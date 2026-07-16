@@ -767,6 +767,10 @@
     header{display:none}
     .nav-fab{display:flex}
     .cm-block-picker{display:flex}
+    #cmDragHint{display:none}   /* drag-and-drop hint is stale on mobile — Crop Map taps instead */
+    .cm-block-tab{padding:.6rem .95rem}
+    /* Tap-to-edit panel takes over the whole screen on mobile instead of stacking below the map */
+    #cmPanel{position:fixed;inset:0;width:100%;max-width:100%;z-index:48;border-radius:0}
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -866,7 +870,7 @@
         </div>
         <button class="icon-btn" id="cmLockBtn" title="Click to lock — pan freely without moving plantings"
           aria-pressed="false" style="margin-left:.4rem">🔓 Unlocked</button>
-        <span class="sub" style="margin-left:.5rem">drag to assign or move · Map pans/zooms the whole farm</span>
+        <span class="sub" id="cmDragHint" style="margin-left:.5rem">drag to assign or move · Map pans/zooms the whole farm</span>
       </div>
       <div class="cm-block-picker" id="cmBlockPicker"></div>
       <div class="cm-main">
@@ -2184,7 +2188,8 @@ function buildCropMap(){
     const grid=document.createElement("div");grid.className="cm-grid";
 
     const axis=document.createElement("div");axis.className="cm-axis";
-    CM_MONTHS.forEach(m=>{const c=document.createElement("div");c.className="cm-mon";c.textContent=m;axis.appendChild(c);});
+    CM_MONTHS.forEach(m=>{const c=document.createElement("div");c.className="cm-mon";c.textContent=m;
+      c.style.height=(CM_H/12)+"px";axis.appendChild(c);});
     grid.appendChild(axis);
 
     groups[key].forEach(bed=>{
