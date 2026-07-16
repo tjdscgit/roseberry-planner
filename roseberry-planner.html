@@ -311,7 +311,12 @@
   #cmViewport.cm-mapmode{overflow:hidden;touch-action:none;cursor:grab}
   #cmViewport.cm-mapmode.dragging{cursor:grabbing}
   #cmBlocks{padding:1rem 1.2rem;display:grid;grid-auto-rows:max-content;gap:1.6rem 2rem;align-items:start}
-  .cm-block-picker{display:none;gap:.3rem;flex-wrap:wrap;padding:.5rem .8rem 0}
+  .cm-block-picker{display:none;gap:.15rem;padding:.35rem .6rem 0;overflow-x:auto;
+    border-bottom:1px solid var(--line-2)}
+  .cm-block-tab{appearance:none;border:none;background:none;cursor:pointer;
+    font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;
+    color:var(--ink-2);padding:.5rem .7rem;border-bottom:2px solid transparent;white-space:nowrap;flex:0 0 auto}
+  .cm-block-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--steel)}
   #cmBlocks.cm-mapmode{position:absolute;top:0;left:0;transform-origin:0 0}
   #cmZoombar{top:.6rem;right:.6rem;display:flex;flex-direction:column;gap:.3rem}
   #cmZoombar button{width:2.1rem;height:2.1rem;font-size:1rem;line-height:1}
@@ -2054,8 +2059,8 @@ function cmDrawBlockChips(allKeys){
   box.innerHTML="";
   if(allKeys.length<2) return;   // nothing to pick between
   const mk=(label,val)=>{
-    const c=document.createElement("button"); c.className="chip"; c.textContent=label;
-    c.setAttribute("aria-pressed", val===cmSelectedBlock?"true":"false");
+    const c=document.createElement("button"); c.className="cm-block-tab"; c.textContent=label;
+    c.setAttribute("aria-selected", val===cmSelectedBlock?"true":"false");
     c.addEventListener("click",()=>{
       cmSelectedBlock=val; buildCropMap();
       if(cmViewMode==="map") cmFitView();   // re-center/scale the now-smaller content
