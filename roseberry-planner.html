@@ -882,7 +882,7 @@
             <button class="icon-btn" id="cmZfit" title="Fit">⤢</button>
           </div>
         </div>
-        <details id="cmUnassigned" open>
+        <details id="cmUnassigned">
           <summary class="cm-un-h">Unassigned · <span id="cmUnCount">0</span></summary>
           <div id="cmUnList"></div>
         </details>
@@ -5618,7 +5618,7 @@ function saveUiState(){
     const state = {
       tab,
       farmMap: { k:view.k, tx:view.tx, ty:view.ty, activeBlock },
-      cropMap: { year:cmYear, mode:cmViewMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock },
+      cropMap: { year:cmYear, mode:cmViewMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock, unassignedOpen:document.getElementById("cmUnassigned")?.open },
       timeline: { year:tlYear, mode:tlGroupMode },
       week: { mode:wkMode, odCollapsed:wkOdCollapsed },
     };
@@ -5626,6 +5626,11 @@ function saveUiState(){
   }catch(_){}
 }
 window.addEventListener("beforeunload", saveUiState);
+// beforeunload doesn't reliably fire on mobile/PWA — backgrounding an app (home button, app
+// switcher) suspends the page instead of unloading it, so the "coming back in" case needs its
+// own save points too.
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") saveUiState(); });
+window.addEventListener("pagehide", saveUiState);
 
 function restoreUiState(){
   let saved;
@@ -5642,6 +5647,9 @@ function restoreUiState(){
     if(typeof saved.cropMap.year==="number") cmYear=saved.cropMap.year;
     if(saved.cropMap.locked) setCmLocked(true);
     if(saved.cropMap.block) cmSelectedBlock=saved.cropMap.block;   // buildCropMap() falls back to "All" if stale
+    if(typeof saved.cropMap.unassignedOpen==="boolean"){
+      const el=document.getElementById("cmUnassigned"); if(el) el.open=saved.cropMap.unassignedOpen;
+    }
   }
   if(saved.timeline){
     if(typeof saved.timeline.year==="number") tlYear=saved.timeline.year;
