@@ -444,7 +444,11 @@
   #cmUnassigned{flex:0 0 210px;border-left:1px solid var(--line-2);overflow:auto;
     padding:.6rem;background:var(--paper-2)}
   .cm-un-h{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;
-    letter-spacing:.08em;color:var(--ink-2);margin:.1rem 0 .6rem}
+    letter-spacing:.08em;color:var(--ink-2);margin:.1rem 0 .6rem;cursor:pointer;list-style:none;
+    display:flex;align-items:center;justify-content:space-between;gap:.4rem}
+  .cm-un-h::-webkit-details-marker{display:none}
+  .cm-un-h::after{content:"▸";transition:transform .15s}
+  #cmUnassigned[open] .cm-un-h::after{transform:rotate(90deg)}
   .cm-block{min-width:0}
   .cm-block-h{font-family:var(--mono);font-weight:700;font-size:1.05rem;margin:0 0 .35rem}
   .cm-grid{display:flex;align-items:flex-start;gap:1px;width:max-content;position:relative}
@@ -858,10 +862,10 @@
             <button class="icon-btn" id="cmZfit" title="Fit">⤢</button>
           </div>
         </div>
-        <aside id="cmUnassigned">
-          <div class="cm-un-h">Unassigned · <span id="cmUnCount">0</span></div>
+        <details id="cmUnassigned" open>
+          <summary class="cm-un-h">Unassigned · <span id="cmUnCount">0</span></summary>
           <div id="cmUnList"></div>
-        </aside>
+        </details>
         <aside class="tl-panel" id="cmPanel"></aside>
       </div>
     </section>
