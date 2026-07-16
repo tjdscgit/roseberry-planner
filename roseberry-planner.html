@@ -139,6 +139,13 @@
   /* ---- Crop defaults tab ---- */
   #view-crops.active{display:flex;flex-direction:column}
   .cr-wrap{flex:1 1 auto;overflow:auto;padding:.4rem 1.2rem 2rem}
+  /* Mobile-only crop -> settings -> variety drill-down (replaces the grid, see buildCrMobileList) */
+  .cr-mobile-list{display:none}
+  .cr-mobile-title{font-weight:700;font-size:1.05rem;margin:.4rem 0}
+  .cr-mobile-group{margin-bottom:.8rem}
+  .cr-mobile-field{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    padding:.4rem 0;border-bottom:1px solid var(--line-2)}
+  .cr-mobile-field select,.cr-mobile-field input{width:120px;max-width:45%}
   .cr-table{width:auto;min-width:100%;border-collapse:collapse;font-size:1rem}
   .cr-table th{text-align:left;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;
     letter-spacing:.06em;color:var(--ink-2);font-weight:700;padding:.9rem .75rem;
@@ -786,6 +793,10 @@
     #tlGroupToggle{display:none}
     #tlHint{display:none}
     .tl-mobile-list{display:flex;flex-direction:column}
+    /* Crops: the 20-column grid is replaced by a crop -> settings -> variety drill-down on mobile */
+    #view-crops .cr-wrap{display:none}
+    #view-crops .tl-search{display:none}   /* crop-name search doesn't filter the mobile list yet */
+    .cr-mobile-list{display:block;padding:.6rem .8rem;overflow:auto}
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -986,6 +997,7 @@
           <tbody id="crBody"></tbody>
         </table>
       </div>
+      <div class="cr-mobile-list" id="crMobileList"></div>
     </section>
 
     <!-- MISC -->
@@ -4197,7 +4209,83 @@ async function crAddVariety(cropId,cropName){
   }
 }
 const crExpanded = new Set();   // crop ids currently showing their variety rows
+
+// Mobile: crop list -> that crop's settings (+ its varieties) -> a variety's own overrides.
+// null,null = crop list; crMobileCrop set = crop settings; both set = variety settings.
+let crMobileCrop=null, crMobileVariety=null;
+function crFieldRowsHTML(){
+  return ["Timing","Row Spacing","Harvest","Nursery"].map(g=>{
+    const fields=CR_ROW_FIELDS.filter(f=>f.group===g);
+    return `<div class="cr-mobile-group"><div class="sect-h">${g}</div>`
+      + fields.map(f=>{
+          if(f.type==="select"){
+            const opts_=typeof f.options==="function"?f.options():f.options;
+            const opts=`<option value="">—</option>`+opts_.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
+            return `<label class="cr-mobile-field"><span>${f.label}</span><select data-k="${f.k}">${opts}</select></label>`;
+          }
+          return `<label class="cr-mobile-field"><span>${f.label}</span><input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}"></label>`;
+        }).join("")
+      + `</div>`;
+  }).join("");
+}
+function buildCrMobileList(){
+  const box=document.getElementById("crMobileList"); if(!box) return;
+  box.innerHTML="";
+
+  if(!crMobileCrop){
+    const ids=Object.keys(data.crops||{}).sort((a,b)=>data.crops[a].localeCompare(data.crops[b]));
+    if(!ids.length){ box.innerHTML=`<div class="empty-note">No crops yet.</div>`; return; }
+    ids.forEach(id=>{
+      const n=(data.varietiesByCrop[id]||[]).length;
+      const row=document.createElement("div"); row.className="cm-chip tl-mobile-row";
+      row.style.borderLeftColor=cropColor(id);
+      row.innerHTML=`${esc(data.crops[id])}<span class="c-sub">${n} variet${n===1?"y":"ies"}</span>`;
+      row.addEventListener("click",()=>{ crMobileCrop=id; buildCrMobileList(); });
+      box.appendChild(row);
+    });
+    return;
+  }
+
+  const cropName=data.crops[crMobileCrop]||"Crop", cd=data.cropDefs[crMobileCrop]||{};
+
+  if(!crMobileVariety){
+    const back=document.createElement("div"); back.className="tl-mobile-back"; back.textContent="← All crops";
+    back.addEventListener("click",()=>{ crMobileCrop=null; buildCrMobileList(); });
+    box.appendChild(back);
+    const head=document.createElement("div"); head.className="cr-mobile-title"; head.textContent=cropName;
+    box.appendChild(head);
+    const form=document.createElement("div"); form.innerHTML=crFieldRowsHTML();
+    box.appendChild(form);
+    crBindFieldCells(form, cd, (k,v)=>saveCropDefault(crMobileCrop,k,v), null);
+
+    const sect=document.createElement("div"); sect.className="sect-h"; sect.textContent="Varieties";
+    box.appendChild(sect);
+    (data.varietiesByCrop[crMobileCrop]||[]).forEach(v=>{
+      const row=document.createElement("div"); row.className="cm-chip tl-mobile-row";
+      row.style.borderLeftColor=cropColor(crMobileCrop); row.textContent=v.name;
+      row.addEventListener("click",()=>{ crMobileVariety=v.id; buildCrMobileList(); });
+      box.appendChild(row);
+    });
+    const addBtn=document.createElement("button"); addBtn.type="button"; addBtn.className="cr-add-variety";
+    addBtn.textContent="+ Add variety…";
+    addBtn.onclick=async()=>{ const id=await crAddVariety(crMobileCrop,cropName); if(id){ crMobileVariety=id; buildCrMobileList(); } };
+    box.appendChild(addBtn);
+    return;
+  }
+
+  const vr=data.varietiesById[crMobileVariety];
+  const back=document.createElement("div"); back.className="tl-mobile-back"; back.textContent=`← ${cropName}`;
+  back.addEventListener("click",()=>{ crMobileVariety=null; buildCrMobileList(); });
+  box.appendChild(back);
+  const head=document.createElement("div"); head.className="cr-mobile-title"; head.textContent=vr?vr.name:"Variety";
+  box.appendChild(head);
+  const form=document.createElement("div"); form.innerHTML=crFieldRowsHTML();
+  box.appendChild(form);
+  if(vr) crBindFieldCells(form, vr, (k,v)=>saveVarietyField(crMobileVariety,k,v), cd);
+}
+
 function buildCropsTab(filter){
+  if(cmIsMobile()){ buildCrMobileList(); return; }
   const body=document.getElementById("crBody"); if(!body) return;
   const q=(filter!=null?filter:(document.getElementById("crSearch").value||"")).trim().toLowerCase();
   const items=Object.keys(data.crops||{}).map(id=>({id,name:data.crops[id]}))
@@ -4219,25 +4307,27 @@ function buildCropsTab(filter){
 }
 // One field's cell, for a row: Method/Seeder/Harvest unit are selects, the rest are numbers.
 // "rows" and "harvestUnit" also carry the divider that lines up with the grouped header.
+// label/group are used by the mobile stacked form (buildCrMobileList) — desktop code below
+// (crFieldCellsHTML) ignores them, since the desktop header labels are hardcoded HTML instead.
 const CR_ROW_FIELDS=[
-  {k:"method", type:"select", options:["Direct seed","Transplant"]},
-  {k:"nursery", step:"1"},
-  {k:"dtm", step:"1"},
-  {k:"window", step:"1"},
-  {k:"gap", step:"1"},
-  {k:"rows", step:"1", divider:true},
-  {k:"rowSpacing", step:"0.1"},
-  {k:"plantSpacing", step:"0.1"},
-  {k:"seeder", type:"select", options:["Hand","Push seeder","Precision seeder","Multi-row seeder"]},
-  {k:"harvestUnit", type:"select", options:["Each","Bunch","Kilogram","Box","Bag","Punnet","Dozen","Bundle"], divider:true},
-  {k:"plantsPerUnit", step:"1"},
-  {k:"price", step:"0.01"},
-  {k:"yield", step:"0.01"},
-  {k:"trayType", type:"select", options:()=>(data.trayTypes||[]).map(t=>t.name), divider:true},
-  {k:"seedsPerCell", step:"1"},
-  {k:"daysToGerminate", step:"1"},
-  {k:"germTemp", step:"0.1"},
-  {k:"pottingUp", type:"select", options:["Yes","No"]},
+  {k:"method", type:"select", options:["Direct seed","Transplant"], label:"Method", group:"Timing"},
+  {k:"nursery", step:"1", label:"Days in nursery", group:"Timing"},
+  {k:"dtm", step:"1", label:"Days to maturity", group:"Timing"},
+  {k:"window", step:"1", label:"Harvest window", group:"Timing"},
+  {k:"gap", step:"1", label:"Succession gap", group:"Timing"},
+  {k:"rows", step:"1", divider:true, label:"Number of rows", group:"Row Spacing"},
+  {k:"rowSpacing", step:"0.1", label:"Row spacing (cm)", group:"Row Spacing"},
+  {k:"plantSpacing", step:"0.1", label:"Plant spacing (cm)", group:"Row Spacing"},
+  {k:"seeder", type:"select", options:["Hand","Push seeder","Precision seeder","Multi-row seeder"], label:"Seeder", group:"Row Spacing"},
+  {k:"harvestUnit", type:"select", options:["Each","Bunch","Kilogram","Box","Bag","Punnet","Dozen","Bundle"], divider:true, label:"Unit", group:"Harvest"},
+  {k:"plantsPerUnit", step:"1", label:"Number / unit", group:"Harvest"},
+  {k:"price", step:"0.01", label:"Price", group:"Harvest"},
+  {k:"yield", step:"0.01", label:"Yield / bed m", group:"Harvest"},
+  {k:"trayType", type:"select", options:()=>(data.trayTypes||[]).map(t=>t.name), divider:true, label:"Tray type", group:"Nursery"},
+  {k:"seedsPerCell", step:"1", label:"Seeds / cell", group:"Nursery"},
+  {k:"daysToGerminate", step:"1", label:"Days to germinate", group:"Nursery"},
+  {k:"germTemp", step:"0.1", label:"Optimal germ temp", group:"Nursery"},
+  {k:"pottingUp", type:"select", options:["Yes","No"], label:"Potting up", group:"Nursery"},
 ];
 function crFieldCellsHTML(start,end){
   return CR_ROW_FIELDS.slice(start,end).map(f=>{
