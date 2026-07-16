@@ -311,6 +311,7 @@
   #cmViewport.cm-mapmode{overflow:hidden;touch-action:none;cursor:grab}
   #cmViewport.cm-mapmode.dragging{cursor:grabbing}
   #cmBlocks{padding:1rem 1.2rem;display:grid;grid-auto-rows:max-content;gap:1.6rem 2rem;align-items:start}
+  .cm-block-picker{display:none;gap:.3rem;flex-wrap:wrap;padding:.5rem .8rem 0}
   #cmBlocks.cm-mapmode{position:absolute;top:0;left:0;transform-origin:0 0}
   #cmZoombar{top:.6rem;right:.6rem;display:flex;flex-direction:column;gap:.3rem}
   #cmZoombar button{width:2.1rem;height:2.1rem;font-size:1rem;line-height:1}
@@ -748,6 +749,7 @@
     .tl-panel{width:min(340px,86vw);flex-basis:min(340px,86vw)}
     nav[role=tablist]{display:none}
     .nav-fab{display:flex}
+    .cm-block-picker{display:flex}
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -841,6 +843,7 @@
           aria-pressed="false" style="margin-left:.4rem">🔓 Unlocked</button>
         <span class="sub" style="margin-left:.5rem">drag to assign or move · Map pans/zooms the whole farm</span>
       </div>
+      <div class="cm-block-picker" id="cmBlockPicker"></div>
       <div class="cm-main">
         <div id="cmViewport">
           <div id="cmBlocks"></div>
@@ -1983,6 +1986,7 @@ let dragPid = null;
 let cmViewMode = "list";
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
+let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
 const CM_H = 360;                 // px height of a 12-month track
 const CM_MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 // Below this width, Crop Map swaps drag-and-drop for tap-to-open (see buildCropMap/buildUnassigned)
@@ -2040,6 +2044,26 @@ function bedGroups(){
     return String(a.name).localeCompare(String(b.name),undefined,{numeric:true});
   }));
   return groups;
+}
+
+// Mobile-only block picker — same "All blocks + one chip per block" idea as the Farm Map's
+// activeBlock filter, but this one actually narrows which .cm-block elements get built (List
+// mode has no pan/zoom to fit-to-block the way the Farm Map's chips do).
+function cmDrawBlockChips(allKeys){
+  const box=document.getElementById("cmBlockPicker"); if(!box) return;
+  box.innerHTML="";
+  if(allKeys.length<2) return;   // nothing to pick between
+  const mk=(label,val)=>{
+    const c=document.createElement("button"); c.className="chip"; c.textContent=label;
+    c.setAttribute("aria-pressed", val===cmSelectedBlock?"true":"false");
+    c.addEventListener("click",()=>{
+      cmSelectedBlock=val; buildCropMap();
+      if(cmViewMode==="map") cmFitView();   // re-center/scale the now-smaller content
+    });
+    return c;
+  };
+  box.appendChild(mk("All blocks", null));
+  allKeys.forEach(k=>box.appendChild(mk(k,k)));
 }
 
 // ---- "where does it fit?" highlighting while dragging ----
@@ -2100,17 +2124,23 @@ function buildCropMap(){
   const groups=bedGroups();
   const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 
+  cmDrawBlockChips(keys);                                                     // always offer every block
+  if(cmSelectedBlock && !keys.includes(cmSelectedBlock)) cmSelectedBlock=null; // stale (renamed/removed) → fall back to "All"
+  // mobile-only: a picked block narrows the view to just that block; desktop always sees every
+  // block regardless of a stale cmSelectedBlock left over from a mobile session on this browser
+  const activeKeys = (cmSelectedBlock && cmIsMobile()) ? [cmSelectedBlock] : keys;
+
   // all plantings for each bed (successions included)
   const perBed={};
   (data.plantings||[]).forEach(p=>{const bid=p.bedIds[0]; if(bid)(perBed[bid] ||= []).push(p);});
 
   // arrange blocks in a roughly square grid (same ceil(sqrt(n)) approach as the Farm Map's
   // auto-layout) so the Crop Map bunches up like the farm, instead of one long vertical list
-  const perRow=Math.max(1,Math.ceil(Math.sqrt(keys.length)));
+  const perRow=Math.max(1,Math.ceil(Math.sqrt(activeKeys.length)));
   wrap.style.gridTemplateColumns=`repeat(${perRow}, max-content)`;
 
   wrap.innerHTML="";
-  keys.forEach(key=>{
+  activeKeys.forEach(key=>{
     const blk=document.createElement("div");blk.className="cm-block";
     const h=document.createElement("div");h.className="cm-block-h";h.textContent=key;blk.appendChild(h);
     const grid=document.createElement("div");grid.className="cm-grid";
@@ -5528,7 +5558,7 @@ function saveUiState(){
     const state = {
       tab,
       farmMap: { k:view.k, tx:view.tx, ty:view.ty, activeBlock },
-      cropMap: { year:cmYear, mode:cmViewMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked },
+      cropMap: { year:cmYear, mode:cmViewMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock },
       timeline: { year:tlYear, mode:tlGroupMode },
       week: { mode:wkMode, odCollapsed:wkOdCollapsed },
     };
@@ -5551,6 +5581,7 @@ function restoreUiState(){
   if(saved.cropMap){
     if(typeof saved.cropMap.year==="number") cmYear=saved.cropMap.year;
     if(saved.cropMap.locked) setCmLocked(true);
+    if(saved.cropMap.block) cmSelectedBlock=saved.cropMap.block;   // buildCropMap() falls back to "All" if stale
   }
   if(saved.timeline){
     if(typeof saved.timeline.year==="number") tlYear=saved.timeline.year;
