@@ -97,7 +97,9 @@
     transform:translateX(-105%);transition:transform .22s ease;
     box-shadow:var(--shadow);padding:.8rem;overflow-y:auto}
   .nav-drawer.open{transform:none}
-  .nav-drawer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.6rem}
+  .nav-drawer-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:.6rem}
+  .nav-drawer-tools{display:flex;gap:.4rem;margin:0 0 .8rem;padding-bottom:.7rem;
+    border-bottom:1px solid var(--line-2)}
   .nav-drawer-item{display:block;width:100%;text-align:left;background:none;border:none;
     padding:.65rem .7rem;border-radius:8px;font-family:var(--sans);font-size:.92rem;
     color:var(--ink);cursor:pointer}
@@ -311,7 +313,7 @@
   #cmViewport.cm-mapmode{overflow:hidden;touch-action:none;cursor:grab}
   #cmViewport.cm-mapmode.dragging{cursor:grabbing}
   #cmBlocks{padding:1rem 1.2rem;display:grid;grid-auto-rows:max-content;gap:1.6rem 2rem;align-items:start}
-  .cm-block-picker{display:none;gap:.15rem;padding:.35rem .6rem 0;overflow-x:auto;
+  .cm-block-picker{display:none;flex:0 0 auto;gap:.15rem;padding:.35rem .6rem 0;overflow-x:auto;
     border-bottom:1px solid var(--line-2)}
   .cm-block-tab{appearance:none;border:none;background:none;cursor:pointer;
     font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;
@@ -757,6 +759,7 @@
     #cmUnassigned{flex:0 0 auto;width:100%;max-height:34vh;border-left:none;border-top:1px solid var(--line-2)}
     .tl-panel{width:min(340px,86vw);flex-basis:min(340px,86vw)}
     nav[role=tablist]{display:none}
+    header{display:none}
     .nav-fab{display:flex}
     .cm-block-picker{display:flex}
   }
@@ -797,8 +800,16 @@
   <div class="nav-drawer-backdrop" id="navDrawerBackdrop"></div>
   <aside class="nav-drawer" id="navDrawer">
     <div class="nav-drawer-head">
-      <span class="brand">Roseberry <b>Planner</b></span>
+      <div>
+        <span class="brand">Roseberry <b>Planner</b></span>
+        <div class="sub" id="statlineDrawer">field map</div>
+      </div>
       <button class="icon-btn" id="navDrawerClose" aria-label="Close menu">✕</button>
+    </div>
+    <div class="nav-drawer-tools">
+      <button class="icon-btn" id="themeBtnDrawer" title="Toggle dark mode">☾</button>
+      <button class="icon-btn" id="reloadBtnDrawer" title="Reload data">↻</button>
+      <button class="icon-btn" id="gearBtnDrawer" title="Settings">⚙</button>
     </div>
     <button class="nav-drawer-item" data-view="map">Farm map</button>
     <button class="nav-drawer-item" data-view="cropmap">Crop map</button>
@@ -1333,8 +1344,10 @@ let theme = localStorage.getItem(THEME_KEY) ||
 function setTheme(t){
   theme=t; document.documentElement.setAttribute("data-theme",t);
   localStorage.setItem(THEME_KEY,t);
-  const btn=document.getElementById("themeBtn");
-  if(btn){ btn.textContent = t==="dark" ? "☀" : "☾"; btn.title = t==="dark" ? "Switch to light mode" : "Switch to dark mode"; }
+  ["themeBtn","themeBtnDrawer"].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn){ btn.textContent = t==="dark" ? "☀" : "☾"; btn.title = t==="dark" ? "Switch to light mode" : "Switch to dark mode"; }
+  });
 }
 setTheme(theme);
 
@@ -1942,6 +1955,12 @@ document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   fab.onclick=open;
   closeBtn.onclick=close;
   backdrop.onclick=close;
+  // The header (brand/stats/theme/reload/gear) is hidden on mobile — these delegate to the
+  // original header buttons' existing click listeners instead of duplicating their logic.
+  ["themeBtn","reloadBtn","gearBtn"].forEach(id=>{
+    const dbtn=document.getElementById(id+"Drawer"), obtn=document.getElementById(id);
+    if(dbtn&&obtn) dbtn.onclick=()=>obtn.click();
+  });
   drawer.querySelectorAll(".nav-drawer-item[data-view]").forEach(b=>b.onclick=()=>{
     document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
     const tab=document.querySelector(`.tab[data-view="${b.dataset.view}"]`);
@@ -1986,7 +2005,10 @@ window.addEventListener("resize",()=>{if(document.getElementById("view-map").cla
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function fmt(d){if(!d)return "—";const dt=new Date(d);if(isNaN(dt))return esc(d);
   return dt.toLocaleDateString("en-AU",{day:"2-digit",month:"short",year:"2-digit"});}
-function setStat(t){document.getElementById("statline").textContent=t;}
+function setStat(t){
+  document.getElementById("statline").textContent=t;
+  const d=document.getElementById("statlineDrawer"); if(d) d.textContent=t;
+}
 function showLoading(b){document.getElementById("loading").classList.toggle("show",b);}
 
 /* ---------- Crop Map (calendar grid + drag/drop assignment) ---------- */
