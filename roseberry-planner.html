@@ -551,6 +551,16 @@
   .tl-notes:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel)}
   .tl-panel-actions{display:flex;gap:.5rem;margin-top:1.2rem}
   .tl-panel-actions .btn-primary{flex:1 1 auto}
+  .tl-bedpick{display:flex;flex-direction:column;gap:.3rem;max-height:220px;overflow:auto}
+  .tl-bedpick-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
+    padding:.45rem .6rem;border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);
+    font-family:var(--sans);font-size:.82rem;color:var(--ink);cursor:pointer;text-align:left}
+  .tl-bedpick-row:hover{background:#fff;border-color:var(--steel)}
+  .tl-bedpick-row:disabled{opacity:.5;cursor:default}
+  .tl-bedpick-row.tl-bedpick-cur{border-color:var(--steel);background:rgba(31,78,95,.08)}
+  .tl-bedpick-block{font-family:var(--mono);font-size:.68rem;color:var(--ink-2)}
+  .tl-bedpick-free{font-family:var(--mono);font-size:.68rem;color:#2f6b3c;white-space:nowrap}
+  .tl-bedpick-row.tl-bedpick-tight .tl-bedpick-free{color:var(--clay)}
   .tl-ctx{position:absolute;display:none;z-index:40;min-width:170px;
     background:var(--paper);border:1px solid var(--line-2);border-radius:10px;
     box-shadow:var(--shadow);padding:.3rem}
@@ -709,6 +719,16 @@
     font-size:.7rem;color:var(--ink-2)}
   .cr-chart-legend .sw{display:inline-block;width:.8rem;height:.8rem;border-radius:2px;
     margin-right:.35rem;vertical-align:-1px}
+
+  /* ---- Mobile overrides (placed last so equal-specificity rules above lose the cascade) ---- */
+  @media(max-width:760px){
+    .cm-main{flex-direction:column}
+    #cmUnassigned{flex:0 0 auto;width:100%;max-height:34vh;border-left:none;border-top:1px solid var(--line-2)}
+    .tl-panel{width:min(340px,86vw);flex-basis:min(340px,86vw)}
+  }
+  @media(pointer:coarse){
+    .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
+  }
 </style>
 </head>
 <body>
@@ -790,6 +810,7 @@
           <div class="cm-un-h">Unassigned · <span id="cmUnCount">0</span></div>
           <div id="cmUnList"></div>
         </aside>
+        <aside class="tl-panel" id="cmPanel"></aside>
       </div>
     </section>
 
@@ -1894,6 +1915,20 @@ let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 const CM_H = 360;                 // px height of a 12-month track
 const CM_MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+// Below this width, Crop Map swaps drag-and-drop for tap-to-open (see buildCropMap/buildUnassigned)
+// — matches the app's other mobile breakpoint (the add-planting modal, ~760px).
+function cmIsMobile(){ return window.matchMedia("(max-width:760px)").matches; }
+(function(){
+  let cmWasMobile=cmIsMobile();
+  let resizeT=null;
+  window.addEventListener("resize",()=>{
+    clearTimeout(resizeT);
+    resizeT=setTimeout(()=>{
+      const nowMobile=cmIsMobile();
+      if(nowMobile!==cmWasMobile){ cmWasMobile=nowMobile; buildCropMap(); }
+    },200);
+  });
+})();
 
 // derive each bed's single "headline" planting (used by the farm map) from the full list.
 // Recency is judged by ground-occupancy start (Transplant date, falling back to Sow date for
@@ -2042,13 +2077,20 @@ function buildCropMap(){
             bar.appendChild(seg);
           }
         }
-        bar.draggable=true;bar.dataset.pid=p.id;
+        bar.dataset.pid=p.id;
         bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`;
         const l=document.createElement("span");l.className="cm-bar-l";l.textContent=p.crop;bar.appendChild(l);
-        bar.addEventListener("dragstart",e=>{
-          if(cmLocked){e.preventDefault();return;}
-          dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
-        });
+        // Mobile: dragging risks an accidental bed move on touch, so tapping opens a detail
+        // panel with a bed picker instead (see cmOpenPanel). Desktop keeps native drag-and-drop.
+        if(cmIsMobile()){
+          bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
+        }else{
+          bar.draggable=true;
+          bar.addEventListener("dragstart",e=>{
+            if(cmLocked){e.preventDefault();return;}
+            dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
+          });
+        }
         track.appendChild(bar);
 
         // outline-only extensions for tasks that fall outside the ground-occupancy window
@@ -2094,13 +2136,18 @@ function buildUnassigned(){
   if(!list.length){box.innerHTML=`<div class="empty-note" style="padding:.4rem 0">Every planting has a bed.</div>`;return;}
   list.sort((a,b)=> (a.crop||"").localeCompare(b.crop||"") || String(a.sow||"").localeCompare(String(b.sow||"")));
   list.forEach(p=>{
-    const chip=document.createElement("div");chip.className="cm-chip";chip.draggable=true;chip.dataset.pid=p.id;
+    const chip=document.createElement("div");chip.className="cm-chip";chip.dataset.pid=p.id;
     chip.style.borderLeftColor=cropColor(p.cropId||p.crop);
     chip.innerHTML=`${esc(p.crop)}${p.variety?" · "+esc(p.variety):""}<span class="c-sub">${p.sow?fmt(p.sow):"no sow date"}${p.group?" · "+esc(p.group):""}</span>`;
-    chip.addEventListener("dragstart",e=>{
-      if(cmLocked){e.preventDefault();return;}
-      dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
-    });
+    if(cmIsMobile()){
+      chip.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
+    }else{
+      chip.draggable=true;
+      chip.addEventListener("dragstart",e=>{
+        if(cmLocked){e.preventDefault();return;}
+        dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
+      });
+    }
     box.appendChild(chip);
   });
 }
@@ -2189,8 +2236,8 @@ document.getElementById("cmZout").onclick=()=>{const r=document.getElementById("
 document.getElementById("cmZfit").onclick=()=>cmFitView();
 
 // assign / move the dragged planting to a bed, writing the Bed link back to Airtable
-async function assignBed(bedId){
-  const pid=dragPid; dragPid=null;
+async function assignBed(bedId, pidOverride){
+  const pid=pidOverride||dragPid; dragPid=null;
   if(!pid) return;
   const p=(data.plantings||[]).find(x=>x.id===pid); if(!p) return;
   if(p.bedIds[0]===bedId) return;                 // dropped on its own bed — no-op
@@ -2546,6 +2593,17 @@ function tlClosePanel(){
   tlSelectedPlantingId=null;
   document.getElementById("tlPanel").classList.remove("open");
 }
+// Crop Map's own detail panel — mobile taps a bar/chip to open this instead of dragging it
+// (see buildCropMap/buildUnassigned); reuses tlRenderPanel like Timeline/Week planner do, with
+// the bed-picker section turned on since Crop Map has no other way to reassign a bed without drag.
+function cmOpenPanel(p){
+  const panel=document.getElementById("cmPanel");
+  tlRenderPanel(p, panel, cmClosePanel, {showBedPicker:true});
+  panel.classList.add("open");
+}
+function cmClosePanel(){
+  document.getElementById("cmPanel").classList.remove("open");
+}
 function tlKv(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`; }
 // Renders the read-only planting-detail summary into ANY panel element (Timeline's own #tlPanel,
 // or the weekly planner's #wkPanel — see wkOpenPlantingPanel) — so both views share one
@@ -2554,9 +2612,14 @@ function tlKv(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><spa
 // are scoped to `panel` and use classes, not ids, since two instances of this markup (one per view)
 // can coexist in the DOM simultaneously (inactive views aren't removed, just hidden) — ids would
 // collide and `getElementById` would silently bind the wrong instance's buttons.
-function tlRenderPanel(p, panel, closeFn){
+function tlRenderPanel(p, panel, closeFn, opts){
   panel = panel || document.getElementById("tlPanel");
   closeFn = closeFn || tlClosePanel;
+  // remember which options this panel instance renders with, so internal re-renders (task
+  // toggles, assignee changes, etc. below) keep showing the bed picker without every one of
+  // those call sites needing to pass opts through explicitly
+  opts = opts || panel._tlOpts || {};
+  panel._tlOpts = opts;
   // preserve which accordion sections were open across re-renders (e.g. after a checkbox toggle
   // or a resize-triggered rebuild), rather than snapping them all back to their defaults
   const prevOpen=new Set(Array.from(panel.querySelectorAll("details.tl-acc[open] summary")).map(s=>s.textContent));
@@ -2653,6 +2716,30 @@ function tlRenderPanel(p, panel, closeFn){
     : `<div class="empty-note">No tasks scheduled.</div>`;
   const acc=(label,body,open)=>`<details class="tl-acc"${(prevOpen.size?prevOpen.has(label):open)?" open":""}><summary>${esc(label)}</summary>${body}</details>`;
 
+  // Mobile Crop Map has no drag-and-drop (accidental-move risk on touch), so it's the only
+  // caller that turns this on — lets a planting be reassigned to a different bed by tapping a
+  // row instead, reusing the same fit/spare-metres math the drag map already computes.
+  let bedPickerHtml="";
+  if(opts.showBedPicker){
+    const win=planWindow(p);
+    const rows=(data.beds||[]).map(bed=>({bed,info:bedFreeInfo(bed,p,win)}))
+      .sort((a,b)=>{
+        if(a.info.fits!==b.info.fits) return a.info.fits?-1:1;
+        return (a.bed.name||"").localeCompare(b.bed.name||"");
+      });
+    bedPickerHtml=`<div class="sect-h">Move to bed</div><div class="tl-bedpick">`
+      +rows.map(({bed,info})=>{
+        const isCur=(p.bedIds||[])[0]===bed.id;
+        const freeLabel=info.free!=null?`${Math.round(info.free*10)/10} m`:"";
+        return `<button type="button" class="tl-bedpick-row${isCur?" tl-bedpick-cur":""}${!info.fits?" tl-bedpick-tight":""}"
+          data-bed="${bed.id}"${isCur?" disabled":""}>
+          <span class="tl-bedpick-name">${esc(bed.name)}${bed.block?` <span class="tl-bedpick-block">· ${esc(bed.block)}</span>`:""}</span>
+          ${freeLabel?`<span class="tl-bedpick-free">${freeLabel}</span>`:""}
+        </button>`;
+      }).join("")
+      +`</div>`;
+  }
+
   panel.innerHTML=`
     <div class="tl-panel-head">
       <div class="tl-panel-title">
@@ -2670,12 +2757,23 @@ function tlRenderPanel(p, panel, closeFn){
     ${acc("Harvest",harvestHtml,false)}
     <div class="sect-h">Notes</div>
     <textarea class="tl-notes" rows="4" placeholder="Anything worth remembering about this planting…">${esc(p.notes||"")}</textarea>
+    ${bedPickerHtml}
     <div class="tl-panel-actions">
       <button type="button" class="btn-primary">Edit Planting</button>
     </div>`;
 
   panel.querySelector(".tl-panel-x").onclick=closeFn;
   panel.querySelector(".btn-primary").onclick=()=>apOpenEdit(p);
+  if(opts.showBedPicker){
+    panel.querySelectorAll(".tl-bedpick-row").forEach(btn=>{
+      btn.onclick=async ()=>{
+        if(btn.disabled) return;
+        await assignBed(btn.dataset.bed, p.id);
+        const fresh=(data.plantings||[]).find(x=>x.id===p.id);
+        if(fresh) tlRenderPanel(fresh, panel, closeFn, opts);
+      };
+    });
+  }
   const tasksBox=panel.querySelector(".tl-qa");
   if(tasksBox){
     tasksBox.querySelectorAll("input[data-df]").forEach(cb=>{
