@@ -756,7 +756,12 @@
   /* ---- Mobile overrides (placed last so equal-specificity rules above lose the cascade) ---- */
   @media(max-width:760px){
     .cm-main{flex-direction:column}
-    #cmUnassigned{flex:0 0 auto;width:100%;max-height:34vh;border-left:none;border-top:1px solid var(--line-2)}
+    /* Small floating pill (bottom-left, clear of the ☰ FAB at bottom-right) instead of a
+       full-width bar — collapsed it's just "Unassigned · N ▸"; expanded it grows into a
+       capped-height scrollable list, all without taking any space from the crop map itself. */
+    #cmUnassigned{position:fixed;left:1rem;bottom:1rem;z-index:43;flex:none;width:auto;
+      max-width:70vw;max-height:50vh;overflow:auto;border:1px solid var(--line-2);
+      border-radius:10px;box-shadow:var(--shadow);padding:.4rem .6rem;background:var(--paper-2)}
     .tl-panel{width:min(340px,86vw);flex-basis:min(340px,86vw)}
     nav[role=tablist]{display:none}
     header{display:none}
@@ -2018,7 +2023,8 @@ let cmViewMode = "list";
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
-const CM_H = 360;                 // px height of a 12-month track
+let CM_H = 360;                    // px height of a 12-month track — grows on mobile when a single block fills the screen
+let cmHFilling = false;            // re-entrancy guard for the measure-then-rebuild pass below
 const CM_MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
 // Below this width, Crop Map swaps drag-and-drop for tap-to-open (see buildCropMap/buildUnassigned)
 // — matches the app's other mobile breakpoint (the add-planting modal, ~760px).
@@ -2151,6 +2157,7 @@ function clearFits(){
 
 function buildCropMap(){
   const wrap=document.getElementById("cmBlocks"); if(!wrap) return;
+  if(!cmHFilling) CM_H=360;   // reset to default unless this is the fill-to-height rebuild pass below
   document.getElementById("cmYearLabel").textContent=cmYear;
   const groups=bedGroups();
   const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
@@ -2183,7 +2190,7 @@ function buildCropMap(){
     groups[key].forEach(bed=>{
       const col=document.createElement("div");col.className="cm-col";col.dataset.bed=bed.id;
       const ch=document.createElement("div");ch.className="cm-col-h";ch.textContent=bed.name;ch.title=bed.name;col.appendChild(ch);
-      const track=document.createElement("div");track.className="cm-track";
+      const track=document.createElement("div");track.className="cm-track";track.style.height=CM_H+"px";
       (perBed[bed.id]||[]).forEach(p=>{
         // bed occupancy only — a nursery-grown planting doesn't occupy the bed until it's
         // transplanted, so the bar starts at Transplant date (falling back to Sow date for
@@ -2256,6 +2263,23 @@ function buildCropMap(){
     });
     blk.appendChild(grid);wrap.appendChild(blk);
   });
+
+  // Mobile + a single block picked: stretch the year track to fill the screen instead of
+  // leaving empty space below a fixed-height grid. Measure the chrome already on screen
+  // (heading + bed-name row + #cmBlocks padding — everything in wrap.scrollHeight besides the
+  // track itself) and rebuild once more at whatever height actually fills the viewport.
+  if(cmIsMobile() && activeKeys.length===1 && !cmHFilling){
+    const vp=document.getElementById("cmViewport");
+    const chrome=wrap.scrollHeight-CM_H;
+    const available=vp.clientHeight-chrome-8;
+    if(available>CM_H+20){
+      CM_H=available;
+      cmHFilling=true;
+      buildCropMap();
+      cmHFilling=false;
+      return;
+    }
+  }
   buildUnassigned();
 }
 
