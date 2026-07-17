@@ -5191,17 +5191,23 @@ function buildWeekPlanner(){
   const openWeek=rows.filter(r=>r.inWeek && !r.t.done);
   const overdueRows=rows.filter(r=>r.overdue);
   const mins=openWeek.reduce((s,r)=>s+wkBlockMin(r),0);
-  document.getElementById("wkSummary").innerHTML=
-    `${openWeek.length} task${openWeek.length===1?"":"s"} this week`
-    + (mins>0?` · ≈ ${wkFmtMins(mins)} work`:"")
-    + (overdueRows.length?` · <span style="color:var(--clay);font-weight:700">${overdueRows.length} overdue</span>`:"");
+  // Mobile: just the overdue count (if any) — the full "N tasks · ~Xm work" line was wrapping to
+  // several lines and bloating the toolbar height; the day-picker + calendar carry the rest.
+  document.getElementById("wkSummary").innerHTML = cmIsMobile()
+    ? (overdueRows.length?`<span style="color:var(--clay);font-weight:700">${overdueRows.length} overdue</span>`:"")
+    : `${openWeek.length} task${openWeek.length===1?"":"s"} this week`
+      + (mins>0?` · ≈ ${wkFmtMins(mins)} work`:"")
+      + (overdueRows.length?` · <span style="color:var(--clay);font-weight:700">${overdueRows.length} overdue</span>`:"");
 
   // Overdue sidebar only makes sense in the clock-calendar (there's a grid of day-columns to drag
-  // onto) — By-crop&bed/By-task-type keep their existing inline "N overdue" counts instead.
+  // onto) — By-crop&bed/By-task-type keep their existing inline "N overdue" counts instead. On
+  // mobile it's dropped entirely (even collapsed it left a persistent toggle column) — the
+  // toolbar's "N overdue" summary text still surfaces the count.
   const odSide=document.getElementById("wkOdSide");
   if(odSide){
-    odSide.style.display = wkMode==="day" ? "flex" : "none";
-    if(wkMode==="day") wkRenderOdSidebar(overdueRows);
+    const showOd = wkMode==="day" && !cmIsMobile();
+    odSide.style.display = showOd ? "flex" : "none";
+    if(showOd) wkRenderOdSidebar(overdueRows);
   }
 
   if(!(data.plantingTasks||[]).length){
@@ -5858,10 +5864,6 @@ function restoreUiState(){
     document.querySelectorAll("#wkModeToggle button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
   }
   if(saved.week && saved.week.odCollapsed) wkSetOdCollapsed(true);
-  // Fresh session (no week state saved yet) + mobile: default the overdue sidebar collapsed to
-  // give the single-day view more room, same reasoning as Crop Map's Unassigned panel. Any
-  // explicit prior choice (the branch above, once saveUiState has run at least once) always wins.
-  else if(!saved.week && cmIsMobile()) wkSetOdCollapsed(true);
 
   const tab=saved.tab||"map";
   if(tab!=="map"){
