@@ -322,7 +322,7 @@
   #cmBlocks{padding:1rem 1.2rem;display:grid;grid-auto-rows:max-content;gap:1.6rem 2rem;align-items:start}
   .cm-block-picker{display:none;flex:0 0 auto;gap:.15rem;padding:.35rem .6rem 0;overflow-x:auto;
     border-bottom:1px solid var(--line-2)}
-  .cm-block-tab{appearance:none;border:none;background:none;cursor:pointer;
+  .cm-block-tab{appearance:none;border:none;background:none;cursor:pointer;text-align:center;
     font-family:var(--mono);font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;
     color:var(--ink-2);padding:.5rem .7rem;border-bottom:2px solid transparent;white-space:nowrap;flex:0 0 auto}
   .cm-block-tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--steel)}
@@ -801,6 +801,8 @@
     .cr-mobile-list{display:block;padding:.6rem .8rem;overflow:auto}
     /* This week: single-day view + day-tab picker (see wkRenderCalendar/wkDrawDayPicker) */
     .wk-day-picker{display:flex}
+    .wk-day-picker .cm-block-tab{font-size:.82rem;padding:.65rem 1.05rem}
+    .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -5090,14 +5092,19 @@ function wkDrawDayPicker(start){
   box.innerHTML="";
   if(wkMode!=="day") return;
   const today=new Date();
+  let selectedTab=null;
   for(let i=0;i<7;i++){
     const day=wkAddDays(start,i), iso=wkISO(day);
     const tab=document.createElement("button"); tab.type="button"; tab.className="cm-block-tab";
     tab.textContent=`${WK_DAYS[i]} ${day.getDate()}`;
-    tab.setAttribute("aria-selected", iso===wkSelectedDay?"true":"false");
+    const isSel=iso===wkSelectedDay;
+    tab.setAttribute("aria-selected", isSel?"true":"false");
     tab.addEventListener("click",()=>{ wkSelectedDay=iso; buildWeekPlanner(); });
     box.appendChild(tab);
+    if(isSel) selectedTab=tab;
   }
+  // keep the active day centered in the scrollable row rather than sitting at whatever edge it happened to land on
+  if(selectedTab) selectedTab.scrollIntoView({inline:"center", block:"nearest"});
 }
 const WK_MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function wkFmtMins(m){ m=Math.round(m); if(m<=0) return "0m"; if(m<60) return m+"m"; const h=Math.floor(m/60),mm=m%60; return mm?`${h}h ${mm}m`:`${h}h`; }
