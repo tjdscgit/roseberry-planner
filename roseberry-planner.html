@@ -378,6 +378,8 @@
   /* ---- By-day clock calendar ---- */
   .wk-cal{min-width:860px}
   .wk-cal-grid{display:grid;grid-template-columns:54px repeat(7,minmax(104px,1fr))}
+  /* Mobile-only day-tab picker for "By day" mode — narrows the calendar to one day (see wkDrawDayPicker) */
+  .wk-day-picker{display:none;gap:.15rem;padding:.35rem .6rem 0;overflow-x:auto;border-bottom:1px solid var(--line-2)}
   .wk-cal-headrow{position:sticky;top:0;z-index:4;background:var(--paper)}
   .wk-cal-corner{border-bottom:1px solid var(--line-2)}
   .wk-cal-dayhead{border-bottom:1px solid var(--line-2);border-left:1px solid var(--line-2);
@@ -797,6 +799,8 @@
     #view-crops .cr-wrap{display:none}
     #view-crops .tl-search{display:none}   /* crop-name search doesn't filter the mobile list yet */
     .cr-mobile-list{display:block;padding:.6rem .8rem;overflow:auto}
+    /* This week: single-day view + day-tab picker (see wkRenderCalendar/wkDrawDayPicker) */
+    .wk-day-picker{display:flex}
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -1100,6 +1104,7 @@
         <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button>
         <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
       </div>
+      <div class="wk-day-picker" id="wkDayPicker"></div>
       <div class="wk-content">
         <aside class="wk-od-side" id="wkOdSide">
           <div class="wk-od-side-head">
@@ -5069,6 +5074,7 @@ document.getElementById("ctSearchClear").addEventListener("click",()=>{
 /* ---------- Weekly planner (This week) ---------- */
 let wkStartISO = null;   // Monday of the shown week (ISO yyyy-mm-dd); null until first build
 let wkMode = "day";       // "day" (clock calendar) | "bed" | "type"
+let wkSelectedDay = null; // mobile-only day-picker selection (ISO date string); only used in "day" mode
 
 function wkParse(s){ const [y,m,d]=String(s).split("-").map(Number); return new Date(y,(m||1)-1,d||1); }
 function wkISO(dt){ const y=dt.getFullYear(),m=String(dt.getMonth()+1).padStart(2,"0"),d=String(dt.getDate()).padStart(2,"0"); return `${y}-${m}-${d}`; }
@@ -5076,6 +5082,23 @@ function wkMonday(dt){ const x=new Date(dt.getFullYear(),dt.getMonth(),dt.getDat
 function wkAddDays(dt,n){ const x=new Date(dt); x.setDate(x.getDate()+n); return x; }
 function wkSameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
 const WK_DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+// Mobile-only: a row of day tabs (like Crop Map's block picker) narrows the calendar to one day
+// (see wkRenderCalendar). Hidden outside "By day" mode since the other two modes are flat lists.
+function wkDrawDayPicker(start){
+  const box=document.getElementById("wkDayPicker"); if(!box) return;
+  box.style.display = wkMode==="day" ? "" : "none";
+  box.innerHTML="";
+  if(wkMode!=="day") return;
+  const today=new Date();
+  for(let i=0;i<7;i++){
+    const day=wkAddDays(start,i), iso=wkISO(day);
+    const tab=document.createElement("button"); tab.type="button"; tab.className="cm-block-tab";
+    tab.textContent=`${WK_DAYS[i]} ${day.getDate()}`;
+    tab.setAttribute("aria-selected", iso===wkSelectedDay?"true":"false");
+    tab.addEventListener("click",()=>{ wkSelectedDay=iso; buildWeekPlanner(); });
+    box.appendChild(tab);
+  }
+}
 const WK_MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function wkFmtMins(m){ m=Math.round(m); if(m<=0) return "0m"; if(m<60) return m+"m"; const h=Math.floor(m/60),mm=m%60; return mm?`${h}h ${mm}m`:`${h}h`; }
 function wkFmtRange(start){
@@ -5154,6 +5177,15 @@ function buildWeekPlanner(){
   const body=document.getElementById("wkBody"); if(!body) return;
   if(!wkStartISO) wkStartISO=wkISO(wkMonday(new Date()));
   const {rows,start}=wkCollect();
+
+  if(wkMode==="day"){
+    const weekISOs=[...Array(7)].map((_,i)=>wkISO(wkAddDays(start,i)));
+    if(!wkSelectedDay || !weekISOs.includes(wkSelectedDay)){
+      const todayISO=wkISO(new Date());
+      wkSelectedDay = weekISOs.includes(todayISO) ? todayISO : weekISOs[0];
+    }
+  }
+  wkDrawDayPicker(start);   // always called — it hides/clears itself when wkMode isn't "day"
 
   document.getElementById("wkRangeLabel").textContent=wkFmtRange(start);
   const openWeek=rows.filter(r=>r.inWeek && !r.t.done);
@@ -5334,22 +5366,28 @@ function wkRenderOdSidebar(overdueRows){
 }
 function wkRenderCalendar(rows,start){
   const gridH=(WK_T1-WK_T0)*WK_PXMIN, today=new Date();
-  let head=`<div class="wk-cal-grid wk-cal-headrow"><div class="wk-cal-corner"></div>`;
-  for(let i=0;i<7;i++){ const day=wkAddDays(start,i);
+  // Mobile: narrow the grid to just the selected day (see wkDrawDayPicker), expanded to fill the
+  // width via its own 1fr — same idea as Crop Map's single-block-picked layout.
+  const idxs = cmIsMobile()
+    ? [Math.max(0,[...Array(7)].findIndex((_,i)=>wkISO(wkAddDays(start,i))===wkSelectedDay))]
+    : [0,1,2,3,4,5,6];
+  const colsTemplate=`54px repeat(${idxs.length},minmax(104px,1fr))`;
+  let head=`<div class="wk-cal-grid wk-cal-headrow" style="grid-template-columns:${colsTemplate}"><div class="wk-cal-corner"></div>`;
+  for(const i of idxs){ const day=wkAddDays(start,i);
     head+=`<div class="wk-cal-dayhead${wkSameDay(day,today)?" wk-today":""}"><span class="wk-dh-day">${WK_DAYS[i]}</span> <span class="wk-dh-date">${day.getDate()}/${day.getMonth()+1}</span></div>`; }
   head+=`</div>`;
   let gutter=`<div class="wk-cal-gutter">`;
   for(let m=WK_T0;m<=WK_T1;m+=60) gutter+=`<div class="wk-hr" style="top:${(m-WK_T0)*WK_PXMIN}px">${wkClock(m)}</div>`;
   gutter+=`</div>`;
   let cols="";
-  for(let i=0;i<7;i++){
+  for(const i of idxs){
     const day=wkAddDays(start,i), dayISO=wkISO(day);
     let lines=""; for(let m=WK_T0;m<=WK_T1;m+=60) lines+=`<div class="wk-line" style="top:${(m-WK_T0)*WK_PXMIN}px"></div>`;
     const blocks=wkPackDay(rows.filter(r=>r.inWeek && wkSameDay(r.due,day))).map(g=>wkBlockHTML(g,dayISO)).join("");
     cols+=`<div class="wk-cal-col" data-day="${dayISO}">${lines}${blocks}</div>`;
   }
   return `<div class="wk-cal">${head}`
-    +`<div class="wk-cal-grid wk-cal-bodyrow" style="height:${gridH}px">${gutter}${cols}</div></div>`;
+    +`<div class="wk-cal-grid wk-cal-bodyrow" style="height:${gridH}px;grid-template-columns:${colsTemplate}">${gutter}${cols}</div></div>`;
 }
 // ---- By task type: one section per task type, its tasks for the week listed with day + crop/bed.
 function wkRenderByType(rows){
@@ -5426,11 +5464,18 @@ function wkClosePlantingPanel(){
   wkSelectedPlantingId=null;
   const panel=document.getElementById("wkPanel"); if(panel) panel.classList.remove("open");
 }
-function wkOpenPlanting(id){ const p=(data.plantings||[]).find(x=>x.id===id); if(p) wkOpenPlantingPanel(p); }
+// Mobile: straight to the full edit dialog (matches Timeline/Crops); desktop keeps the
+// read-only detail panel docked in #wkPanel.
+function wkOpenPlanting(id){
+  const p=(data.plantings||[]).find(x=>x.id===id); if(!p) return;
+  if(cmIsMobile()){ apOpenEdit(p); return; }
+  wkOpenPlantingPanel(p);
+}
 
 // ---- Calendar drag-and-drop: drag a block's header to another day/time. ----
 let wkDrag=null;
 function wkOnPointerDown(e){
+  if(cmIsMobile()) return;   // mobile: tapping opens the edit dialog directly instead of dragging
   if(e.button!=null && e.button!==0) return;                    // primary button / touch only
   const h=e.target.closest(".wk-block-h[data-drag]"); if(!h) return;
   // matches either a calendar block (grouped, same-day) or an overdue-sidebar item (single row,
@@ -5813,6 +5858,10 @@ function restoreUiState(){
     document.querySelectorAll("#wkModeToggle button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
   }
   if(saved.week && saved.week.odCollapsed) wkSetOdCollapsed(true);
+  // Fresh session (no week state saved yet) + mobile: default the overdue sidebar collapsed to
+  // give the single-day view more room, same reasoning as Crop Map's Unassigned panel. Any
+  // explicit prior choice (the branch above, once saveUiState has run at least once) always wins.
+  else if(!saved.week && cmIsMobile()) wkSetOdCollapsed(true);
 
   const tab=saved.tab||"map";
   if(tab!=="map"){
