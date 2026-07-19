@@ -269,10 +269,25 @@
   .placeholder p{max-width:30ch;font-size:.85rem;line-height:1.45;margin:0}
 
   /* ---- Settings / gate ---- */
+  /* The card is a full settings page (Airtable + Anthropic + TickTick + Google Calendar) and is
+     routinely taller than a phone screen. `align-items:center` overflows a too-tall flex child in
+     BOTH directions, putting the top of the card above the scroll origin where it can't be
+     reached; auto margins centre it when it fits and stay scrollable when it doesn't. */
   #gate{position:absolute;inset:0;z-index:50;background:var(--paper);
-    display:none;align-items:center;justify-content:center;padding:1.2rem}
+    display:none;justify-content:center;padding:1.2rem;overflow-y:auto;overscroll-behavior:contain}
+  #gate .card{margin:auto 0}
   .card{width:min(440px,100%);border:1px solid var(--line-2);border-radius:14px;
     background:var(--paper);box-shadow:var(--shadow);padding:1.3rem 1.3rem 1.1rem}
+  /* Only the Airtable token is needed to use the app — everything else folds away so the
+     Connect button stays above the fold on a phone. */
+  #gate details{border-top:1px solid var(--line-2);margin-top:.9rem}
+  /* min-height keeps a one-line summary an honest tap target on a phone */
+  #gate details>summary{cursor:pointer;list-style:none;padding:.5rem 0;min-height:44px;font-size:.82rem;
+    font-weight:600;color:var(--steel);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+  #gate details>summary::-webkit-details-marker{display:none}
+  #gate details>summary::before{content:"▸";font-size:.7rem;line-height:1}
+  #gate details[open]>summary::before{content:"▾"}
+  #gate details>summary em{font-style:normal;font-weight:400;color:var(--ink-2);font-size:.72rem}
   .card h1{font-size:1.1rem;margin:.1rem 0 .2rem;letter-spacing:-.01em}
   .card h1 b{color:var(--steel)}
   .card p{color:var(--ink-2);font-size:.84rem;line-height:1.5;margin:.2rem 0 1rem}
@@ -1329,23 +1344,31 @@
   <div id="gate">
     <div class="card">
       <h1>Roseberry <b>Planner</b></h1>
-      <p>Paste an Airtable Personal Access Token to connect. It's stored only in this browser (localStorage) and never leaves your device except to talk to Airtable.</p>
-      <label class="fld" for="patInput">Personal access token</label>
+      <p>Tokens are stored in this browser only.</p>
+      <label class="fld" for="patInput">Airtable personal access token</label>
       <input type="password" id="patInput" placeholder="pat…" autocomplete="off" spellcheck="false">
-      <label class="fld" for="akInput">Anthropic API key <span style="opacity:.6;font-weight:400">— optional</span></label>
+      <label class="fld" for="akInput">Anthropic API key <span style="opacity:.6;font-weight:400">— optional, for Seed book</span></label>
       <input type="password" id="akInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
-      <div class="hint" style="margin:-4px 0 10px">Only needed for the <b>Seed book</b> page, which reads a photo of the seeding book. Stored in this browser and sent only to Anthropic. Use a key with a low spend cap.</div>
       <button class="btn" id="connectBtn">Connect</button>
-      <button class="btn ghost" id="clearBtn" style="display:none">Disconnect &amp; forget token</button>
+      <button class="btn ghost" id="clearBtn" style="display:none">Disconnect &amp; forget tokens</button>
       <div class="status" id="gateStatus"></div>
-      <div class="hint">
-        Create one at <a href="https://airtable.com/create/tokens" target="_blank" rel="noopener">airtable.com/create/tokens</a> with scopes
-        <b>data.records:read</b>, <b>data.records:write</b>, <b>schema.bases:read</b>,
-        granted to <b>Fert &amp; Foliar</b> and <b>Roseberry Planner</b>.
-      </div>
 
-      <div class="tt-divider"></div>
-      <h2 class="tt-h2">TickTick <span class="tt-h2-sub">optional — check off tasks in the field, reflected back here</span></h2>
+      <details>
+        <summary>Where do these come from? <em>Airtable · Anthropic</em></summary>
+        <div class="hint">
+          <b>Airtable</b> — create a token at <a href="https://airtable.com/create/tokens" target="_blank" rel="noopener">airtable.com/create/tokens</a> with scopes
+          <b>data.records:read</b>, <b>data.records:write</b>, <b>schema.bases:read</b>,
+          granted to <b>Fert &amp; Foliar</b> and <b>Roseberry Planner</b>.
+        </div>
+        <div class="hint">
+          <b>Anthropic</b> — only needed for the <b>Seed book</b> page, which reads a photo of the seeding book.
+          Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>
+          and set a low monthly spend cap. Sent only to Anthropic. Leave blank to skip.
+        </div>
+      </details>
+
+      <details>
+        <summary>TickTick <em>optional — tick off tasks in the field</em></summary>
       <label class="fld" for="ttClientId">Client ID</label>
       <input type="text" id="ttClientId" placeholder="from developer.ticktick.com" autocomplete="off" spellcheck="false">
       <label class="fld" for="ttClientSecret">Client secret</label>
@@ -1365,9 +1388,10 @@
         with redirect URI <code>https://tjdscgit.github.io/ticktick-oauth-redirect/</code>, paste its Client ID/Secret above and save,
         then connect each person's own TickTick account below — this only needs doing once per person.
       </div>
+      </details>
 
-      <div class="tt-divider"></div>
-      <h2 class="tt-h2">Google Calendar <span class="tt-h2-sub">optional — push this week's schedule to one shared farm calendar</span></h2>
+      <details>
+        <summary>Google Calendar <em>optional — push this week to a shared calendar</em></summary>
       <label class="fld" for="gcalClientId">OAuth Client ID</label>
       <input type="text" id="gcalClientId" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false">
       <button class="btn ghost" id="gcalSaveCreds">Save Client ID</button>
@@ -1384,6 +1408,7 @@
         then connect — this only needs doing once. Events land on a dedicated "Roseberry Farm Tasks" calendar,
         not your primary one.
       </div>
+      </details>
     </div>
   </div>
 
