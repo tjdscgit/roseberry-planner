@@ -802,7 +802,20 @@
     /* This week: single-day view + day-tab picker (see wkRenderCalendar/wkDrawDayPicker) */
     .wk-day-picker{display:flex}
     .wk-day-picker .cm-block-tab{font-size:.82rem;padding:.65rem 1.05rem}
+    /* selected day needs to read at a glance in a scrollable strip — an underline is too easy to miss */
+    .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
     .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
+    .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
+    /* #view-week's toolbar has ~10 controls (nav, mode toggle, TickTick, add) — too many for one row on a
+       phone, and with no wrap they were rendering past the right edge, clipped by main{overflow:hidden}.
+       Worse: main still accepts *programmatic* scrolling despite overflow:hidden (no scrollbar, but the
+       day-picker's scrollIntoView call was dragging main itself sideways to find room), which is what
+       shifted the whole toolbar — and the calendar's hour gutter — off to the left when a day was tapped.
+       Wrapping the toolbar removes the overflow at the source, so there's nothing left to drag it. */
+    #view-week .cm-top{flex-wrap:wrap;row-gap:.5rem}
+    #view-week #wkModeToggle{flex:1 1 100%;margin-left:0}
+    #view-week #wkModeToggle button{flex:1 1 0}
+    #view-week .wk-tt-status{white-space:normal}
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
