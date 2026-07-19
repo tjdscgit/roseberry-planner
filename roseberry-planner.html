@@ -172,6 +172,7 @@
   tr.cr-variety-row{background:var(--band-a)}
   tr.cr-variety-row td:first-child{padding-left:2.2rem}
   .cr-variety-name{display:flex;align-items:center;gap:.6rem;color:var(--ink-2);font-size:.98rem}
+  .cr-type-inherited{color:var(--ink-2);font-size:.9rem}
   .cr-dot{width:.65rem;height:.65rem;border-radius:50%;flex:0 0 auto}
   tr.cr-add-row td{padding:.35rem .75rem .8rem 2.2rem;border-bottom:1px solid var(--line)}
   .cr-add-variety{border:none;background:none;cursor:pointer;color:var(--steel);
@@ -452,16 +453,24 @@
   .wk-odsb-ctx{font-size:.76rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wk-odsb-due{font-family:var(--mono);font-size:.68rem;color:var(--clay);font-weight:700}
   .wk-body{flex:1 1 auto;overflow:auto;padding:1rem 1.2rem;background:var(--paper);min-width:0}
-  #cmUnassigned{flex:0 0 210px;border-left:1px solid var(--line-2);overflow:auto;
-    padding:.6rem;background:var(--paper-2)}
-  .cm-un-h{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;
-    letter-spacing:.08em;color:var(--ink-2);margin:.1rem 0 .6rem;cursor:pointer;list-style:none;
-    display:flex;align-items:center;justify-content:space-between;gap:.4rem}
-  .cm-un-h::-webkit-details-marker{display:none}
-  .cm-un-h::after{content:"▸";transition:transform .15s}
-  #cmUnassigned[open] .cm-un-h::after{transform:rotate(90deg)}
-  .cm-block{min-width:0}
-  .cm-block-h{font-family:var(--mono);font-weight:700;font-size:1.05rem;margin:0 0 .35rem}
+  #cmUnassigned{flex:0 0 210px;display:flex;flex-direction:column;overflow:hidden;
+    border-left:1px solid var(--line-2);background:var(--paper-2);transition:flex-basis .15s ease}
+  #cmUnassigned.collapsed{flex:0 0 40px}
+  #cmUnassigned.collapsed .cm-un-title,#cmUnassigned.collapsed .cm-un-n,
+  #cmUnassigned.collapsed .cm-un-body{display:none}
+  #cmUnassigned.collapsed .cm-un-arrow{transform:rotate(180deg)}
+  .cm-un-head{display:flex;align-items:center;gap:.4rem;padding:.5rem .55rem;cursor:pointer;
+    border-bottom:1px solid var(--line-2);background:var(--paper)}
+  .cm-un-arrow{color:var(--ink-2);transition:transform .15s}
+  .cm-un-title{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--ink-2);white-space:nowrap}
+  .cm-un-n{font-family:var(--mono);font-size:.66rem;color:var(--clay);font-weight:700;margin-left:auto}
+  .cm-un-body{flex:1 1 auto;overflow-y:auto;padding:.55rem}
+  .cm-block{min-width:0;padding:.5rem;border-radius:10px;transition:background .15s}
+  .cm-block-h{font-family:var(--mono);font-weight:700;font-size:1.05rem;margin:0 0 .35rem;
+    padding:.15rem .4rem;border-radius:5px}
+  .cm-block-h-editable{cursor:pointer}
+  .cm-block-h-editable:hover{outline:1px dashed var(--line-2)}
   .cm-grid{display:flex;align-items:flex-start;gap:1px;width:max-content;position:relative}
   .cm-axis{flex:0 0 30px;padding-top:18px}
   .cm-mon{height:30px;font-family:var(--mono);font-size:.56rem;color:var(--ink-2)}
@@ -485,8 +494,8 @@
   .cm-bar{position:absolute;left:2px;right:2px;border-radius:3px;cursor:grab;color:#fff;
     padding:2px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18)}
   .cm-bar:active{cursor:grabbing}
-  .cm-bar-ext{position:absolute;left:2px;right:2px;box-sizing:border-box;border:2px solid;
-    border-radius:3px;background:transparent}
+  .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
+    box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-seg{position:absolute;left:0;right:0;z-index:1}
   .cm-bar-l{position:relative;z-index:2;font-family:var(--mono);font-size:.52rem;line-height:1;white-space:nowrap;
     writing-mode:vertical-rl;text-orientation:mixed}
@@ -556,8 +565,8 @@
   .tl-row{height:38px;position:relative;border-bottom:1px solid var(--line)}
   .tl-bar{position:absolute;top:6px;height:26px;border-radius:13px;cursor:pointer;
     overflow:hidden;box-shadow:0 1px 1px rgba(0,0,0,.18)}
-  .tl-bar-ext{position:absolute;top:6px;height:26px;box-sizing:border-box;border:2px solid;
-    border-radius:13px;background:transparent;cursor:pointer}
+  .tl-bar-ext{position:absolute;top:6px;height:26px;width:2px;border-radius:1px;
+    cursor:pointer;box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .tl-seg{position:absolute;top:0;height:100%}
   .tl-date{position:absolute;top:50%;font-family:var(--mono);
     font-size:.68rem;font-weight:600;color:#fff;white-space:nowrap;pointer-events:none;z-index:3;
@@ -626,6 +635,8 @@
   .tl-ctx-sep{border-top:1px solid var(--line);margin:.25rem 0}
   .tl-ctx button.tl-ctx-danger{color:var(--clay)}
   .tl-ctx button.tl-ctx-danger:hover{background:var(--clay);color:#fff}
+  .cm-type-chip{border-left:4px solid var(--line-2);padding-left:.5rem}
+  .cm-type-chip.on{font-weight:600;background:var(--paper-2)}
 
   /* ---- Buttons (compact primary / ghost) ---- */
   .btn-primary{border:none;border-radius:8px;background:var(--ok);color:#fff;
@@ -772,15 +783,61 @@
   .cr-chart-legend .sw{display:inline-block;width:.8rem;height:.8rem;border-radius:2px;
     margin-right:.35rem;vertical-align:-1px}
 
+  /* ---- Harvest planner (2-panel) ---- */
+  .hv-2col{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:1.2rem;padding:0 1rem 1.5rem}
+  .hv-left{display:flex;flex-direction:column;gap:.6rem;max-height:calc(100vh - 150px);overflow-y:auto}
+  .hv-card{text-align:left;appearance:none;cursor:pointer;background:var(--paper);border:1px solid var(--line-2);
+    border-radius:10px;padding:.7rem .85rem;font-family:var(--sans);color:var(--ink);transition:border-color .1s,background .1s}
+  .hv-card:hover{border-color:var(--steel)}
+  .hv-card[aria-selected="true"]{border-color:var(--steel);background:var(--paper-2);box-shadow:inset 3px 0 0 var(--steel)}
+  .hv-card .hv-crop{font-weight:600;font-size:1rem}
+  .hv-card .hv-meta{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.02em;color:var(--ink-2);margin-top:.15rem}
+  .hv-card .hv-nums{display:flex;gap:1rem;margin-top:.45rem;font-size:.85rem}
+  .hv-card .hv-nums b{font-size:1.05rem}
+  .hv-prog{height:5px;border-radius:3px;background:var(--line);margin-top:.5rem;overflow:hidden}
+  .hv-prog>span{display:block;height:100%;background:var(--steel)}
+  .hv-empty{color:var(--ink-2);font-size:.9rem;padding:1rem;border:1px dashed var(--line-2);border-radius:10px;text-align:center}
+  .hv-right{min-width:0}
+  .hv-right-head{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.8rem}
+  .hv-week-label{font-family:var(--mono);min-width:16ch;text-align:center;font-size:.9rem}
+  .hv-daychip{appearance:none;border:1px solid var(--line-2);background:var(--paper);cursor:pointer;
+    border-radius:999px;padding:.25rem .6rem;font-family:var(--mono);font-size:.68rem;text-transform:uppercase;color:var(--ink-2)}
+  .hv-daychip[aria-pressed="true"]{background:var(--steel);color:#fff;border-color:var(--steel)}
+  .hv-out-table{width:100%;border-collapse:collapse;font-size:1rem;max-width:640px}
+  .hv-out-table th{text-align:left;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;
+    color:var(--ink-2);font-weight:600;padding:.4rem .6rem;border-bottom:1px solid var(--line-2)}
+  .hv-out-table td{padding:.4rem .6rem;border-bottom:1px solid var(--line);vertical-align:middle}
+  .hv-out-table input{width:100%;padding:.45rem .55rem;font-family:var(--sans);font-size:.95rem;
+    border:1px solid var(--line-2);border-radius:7px;background:var(--paper);color:var(--ink)}
+  .hv-out-table input:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel)}
+  .hv-out-table .hv-numcol{width:7.5rem}
+  .hv-out-table tfoot td{font-family:var(--mono);font-size:.85rem;border-top:2px solid var(--line-2);border-bottom:none;padding-top:.6rem}
+  .hv-over{color:var(--danger,#c0392b);font-weight:600}
+  .hv-avail-tile{display:inline-flex;flex-direction:column;gap:.1rem;background:var(--paper-2);border:1px solid var(--line-2);
+    border-radius:10px;padding:.5rem .9rem;margin-bottom:.9rem}
+  .hv-avail-tile b{font-size:1.3rem}
+  .hv-avail-tile span{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-2)}
+  /* ---- Season roll-up ---- */
+  .season-tiles{display:flex;gap:.8rem;flex-wrap:wrap;padding:0 1rem 1rem}
+  .season-tile{background:var(--paper-2);border:1px solid var(--line-2);border-radius:12px;padding:.8rem 1.1rem;min-width:140px}
+  .season-tile b{display:block;font-size:1.6rem}
+  .season-tile span{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-2)}
+  .season-sect{padding:0 1rem 1.5rem}
+  .season-sect .ap-sect{margin:.4rem 0 .6rem}
+
   /* ---- Mobile overrides (placed last so equal-specificity rules above lose the cascade) ---- */
   @media(max-width:760px){
+    .hv-2col{grid-template-columns:1fr}
+    .hv-left{max-height:none}
     .cm-main{flex-direction:column}
     /* Small floating pill (bottom-left, clear of the ☰ FAB at bottom-right) instead of a
        full-width bar — collapsed it's just "Unassigned · N ▸"; expanded it grows into a
        capped-height scrollable list, all without taking any space from the crop map itself. */
     #cmUnassigned{position:fixed;left:1rem;bottom:1rem;z-index:43;flex:none;width:auto;
-      max-width:70vw;max-height:50vh;overflow:auto;border:1px solid var(--line-2);
-      border-radius:10px;box-shadow:var(--shadow);padding:.4rem .6rem;background:var(--paper-2)}
+      max-width:70vw;border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);
+      background:var(--paper-2)}
+    #cmUnassigned .cm-un-body{max-height:50vh}
+    #cmUnassigned.collapsed{flex:none}
     .tl-panel{width:min(340px,86vw);flex-basis:min(340px,86vw)}
     nav[role=tablist]{display:none}
     header{display:none}
@@ -807,11 +864,8 @@
     .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
     /* #view-week's toolbar has ~10 controls (nav, mode toggle, TickTick, add) — too many for one row on a
-       phone, and with no wrap they were rendering past the right edge, clipped by main{overflow:hidden}.
-       Worse: main still accepts *programmatic* scrolling despite overflow:hidden (no scrollbar, but the
-       day-picker's scrollIntoView call was dragging main itself sideways to find room), which is what
-       shifted the whole toolbar — and the calendar's hour gutter — off to the left when a day was tapped.
-       Wrapping the toolbar removes the overflow at the source, so there's nothing left to drag it. */
+       phone, and with no wrap they were rendering past the right edge, clipped by main{overflow:hidden}
+       and unreachable. Wrapping + giving the mode toggle its own full-width row keeps everything on-screen. */
     #view-week .cm-top{flex-wrap:wrap;row-gap:.5rem}
     #view-week #wkModeToggle{flex:1 1 100%;margin-left:0}
     #view-week #wkModeToggle button{flex:1 1 0}
@@ -820,6 +874,25 @@
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
   }
+  /* Seed book — one card per transcribed line of the paper book */
+  .sb-card{border:1px solid var(--line);border-radius:10px;padding:.7rem .8rem;margin-bottom:.7rem;max-width:820px}
+  .sb-raw{font-family:var(--mono);font-size:.82rem;margin-bottom:.55rem}
+  .sb-fields{display:flex;flex-wrap:wrap;gap:.5rem .7rem}
+  .sb-fields label,.sb-match label{display:flex;flex-direction:column;gap:.15rem;font-size:.72rem}
+  .sb-fields label span,.sb-match label span{text-transform:uppercase;letter-spacing:.06em;opacity:.65}
+  .sb-fields input{width:9rem}
+  .sb-fields input[type=number]{width:5rem}
+  .sb-match{margin-top:.6rem;display:flex;flex-wrap:wrap;gap:.5rem .8rem;align-items:flex-end}
+  /* the option labels are long (crop · variety · bed · plan date · how it matched), so give the
+     select the full card width; min-width:0 stops the flex item refusing to shrink below its
+     content and overflowing into main{overflow:hidden}, where it would just be clipped */
+  .sb-match label{flex:1 1 100%;min-width:0}
+  .sb-match select{width:100%;max-width:100%}
+  .sb-shift{display:flex;flex-direction:row;align-items:center;gap:.35rem;font-size:.75rem;flex:1 1 100%}
+  .sb-pill{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;
+           border:1px solid var(--line);border-radius:999px;padding:.05rem .45rem;margin-left:.4rem}
+  .sb-pill.warn{color:var(--clay);border-color:var(--clay)}
+  @media(max-width:760px){ .sb-fields input{width:100%} .sb-fields label{flex:1 1 100%} }
 </style>
 </head>
 <body>
@@ -838,11 +911,18 @@
     <button class="tab" role="tab" aria-selected="false" data-view="cropmap">Crop map</button>
     <button class="tab" role="tab" aria-selected="false" data-view="timeline">Timeline</button>
     <button class="tab" role="tab" aria-selected="false" data-view="crops">Crops</button>
+    <button class="tab" role="tab" aria-selected="false" id="harvestTab" aria-haspopup="true">Harvest ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="miscTab" aria-haspopup="true">Misc ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="spray">Spray log</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
   </nav>
+  <div class="tab-dd" id="harvestDropdown" hidden>
+    <button type="button" data-view="harvest">Harvest planner</button>
+    <button type="button" data-view="outlets">Sales outlets</button>
+    <button type="button" data-view="season">Season</button>
+  </div>
   <div class="tab-dd" id="miscDropdown" hidden>
+    <button type="button" data-view="seedbook">Seed book</button>
     <button type="button" data-view="misc">Tray types</button>
     <button type="button" data-view="tasklib">Task library</button>
     <button type="button" data-view="croptasks">Crop tasks</button>
@@ -871,7 +951,12 @@
     <button class="nav-drawer-item" data-view="crops">Crops</button>
     <button class="nav-drawer-item" data-view="spray">Spray log</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
+    <div class="nav-drawer-sep">Harvest</div>
+    <button class="nav-drawer-item" data-view="harvest">Harvest planner</button>
+    <button class="nav-drawer-item" data-view="outlets">Sales outlets</button>
+    <button class="nav-drawer-item" data-view="season">Season</button>
     <div class="nav-drawer-sep">More</div>
+    <button class="nav-drawer-item" data-view="seedbook">Seed book</button>
     <button class="nav-drawer-item" data-view="misc">Tray types</button>
     <button class="nav-drawer-item" data-view="tasklib">Task library</button>
     <button class="nav-drawer-item" data-view="croptasks">Crop tasks</button>
@@ -913,6 +998,10 @@
           <button data-cmview="list" aria-pressed="true">List</button>
           <button data-cmview="map" aria-pressed="false">Map</button>
         </div>
+        <div class="seg" id="cmColorToggle" role="tablist" style="margin-left:.4rem" title="Colour plantings by individual crop, or by crop type">
+          <button data-cmcolor="crop" aria-pressed="true">By crop</button>
+          <button data-cmcolor="type" aria-pressed="false">By type</button>
+        </div>
         <button class="icon-btn" id="cmLockBtn" title="Click to lock — pan freely without moving plantings"
           aria-pressed="false" style="margin-left:.4rem">🔓 Unlocked</button>
         <span class="sub" id="cmDragHint" style="margin-left:.5rem">drag to assign or move · Map pans/zooms the whole farm</span>
@@ -927,12 +1016,20 @@
             <button class="icon-btn" id="cmZfit" title="Fit">⤢</button>
           </div>
         </div>
-        <details id="cmUnassigned">
-          <summary class="cm-un-h">Unassigned · <span id="cmUnCount">0</span></summary>
-          <div id="cmUnList"></div>
-        </details>
+        <aside id="cmUnassigned">
+          <div class="cm-un-head" id="cmUnToggle" title="Collapse/expand unassigned">
+            <span class="cm-un-arrow">◂</span>
+            <span class="cm-un-title">Unassigned</span>
+            <span class="cm-un-n" id="cmUnCount">0</span>
+          </div>
+          <div class="cm-un-body" id="cmUnList"></div>
+        </aside>
         <aside class="tl-panel" id="cmPanel"></aside>
       </div>
+      <div class="tl-ctx" id="cmCtxMenu">
+        <button data-act="unassign">Unassign from bed</button>
+      </div>
+      <div class="tl-ctx" id="cmTypePopover"></div>
     </section>
 
     <!-- TIMELINE -->
@@ -985,6 +1082,7 @@
           <thead>
             <tr class="cr-thead-group">
               <th></th>
+              <th></th>
               <th colspan="6">Timing</th>
               <th colspan="4" class="cr-divider">Row Spacing</th>
               <th colspan="4" class="cr-divider">Harvest</th>
@@ -992,6 +1090,7 @@
             </tr>
             <tr>
               <th>Crop</th>
+              <th>Type</th>
               <th>Method</th>
               <th>Days&nbsp;in&nbsp;nursery</th>
               <th>Days&nbsp;to&nbsp;maturity</th>
@@ -1020,6 +1119,40 @@
     </section>
 
     <!-- MISC -->
+    <!-- SEED BOOK — photograph a page of the paper seeding book, read it, reconcile against plantings -->
+    <section class="view" id="view-seedbook">
+      <div class="cm-top">
+        <span class="sub">Seed book · photograph a page and match it to your plantings</span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="sbResetBtn" style="display:none">Start over</button>
+      </div>
+      <div class="cr-wrap">
+        <!-- swapped by buildSeedbook(): no-key notice / capture / reading / review -->
+        <div id="sbNoKey" style="display:none"></div>
+        <div id="sbCapture" style="display:none">
+          <div class="ap-sect" style="margin-top:0">Photograph a page</div>
+          <p class="sub" style="max-width:52ch">Take a straight-on photo of one page. Good light and a flat page read far better than a close crop.</p>
+          <!-- capture="environment" opens the rear camera directly on a phone -->
+          <input type="file" id="sbFile" accept="image/*" capture="environment" style="display:none">
+          <button class="btn" id="sbShoot">📷 Take photo / choose image</button>
+        </div>
+        <div id="sbBusy" style="display:none">
+          <div class="ap-sect" style="margin-top:0">Reading the page…</div>
+          <p class="sub" id="sbBusyMsg">Sending the photo to Claude.</p>
+        </div>
+        <div id="sbError" class="status err" style="display:none"></div>
+        <div id="sbReview" style="display:none">
+          <div class="ap-sect" style="margin-top:0">Check before saving</div>
+          <p class="sub" id="sbReviewSummary"></p>
+          <div id="sbCards"></div>
+          <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn" id="sbApply">Apply confirmed entries</button>
+            <span class="sub" id="sbApplyNote"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="view" id="view-misc">
       <div class="cm-top">
         <span class="sub">Farm-wide reference data · saves automatically</span>
@@ -1117,6 +1250,8 @@
         <span class="spacer"></span>
         <span class="wk-tt-status" id="wkTtStatus"></span>
         <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button>
+        <span class="wk-tt-status" id="wkGcalStatus"></span>
+        <button class="icon-btn" id="wkGcalSyncBtn" title="Push this week's schedule to Google Calendar">📅 Google Calendar</button>
         <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
       </div>
       <div class="wk-day-picker" id="wkDayPicker"></div>
@@ -1133,6 +1268,49 @@
         <aside class="tl-panel" id="wkPanel"></aside>
       </div>
       <div class="tl-ctx" id="wkCtxMenu"></div>
+    </section>
+
+    <!-- HARVEST PLANNER (2-panel: available-to-pick list + per-outlet planned/actual entry) -->
+    <section class="view" id="view-harvest">
+      <div class="cm-top">
+        <span class="sub" id="hvSummary">Harvest planner</span>
+      </div>
+      <div class="hv-2col">
+        <aside class="hv-left" id="hvLeft"></aside>
+        <div class="hv-right" id="hvRight"></div>
+      </div>
+    </section>
+
+    <!-- SALES OUTLETS (CRUD) -->
+    <section class="view" id="view-outlets">
+      <div class="cm-top">
+        <span class="sub">Sales outlets · where produce is sold · saves automatically</span>
+      </div>
+      <div class="cr-wrap">
+        <table class="cr-table" style="max-width:760px">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Active</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="soBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- SEASON (harvest + earnings roll-up) -->
+    <section class="view" id="view-season">
+      <div class="cm-top">
+        <button class="icon-btn" id="seasonPrev" title="Previous year">◀</button>
+        <span class="cm-year" id="seasonYearLabel">—</span>
+        <button class="icon-btn" id="seasonNext" title="Next year">▶</button>
+        <span class="sub" style="margin-left:.6rem">Season harvest &amp; earnings</span>
+      </div>
+      <div id="seasonBody"></div>
     </section>
   </main>
 
@@ -1154,6 +1332,9 @@
       <p>Paste an Airtable Personal Access Token to connect. It's stored only in this browser (localStorage) and never leaves your device except to talk to Airtable.</p>
       <label class="fld" for="patInput">Personal access token</label>
       <input type="password" id="patInput" placeholder="pat…" autocomplete="off" spellcheck="false">
+      <label class="fld" for="akInput">Anthropic API key <span style="opacity:.6;font-weight:400">— optional</span></label>
+      <input type="password" id="akInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <div class="hint" style="margin:-4px 0 10px">Only needed for the <b>Seed book</b> page, which reads a photo of the seeding book. Stored in this browser and sent only to Anthropic. Use a key with a low spend cap.</div>
       <button class="btn" id="connectBtn">Connect</button>
       <button class="btn ghost" id="clearBtn" style="display:none">Disconnect &amp; forget token</button>
       <div class="status" id="gateStatus"></div>
@@ -1183,6 +1364,25 @@
         Register a free app at <a href="https://developer.ticktick.com/" target="_blank" rel="noopener">developer.ticktick.com</a>
         with redirect URI <code>https://tjdscgit.github.io/ticktick-oauth-redirect/</code>, paste its Client ID/Secret above and save,
         then connect each person's own TickTick account below — this only needs doing once per person.
+      </div>
+
+      <div class="tt-divider"></div>
+      <h2 class="tt-h2">Google Calendar <span class="tt-h2-sub">optional — push this week's schedule to one shared farm calendar</span></h2>
+      <label class="fld" for="gcalClientId">OAuth Client ID</label>
+      <input type="text" id="gcalClientId" placeholder="…apps.googleusercontent.com" autocomplete="off" spellcheck="false">
+      <button class="btn ghost" id="gcalSaveCreds">Save Client ID</button>
+      <div class="status" id="gcalCredStatus"></div>
+
+      <div id="gcalAccountWrap" style="margin-top:.6rem"></div>
+      <button class="btn ghost" id="gcalConnectBtn">Connect Google Calendar</button>
+      <div class="status" id="gcalConnectStatus"></div>
+      <div class="hint">
+        In <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a>, enable the
+        <b>Google Calendar API</b>, configure the OAuth consent screen (External, scope <code>.../auth/calendar</code>,
+        add the farm's Google account as a test user), then create an OAuth <b>Web application</b> Client ID with
+        Authorized JavaScript origin <code>https://tjdscgit.github.io</code>. Paste the Client ID above and save,
+        then connect — this only needs doing once. Events land on a dedicated "Roseberry Farm Tasks" calendar,
+        not your primary one.
       </div>
     </div>
   </div>
@@ -1391,6 +1591,7 @@
   </div>
 </div>
 
+<script src="planner-shared.js"></script>
 <script>
 "use strict";
 
@@ -1409,98 +1610,21 @@ function setTheme(t){
 setTheme(theme);
 
 /* ---------- Config: your real bases, tables, fields ---------- */
-const CFG = {
-  farmBase: "appkAem0klgcen8X2",
-  planBase: "applc11x0y6F4CTdx",
-  tables: {
-    blocks:    "tblhf95DwXV9TkUw0",
-    beds:      "tbl6hWfUDGKx3i7Tx",   // "Location"
-    plantings: "tblCKqtYSJ79Ugs7j",
-    crops:     "tblNrC1WTS6Z4cIeZ",
-    varieties: "tblVJfY6CMoGA3TOf",   // "Crop Varieties" — variety-level overrides of the Crop defaults
-    trayTypes: "tblBtWkrGPsw1N4Hc",   // "Tray Types" — farm-wide tray name -> cell count list (Misc tab)
-    tasks:     "tbliAKSvDB8ToYDTC",   // "Tasks" — master library of cultural tasks + default schedule
-    cropTasks: "tblFH4TyHWlwBKtUY",   // "Crop Tasks" — assigns a task to a crop/variety, overriding the default
-    plantingTasks: "tblah0KRCPdFK3BPv", // "Planting Tasks" — dated task instances for one planting (Add-planting dialog's Tasks tab)
-  },
-  f: { // field names (readable; rename in Airtable => update here)
-    blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation",
-    bed_name:"Bed", bed_block:"Block", bed_len:"Length m", bed_wid:"Width m", bed_order:"Order in block",
-    tt_name:"Name", tt_cells:"Cell count",
-    // master Tasks library (the reusable "what" + a default "when")
-    tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
-    tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
-    tk_duration:"Minutes per 15m bed",
-    // Crop Tasks — a task assigned to a crop (and optionally a variety); blank timing fields inherit the task default
-    ct_label:"Label", ct_task:"Task", ct_crop:"Crop", ct_variety:"Variety",
-    ct_anchor:"Anchor", ct_offset:"Offset days", ct_repeat:"Repeat every (days)", ct_until:"Repeat until",
-    ct_duration:"Minutes per 15m bed",
-    // Planting Tasks — a planting's own editable task schedule (anchor/offset/repeat/duration are
-    // literal per-planting fields, same treatment as Bed metres; Due date is auto-derived for
-    // future "This week" use, not directly edited)
-    pt_label:"Label", pt_planting:"Planting", pt_task:"Task", pt_anchor:"Anchor", pt_offset:"Offset days",
-    pt_due:"Due date", pt_done:"Done", pt_start:"Start minute",
-    pt_repeat:"Repeat every (days)", pt_until:"Repeat until", pt_duration:"Minutes per 15m bed",
-    pt_assignee:"Assignee", pt_ttid:"TickTick Task ID",
-    pl_crop:"Crop", pl_bed:"Bed", pl_var:"Variety", pl_status:"Status", pl_bm:"Bed metres", pl_notes:"Notes",
-    pl_sow:"Sow date", pl_tp:"Transplant date", pl_h1:"First harvest", pl_h2:"Last harvest",
-    pl_sowTtId:"Sow TickTick Task ID", pl_tpTtId:"Transplant TickTick Task ID",
-    pl_group:"Succession group",
-    pl_sowStart:"Sow start minute", pl_tpStart:"Transplant start minute",
-    pl_sowAssignee:"Sow assignee", pl_tpAssignee:"Transplant assignee",
-    pl_h1Assignee:"First harvest assignee", pl_h2Assignee:"Last harvest assignee",
-    // row-spacing + harvest values actually saved on a planting — auto-filled from the crop/variety
-    // defaults below, then editable per planting (same pattern as Bed metres)
-    pl_rows:"Number of rows", pl_rowSpacing:"Spacing between rows cm", pl_plantSpacing:"In-row spacing cm",
-    pl_seeder:"Seeder type", pl_harvestUnit:"Harvest unit", pl_plantsPerUnit:"Plants per unit",
-    pl_price:"Price", pl_yield:"Yield per bed metre",
-    // nursery values, same treatment (literal per-planting fields, auto-filled then editable)
-    pl_trayType:"Tray type", pl_seedsPerCell:"Seeds per cell", pl_daysToGerminate:"Days to germinate",
-    pl_germTemp:"Optimal germ temp (°C)", pl_pottingUp:"Requires potting up",
-    // per-crop defaults, on the Crop table — prefill the Add-planting dialog
-    cr_method:"Method", cr_nursery:"Days in nursery", cr_dtm:"Days to maturity",
-    cr_window:"Harvest window days", cr_gap:"Succession interval days",
-    cr_rows:"Rows per bed", cr_rowSpacing:"Spacing between rows cm", cr_plantSpacing:"In-row spacing cm",
-    cr_seeder:"Seeder type", cr_harvestUnit:"Harvest unit", cr_plantsPerUnit:"Plants per unit",
-    cr_price:"Price", cr_yield:"Yield per bed metre",
-    cr_trayType:"Tray type", cr_seedsPerCell:"Seeds per cell", cr_daysToGerminate:"Days to germinate",
-    cr_germTemp:"Optimal germ temp (°C)", cr_pottingUp:"Requires potting up",
-    // per-variety overrides, on the Crop Varieties table — same shape as the crop defaults above,
-    // each blank field inherits the parent crop's value
-    va_name:"Variety", va_crop:"Crop", va_method:"Method", va_nursery:"Days in nursery",
-    va_dtm:"Days to maturity", va_window:"Harvest window days", va_gap:"Succession interval days",
-    va_rows:"Rows per bed", va_rowSpacing:"Spacing between rows cm", va_plantSpacing:"In-row spacing cm",
-    va_seeder:"Seeder type", va_harvestUnit:"Harvest unit", va_plantsPerUnit:"Plants per unit",
-    va_price:"Price", va_yield:"Yield per bed metre",
-    va_trayType:"Tray type", va_seedsPerCell:"Seeds per cell", va_daysToGerminate:"Days to germinate",
-    va_germTemp:"Optimal germ temp (°C)", va_pottingUp:"Requires potting up",
-  }
-};
-// fields shared identically by Crop, Crop Varieties and Plantings — the "timing"/"row spacing"/
-// "harvest"/"nursery" default keys used throughout (cropDefs, variety overrides, and merge logic all key on these)
-const DEFAULT_KEYS = ["method","nursery","dtm","window","gap","rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
-const SELECT_DEFAULT_KEYS = new Set(["method","seeder","harvestUnit","trayType","pottingUp"]);   // text-valued fields; the rest are numbers
-// Reads DEFAULT_KEYS (or a subset) off a record's fields for a given table prefix ("cr"/"va"/"pl"),
-// e.g. readDefaultFields(cropFields,"cr") reads CFG.f.cr_method, CFG.f.cr_nursery, etc.
-function readDefaultFields(fields, prefix, keys){
-  const out={};
-  (keys||DEFAULT_KEYS).forEach(k=>{
-    const fieldName = CFG.f[prefix+"_"+k];
-    const raw = fields[fieldName];
-    out[k] = SELECT_DEFAULT_KEYS.has(k) ? (raw||"") : num(raw);
-  });
-  return out;
-}
-// Plantings only store the row-spacing/harvest/nursery keys as literal fields (the timing keys —
-// method/nursery/dtm/window/gap — are back-computed from the planting's actual dates instead).
-const PLANTING_DEFAULT_KEYS = ["rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
+// CFG + the default-fields helpers now live in planner-shared.js (loaded above), so the same
+// business rules can't drift between this app and anything else reading the same base (e.g. an
+// MCP server). See that file for the full field-map comments.
+const { CFG, DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields } = PlannerShared;
 const DEFAULT_WID = 0.9, DEFAULT_LEN = 20; // metres, used when a bed has no size yet
 const OCCUPIED = new Set(["In ground","Harvesting"]);
 
 /* ---------- State ---------- */
 const LS_KEY = "roseberry_pat";
 const UI_KEY = "roseberry_ui";
+// Optional second credential, used only by the Seed book page to read a photo of the paper
+// seeding book. Same storage model as the Airtable PAT: this browser only, never proxied.
+const AK_KEY = "roseberry_anthropic_key";
 let PAT = localStorage.getItem(LS_KEY) || "";
+let AKEY = localStorage.getItem(AK_KEY) || "";
 let data = { blocks:[], beds:[], plantings:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
@@ -1526,25 +1650,9 @@ async function atFetch(base, table, opts={}){
   return records;
 }
 
-// Shared by loadAll() and refreshPlantingTasks() so both parse Planting Tasks identically.
-function parsePlantingTaskRecord(r){
-  const F=CFG.f;
-  return {
-    id:r.id,
-    plantingId:(r.fields[F.pt_planting]||[])[0] || null,
-    taskId:(r.fields[F.pt_task]||[])[0] || null,
-    anchor:r.fields[F.pt_anchor] || "",
-    offset:num(r.fields[F.pt_offset]),
-    due:r.fields[F.pt_due] || "",
-    done:!!r.fields[F.pt_done],
-    start: r.fields[F.pt_start]==null ? null : Number(r.fields[F.pt_start]),  // min from midnight; null = auto
-    repeat:num(r.fields[F.pt_repeat]),
-    until:r.fields[F.pt_until] || "",   // an anchor name (Sow/Transplant/…), not a resolved date
-    duration:num(r.fields[F.pt_duration]),
-    assignee:r.fields[F.pt_assignee] || "",
-    ttId:r.fields[F.pt_ttid] || "",
-  };
-}
+// Shared by loadAll() and refreshPlantingTasks() so both parse Planting Tasks identically —
+// and, via planner-shared.js, identically to anything else (e.g. an MCP server) reading this table.
+const parsePlantingTaskRecord = PlannerShared.parsePlantingTaskRecord;
 // Re-fetches just the Planting Tasks table (used after generating/editing tasks from inside the
 // Add-planting dialog, where a full loadAll() would be overkill and would reset the open dialog).
 async function refreshPlantingTasks(){
@@ -1555,7 +1663,7 @@ async function refreshPlantingTasks(){
 async function loadAll(){
   showLoading(true);
   try{
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -1565,12 +1673,15 @@ async function loadAll(){
       atFetch(CFG.farmBase, CFG.tables.tasks),
       atFetch(CFG.farmBase, CFG.tables.cropTasks),
       atFetch(CFG.farmBase, CFG.tables.plantingTasks),
+      atFetch(CFG.farmBase, CFG.tables.salesOutlets),
+      atFetch(CFG.farmBase, CFG.tables.harvestRecords),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
     crops.forEach(c => {
       data.crops[c.id] = (c.fields["Crop"] ?? "Crop");
       data.cropDefs[c.id] = readDefaultFields(c.fields, "cr");
+      data.cropDefs[c.id].type = c.fields[F.cr_type] || "";
     });
     data.varietiesByCrop = {}; data.varietiesById = {};
     varieties.forEach(v => {
@@ -1618,6 +1729,7 @@ async function loadAll(){
       id:b.id, name:b.fields[F.blk_name] ?? "?",
       x:num(b.fields[F.blk_x]), y:num(b.fields[F.blk_y]),
       orient:b.fields[F.blk_orient] || "Beds run vertical",
+      preferredCropTypes:(b.fields[F.blk_prefTypes]||[]).slice(),
     }));
 
     data.beds = beds.map(b => ({
@@ -1640,10 +1752,30 @@ async function loadAll(){
       sowAssignee:p.fields[F.pl_sowAssignee]||"", tpAssignee:p.fields[F.pl_tpAssignee]||"",
       h1Assignee:p.fields[F.pl_h1Assignee]||"", h2Assignee:p.fields[F.pl_h2Assignee]||"",
       sowTtId:p.fields[F.pl_sowTtId]||"", tpTtId:p.fields[F.pl_tpTtId]||"",
+      sowGcalId:p.fields[F.pl_sowGcalId]||"", tpGcalId:p.fields[F.pl_tpGcalId]||"",
       group:p.fields[F.pl_group]||"", bm:num(p.fields[F.pl_bm]),
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
+      seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
+      sowActual:p.fields[F.pl_sowActual]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
+
+    // where produce is sold (Harvest → Sales outlets); active-first, then manual Order, then name
+    data.salesOutlets = salesOutlets.map(o => ({
+      id:o.id, name:o.fields[F.so_name] || "", type:o.fields[F.so_type] || "",
+      active: o.fields[F.so_active] === true, notes:o.fields[F.so_notes] || "", order:num(o.fields[F.so_order]),
+    })).sort((a,b)=> (b.active-a.active) || ((a.order??1e9)-(b.order??1e9)) || a.name.localeCompare(b.name));
+
+    // planned/actual harvest per planting × outlet × week (Harvest planner)
+    data.harvestRecords = harvestRecords.map(h => ({
+      id:h.id,
+      plantingId:(h.fields[F.hr_planting]||[])[0] || null,
+      outletId:(h.fields[F.hr_outlet]||[])[0] || null,
+      week:h.fields[F.hr_week] || "",
+      planned:num(h.fields[F.hr_planned]), actual:num(h.fields[F.hr_actual]),
+      priceOverride:num(h.fields[F.hr_priceOverride]),
+    }));
+
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
     setStat(`${data.beds.length} beds · ${data.blocks.length} blocks · ${pl.length} plantings`);
@@ -1655,7 +1787,7 @@ async function loadAll(){
     gate(true, "err", "Couldn't load: "+e.message);
   }finally{ showLoading(false); }
 }
-const num = v => (v===undefined||v===null||v==="")?null:(+v);
+const num = PlannerShared.num;
 
 /* ---------- Layout: blocks -> beds in metres ---------- */
 function layoutAndDraw(){
@@ -1833,15 +1965,26 @@ function tint(hex){ // lighter version for planned/finished beds
   const mix=(c)=>Math.round(c+(237-c)*m);
   return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
 }
+function hexToRgba(hex,alpha){ // translucent version, for washes laid *behind* other content
+  const n=parseInt(hex.slice(1),16);
+  return `rgba(${n>>16},${(n>>8)&255},${n&255},${alpha})`;
+}
 
 /* ---------- Status colours (timeline status pill) ---------- */
 const STATUS_COLORS={planned:"#9AA39B",seeded:"#2F6FB0","in ground":"#3F7D46",harvesting:"#7A4FA0",finished:"#C97A2B"};
 function statusColor(status){
   return STATUS_COLORS[String(status||"").trim().toLowerCase()] || "#9AA39B";
 }
-// canonical lifecycle order, used to map a status to how many tasks are done
-const STATUS_ORDER=["Planned","Seeded","In ground","Harvesting","Finished"];
-function statusRank(s){ const i=STATUS_ORDER.indexOf(s); return i<0?0:i; }
+// canonical lifecycle order, used to map a status to how many tasks are done (shared, see planner-shared.js)
+const { STATUS_ORDER, statusRank } = PlannerShared;
+
+/* ---------- Crop-type colours (fixed lookup, for the Crop Map's colour-by-type mode + block underlay) ---------- */
+const CROP_TYPES = ["Roots","Greens","Brassica","Allium","Legume","Solanaceous","Cucurbit","Herb","Other"];
+const CROP_TYPE_COLORS = {
+  Roots:"#9C6D3E", Greens:"#4C7A34", Brassica:"#3F7D46", Allium:"#7A6BA8",
+  Legume:"#8F9C3C", Solanaceous:"#A44A3F", Cucurbit:"#C29B0C", Herb:"#5B8A72", Other:"#9AA39B",
+};
+function cropTypeColor(type){ return CROP_TYPE_COLORS[type] || CROP_TYPE_COLORS.Other; }
 
 /* ---------- Chips / filter ---------- */
 function drawChips(keys){
@@ -1974,38 +2117,51 @@ function showView(view){
   if(view==="cropmap") buildCropMap();
   if(view==="timeline") buildTimeline();
   if(view==="crops") buildCropsTab();
+  if(view==="seedbook") buildSeedbook();
   if(view==="misc") buildMiscTab();
   if(view==="tasklib") buildTaskLibrary();
   if(view==="croptasks") buildCropTasks();
   if(view==="week") buildWeekPlanner();
+  if(view==="harvest") buildHarvestPlanner();
+  if(view==="outlets") buildOutlets();
+  if(view==="season") buildSeason();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
   t.setAttribute("aria-selected","true");
   showView(t.dataset.view);
 });
-// Misc is a dropdown to its sub-pages (Tray types / Task library / Crop tasks).
-(function(){
-  const miscTab=document.getElementById("miscTab"), dd=document.getElementById("miscDropdown");
-  if(!miscTab||!dd) return;
-  const place=()=>{ const r=miscTab.getBoundingClientRect(); dd.style.top=r.bottom+"px"; dd.style.left=r.left+"px"; };
-  miscTab.onclick=(e)=>{ e.stopPropagation(); if(dd.hidden){ place(); dd.hidden=false; } else dd.hidden=true; };
-  document.addEventListener("click",()=>{ dd.hidden=true; });
+// Harvest and Misc are dropdown tabs to their sub-pages. Same behaviour for each:
+// clicking the tab toggles its menu; picking an item shows that view and parks the
+// chosen sub-view on the tab's dataset so saveUiState can remember it.
+function wireDropdownTab(tabId, ddId){
+  const tab=document.getElementById(tabId), dd=document.getElementById(ddId);
+  if(!tab||!dd) return;
+  const place=()=>{ const r=tab.getBoundingClientRect(); dd.style.top=r.bottom+"px"; dd.style.left=r.left+"px"; };
+  tab.onclick=(e)=>{ e.stopPropagation();
+    document.querySelectorAll(".tab-dd").forEach(o=>{ if(o!==dd) o.hidden=true; });
+    if(dd.hidden){ place(); dd.hidden=false; } else dd.hidden=true; };
   dd.querySelectorAll("button[data-view]").forEach(b=>b.onclick=(e)=>{
     e.stopPropagation(); dd.hidden=true;
     document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
-    miscTab.setAttribute("aria-selected","true");
-    miscTab.dataset.view=b.dataset.view;   // lets saveUiState remember which sub-page was open
+    tab.setAttribute("aria-selected","true");
+    tab.dataset.view=b.dataset.view;   // lets saveUiState remember which sub-page was open
     showView(b.dataset.view);
   });
-})();
+}
+wireDropdownTab("harvestTab","harvestDropdown");
+wireDropdownTab("miscTab","miscDropdown");
+document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").forEach(dd=>dd.hidden=true); });
 
 // Mobile nav drawer — hamburger bubble + slide-in list of all 9 destinations (see markup near
 // #miscDropdown). Only visible below the 760px breakpoint (CSS), but wiring is unconditional.
 (function(){
   const fab=document.getElementById("navFab"), drawer=document.getElementById("navDrawer"),
         backdrop=document.getElementById("navDrawerBackdrop"), closeBtn=document.getElementById("navDrawerClose"),
-        miscTab=document.getElementById("miscTab");
+        miscTab=document.getElementById("miscTab"), harvestTab=document.getElementById("harvestTab");
+  // sub-views that live under a dropdown tab rather than their own top-level tab
+  const DROPDOWN_PARENT={ seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
+                          harvest:harvestTab, outlets:harvestTab, season:harvestTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
   function close(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); fab.setAttribute("aria-expanded","false"); }
@@ -2021,8 +2177,9 @@ document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   drawer.querySelectorAll(".nav-drawer-item[data-view]").forEach(b=>b.onclick=()=>{
     document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
     const tab=document.querySelector(`.tab[data-view="${b.dataset.view}"]`);
+    const parent=DROPDOWN_PARENT[b.dataset.view];
     if(tab) tab.setAttribute("aria-selected","true");
-    else if(miscTab){ miscTab.setAttribute("aria-selected","true"); miscTab.dataset.view=b.dataset.view; }
+    else if(parent){ parent.setAttribute("aria-selected","true"); parent.dataset.view=b.dataset.view; }
     showView(b.dataset.view);
     close();
   });
@@ -2040,17 +2197,25 @@ document.getElementById("connectBtn").onclick=async()=>{
   const v=document.getElementById("patInput").value.trim();
   if(!v){gate(true,"err","Paste a token first.");return;}
   PAT=v;localStorage.setItem(LS_KEY,v);
+  // The Anthropic key is optional and independent: blanking the field forgets it without
+  // disturbing the Airtable connection.
+  const ak=document.getElementById("akInput").value.trim();
+  AKEY=ak;
+  if(ak) localStorage.setItem(AK_KEY,ak); else localStorage.removeItem(AK_KEY);
   document.getElementById("gateStatus").className="status";
   document.getElementById("gateStatus").textContent="Connecting…";
   await loadAll();
 };
 document.getElementById("clearBtn").onclick=()=>{
   localStorage.removeItem(LS_KEY);PAT="";
+  localStorage.removeItem(AK_KEY);AKEY="";
   document.getElementById("patInput").value="";
+  document.getElementById("akInput").value="";
   gate(true,null,"Token forgotten.");
 };
 document.getElementById("gearBtn").onclick=()=>{
   document.getElementById("patInput").value=PAT;
+  document.getElementById("akInput").value=AKEY;
   gate(true,null,"");
 };
 document.getElementById("panelClose").onclick=closePanel;
@@ -2072,6 +2237,7 @@ function showLoading(b){document.getElementById("loading").classList.toggle("sho
 let cmYear = new Date().getFullYear();
 let dragPid = null;
 let cmViewMode = "list";
+let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-type colour)
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -2207,6 +2373,12 @@ function clearFits(){
   document.querySelectorAll("#cmBlocks .cm-free").forEach(e=>e.remove());
 }
 
+// Bed groups are keyed by the block's NAME (a plain string on Bed, matched against Block
+// records by name — see bedGroups()); this looks up the actual Block record for that name so
+// its preferredCropTypes can drive the Crop Map's underlay tint + edit popover. Returns
+// undefined for the "—" (no block) group, which has no Block record to edit.
+function cmBlockByName(name){ return (data.blocks||[]).find(b=>String(b.name).trim()===String(name).trim()); }
+
 function buildCropMap(){
   const wrap=document.getElementById("cmBlocks"); if(!wrap) return;
   if(!cmHFilling) CM_H=360;   // reset to default unless this is the fill-to-height rebuild pass below
@@ -2232,7 +2404,27 @@ function buildCropMap(){
   wrap.innerHTML="";
   activeKeys.forEach(key=>{
     const blk=document.createElement("div");blk.className="cm-block";
-    const h=document.createElement("div");h.className="cm-block-h";h.textContent=key;blk.appendChild(h);
+    const h=document.createElement("div");h.className="cm-block-h";h.textContent=key;
+    // Soft visual aid only — never restricts what can be planted. 0 types = no tint (today's
+    // look); 1 type = a translucent wash under the whole block; 2+ = a soft banded gradient
+    // of the same translucent washes, one band per type. Alpha (not tint()'s opaque pastel
+    // mix) so the block's own header/grid/plantings still read clearly on top of it.
+    const blkMeta=cmBlockByName(key), prefTypes=(blkMeta&&blkMeta.preferredCropTypes)||[];
+    if(prefTypes.length===1){
+      blk.style.background=hexToRgba(cropTypeColor(prefTypes[0]), .16);
+    }else if(prefTypes.length>1){
+      const stops=prefTypes.map((t,i)=>{
+        const c=hexToRgba(cropTypeColor(t), .16), a=(i/prefTypes.length*100).toFixed(1), b=((i+1)/prefTypes.length*100).toFixed(1);
+        return `${c} ${a}%, ${c} ${b}%`;
+      }).join(", ");
+      blk.style.background=`linear-gradient(90deg, ${stops})`;
+    }
+    if(blkMeta){
+      h.classList.add("cm-block-h-editable");
+      h.title="Click to set this block's preferred crop type(s)"+(prefTypes.length?` — currently ${prefTypes.join(", ")}`:" — none set");
+      h.addEventListener("click",e=>{ e.stopPropagation(); cmOpenTypePopover(e, blkMeta.id); });
+    }
+    blk.appendChild(h);
     const grid=document.createElement("div");grid.className="cm-grid";
 
     const axis=document.createElement("div");axis.className="cm-axis";
@@ -2257,7 +2449,9 @@ function buildCropMap(){
         bar.style.height=height+"px";
         // base = in-ground colour; harvest (first→last harvest) shaded darker on top — same
         // convention as the Timeline's tlAddBar (minus the nursery segment, which doesn't apply here)
-        const base=cropColor(p.cropId||p.crop);
+        const base = cmColorMode==="type"
+          ? cropTypeColor((data.cropDefs[p.cropId]||{}).type)
+          : cropColor(p.cropId||p.crop);
         bar.style.background=base;
         if(p.h1 && p.h2){
           const yH1=cmY(p.h1);
@@ -2272,11 +2466,13 @@ function buildCropMap(){
         bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`;
         const l=document.createElement("span");l.className="cm-bar-l";l.textContent=p.crop;bar.appendChild(l);
         // Mobile: dragging risks an accidental bed move on touch, so tapping opens a detail
-        // panel with a bed picker instead (see cmOpenPanel). Desktop keeps native drag-and-drop.
+        // panel with a bed picker instead (see cmOpenPanel). Desktop keeps native drag-and-drop
+        // but a plain click (mouseup with no drag) still opens the same panel.
         if(cmIsMobile()){
           bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
         }else{
           bar.draggable=true;
+          bar.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) cmOpenPanel(p); });
           bar.addEventListener("dragstart",e=>{
             if(cmLocked){e.preventDefault();return;}
             dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
@@ -2284,15 +2480,16 @@ function buildCropMap(){
         }
         track.appendChild(bar);
 
-        // outline-only extensions for tasks that fall outside the ground-occupancy window
-        // (e.g. bed prep before transplant, tarping after harvest) — same convention as the Timeline
+        // tick marks for tasks that fall outside the ground-occupancy window (e.g. bed prep
+        // before transplant, tarping after harvest) — same convention as the Timeline: a thin
+        // line at the task's own date rather than a box extending the bar's shape
         const cmExt=taskExtentFor(p, groundStart, p.h2||p.h1||groundStart);
         if(cmExt.pre){
           const yPre=cmY(cmExt.pre.due);
           if(yPre!=null && yPre<top){
             const el=document.createElement("div");el.className="cm-bar-ext";
-            el.style.top=yPre+"px";el.style.height=Math.max(4,top-yPre)+"px";
-            el.style.borderColor=base;el.title=`${taskName(cmExt.pre)} · ${fmt(cmExt.pre.due)}`;
+            el.style.top=(yPre-1)+"px";el.style.background=base;
+            el.title=`${taskName(cmExt.pre)} · ${fmt(cmExt.pre.due)}`;
             track.appendChild(el);
           }
         }
@@ -2300,8 +2497,8 @@ function buildCropMap(){
           const yPost=cmY(cmExt.post.due), bottomEdge=top+height;
           if(yPost!=null && yPost>bottomEdge){
             const el=document.createElement("div");el.className="cm-bar-ext";
-            el.style.top=bottomEdge+"px";el.style.height=Math.max(4,yPost-bottomEdge)+"px";
-            el.style.borderColor=base;el.title=`${taskName(cmExt.post)} · ${fmt(cmExt.post.due)}`;
+            el.style.top=(yPost-1)+"px";el.style.background=base;
+            el.title=`${taskName(cmExt.post)} · ${fmt(cmExt.post.due)}`;
             track.appendChild(el);
           }
         }
@@ -2387,6 +2584,13 @@ function setCmViewMode(mode){
 }
 document.querySelectorAll("#cmViewToggle button").forEach(b=>b.addEventListener("click",()=>setCmViewMode(b.dataset.cmview)));
 
+function setCmColorMode(mode){
+  cmColorMode=mode;
+  document.querySelectorAll("#cmColorToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.cmcolor===mode?"true":"false"));
+  buildCropMap();
+}
+document.querySelectorAll("#cmColorToggle button").forEach(b=>b.addEventListener("click",()=>setCmColorMode(b.dataset.cmcolor)));
+
 function setCmLocked(v){
   cmLocked=v;
   document.getElementById("view-cropmap").classList.toggle("cm-locked",v);
@@ -2398,11 +2602,90 @@ function setCmLocked(v){
 }
 document.getElementById("cmLockBtn").addEventListener("click",()=>setCmLocked(!cmLocked));
 
+let cmUnCollapsed=false;
+function cmSetUnCollapsed(val){
+  cmUnCollapsed=val;
+  const side=document.getElementById("cmUnassigned"); if(side) side.classList.toggle("collapsed",val);
+}
+document.getElementById("cmUnToggle").addEventListener("click",()=>{ cmSetUnCollapsed(!cmUnCollapsed); saveUiState(); });
+
+// Right-click a placed planting to unassign it from its bed (sends it back to the
+// Unassigned list) — the drag-and-drop equivalent of dragging it off the map.
+let cmCtxPid=null;
+function cmShowCtxMenu(ev,pid){
+  cmCtxPid=pid;
+  const menu=document.getElementById("cmCtxMenu");
+  const sec=document.getElementById("view-cropmap").getBoundingClientRect();
+  const x=Math.min(ev.clientX-sec.left, sec.width-180), y=Math.min(ev.clientY-sec.top, sec.height-50);
+  menu.style.left=Math.max(4,x)+"px"; menu.style.top=Math.max(4,y)+"px";
+  menu.classList.add("open");
+}
+function cmHideCtxMenu(){ document.getElementById("cmCtxMenu").classList.remove("open"); cmCtxPid=null; }
+document.getElementById("cmBlocks").addEventListener("contextmenu",e=>{
+  if(cmLocked) return;
+  const bar=e.target.closest(".cm-bar"); if(!bar) return;
+  e.preventDefault(); e.stopPropagation();
+  cmShowCtxMenu(e,bar.dataset.pid);
+});
+document.getElementById("cmCtxMenu").addEventListener("click",e=>{
+  const act=e.target.closest("button")?.dataset.act;
+  if(act==="unassign" && cmCtxPid) unassignBed(cmCtxPid);
+  cmHideCtxMenu();
+});
+document.addEventListener("click",e=>{ if(!e.target.closest("#cmCtxMenu")) cmHideCtxMenu(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") cmHideCtxMenu(); });
+
+// Click a block header on the Crop Map to open a small popover for toggling its "preferred crop
+// types" — a soft visual aid only (see CROP_TYPES/CROP_TYPE_COLORS above), never a hard rule.
+let cmTypePopBlockId=null;
+function cmTypePopoverBodyHTML(blk){
+  const prefTypes=blk.preferredCropTypes||[];
+  return `<div class="tl-ctx-label">${esc(blk.name)} · preferred crop types</div>`
+    + CROP_TYPES.map(t=>{
+        const on=prefTypes.includes(t);
+        return `<button type="button" class="cm-type-chip${on?" on":""}" data-type="${esc(t)}"
+                  style="border-left-color:${cropTypeColor(t)}">${on?"✓ ":""}${esc(t)}</button>`;
+      }).join("");
+}
+function cmOpenTypePopover(ev,blockId){
+  const blk=(data.blocks||[]).find(b=>b.id===blockId); if(!blk) return;
+  cmTypePopBlockId=blockId;
+  const pop=document.getElementById("cmTypePopover");
+  pop.innerHTML=cmTypePopoverBodyHTML(blk);
+  const sec=document.getElementById("view-cropmap").getBoundingClientRect();
+  const x=Math.min(ev.clientX-sec.left, sec.width-200), y=Math.min(ev.clientY-sec.top, sec.height-320);
+  pop.style.left=Math.max(4,x)+"px"; pop.style.top=Math.max(4,y)+"px";
+  pop.classList.add("open");
+}
+function cmHideTypePopover(){ document.getElementById("cmTypePopover").classList.remove("open"); cmTypePopBlockId=null; }
+async function cmToggleBlockType(blockId,type){
+  const blk=(data.blocks||[]).find(b=>b.id===blockId); if(!blk) return;
+  const prev=blk.preferredCropTypes||[];
+  const next=prev.includes(type) ? prev.filter(t=>t!==type) : [...prev,type];
+  blk.preferredCropTypes=next;   // optimistic
+  document.getElementById("cmTypePopover").innerHTML=cmTypePopoverBodyHTML(blk);
+  buildCropMap();
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.blocks, blockId, {[CFG.f.blk_prefTypes]:next});
+  }catch(e){
+    blk.preferredCropTypes=prev;   // rollback
+    console.error(e);
+    alert("Couldn't save preferred crop types:\n"+e.message);
+    buildCropMap();
+  }
+}
+document.getElementById("cmTypePopover").addEventListener("click",e=>{
+  const btn=e.target.closest("[data-type]"); if(!btn||!cmTypePopBlockId) return;
+  cmToggleBlockType(cmTypePopBlockId, btn.dataset.type);
+});
+document.addEventListener("click",e=>{ if(!e.target.closest("#cmTypePopover, .cm-block-h-editable")) cmHideTypePopover(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") cmHideTypePopover(); });
+
 (function(){
   const vp=document.getElementById("cmViewport");
   let dragging=false,lastX,lastY;
   const pts=new Map();let pinchD=0;
-  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-chip, #cmZoombar");
+  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-chip, #cmZoombar, .cm-block-h");
 
   vp.addEventListener("pointerdown",e=>{
     if(cmViewMode!=="map"||isDndTarget(e.target)) return; // let native drag-and-drop take over
@@ -2461,6 +2744,21 @@ async function assignBed(bedId, pidOverride){
   }
 }
 
+// remove the Bed link entirely, sending the planting back to the Unassigned list
+async function unassignBed(pid){
+  const p=(data.plantings||[]).find(x=>x.id===pid); if(!p||!p.bedIds.length) return;
+  const prev=p.bedIds.slice();
+  p.bedIds=[];                                    // optimistic
+  rebuildDerived(); buildCropMap();
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f.pl_bed]:[]});
+    layoutAndDraw();                              // keep the farm map in sync
+  }catch(e){
+    p.bedIds=prev; rebuildDerived(); buildCropMap();   // roll back on failure
+    alert("Couldn't unassign planting:\n"+e.message);
+  }
+}
+
 async function atPatch(base,table,id,fields){
   const r=await fetch(`https://api.airtable.com/v0/${base}/${table}/${id}`,{
     method:"PATCH",
@@ -2496,8 +2794,694 @@ async function atDelete(base,table,ids){
   }
 }
 
+/* ==================== SEED BOOK section ====================
+   Seeding is recorded by hand in a paper book — tray count, seed type, packet reference. This
+   page photographs a page, has Claude transcribe it, matches each line to a planned planting,
+   and (after an explicit review step) writes the ref/tray count/actual date back and advances
+   the planting's status. Nothing reaches Airtable until "Apply".
+
+   This is the app's only LLM call. It goes browser-direct to api.anthropic.com with the key the
+   user pasted into the gate screen — same trust model as the Airtable PAT, no proxy. */
+
+const SB_MODEL = "claude-opus-4-8";
+const SB_MAX_EDGE = 2576;   // the model's high-res vision ceiling on the long edge; handwriting needs it
+
+// Structured-outputs schema. Every key is required and explicitly nullable: this schema dialect
+// has no clean "optional key", so an unreadable value must come back as null rather than being
+// omitted — or, worse, guessed.
+const SB_STR  = {anyOf:[{type:"string"},{type:"null"}]};
+const SB_INT  = {anyOf:[{type:"integer"},{type:"null"}]};
+const SB_SCHEMA = {
+  type:"object",
+  properties:{
+    page_date:{...SB_STR, description:"Date heading for the page as a whole, ISO YYYY-MM-DD, or null."},
+    entries:{type:"array", items:{
+      type:"object",
+      properties:{
+        raw_text:{type:"string", description:"The line transcribed verbatim, exactly as written."},
+        crop:SB_STR, variety:SB_STR,
+        tray_count:{...SB_INT, description:"Number of trays — the 2 in \"2x198\"."},
+        tray_cells:{...SB_INT, description:"Cells per tray — the 198 in \"2x198\"."},
+        seed_ref:SB_STR, date:SB_STR,
+        confidence:{type:"string", enum:["high","medium","low"]},
+      },
+      required:["raw_text","crop","variety","tray_count","tray_cells","seed_ref","date","confidence"],
+      additionalProperties:false,
+    }},
+  },
+  required:["page_date","entries"],
+  additionalProperties:false,
+};
+
+// Built per-call because the book omits the year — the model needs today's date to resolve
+// "19 July" to an actual one.
+const sbPrompt = () => `This is a photograph of a page from a market garden's handwritten seeding book. Transcribe every seeding entry on the page.
+
+Today's date is ${PlannerShared.wkISO(new Date())}. Use it to resolve years (see dates, below).
+
+Page layout — this book is a three-column table:
+- "Tray #" — quantities written like "2x198", meaning 2 trays of 198 cells each. Put 2 in tray_count and 198 in tray_cells.
+- "Seed type" — a crop, usually preceded by a variety name. "Miyako bokchoy" is the variety "Miyako" of the crop "bokchoy". Split them into variety and crop, transcribing each exactly as written including its spacing (write "bokchoy" if that is what is on the page; do not tidy it to "Bok Choy"). If you cannot tell which part is the variety, put the whole string in crop and leave variety null.
+- "Seed Ref" — identifies the physical seed packet. Copy it verbatim as a string. These often look like dates but are NOT dates: "01/26" is the reference string "01/26". Never reformat, never reinterpret as a date, never convert to a number.
+The row of column headers is not an entry. Skip it.
+
+Dates:
+- A date heading covers all the rows beneath it. Put it in page_date and give every entry that date.
+- The book normally omits the year. Resolve to the year that puts the date nearest to today, and output ISO YYYY-MM-DD.
+- Corrections are made by striking a word out and writing the replacement beside it — "19 ~~June~~ July" means 19 July. Always use the corrected value, never the struck-out one.
+
+Rules:
+- One entry per filled row. Always fill raw_text with a verbatim transcription of the whole row, including anything you could not parse — it is shown to the user for checking.
+- Most of the page is usually blank ruled lines. Blank pages are normal; returning zero entries is a valid answer.
+- Ruled lines frequently show faint impressions, indentations or ink show-through from other pages in the book. These are NOT entries on this page. Only transcribe writing that is clearly, directly written on this page. When in doubt, leave it out.
+- Use null for any value you cannot read. Do not guess, do not infer a plausible variety, and do not invent a reference number.
+- Set confidence to "low" whenever the handwriting is unclear or you are unsure of a parse, "medium" if mostly legible, "high" only when the row is unambiguous.
+- Ignore totals and notes to self.`;
+
+// --- capture ---------------------------------------------------------------
+function sbLoadImage(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload =()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("Couldn't open that image. If it came from an iPhone, try saving it as JPEG first.")); };
+    img.src=url;
+  });
+}
+// Re-encode through a canvas rather than sending the file bytes: it caps the long edge at the
+// model's high-res limit and normalises PNG/HEIC/odd-profile input to one media type.
+async function sbEncode(file){
+  const img=await sbLoadImage(file);
+  const scale=Math.min(1, SB_MAX_EDGE/Math.max(img.naturalWidth,img.naturalHeight));
+  const w=Math.max(1,Math.round(img.naturalWidth*scale)), h=Math.max(1,Math.round(img.naturalHeight*scale));
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  c.getContext("2d").drawImage(img,0,0,w,h);
+  const dataUrl=c.toDataURL("image/jpeg",0.92);
+  return { b64:dataUrl.slice(dataUrl.indexOf(",")+1), mediaType:"image/jpeg" };
+}
+
+// --- the vision call -------------------------------------------------------
+async function sbReadPage(b64, mediaType){
+  const r=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "x-api-key":AKEY,
+      "anthropic-version":"2023-06-01",
+      // without this header the browser's CORS preflight is rejected outright
+      "anthropic-dangerous-direct-browser-access":"true",
+      "content-type":"application/json",
+    },
+    body:JSON.stringify({
+      model:SB_MODEL,
+      max_tokens:8000,
+      output_config:{ format:{ type:"json_schema", schema:SB_SCHEMA } },
+      messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64",media_type:mediaType,data:b64}},
+        {type:"text",text:sbPrompt()},
+      ]}],
+    }),
+  });
+  if(!r.ok){
+    const t=await r.text().catch(()=>"");
+    if(r.status===401) throw new Error("Anthropic rejected the API key (401). Check it under settings ⚙.");
+    if(r.status===429) throw new Error("Rate limited by Anthropic (429). Wait a moment and try again.");
+    throw new Error(`Anthropic returned ${r.status}. ${t.slice(0,200)}`);
+  }
+  const j=await r.json();
+  if(j.stop_reason==="refusal") throw new Error("Claude declined to read that image.");
+  if(j.stop_reason==="max_tokens") throw new Error("The page was too long to read in one go. Try photographing half a page at a time.");
+  const text=(j.content||[]).find(b=>b.type==="text")?.text;
+  if(!text) throw new Error("Claude returned no readable output.");
+  try{ return JSON.parse(text); }
+  catch{ throw new Error("Couldn't parse Claude's response as JSON."); }
+}
+
+// --- matching --------------------------------------------------------------
+const sbNorm = s => String(s||"").toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();
+// The book and Airtable disagree about spacing — the book writes "bokchoy", the Crops table says
+// "Bok Choy". Comparing with the spaces squeezed out is what makes those the same crop.
+const sbSquash = s => sbNorm(s).replace(/ /g,"");
+
+// Resolve a book line's seed type ("Miyako Bok Choy") to a crop + variety. Deliberately reuses
+// the app's existing name rules rather than inventing a second scheme: exact match on variety
+// (as apFillVarieties does) and case-insensitive containment on crop name (as apRenderCropList
+// does). There is no alias table, so the longest crop-name match wins and the leftover words are
+// treated as the variety.
+function sbResolveCrop(cropText, varietyText){
+  const combined = sbNorm([varietyText,cropText].filter(Boolean).join(" "));
+  if(!combined) return null;
+  const combinedSq = sbSquash(combined);
+  for(const v of Object.values(data.varietiesById||{})){
+    if(v.name && sbSquash(v.name)===combinedSq) return {cropId:v.cropId, variety:v.name};
+  }
+  let best=null;
+  Object.entries(data.crops||{}).forEach(([id,name])=>{
+    const n=sbNorm(name), nSq=sbSquash(name);
+    if(nSq && combinedSq.includes(nSq) && (!best || nSq.length>best.nSq.length)) best={id,n,nSq};
+  });
+  if(!best) return null;
+  // Strip the crop to leave a candidate variety. The spacing may not line up ("miyako bokchoy"
+  // vs crop "bok choy"), so fall back to dropping whichever words the crop name absorbed.
+  const leftover = (combined.includes(best.n)
+      ? combined.replace(best.n," ")
+      : combined.split(" ").filter(w => !(w.length>2 && best.nSq.includes(sbSquash(w)))).join(" ")
+    ).replace(/\s+/g," ").trim();
+  const saved=(data.varietiesByCrop[best.id]||[]).find(v=>sbSquash(v.name)===sbSquash(leftover));
+  return { cropId:best.id, variety: saved ? saved.name : ((varietyText||"").trim() || leftover) };
+}
+
+// Rank this crop's plantings against one book line. Sow week is the strongest signal (the book
+// and the plan should agree on roughly when), variety next, and an already-advanced or
+// already-referenced planting is penalised as probably-already-recorded.
+function sbMatch(entry, resolved){
+  if(!resolved) return [];
+  const {wkParse, wkMonday, wkISO} = PlannerShared;
+  const dISO=entry.date||null;
+  const week=dISO ? wkISO(wkMonday(wkParse(dISO))) : null;
+  const wantVar=sbSquash(resolved.variety);
+  return (data.plantings||[])
+    .filter(p=>p.cropId===resolved.cropId)
+    .map(p=>{
+      let score=0, tier="loose";
+      const pVar=sbSquash(p.variety);
+      if(wantVar && pVar===wantVar) score+=3;
+      else if(!wantVar && !pVar) score+=1;
+      else if(wantVar && pVar) score-=1;   // both named but different — likely a different succession
+      if(week && p.sow){
+        const days=Math.abs((wkParse(p.sow)-wkParse(dISO))/86400000);
+        // "Same week" alone is brittle at the week boundary — a Sunday entry against a Monday
+        // plan is one day apart but two ISO weeks apart, and Sunday sowings are common. Treat
+        // anything within 3 days as just as strong a signal.
+        if(wkISO(wkMonday(wkParse(p.sow)))===week || days<=3){ score+=4; tier="week"; }
+        else if(days<=14){ score+=2; tier="near"; }
+      }
+      score += (p.status==="Planned") ? 1 : -2;
+      if(p.seedRef) score-=1;
+      return {p,score,tier};
+    })
+    .filter(c=>c.score>0)
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,4);
+}
+
+// --- page ------------------------------------------------------------------
+let sbState={rows:[],phase:"capture"};
+
+function sbShow(phase,msg,cls){
+  sbState.phase=phase;
+  const set=(id,on)=>{const e=document.getElementById(id); if(e) e.style.display=on?"":"none";};
+  set("sbNoKey",  phase==="nokey");
+  set("sbCapture",phase==="capture");
+  set("sbBusy",   phase==="busy");
+  set("sbReview", phase==="review");
+  const eb=document.getElementById("sbError");
+  eb.className="status "+(cls||"err");
+  eb.style.display=msg?"":"none"; eb.textContent=msg||"";
+  document.getElementById("sbResetBtn").style.display=(phase==="review")?"":"none";
+}
+
+function buildSeedbook(){
+  if(!AKEY){
+    document.getElementById("sbNoKey").innerHTML=
+      `<div class="ap-sect" style="margin-top:0">An Anthropic API key is needed</div>
+       <p class="sub" style="max-width:52ch">This page sends a photo of the seeding book to Claude to read the handwriting. Add an Anthropic API key under settings (⚙, top right) to switch it on.</p>`;
+    sbShow("nokey"); return;
+  }
+  // coming back to a review already in progress shouldn't throw away the read
+  if(sbState.phase==="review" && sbState.rows.length){ sbRenderCards(); sbShow("review"); return; }
+  sbShow("capture");
+}
+
+function sbRenderCards(){
+  const rows=sbState.rows;
+  document.getElementById("sbReviewSummary").textContent =
+    `${rows.length} ${rows.length===1?"line":"lines"} read. Check each against the page, then apply. Nothing is saved until you do.`;
+  document.getElementById("sbCards").innerHTML = rows.map((row,i)=>{
+    const e=row.entry;
+    const conf = e.confidence==="low"    ? `<span class="sb-pill warn">low confidence</span>`
+               : e.confidence==="medium" ? `<span class="sb-pill">medium</span>` : "";
+    const opts = row.candidates.map(c=>{
+      const tier = c.tier==="week" ? "same week" : c.tier==="near" ? "within 2 weeks" : "date mismatch";
+      const bed  = PlannerShared.bedNameOf(data,c.p) || "no bed";
+      const lbl  = `${c.p.crop}${c.p.variety?" · "+c.p.variety:""} · ${bed} · plan ${c.p.sow||"—"} · ${tier}`;
+      return `<option value="${c.p.id}"${row.choice===c.p.id?" selected":""}>${esc(lbl)}</option>`;
+    }).join("");
+    const chosen=row.candidates.find(c=>c.p.id===row.choice);
+    // Only offered when the book and the plan actually disagree — moving the planned date
+    // reshuffles every task anchored to it, so it must be a deliberate tick.
+    const shift = (chosen && e.date && chosen.p.sow && chosen.p.sow!==e.date)
+      ? `<label class="sb-shift"><input type="checkbox" data-f="alsoPlan"${row.alsoPlan?" checked":""}>
+           Also move the planned sow date from ${esc(chosen.p.sow)} to ${esc(e.date)}</label>`
+      : "";
+    const noCrop = row.resolved ? "" :
+      `<span class="sub" style="flex:1 1 100%">Crop not recognised — correct the crop above, or create a new planting.</span>`;
+    return `<div class="sb-card" data-i="${i}">
+      <div class="sb-raw">${esc(e.raw_text||"(blank line)")}${conf}</div>
+      <div class="sb-fields">
+        <label><span>Crop</span><input data-f="crop" value="${esc(e.crop||"")}"></label>
+        <label><span>Variety</span><input data-f="variety" value="${esc(e.variety||"")}"></label>
+        <label><span>Trays</span><input data-f="tray_count" type="number" min="0" value="${e.tray_count??""}"></label>
+        <label><span>Cells</span><input data-f="tray_cells" type="number" min="0" value="${e.tray_cells??""}"></label>
+        <label><span>Seed ref</span><input data-f="seed_ref" value="${esc(e.seed_ref||"")}"></label>
+        <label><span>Date</span><input data-f="date" type="date" value="${esc(e.date||"")}"></label>
+      </div>
+      <div class="sb-match">
+        <label><span>Match</span><select data-f="choice">
+          <option value=""${row.choice?"":" selected"}>— skip this line —</option>
+          ${opts}
+          <option value="__new__">+ create a new planting…</option>
+        </select></label>
+        ${noCrop}${shift}
+      </div>
+    </div>`;
+  }).join("");
+  const n=rows.filter(r=>r.choice).length;
+  document.getElementById("sbApplyNote").textContent =
+    n ? `${n} of ${rows.length} selected.` : "Nothing selected yet.";
+}
+
+// Re-resolving the crop re-renders the card, which would steal focus mid-typing — so text edits
+// are captured on `input` but only acted on at `change` (i.e. blur).
+function sbRow(ev){
+  const card=ev.target.closest(".sb-card"); if(!card) return null;
+  const row=sbState.rows[+card.dataset.i], f=ev.target.dataset.f;
+  return (row && f) ? {row,f} : null;
+}
+function sbReadField(ev){
+  const hit=sbRow(ev); if(!hit) return null;
+  const {row,f}=hit;
+  if(f==="choice"||f==="alsoPlan") return hit;
+  row.entry[f] = (f==="tray_count"||f==="tray_cells")
+    ? (ev.target.value===""?null:+ev.target.value)
+    : ev.target.value;
+  return hit;
+}
+document.getElementById("sbCards").addEventListener("input", sbReadField);
+document.getElementById("sbCards").addEventListener("change",(ev)=>{
+  const hit=sbReadField(ev); if(!hit) return;
+  const {row,f}=hit;
+  if(f==="alsoPlan"){ row.alsoPlan=ev.target.checked; return; }
+  if(f==="choice"){
+    if(ev.target.value==="__new__"){ sbCreateNew(row); ev.target.value=row.choice||""; return; }
+    row.choice=ev.target.value;
+  }
+  if(f==="crop"||f==="variety"||f==="date"){
+    row.resolved=sbResolveCrop(row.entry.crop,row.entry.variety);
+    row.candidates=sbMatch(row.entry,row.resolved);
+    if(!row.candidates.some(c=>c.p.id===row.choice)) row.choice="";
+  }
+  sbRenderCards();
+});
+
+// Hand a line with no plan behind it to the existing Add-planting dialog, prefilled.
+function sbCreateNew(row){
+  apOpen();
+  if(row.resolved){
+    apSelectCrop(row.resolved.cropId);
+    const v=$ap("apVariety");
+    if(v && row.resolved.variety){
+      const opt=[...v.options].find(o=>o.textContent.trim().toLowerCase()===row.resolved.variety.trim().toLowerCase());
+      if(opt){ v.value=opt.value; v.dispatchEvent(new Event("change")); }
+    }
+  }
+  const s=$ap("apSow");
+  if(s && row.entry.date){ s.value=row.entry.date; s.dispatchEvent(new Event("change")); }
+}
+
+document.getElementById("sbShoot").onclick=()=>document.getElementById("sbFile").click();
+document.getElementById("sbResetBtn").onclick=()=>{ sbState={rows:[],phase:"capture"}; sbShow("capture"); };
+document.getElementById("sbFile").onchange=async(ev)=>{
+  const file=ev.target.files && ev.target.files[0];
+  ev.target.value="";                 // let the same file be re-picked after a failure
+  if(!file) return;
+  sbShow("busy");
+  try{
+    const {b64,mediaType}=await sbEncode(file);
+    document.getElementById("sbBusyMsg").textContent="Reading the handwriting — usually 10–30 seconds.";
+    const out=await sbReadPage(b64,mediaType);
+    const entries=out.entries||[];
+    if(!entries.length){ sbShow("capture","No seeding entries found on that page. Try a straighter, better-lit photo."); return; }
+    sbState.rows=entries.map(en=>{
+      const entry={...en, date: en.date || out.page_date || ""};
+      const resolved=sbResolveCrop(entry.crop,entry.variety);
+      const candidates=sbMatch(entry,resolved);
+      // Only a confident line with a same-week match is preselected; everything else needs a tap.
+      const auto = candidates[0] && candidates[0].tier==="week" && entry.confidence!=="low";
+      return {entry, resolved, candidates, choice: auto?candidates[0].p.id:"", alsoPlan:false};
+    });
+    sbRenderCards(); sbShow("review");
+  }catch(err){ sbShow("capture", err.message||String(err)); }
+};
+
+document.getElementById("sbApply").onclick=async()=>{
+  const F=CFG.f;
+  const picks=sbState.rows.filter(r=>r.choice);
+  if(!picks.length){ sbShow("review","Nothing selected to apply."); return; }
+  const btn=document.getElementById("sbApply"), note=document.getElementById("sbApplyNote");
+  btn.disabled=true;
+  let done=0; const failed=[];
+  for(const row of picks){
+    const p=(data.plantings||[]).find(x=>x.id===row.choice);
+    if(!p){ failed.push("a planting that no longer exists"); continue; }
+    const fields={};
+    if(row.entry.seed_ref)          fields[F.pl_seedRef]=String(row.entry.seed_ref);
+    if(row.entry.tray_count!=null)  fields[F.pl_traysSown]=row.entry.tray_count;
+    if(row.entry.date)              fields[F.pl_sowActual]=row.entry.date;
+    if(row.alsoPlan && row.entry.date) fields[F.pl_sow]=row.entry.date;
+    // nextMilestoneStep is a *toggle*: it steps back when the planting already sits exactly at the
+    // sow stage. A book entry only ever means "this was sown", so take its answer only when it
+    // moves the status forward. (Direct-sown crops correctly land on "In ground", not "Seeded".)
+    const step=PlannerShared.nextMilestoneStep(p,"sow");
+    if(step && PlannerShared.statusRank(step.status)>PlannerShared.statusRank(p.status)) fields[F.pl_status]=step.status;
+    note.textContent=`Saving ${done+1} of ${picks.length}…`;
+    try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, fields); done++; }
+    catch(err){ failed.push(`${p.crop}: ${err.message}`); }
+  }
+  btn.disabled=false; note.textContent="";
+  if(failed.length){ sbShow("review",`Saved ${done}. Failed — ${failed.join(" · ")}`); return; }
+  sbState={rows:[],phase:"capture"};
+  await loadAll();
+  showView("seedbook");
+  sbShow("capture",`Saved ${done} ${done===1?"entry":"entries"}.`,"ok");
+};
+
+/* ==================== HARVEST section ====================
+   Three pages under the Harvest ▾ tab: the planner (available-to-pick + per-outlet
+   planned/actual entry), the Sales outlets CRUD list, and the Season roll-up. */
+
+// ---- shared helpers ----
+const HARVEST_DAYS_KEY = "roseberry_harvest_days";
+const DAY_ABBR = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+function harvestDays(){                    // default Thu(4) + Fri(5)
+  try{ const a=JSON.parse(localStorage.getItem(HARVEST_DAYS_KEY)||"null"); if(Array.isArray(a)) return a; }catch(_){}
+  return [4,5];
+}
+function saveHarvestDays(a){ localStorage.setItem(HARVEST_DAYS_KEY, JSON.stringify(a.slice().sort((x,y)=>x-y))); }
+function mondayOfISO(iso){                  // ISO date of the Monday of iso's week
+  const dt=isoToDate(iso), day=dt.getDay();
+  dt.setDate(dt.getDate() + (day===0 ? -6 : 1-day));
+  return dateToISO(dt);
+}
+function weeksInWindow(h1,h2){ const d=isoDiffDays(h1,h2); return Math.max(1, Math.round((d||0)/7)); }
+function plantingTotalUnits(p){            // total yield in harvest units, or null if not enough info
+  return (p.yield>0 && p.bm>0) ? p.yield*p.bm : null;
+}
+function unitLabel(unit,n){
+  if(!unit) return "";
+  const u=unit.toLowerCase();
+  if(Math.abs((n||0)-1)<.005) return u;                 // singular
+  if(u==="each") return "each";                          // uncountable-style unit
+  if(/(ch|sh|s|x|z)$/.test(u)) return u+"es";            // bunch→bunches, box→boxes
+  if(/[^aeiou]y$/.test(u)) return u.slice(0,-1)+"ies";   // e.g. berry→berries
+  return u+"s";
+}
+function plantingBedNames(p){ return (p.bedIds||[]).map(id=>{const b=(data.beds||[]).find(x=>x.id===id); return b?b.name:"?";}).join(", "); }
+function hrFor(pid,oid,week){ return (data.harvestRecords||[]).find(h=>h.plantingId===pid && h.outletId===oid && h.week===week); }
+function activeOutlets(){ return (data.salesOutlets||[]).filter(o=>o.active); }
+function harvestReadyPlantings(){
+  const today=todayISO();
+  return (data.plantings||[]).filter(p=>p.h1 && p.h2 && p.h1<=today && today<=p.h2)
+    .sort((a,b)=> (a.h1||"").localeCompare(b.h1||"") || String(a.crop).localeCompare(String(b.crop)));
+}
+
+// ---- Page 1: Harvest planner ----
+let hvState = { plantingId:null, week:null };
+function buildHarvestPlanner(){
+  const ready=harvestReadyPlantings();
+  const sum=document.getElementById("hvSummary");
+  if(sum) sum.textContent = ready.length
+    ? `Harvest planner · ${ready.length} planting${ready.length===1?"":"s"} ready to pick now`
+    : "Harvest planner";
+  if(!hvState.week) hvState.week = mondayOfISO(todayISO());
+  // keep/repair selection
+  if(!ready.some(p=>p.id===hvState.plantingId)) hvState.plantingId = ready.length ? ready[0].id : null;
+
+  const left=document.getElementById("hvLeft"); left.innerHTML="";
+  if(!ready.length){
+    left.innerHTML=`<div class="hv-empty">No plantings are inside their harvest window today.<br>Check the First/Last harvest dates on a planting.</div>`;
+    document.getElementById("hvRight").innerHTML="";
+    return;
+  }
+  ready.forEach(p=>{
+    const tot=plantingTotalUnits(p), weeks=weeksInWindow(p.h1,p.h2);
+    const perWeek = tot!=null ? Math.round(tot/weeks) : null;
+    const harvested=(data.harvestRecords||[]).filter(h=>h.plantingId===p.id).reduce((s,h)=>s+(h.actual||0),0);
+    const pct = (tot>0) ? Math.min(100, Math.round(harvested/tot*100)) : 0;
+    const card=document.createElement("button");
+    card.className="hv-card"; card.setAttribute("aria-selected", p.id===hvState.plantingId ? "true":"false");
+    card.innerHTML=
+      `<div class="hv-crop">${esc(p.crop)}${p.variety?` · ${esc(p.variety)}`:""}</div>`
+      +`<div class="hv-meta">${esc(plantingBedNames(p)||"no bed")} · ${esc(p.status||"—")}</div>`
+      +`<div class="hv-nums">`
+        +`<span><b>${tot!=null?tot.toFixed(0):"–"}</b> ${esc(tot!=null?unitLabel(p.harvestUnit,tot):"total")}</span>`
+        +`<span><b>${perWeek!=null?perWeek:"–"}</b>/week</span>`
+      +`</div>`
+      +(tot!=null?`<div class="hv-prog"><span style="width:${pct}%"></span></div>`:"");
+    card.onclick=()=>{ hvState.plantingId=p.id; buildHarvestPlanner(); };
+    left.appendChild(card);
+  });
+  renderHarvestRight();
+}
+
+function renderHarvestRight(){
+  const wrap=document.getElementById("hvRight"); wrap.innerHTML="";
+  const p=(data.plantings||[]).find(x=>x.id===hvState.plantingId);
+  if(!p){ wrap.innerHTML=`<div class="hv-empty">Select a planting on the left.</div>`; return; }
+  const week=hvState.week, monday=week;
+  const sunday=isoAddDays(monday,6);
+  const tot=plantingTotalUnits(p), weeks=weeksInWindow(p.h1,p.h2);
+  const avail = tot!=null ? Math.round(tot/weeks) : null;
+  const unit=p.harvestUnit||"";
+
+  // header: week nav + harvest-day chips
+  const head=document.createElement("div"); head.className="hv-right-head";
+  head.innerHTML=
+    `<button class="icon-btn" id="hvPrevWk" title="Previous week">◀</button>`
+    +`<span class="hv-week-label">${esc(fmt(monday))} – ${esc(fmt(sunday))}</span>`
+    +`<button class="icon-btn" id="hvNextWk" title="Next week">▶</button>`
+    +`<button class="icon-btn" id="hvThisWk" title="Jump to current week" style="margin-left:.2rem">This week</button>`;
+  wrap.appendChild(head);
+
+  // harvest-day chips
+  const days=harvestDays();
+  const chips=document.createElement("div"); chips.className="hv-right-head";
+  chips.style.marginTop="-.3rem";
+  chips.innerHTML=`<span class="hv-meta" style="align-self:center">Harvest days</span>`+
+    [1,2,3,4,5,6,0].map(d=>{
+      const on=days.includes(d);
+      const date=isoAddDays(monday,(d===0?6:d-1)); // Mon-based offset
+      return `<button class="hv-daychip" data-day="${d}" aria-pressed="${on?"true":"false"}" title="${esc(fmt(date))}">${DAY_ABBR[d]}</button>`;
+    }).join("");
+  wrap.appendChild(chips);
+
+  // planting title + this-week available
+  const title=document.createElement("div");
+  title.innerHTML=`<div class="ap-sect" style="margin:.9rem 0 .5rem">${esc(p.crop)}${p.variety?` · ${esc(p.variety)}`:""}</div>`
+    +`<div class="hv-avail-tile"><b>${avail!=null?avail:"–"}</b><span>${esc(avail!=null?unitLabel(unit,avail):"units")} available this week</span></div>`;
+  wrap.appendChild(title);
+
+  const outlets=activeOutlets();
+  if(!outlets.length){
+    const e=document.createElement("div"); e.className="hv-empty";
+    e.innerHTML=`No active sales outlets yet. <a href="#" id="hvGoOutlets">Add a sales outlet</a> to start allocating harvest.`;
+    wrap.appendChild(e);
+    e.querySelector("#hvGoOutlets").onclick=(ev)=>{ ev.preventDefault();
+      document.querySelector('#harvestDropdown button[data-view="outlets"]').click(); };
+    wireHarvestWeekNav();
+    return;
+  }
+
+  // per-outlet planned/actual table
+  const priceDefault = p.price>0 ? p.price : null;
+  const table=document.createElement("table"); table.className="hv-out-table";
+  table.innerHTML=`<thead><tr><th>Outlet</th><th class="hv-numcol">Planned</th><th class="hv-numcol">Actual</th><th class="hv-numcol">Price $</th></tr></thead>`;
+  const tb=document.createElement("tbody");
+  let sumPlanned=0, sumActual=0;
+  outlets.forEach(o=>{
+    const rec=hrFor(p.id,o.id,week);
+    if(rec){ sumPlanned+=rec.planned||0; sumActual+=rec.actual||0; }
+    const tr=document.createElement("tr");
+    tr.innerHTML=
+      `<td>${esc(o.name)}${o.type?` <span class="hv-meta">${esc(o.type)}</span>`:""}</td>`
+      +`<td><input type="number" min="0" step="1" data-f="planned" value="${rec&&rec.planned!=null?rec.planned:""}"></td>`
+      +`<td><input type="number" min="0" step="1" data-f="actual" value="${rec&&rec.actual!=null?rec.actual:""}"></td>`
+      +`<td><input type="number" min="0" step="0.01" data-f="priceOverride" value="${rec&&rec.priceOverride!=null?rec.priceOverride:""}" placeholder="${priceDefault!=null?priceDefault.toFixed(2):""}"></td>`;
+    tr.querySelectorAll("input").forEach(inp=>inp.onchange=()=>
+      upsertHarvest(p, o, week, inp.dataset.f, inp.value===""?null:(+inp.value)));
+    tb.appendChild(tr);
+  });
+  table.appendChild(tb);
+  const over = avail!=null && sumPlanned>avail;
+  const tf=document.createElement("tfoot");
+  tf.innerHTML=`<tr><td>Totals</td>`
+    +`<td class="${over?"hv-over":""}">${sumPlanned||0}${over?` / ${avail}`:""}</td>`
+    +`<td>${sumActual||0}</td><td></td></tr>`
+    +(over?`<tr><td colspan="4" class="hv-over" style="font-size:.72rem">Planned exceeds this week's available (${avail}).</td></tr>`:"");
+  table.appendChild(tf);
+  wrap.appendChild(table);
+
+  // wire chips + week nav
+  chips.querySelectorAll(".hv-daychip").forEach(c=>c.onclick=()=>{
+    const d=+c.dataset.day, cur=harvestDays();
+    saveHarvestDays(cur.includes(d) ? cur.filter(x=>x!==d) : cur.concat(d));
+    renderHarvestRight();
+  });
+  wireHarvestWeekNav();
+}
+function wireHarvestWeekNav(){
+  const prev=document.getElementById("hvPrevWk"), next=document.getElementById("hvNextWk"), tw=document.getElementById("hvThisWk");
+  if(prev) prev.onclick=()=>{ hvState.week=isoAddDays(hvState.week,-7); renderHarvestRight(); };
+  if(next) next.onclick=()=>{ hvState.week=isoAddDays(hvState.week,7); renderHarvestRight(); };
+  if(tw) tw.onclick=()=>{ hvState.week=mondayOfISO(todayISO()); renderHarvestRight(); };
+}
+async function upsertHarvest(p, o, week, field, value){
+  const fieldMap={planned:CFG.f.hr_planned, actual:CFG.f.hr_actual, priceOverride:CFG.f.hr_priceOverride};
+  let rec=hrFor(p.id,o.id,week);
+  try{
+    if(rec){
+      const prev=rec[field]; rec[field]=value;                 // optimistic
+      try{ await atPatch(CFG.farmBase, CFG.tables.harvestRecords, rec.id, {[fieldMap[field]]:value}); }
+      catch(e){ rec[field]=prev; throw e; }
+    }else{
+      if(value==null) return;                                  // nothing to create
+      const label=`${p.crop}${p.variety?" · "+p.variety:""} — ${o.name} — ${week}`;
+      const fields={ [CFG.f.hr_name]:label, [CFG.f.hr_planting]:[p.id], [CFG.f.hr_outlet]:[o.id],
+                     [CFG.f.hr_week]:week, [fieldMap[field]]:value };
+      const created=await atCreate(CFG.farmBase, CFG.tables.harvestRecords, [fields]);
+      data.harvestRecords.push({ id:created[0].id, plantingId:p.id, outletId:o.id, week,
+        planned:field==="planned"?value:null, actual:field==="actual"?value:null,
+        priceOverride:field==="priceOverride"?value:null });
+    }
+    renderHarvestRight();          // refresh totals/over-allocation
+    // update the left card's progress bar without losing selection
+    const cards=document.getElementById("hvLeft"); if(cards) buildHarvestPlanner();
+  }catch(e){
+    console.error(e); alert("Couldn't save harvest entry:\n"+e.message); renderHarvestRight();
+  }
+}
+
+// ---- Page 2: Sales outlets (CRUD) ----
+const SO_TYPES=["Market","Wholesale","CSA","Restaurant","Other"];
+function buildOutlets(){
+  const body=document.getElementById("soBody"); if(!body) return;
+  body.innerHTML="";
+  const list=data.salesOutlets||[];
+  if(!list.length){
+    const r=document.createElement("tr");
+    r.innerHTML=`<td colspan="5"><div class="cr-empty">No sales outlets yet.</div></td>`;
+    body.appendChild(r);
+  }else list.forEach(o=>body.appendChild(soRow(o)));
+  body.appendChild(soAddRow());
+}
+function soRow(o){
+  const tr=document.createElement("tr");
+  const opts=SO_TYPES.map(t=>`<option value="${t}"${o.type===t?" selected":""}>${t}</option>`).join("");
+  tr.innerHTML=
+    `<td><input type="text" data-k="name" value="${esc(o.name)}"></td>`
+    +`<td><select data-k="type"><option value="">—</option>${opts}</select></td>`
+    +`<td style="text-align:center"><input type="checkbox" data-k="active"${o.active?" checked":""}></td>`
+    +`<td><input type="text" data-k="notes" value="${esc(o.notes)}"></td>`
+    +`<td><button type="button" class="btn-danger" style="padding:.2rem .6rem;font-size:.8rem">Delete</button></td>`;
+  tr.querySelector('[data-k="name"]').onchange=e=>saveOutlet(o.id,"name",e.target.value.trim());
+  tr.querySelector('[data-k="type"]').onchange=e=>saveOutlet(o.id,"type",e.target.value);
+  tr.querySelector('[data-k="active"]').onchange=e=>saveOutlet(o.id,"active",e.target.checked);
+  tr.querySelector('[data-k="notes"]').onchange=e=>saveOutlet(o.id,"notes",e.target.value);
+  tr.querySelector(".btn-danger").onclick=()=>deleteOutlet(o.id,o.name);
+  return tr;
+}
+function soAddRow(){
+  const tr=document.createElement("tr"); tr.className="cr-add-row";
+  tr.innerHTML=`<td colspan="5"><button type="button" class="cr-add-variety">+ Add sales outlet…</button></td>`;
+  tr.querySelector("button").onclick=async()=>{ if(await addOutlet()) buildOutlets(); };
+  return tr;
+}
+async function saveOutlet(id,key,val){
+  const fieldMap={name:CFG.f.so_name,type:CFG.f.so_type,active:CFG.f.so_active,notes:CFG.f.so_notes,order:CFG.f.so_order};
+  const o=data.salesOutlets.find(x=>x.id===id); if(!o) return;
+  const prev=o[key]; o[key]=val;                              // optimistic
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.salesOutlets, id, {[fieldMap[key]]:val});
+    if(key==="name"||key==="active") data.salesOutlets.sort((a,b)=>(b.active-a.active)||((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+    buildOutlets();
+  }catch(e){ o[key]=prev; console.error(e); alert("Couldn't save outlet:\n"+e.message); buildOutlets(); }
+}
+async function addOutlet(){
+  const name=(prompt('New sales outlet name (e.g. "The Channon Market"):')||"").trim();
+  if(!name) return false;
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.salesOutlets, [{[CFG.f.so_name]:name,[CFG.f.so_active]:true}]);
+    data.salesOutlets.push({id:created[0].id, name, type:"", active:true, notes:"", order:null});
+    data.salesOutlets.sort((a,b)=>(b.active-a.active)||((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+    return true;
+  }catch(e){ console.error(e); alert("Couldn't add outlet:\n"+e.message); return false; }
+}
+async function deleteOutlet(id,name){
+  if(!confirm(`Delete sales outlet "${name}"?\n\nThis permanently removes it from Airtable. Existing harvest records linked to it will lose the link.`)) return;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.salesOutlets, [id]);
+    data.salesOutlets=data.salesOutlets.filter(o=>o.id!==id);
+    buildOutlets();
+  }catch(e){ console.error(e); alert("Couldn't delete outlet:\n"+e.message); }
+}
+
+// ---- Page 3: Season roll-up ----
+let seasonYear = new Date().getFullYear();
+function buildSeason(){
+  document.getElementById("seasonYearLabel").textContent=seasonYear;
+  const body=document.getElementById("seasonBody"); body.innerHTML="";
+  const recs=(data.harvestRecords||[]).filter(h=>h.week && (+h.week.slice(0,4))===seasonYear);
+  const outletById=id=>(data.salesOutlets||[]).find(o=>o.id===id);
+  const plantById=id=>(data.plantings||[]).find(p=>p.id===id);
+
+  let totalEarnings=0, totalPlanned=0, totalActual=0;
+  const byCrop={}, byOutlet={};
+  recs.forEach(h=>{
+    const p=plantById(h.plantingId); if(!p) return;
+    const price = (h.priceOverride!=null?h.priceOverride:(p.price||0));
+    const earn=(h.actual||0)*price;
+    totalEarnings+=earn; totalPlanned+=h.planned||0; totalActual+=h.actual||0;
+    const ck=`${p.crop}${p.variety?" · "+p.variety:""}`;
+    const c=(byCrop[ck] ||= {name:ck, unit:p.harvestUnit||"", actual:0, earn:0});
+    c.actual+=h.actual||0; c.earn+=earn;
+    const o=outletById(h.outletId); const ok=o?o.name:"(unlinked)";
+    const ob=(byOutlet[ok] ||= {name:ok, planned:0, actual:0, earn:0});
+    ob.planned+=h.planned||0; ob.actual+=h.actual||0; ob.earn+=earn;
+  });
+  const money=n=>"$"+n.toFixed(2);
+  const fill = totalPlanned>0 ? Math.round(totalActual/totalPlanned*100) : null;
+
+  // header tiles
+  const tiles=document.createElement("div"); tiles.className="season-tiles";
+  tiles.innerHTML=
+    `<div class="season-tile"><b>${money(totalEarnings)}</b><span>Total earnings</span></div>`
+    +`<div class="season-tile"><b>${totalActual.toFixed(0)}</b><span>Units harvested</span></div>`
+    +`<div class="season-tile"><b>${recs.length}</b><span>Harvest records</span></div>`
+    +`<div class="season-tile"><b>${fill!=null?fill+"%":"–"}</b><span>Planned → actual</span></div>`;
+  body.appendChild(tiles);
+
+  if(!recs.length){
+    const e=document.createElement("div"); e.className="season-sect";
+    e.innerHTML=`<div class="hv-empty">No harvest records for ${seasonYear}.</div>`;
+    body.appendChild(e); return;
+  }
+
+  // by crop
+  const cropRows=Object.values(byCrop).sort((a,b)=>b.earn-a.earn).map(c=>
+    `<tr><td>${esc(c.name)}</td><td>${c.actual.toFixed(0)} ${esc(unitLabel(c.unit,c.actual))}</td><td>${money(c.earn)}</td></tr>`).join("");
+  const outRows=Object.values(byOutlet).sort((a,b)=>b.earn-a.earn).map(o=>
+    `<tr><td>${esc(o.name)}</td><td>${o.planned.toFixed(0)}</td><td>${o.actual.toFixed(0)}</td><td>${money(o.earn)}</td></tr>`).join("");
+  const sect=document.createElement("div"); sect.className="season-sect";
+  sect.innerHTML=
+    `<div class="ap-sect">By crop</div>`
+    +`<table class="cr-table" style="max-width:640px"><thead><tr><th>Crop</th><th>Harvested</th><th>Earnings</th></tr></thead><tbody>${cropRows}</tbody></table>`
+    +`<div class="ap-sect" style="margin-top:1.4rem">By outlet</div>`
+    +`<table class="cr-table" style="max-width:640px"><thead><tr><th>Outlet</th><th>Planned</th><th>Actual</th><th>Earnings</th></tr></thead><tbody>${outRows}</tbody></table>`;
+  body.appendChild(sect);
+}
+
 document.getElementById("cmPrev").onclick=()=>{cmYear--;buildCropMap();};
 document.getElementById("cmNext").onclick=()=>{cmYear++;buildCropMap();};
+document.getElementById("seasonPrev").onclick=()=>{seasonYear--;buildSeason();};
+document.getElementById("seasonNext").onclick=()=>{seasonYear++;buildSeason();};
 document.addEventListener("dragend",()=>{dragPid=null;clearFits();document.querySelectorAll(".cm-over").forEach(el=>el.classList.remove("cm-over"));});
 
 /* ---------- Timeline (succession Gantt, crop- or bed-grouped) ---------- */
@@ -2531,9 +3515,9 @@ function fmtDM(d){ // compact DD/MM, matching Heirloom's date-label style
   const dt=new Date(d); if(isNaN(dt)) return "";
   return String(dt.getDate()).padStart(2,"0")+"/"+String(dt.getMonth()+1).padStart(2,"0");
 }
-function tlAddBarExt(rowEl,x,w,color,label,p){
+function tlAddBarExt(rowEl,x,color,label,p){
   const el=document.createElement("div");el.className="tl-bar-ext";
-  el.style.left=x+"px";el.style.width=Math.max(4,w)+"px";el.style.borderColor=color;
+  el.style.left=(x-1)+"px";el.style.background=color;
   el.title=label;
   el.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
   rowEl.appendChild(el);
@@ -2623,17 +3607,17 @@ function tlAddBar(rowEl,p,b){
   bar.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
   rowEl.appendChild(bar);
 
-  // outline-only extensions for tasks that fall outside the sow→harvest span (e.g. bed prep
-  // before sowing, tarping after harvest) — same click target as the main bar, no fill so the
-  // "real" planting duration stays visually distinct from prep/wind-down time
+  // tick marks for tasks that fall outside the sow→harvest span (e.g. bed prep before sowing,
+  // tarping after harvest) — same click target as the main bar; a thin line at the task's own
+  // date rather than a box, so it reads as a marker instead of extending the bar's shape
   const ext=taskExtentFor(p, p.sow, p.h2||p.h1||p.sow);
   if(ext.pre){
     const xPre=tlX(ext.pre.due,b);
-    if(xPre!=null && xPre<left) tlAddBarExt(rowEl, xPre, left-xPre, base, `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, p);
+    if(xPre!=null && xPre<left) tlAddBarExt(rowEl, xPre, base, `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, p);
   }
   if(ext.post){
     const xPost=tlX(ext.post.due,b), rightEdge=left+w;
-    if(xPost!=null && xPost>rightEdge) tlAddBarExt(rowEl, rightEdge, xPost-rightEdge, base, `${taskName(ext.post)} · ${fmt(ext.post.due)}`, p);
+    if(xPost!=null && xPost>rightEdge) tlAddBarExt(rowEl, xPost, base, `${taskName(ext.post)} · ${fmt(ext.post.due)}`, p);
   }
 
   // crop name shown as its own pill outside the bar, Heirloom-style (By-bed view only — in
@@ -3195,18 +4179,9 @@ function loadClimatePref(){ return localStorage.getItem(CLIMATE_PREF_KEY) !== "0
 function saveClimatePref(on){ localStorage.setItem(CLIMATE_PREF_KEY, on ? "1" : "0"); }
 
 // ---- Lifecycle tasks: ticking a task advances the planting's status ----
-// A new planting starts "Planned"; each ticked task moves it one stage on.
+// A new planting starts "Planned"; each ticked task moves it one stage on. (shared, see planner-shared.js)
 let apStatusVal = "Planned";
-function apLifecycle(method){
-  return method==="transplant"
-    ? [ {label:"Sown in nursery", stage:"Seeded",     df:"sow"},
-        {label:"Planted out",     stage:"In ground",  df:"tp"},
-        {label:"Harvest started", stage:"Harvesting", df:"h1"},
-        {label:"Finished / pulled",stage:"Finished",  df:"h2"} ]
-    : [ {label:"Sown",            stage:"In ground",  df:"sow"},
-        {label:"Harvest started", stage:"Harvesting", df:"h1"},
-        {label:"Finished / pulled",stage:"Finished",  df:"h2"} ];
-}
+const { apLifecycle } = PlannerShared;
 // ---- Tasks tab: this planting's editable task schedule ----
 // (Distinct from the Progress checklist above — that's the lifecycle stepper. This is the crop's
 // weeding/foliar-feed/tarp-etc. schedule.) Pre-fills from the crop/variety's resolved Crop Tasks
@@ -4195,6 +5170,22 @@ async function saveCropDefault(cropId,key,val){
     buildCropsTab();
   }
 }
+// Type is crop-only (never a per-variety override), so it's kept out of CR_FIELD_KEY/DEFAULT_KEYS
+// and saved directly here rather than through the generic crop-default machinery.
+async function saveCropType(cropId,val){
+  const clean = val || null;
+  const prev = (data.cropDefs[cropId]||{}).type;
+  data.cropDefs[cropId]=data.cropDefs[cropId]||{}; data.cropDefs[cropId].type = clean || "";   // optimistic
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.crops, cropId, {[CFG.f.cr_type]:clean});
+    buildCropMap();   // underlay/bar colours depend on this — safe no-op if that tab isn't built yet
+  }catch(e){
+    data.cropDefs[cropId].type = prev;   // rollback
+    console.error(e);
+    alert("Couldn't save crop type:\n"+e.message);
+    buildCropsTab();
+  }
+}
 const VA_FIELD_KEY=Object.fromEntries(DEFAULT_KEYS.map(k=>[k,"va_"+k]));
 async function saveVarietyField(varietyId,key,val){
   const fieldName=CFG.f[VA_FIELD_KEY[key]]; if(!fieldName) return;
@@ -4274,6 +5265,10 @@ function buildCrMobileList(){
     box.appendChild(back);
     const head=document.createElement("div"); head.className="cr-mobile-title"; head.textContent=cropName;
     box.appendChild(head);
+    const typeRow=document.createElement("label"); typeRow.className="cr-mobile-field";
+    typeRow.innerHTML=`<span>Type</span><select>${crTypeOptionsHTML(cd.type)}</select>`;
+    typeRow.querySelector("select").onchange=e=>saveCropType(crMobileCrop, e.target.value||null);
+    box.appendChild(typeRow);
     const form=document.createElement("div"); form.innerHTML=crFieldRowsHTML();
     box.appendChild(form);
     crBindFieldCells(form, cd, (k,v)=>saveCropDefault(crMobileCrop,k,v), null);
@@ -4314,7 +5309,7 @@ function buildCropsTab(filter){
   body.innerHTML="";
   if(!items.length){
     const r=document.createElement("tr");
-    r.innerHTML=`<td colspan="20"><div class="cr-empty">${Object.keys(data.crops||{}).length?`No crops match "${esc(q)}".`:"No crops loaded yet — connect and reload."}</div></td>`;
+    r.innerHTML=`<td colspan="21"><div class="cr-empty">${Object.keys(data.crops||{}).length?`No crops match "${esc(q)}".`:"No crops loaded yet — connect and reload."}</div></td>`;
     body.appendChild(r); return;
   }
   items.forEach(c=>{
@@ -4382,17 +5377,22 @@ function crBindFieldCells(tr, rec, saveFn, cropDefsForPlaceholder){
 }
 function crRefreshSpark(tr){ if(tr._crRenderSpark) tr._crRenderSpark(); }
 // Crop's own row: always edits the crop-level defaults. Chevron expands/collapses its varieties.
+function crTypeOptionsHTML(val){
+  return `<option value="">—</option>`+CROP_TYPES.map(t=>`<option${t===val?" selected":""}>${esc(t)}</option>`).join("");
+}
 function crCropRow(c){
   const tr=document.createElement("tr"); tr.className="cr-crop-row";
   const expanded=crExpanded.has(c.id);
+  const cd=data.cropDefs[c.id]||{};
   tr.innerHTML=
     `<td><div class="cr-crop"><button type="button" class="cr-chev">${expanded?"▾":"▸"}</button>`
       +`<span class="ap-crop-dot" style="background:${cropColor(c.id)}"></span>${esc(c.name)}</div></td>`
+    +`<td><select data-cr-type>${crTypeOptionsHTML(cd.type)}</select></td>`
     +crFieldCellsHTML(0,5)
     +`<td class="cr-spark-cell"></td>`
     +crFieldCellsHTML(5);
-  const cd=data.cropDefs[c.id]||{};
   const {sparkCell}=crBindFieldCells(tr, cd, (k,v)=>saveCropDefault(c.id,k,v), null);
+  tr.querySelector("[data-cr-type]").onchange=e=>saveCropType(c.id, e.target.value||null);
   tr._crRenderSpark=()=>{ sparkCell.innerHTML=crvSparkline(c.name, (data.cropDefs[c.id]||{}).dtm); };
   tr._crRenderSpark();
   sparkCell.onclick=()=>crOpenChart(c.id, null);
@@ -4406,8 +5406,10 @@ function crCropRow(c){
 // blank fields showing the crop's default as a placeholder (so it's clear what's inherited).
 function crVarietyRow(c,v){
   const tr=document.createElement("tr"); tr.className="cr-variety-row";
+  const cropType=(data.cropDefs[c.id]||{}).type;
   tr.innerHTML=
     `<td><div class="cr-variety-name"><span class="cr-dot" style="background:${cropColor(c.id)}"></span>${esc(v.name)}</div></td>`
+    +`<td class="cr-type-inherited">${esc(cropType||"—")}</td>`
     +crFieldCellsHTML(0,5)
     +`<td class="cr-spark-cell"></td>`
     +crFieldCellsHTML(5);
@@ -4424,7 +5426,7 @@ function crVarietyRow(c,v){
 }
 function crAddVarietyRow(c){
   const tr=document.createElement("tr"); tr.className="cr-add-row";
-  tr.innerHTML=`<td colspan="20"><button type="button" class="cr-add-variety">+ Add variety…</button></td>`;
+  tr.innerHTML=`<td colspan="21"><button type="button" class="cr-add-variety">+ Add variety…</button></td>`;
   tr.querySelector("button").onclick=async()=>{
     const newId=await crAddVariety(c.id, c.name);
     if(newId) buildCropsTab();
@@ -4747,7 +5749,7 @@ const CT_FIELD = { anchor:"ct_anchor", offset:"ct_offset", repeat:"ct_repeat", u
 const ctExpandedCrops = new Set();
 const ctExpandedVars = new Set();
 const ctBlank = x => x===null || x===undefined || x==="";
-const ctTaskById = id => (data.tasks||[]).find(t=>t.id===id);
+const ctTaskById = id => PlannerShared.ctTaskById(data, id);
 // crop-level assignments (no Variety link) for a crop, task-alphabetical
 function ctRowsForCrop(cropId){
   return (data.cropTasks||[]).filter(ct=>ct.cropId===cropId && !ct.varietyId)
@@ -5091,11 +6093,8 @@ let wkStartISO = null;   // Monday of the shown week (ISO yyyy-mm-dd); null unti
 let wkMode = "day";       // "day" (clock calendar) | "bed" | "type"
 let wkSelectedDay = null; // mobile-only day-picker selection (ISO date string); only used in "day" mode
 
-function wkParse(s){ const [y,m,d]=String(s).split("-").map(Number); return new Date(y,(m||1)-1,d||1); }
-function wkISO(dt){ const y=dt.getFullYear(),m=String(dt.getMonth()+1).padStart(2,"0"),d=String(dt.getDate()).padStart(2,"0"); return `${y}-${m}-${d}`; }
-function wkMonday(dt){ const x=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }
-function wkAddDays(dt,n){ const x=new Date(dt); x.setDate(x.getDate()+n); return x; }
-function wkSameDay(a,b){ return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate(); }
+// TZ-safe local date helpers (shared, see planner-shared.js) — deliberately not `new Date(isoString)` (UTC drift).
+const { wkParse, wkISO, wkMonday, wkAddDays, wkSameDay } = PlannerShared;
 const WK_DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 // Mobile-only: a row of day tabs (like Crop Map's block picker) narrows the calendar to one day
 // (see wkRenderCalendar). Hidden outside "By day" mode since the other two modes are flat lists.
@@ -5151,46 +6150,10 @@ function wkBlockColor(g){
 
 // Gather every Planting Task with a due date in the shown week, plus any still-open task
 // overdue from before it. Enriches each with its planting + library task + a minutes estimate.
+// Real logic lives in planner-shared.js (so an MCP server can compute the identical "this week" /
+// overdue set) — this is just a thin wrapper binding it to the app's own `data`/`wkStartISO`.
 function wkCollect(){
-  const start=wkParse(wkStartISO), end=wkAddDays(start,7), rows=[];
-  // Overdue (still-open tasks due before the window) only surface on the *current* week —
-  // the actionable one. Paging to other weeks shows just that week's own tasks.
-  const isCurrent=wkSameDay(start, wkMonday(new Date()));
-  (data.plantingTasks||[]).forEach(t=>{
-    if(!t.due) return;
-    const p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
-    const task=ctTaskById(t.taskId)||{name:"(task)",category:""};
-    const due=wkParse(t.due), overdue=isCurrent && !t.done && due<start, inWeek=due>=start && due<end;
-    if(!overdue && !inWeek) return;
-    const dur=t.duration||task.duration||0;
-    rows.push({ id:t.id, t, p, task, due, overdue, inWeek, minutes:dur*(p.bm||0)/15 });
-  });
-  // Lifecycle milestones (seed / transplant) drawn from each planting's own dates + Status.
-  // Harvest milestones (h1/h2) are deliberately excluded — handled elsewhere later.
-  // Each milestone's labour-time estimate comes from its matching Task-library row (by name) —
-  // "Direct sow" / "Sow (trays)" / "Transplant" — so it's editable like any other task's duration,
-  // rather than the fixed WK_MS_MIN fallback used when no such row exists yet.
-  (data.plantings||[]).forEach(p=>{
-    apLifecycle(p.tp?"transplant":"direct").forEach(step=>{
-      if(step.df!=="sow" && step.df!=="tp") return;          // pre-harvest milestones only
-      const dstr=p[step.df]; if(!dstr) return;               // no date set → nothing to schedule
-      const due=wkParse(dstr), sr=statusRank(step.stage), cur=statusRank(p.status), done=cur>=sr;
-      const overdue=isCurrent && !done && due<start, inWeek=due>=start && due<end;
-      if(!overdue && !inWeek) return;
-      const msName = step.df==="tp" ? "Transplant" : (p.tp ? "Sow (trays)" : "Direct sow");
-      const msTask = (data.tasks||[]).find(x=>x.name===msName);
-      // null (not 0) when there's no matching library row yet, so wkBlockMin can tell "no duration
-      // data at all" apart from "duration data says 0" (e.g. this planting has no Bed metres set)
-      const msMinutes = msTask && msTask.duration!=null ? msTask.duration*(p.bm||0)/15 : null;
-      const msStart = step.df==="tp" ? p.tpStart : p.sowStart;
-      rows.push({
-        id:`ms:${p.id}:${step.df}`, kind:"milestone", msDf:step.df, msLocked:cur>sr,
-        t:{done, repeat:0, start:msStart??null}, p, task:msTask||{name:msName, category:""},
-        due, overdue, inWeek, minutes:msMinutes,
-      });
-    });
-  });
-  return {rows,start};
+  return PlannerShared.wkCollect(data, wkStartISO, new Date());
 }
 
 function buildWeekPlanner(){
@@ -5464,13 +6427,10 @@ async function wkToggleDone(id,val){
 // milestone the planting has already advanced *beyond* is rendered locked (checkbox disabled).
 async function wkToggleMilestone(plantingId, df){
   const p=(data.plantings||[]).find(x=>x.id===plantingId); if(!p) return;
-  const lc=apLifecycle(p.tp?"transplant":"direct");
-  const i=lc.findIndex(s=>s.df===df); if(i<0) return;
-  const cur=statusRank(p.status), sr=statusRank(lc[i].stage);
-  let ns;
-  if(cur<sr) ns=lc[i].stage;                              // tick → advance to this stage
-  else if(cur===sr) ns=(i===0?"Planned":lc[i-1].stage);  // untick frontier → step back one
-  else return;                                            // already past (checkbox disabled)
+  // the actual stepper rule lives in planner-shared.js (nextMilestoneStep) so it can't drift from
+  // whatever else advances a planting's status (e.g. an MCP tool) — null = locked, no-op.
+  const step=PlannerShared.nextMilestoneStep(p, df); if(!step) return;
+  const ns=step.status;
   const prev=p.status; p.status=ns;                       // optimistic
   buildWeekPlanner();
   try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[CFG.f.pl_status]:ns}); }
@@ -5838,7 +6798,7 @@ function saveUiState(){
     const state = {
       tab,
       farmMap: { k:view.k, tx:view.tx, ty:view.ty, activeBlock },
-      cropMap: { year:cmYear, mode:cmViewMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock, unassignedOpen:document.getElementById("cmUnassigned")?.open },
+      cropMap: { year:cmYear, mode:cmViewMode, colorMode:cmColorMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock, unassignedCollapsed:cmUnCollapsed },
       timeline: { year:tlYear, mode:tlGroupMode },
       week: { mode:wkMode, odCollapsed:wkOdCollapsed },
     };
@@ -5867,9 +6827,8 @@ function restoreUiState(){
     if(typeof saved.cropMap.year==="number") cmYear=saved.cropMap.year;
     if(saved.cropMap.locked) setCmLocked(true);
     if(saved.cropMap.block) cmSelectedBlock=saved.cropMap.block;   // buildCropMap() falls back to "All" if stale
-    if(typeof saved.cropMap.unassignedOpen==="boolean"){
-      const el=document.getElementById("cmUnassigned"); if(el) el.open=saved.cropMap.unassignedOpen;
-    }
+    if(saved.cropMap.unassignedCollapsed) cmSetUnCollapsed(true);
+    if(saved.cropMap.colorMode==="type") setCmColorMode("type");   // independent of List/Map, so restored unconditionally
   }
   if(saved.timeline){
     if(typeof saved.timeline.year==="number") tlYear=saved.timeline.year;
@@ -5887,8 +6846,8 @@ function restoreUiState(){
 
   const tab=saved.tab||"map";
   if(tab!=="map"){
-    // normal tabs plus the Misc dropdown's sub-pages (tray types / task library / crop tasks)
-    const btn=document.querySelector(`.tab[data-view="${tab}"], #miscDropdown button[data-view="${tab}"]`);
+    // normal tabs plus the Harvest/Misc dropdowns' sub-pages
+    const btn=document.querySelector(`.tab[data-view="${tab}"], #harvestDropdown button[data-view="${tab}"], #miscDropdown button[data-view="${tab}"]`);
     if(btn) btn.click(); // reuses the normal tab-switch handler (builds the crop map with the restored year)
   }
   if(tab==="cropmap" && saved.cropMap && saved.cropMap.mode==="map"){
@@ -6215,6 +7174,239 @@ document.getElementById("wkTtSyncBtn")?.addEventListener("click", async()=>{
   }
   btn.disabled=false;
   buildWeekPlanner();
+});
+
+/* ---------- Google Calendar export ----------
+   One shared calendar, not per-assignee (TickTick's per-assignee refresh-token trick doesn't
+   translate to Google — its OAuth token endpoint has no browser CORS support, so token acquisition
+   can't happen via a plain fetch the way TickTick's exchange does). Instead the *entire* token grant
+   happens on a small https helper page (accounts.google.com trusts registered https origins, never
+   file://) and gets handed back here via postMessage — same handshake shape as ttStartConnect, just
+   with the whole OAuth dance on the far side instead of only a code relay.
+   Push-only: Calendar events have no "done" checkbox the way TickTick tasks do, so there's nothing
+   meaningful to pull back. */
+const GCAL_CONNECT_URL = "https://tjdscgit.github.io/google-oauth-connect/";
+const GCAL_API_BASE = "https://www.googleapis.com/calendar/v3";
+const GCAL_LS_CREDS = "roseberry_gcal_creds";     // {clientId}
+const GCAL_LS_ACCOUNT = "roseberry_gcal_account"; // {accessToken, expiresAt, calendarId}
+
+function gcalLoadCreds(){ try{ return JSON.parse(localStorage.getItem(GCAL_LS_CREDS)||"null"); }catch(_){ return null; } }
+function gcalSaveCreds(c){ localStorage.setItem(GCAL_LS_CREDS, JSON.stringify(c)); }
+function gcalLoadAccount(){ try{ return JSON.parse(localStorage.getItem(GCAL_LS_ACCOUNT)||"null"); }catch(_){ return null; } }
+function gcalSaveAccount(a){ localStorage.setItem(GCAL_LS_ACCOUNT, JSON.stringify(a)); }
+
+function gcalRenderSettings(){
+  const creds=gcalLoadCreds();
+  const idEl=document.getElementById("gcalClientId"); if(idEl) idEl.value = creds?creds.clientId:"";
+
+  const acc=gcalLoadAccount();
+  const wrap=document.getElementById("gcalAccountWrap"); if(!wrap) return;
+  wrap.innerHTML = acc && acc.calendarId
+    ? `<div class="tt-account"><span class="tt-account-dot"></span><span class="tt-account-name">Connected</span>`
+      +`<button type="button" class="tt-account-x" id="gcalDisconnectBtn">Disconnect</button></div>`
+    : `<div class="hint" style="margin-top:0">Not connected yet.</div>`;
+  document.getElementById("gcalDisconnectBtn")?.addEventListener("click",()=>{
+    if(!confirm("Disconnect Google Calendar? You'll need to reconnect to sync again.")) return;
+    localStorage.removeItem(GCAL_LS_ACCOUNT);
+    gcalRenderSettings();
+  });
+}
+
+document.getElementById("gcalSaveCreds")?.addEventListener("click",()=>{
+  const clientId=document.getElementById("gcalClientId").value.trim();
+  const statusEl=document.getElementById("gcalCredStatus");
+  if(!clientId){ statusEl.className="status err"; statusEl.textContent="Client ID is required."; return; }
+  gcalSaveCreds({clientId});
+  statusEl.className="status ok"; statusEl.textContent="Saved.";
+});
+
+document.getElementById("gcalConnectBtn")?.addEventListener("click", async()=>{
+  const statusEl=document.getElementById("gcalConnectStatus");
+  const creds=gcalLoadCreds();
+  if(!creds || !creds.clientId){ statusEl.className="status err"; statusEl.textContent="Save your Google OAuth Client ID first."; return; }
+  statusEl.className="status"; statusEl.textContent="Waiting for approval in the popup…";
+  try{
+    await gcalStartConnect(creds, {silent:false});
+    await gcalEnsureCalendar();
+    gcalRenderSettings();
+    statusEl.className="status ok"; statusEl.textContent="Connected.";
+  }catch(err){
+    statusEl.className="status err"; statusEl.textContent="Couldn't connect: "+err.message;
+  }
+});
+
+// Opens the https helper page as a popup — it does the actual GIS token acquisition (this app's own
+// origin is file://, which Google's OAuth library refuses outright) and hands the access token back
+// via postMessage, mirroring ttStartConnect's popup+postMessage handshake.
+function gcalStartConnect(creds, opts){
+  opts=opts||{};
+  return new Promise((resolve, reject)=>{
+    const url = GCAL_CONNECT_URL + "?" + new URLSearchParams({
+      client_id: creds.clientId, silent: opts.silent ? "1" : "0",
+    }).toString();
+    const popup = window.open(url, "gcalOAuth", "width=480,height=680");
+    const timeout = setTimeout(()=>{
+      window.removeEventListener("message", onMsg);
+      try{ if(popup && !popup.closed) popup.close(); }catch(_){}
+      reject(new Error("Timed out waiting for Google sign-in."));
+    }, opts.silent ? 8000 : 120000);
+    const onMsg = (e)=>{
+      if(!e.data || e.data.source!=="gcal-oauth") return;
+      clearTimeout(timeout);
+      window.removeEventListener("message", onMsg);
+      try{ if(popup && !popup.closed) popup.close(); }catch(_){}
+      if(e.data.error){ reject(new Error(e.data.error)); return; }
+      const account=gcalLoadAccount()||{};
+      account.accessToken=e.data.token;
+      account.expiresAt=Date.now()+(e.data.expiresIn||3600)*1000;
+      gcalSaveAccount(account);
+      resolve(account);
+    };
+    window.addEventListener("message", onMsg);
+  });
+}
+
+// Ensures a live access token before any API call — tries a silent (no-UI) refresh first, and only
+// falls back to an interactive popup if that fails (e.g. the Google session's gone stale).
+async function gcalEnsureAccessToken(){
+  const creds=gcalLoadCreds();
+  if(!creds || !creds.clientId) throw new Error("Google Calendar not connected.");
+  const acc=gcalLoadAccount();
+  if(acc && acc.accessToken && acc.expiresAt && Date.now() < acc.expiresAt - 60000) return acc.accessToken;
+  try{
+    const refreshed = await gcalStartConnect(creds, {silent:true});
+    return refreshed.accessToken;
+  }catch(_){
+    const refreshed = await gcalStartConnect(creds, {silent:false});
+    return refreshed.accessToken;
+  }
+}
+
+async function gcalApiFetch(url, opts){
+  opts=opts||{};
+  const token=await gcalEnsureAccessToken();
+  const headers=Object.assign({"Authorization":"Bearer "+token,"Content-Type":"application/json"}, opts.headers||{});
+  return fetch(url, Object.assign({}, opts, {headers}));
+}
+
+// Finds (or creates) a "Roseberry Farm Tasks" secondary calendar, so pushed events land somewhere
+// separate from whatever's already on the connected account's own calendar.
+async function gcalEnsureCalendar(){
+  const r=await gcalApiFetch(GCAL_API_BASE+"/users/me/calendarList");
+  if(!r.ok) throw new Error("Couldn't list calendars: "+r.status);
+  const list=await r.json();
+  let cal=(list.items||[]).find(c=>c.summary==="Roseberry Farm Tasks");
+  if(!cal){
+    const cr=await gcalApiFetch(GCAL_API_BASE+"/calendars", {method:"POST", body:JSON.stringify({summary:"Roseberry Farm Tasks"})});
+    if(!cr.ok) throw new Error("Couldn't create calendar: "+cr.status);
+    cal=await cr.json();
+  }
+  const account=gcalLoadAccount()||{};
+  account.calendarId=cal.id;
+  gcalSaveAccount(account);
+  return cal.id;
+}
+
+// One shared calendar means every row's title needs to say who it's for (TickTick's per-assignee
+// calendars didn't need this — the calendar itself was the assignee).
+function gcalTitleFor(r){
+  const bed=bedNameOf(r.p);
+  const who = (r.kind==="milestone" ? (r.msDf==="tp"?r.p.tpAssignee:r.p.sowAssignee) : r.t.assignee) || "Unassigned";
+  return `${r.task.name} — ${r.p.crop}${r.p.variety?" "+r.p.variety:""}${bed?" · "+bed:""} (${who})`;
+}
+function gcalDateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function gcalDateTimeStr(dateOnly, minutesFromMidnight){
+  const dt=new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate(), 0, 0, 0);
+  dt.setMinutes(minutesFromMidnight);
+  const p2=n=>String(n).padStart(2,"0");
+  return `${dt.getFullYear()}-${p2(dt.getMonth()+1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}:00`;
+}
+function gcalMinutesFor(r){
+  return r.kind==="milestone" ? (r.msDf==="tp"?r.p.tpStart:r.p.sowStart) : r.t.start;
+}
+// Calendar events need a real start+end range (unlike a TickTick task, which can be a bare point in
+// time) — an all-day event when the row has no explicit clock time, otherwise a timed event running
+// for the row's own workload-estimate minutes (floored at 30, so a near-zero estimate doesn't render
+// as a blink-and-you-miss-it block).
+function gcalEventBodyForRow(r, minutesOverride){
+  const minutes = minutesOverride!=null ? minutesOverride : gcalMinutesFor(r);
+  const title=gcalTitleFor(r);
+  if(minutes==null){
+    return { summary: title, start:{date:gcalDateStr(r.due)}, end:{date:gcalDateStr(wkAddDays(r.due,1))} };
+  }
+  const tz=Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const durationMin = Math.max(r.minutes||0, 30);
+  return { summary: title,
+           start:{dateTime:gcalDateTimeStr(r.due, minutes), timeZone:tz},
+           end:{dateTime:gcalDateTimeStr(r.due, minutes+durationMin), timeZone:tz} };
+}
+// One row (a cultural task or a sow/transplant milestone) → create or update its Calendar event, and
+// for a fresh create, write the new event id straight back onto the Airtable record so the next sync
+// knows to update instead of duplicating.
+async function gcalPushOneRow(r, calendarId, minutesOverride){
+  const isMs=r.kind==="milestone";
+  const existingId = isMs ? (r.msDf==="tp"?r.p.tpGcalId:r.p.sowGcalId) : r.t.gcalId;
+  const body=gcalEventBodyForRow(r, minutesOverride);
+  const base=GCAL_API_BASE+"/calendars/"+encodeURIComponent(calendarId)+"/events";
+  if(existingId){
+    const resp=await gcalApiFetch(base+"/"+existingId, {method:"PATCH", body:JSON.stringify(body)});
+    if(!resp.ok) throw new Error("update failed: "+resp.status);
+    return;
+  }
+  const resp=await gcalApiFetch(base, {method:"POST", body:JSON.stringify(body)});
+  if(!resp.ok) throw new Error("create failed: "+resp.status);
+  const created=await resp.json();
+  const newId=created.id;
+  if(isMs){
+    const field = r.msDf==="tp" ? CFG.f.pl_tpGcalId : CFG.f.pl_sowGcalId;
+    await atPatch(CFG.farmBase, CFG.tables.plantings, r.p.id, {[field]: newId});
+    if(r.msDf==="tp") r.p.tpGcalId=newId; else r.p.sowGcalId=newId;
+  }else{
+    await atPatch(CFG.farmBase, CFG.tables.plantingTasks, r.t.id, {[CFG.f.pt_gcalid]: newId});
+    r.t.gcalId=newId;
+  }
+}
+// Pushes every row wkCollect() currently considers relevant, regardless of assignee — one shared
+// calendar, so there's no per-person "not connected" skip the way TickTick's push has.
+async function gcalPushWeek(){
+  const {rows}=wkCollect();
+  const creds=gcalLoadCreds();
+  if(!creds || !creds.clientId) throw new Error("Connect Google Calendar in Settings first.");
+  const calendarId = (gcalLoadAccount()||{}).calendarId || await gcalEnsureCalendar();
+
+  // Reproduce the exact same per-day packing used to render the calendar (wkPackDay), so a pushed
+  // event's time matches what's actually shown on screen — see ttPushWeek's identical rationale.
+  const minutesByRowId=new Map();
+  const byDay=new Map();
+  rows.forEach(r=>{
+    if(!r.inWeek) return;
+    const key=wkISO(r.due);
+    if(!byDay.has(key)) byDay.set(key,[]);
+    byDay.get(key).push(r);
+  });
+  byDay.forEach(dayRows=>{
+    wkPackDay(dayRows).forEach(g=>{ g.members.forEach(m=>minutesByRowId.set(m.id, g.start)); });
+  });
+  let pushed=0, failed=0;
+  for(const r of rows){
+    try{ await gcalPushOneRow(r, calendarId, minutesByRowId.get(r.id)); pushed++; }
+    catch(e){ failed++; console.error("Google Calendar push failed:", r, e); }
+  }
+  return `Pushed ${pushed}${failed?`, ${failed} failed`:""}.`;
+}
+
+document.getElementById("gearBtn")?.addEventListener("click", gcalRenderSettings);
+window.addEventListener("load", gcalRenderSettings);
+
+document.getElementById("wkGcalSyncBtn")?.addEventListener("click", async()=>{
+  const btn=document.getElementById("wkGcalSyncBtn"), statusEl=document.getElementById("wkGcalStatus");
+  btn.disabled=true; statusEl.textContent="Syncing…";
+  try{
+    statusEl.textContent = await gcalPushWeek();
+  }catch(e){
+    statusEl.textContent = "Sync error: "+e.message;
+  }
+  btn.disabled=false;
 });
 
 /* ---------- boot ---------- */
