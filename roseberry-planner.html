@@ -255,6 +255,7 @@
   .kv{display:flex;justify-content:space-between;gap:1rem;padding:.42rem 0;border-bottom:1px solid var(--line);font-size:.86rem}
   .kv .k{color:var(--ink-2)}
   .kv .v{font-family:var(--mono);text-align:right}
+  .tl-actual-note{display:block;font-size:.72rem;color:var(--ink-2);font-family:var(--sans,inherit)}
   .pill{display:inline-block;font-family:var(--mono);font-size:.66rem;
     padding:.16rem .5rem;border-radius:999px;color:#fff;letter-spacing:.03em}
   .sect-h{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
@@ -319,6 +320,9 @@
   .tt-account-x{background:none;border:none;color:var(--clay);cursor:pointer;font-family:var(--mono);
     font-size:.7rem;padding:.15rem .3rem}
   .wk-tt-status{font-family:var(--mono);font-size:.66rem;color:var(--ink-2);margin-right:.4rem;white-space:nowrap}
+  /* desktop: behaves exactly like two plain .cm-top children (display:contents removes the wrapper
+     from layout entirely) — only mobile (below) turns it into a real, guaranteed-visible row. */
+  .wk-add-group{display:contents}
 
   #loading{position:absolute;inset:0;z-index:40;display:none;align-items:center;
     justify-content:center;background:rgba(247,245,239,.7);font-family:var(--mono);
@@ -391,6 +395,7 @@
   .wk-task.wk-ms{background:var(--band-b)}
   .wk-task.wk-ms .wk-task-name{font-weight:700}
   .ct-cat.wk-ms-pill{background:var(--steel);color:#fff;border-color:var(--steel)}
+  .ct-cat.wk-manual-pill{background:var(--clay);color:#fff;border-color:var(--clay)}
   /* ---- By-day clock calendar ---- */
   .wk-cal{min-width:860px}
   .wk-cal-grid{display:grid;grid-template-columns:54px repeat(7,minmax(104px,1fr))}
@@ -447,6 +452,14 @@
   .wk-group-row-main{flex:1 1 auto;min-width:0;cursor:pointer}
   .wk-group-row-crop{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .wk-group-row-meta{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-top:.1rem}
+  /* ---- add/edit manual task modal (reuses .wk-group-card + .ap-trow-f/.ap-actions) ---- */
+  #wkTaskModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.45);padding:1rem}
+  #wkTaskModal.open{display:flex}
+  .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
+  .wk-task-form-row{display:flex;gap:.9rem}
+  .wk-task-form-row .ap-trow-f{flex:1 1 0}
+  .wk-task-form input,.wk-task-form select{width:100%}
   /* ---- week view layout: overdue sidebar (left) · main body · planting-detail panel (right) ---- */
   #view-week.active{display:flex;flex-direction:column}
   .wk-content{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}
@@ -885,6 +898,12 @@
     #view-week #wkModeToggle{flex:1 1 100%;margin-left:0}
     #view-week #wkModeToggle button{flex:1 1 0}
     #view-week .wk-tt-status{white-space:normal}
+    /* Add task / Add planting: same idea as the mode toggle above — rather than leaving them to
+       fall wherever the wrap happens to land (and risk being pushed below the fold on a short
+       viewport, since .cm-top's wrapped rows aren't scrollable — see the overflow:hidden note
+       above), give them their own guaranteed full-width row so they're always reachable. */
+    #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.5rem}
+    #view-week .wk-add-group button{flex:1 1 0}
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -1267,7 +1286,10 @@
         <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button>
         <span class="wk-tt-status" id="wkGcalStatus"></span>
         <button class="icon-btn" id="wkGcalSyncBtn" title="Push this week's schedule to Google Calendar">📅 Google Calendar</button>
-        <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
+        <div class="wk-add-group">
+          <button class="btn-ghost" id="wkAddTaskBtn">+ Add task</button>
+          <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
+        </div>
       </div>
       <div class="wk-day-picker" id="wkDayPicker"></div>
       <div class="wk-content">
@@ -1335,6 +1357,30 @@
       <button class="ap-x" id="wkGroupClose" title="Close">✕</button>
       <div class="wk-group-title" id="wkGroupTitle">Task</div>
       <div class="wk-group-list" id="wkGroupList"></div>
+    </div>
+  </div>
+
+  <!-- WEEKLY PLANNER: add/edit a manual task (not tied to any planting) -->
+  <div id="wkTaskModal">
+    <div class="wk-group-card">
+      <button class="ap-x" id="wkTaskClose" title="Close">✕</button>
+      <div class="wk-group-title" id="wkTaskTitle">Add task</div>
+      <div class="wk-task-form">
+        <label class="ap-trow-f"><span>Task</span>
+          <input type="text" id="wkTaskLabel" placeholder="e.g. Fix drip line on Block C" maxlength="140">
+        </label>
+        <div class="wk-task-form-row">
+          <label class="ap-trow-f"><span>Due date</span><input type="date" id="wkTaskDue"></label>
+          <label class="ap-trow-f"><span>Est. minutes</span><input type="number" id="wkTaskDuration" min="0" step="5" placeholder="optional"></label>
+        </div>
+        <label class="ap-trow-f"><span>Assignee</span><select id="wkTaskAssignee"></select></label>
+      </div>
+      <div class="ap-actions">
+        <button class="btn-danger" id="wkTaskDelete" style="display:none">Delete</button>
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="wkTaskCancel">Cancel</button>
+        <button class="btn-primary" id="wkTaskSaveBtn">Save</button>
+      </div>
     </div>
   </div>
 
@@ -1499,6 +1545,13 @@
             <input type="date" id="apH2"></label>
           <label class="ap-field" id="apGroupWrap"><span>Succession group</span>
             <input type="text" id="apGroup" placeholder="optional"></label>
+
+          <label class="ap-field" id="apSowActualWrap" title="When this was actually seeded, if different from the plan above">
+            <span>Actual sow date</span>
+            <input type="date" id="apSowActual"></label>
+          <label class="ap-field" id="apTpActualWrap" style="display:none" title="When this was actually transplanted, if different from the plan above">
+            <span>Actual transplant date</span>
+            <input type="date" id="apTpActual"></label>
         </div>
 
         <div class="ap-sect">Notes</div>
@@ -1781,7 +1834,7 @@ async function loadAll(){
       group:p.fields[F.pl_group]||"", bm:num(p.fields[F.pl_bm]),
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
-      sowActual:p.fields[F.pl_sowActual]||"",
+      sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
 
@@ -3914,8 +3967,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
     +tlKv("Bed",esc(bedName||"unassigned"))
     +tlKv("Bed metres",esc(p.bm!=null?String(p.bm)+" m":"–"))
     +tlKv("Succession group",esc(dash(p.group)))
-    +tlKv("Sow date",fmt(p.sow))
-    +(p.tp?tlKv("Transplant date",fmt(p.tp)):"")
+    +tlKv("Sow date",fmt(p.sow)+(p.sowActual?` <span class="tl-actual-note">actual: ${esc(fmt(p.sowActual))}</span>`:""))
+    +(p.tp?tlKv("Transplant date",fmt(p.tp)+(p.tpActual?` <span class="tl-actual-note">actual: ${esc(fmt(p.tpActual))}</span>`:"")):"")
     +tlKv("First harvest",fmt(p.h1))
     +tlKv("Last harvest",fmt(p.h2));
 
@@ -4561,6 +4614,8 @@ function apUpdateVis(){
   apShow("apTpWrap", isTp && !group);
   apShow("apH1Wrap", !group);
   apShow("apH2Wrap", !group);
+  apShow("apSowActualWrap", !group);          // actual dates are per-planting facts, not bulk-editable
+  apShow("apTpActualWrap", isTp && !group);
   apShow("apClimateWrap", apMode==="create"); // season-adjust harvest only when creating
 }
 
@@ -4777,6 +4832,7 @@ function apSelectCrop(cropId){
   $ap("apBm").value = "";
   $ap("apSow").value = todayISO();
   $ap("apTp").value=""; $ap("apH1").value=""; $ap("apH2").value="";
+  $ap("apSowActual").value=""; $ap("apTpActual").value="";
   apApplyDefaults(cropId, "");   // sets method/nursery/dtm/window/gap/rows/harvest, the defaults note, and cascades dates
   apLoadTaskRows();   // prefills the Tasks tab's editable schedule from this crop's Crop Tasks
   apShowTab("details");
@@ -4826,6 +4882,7 @@ function apOpenEdit(p){
   // absolute dates from the record …
   $ap("apSow").value=p.sow||""; $ap("apTp").value=p.tp||"";
   $ap("apH1").value=p.h1||""; $ap("apH2").value=p.h2||"";
+  $ap("apSowActual").value=p.sowActual||""; $ap("apTpActual").value=p.tpActual||"";
   // … and back-compute the timing parameters so DTM / harvest window are remembered
   const base = isTp ? p.tp : p.sow;
   const nur = (isTp && p.sow && p.tp) ? isoDiffDays(p.sow,p.tp) : null;
@@ -4852,6 +4909,7 @@ function apSnapshot(){
     bedId:$ap("apBed").value, bm:$ap("apBm").value, group:$ap("apGroup").value,
     nursery:$ap("apNursery").value, dtm:$ap("apDtm").value, window:$ap("apWindow").value,
     sow:$ap("apSow").value, tp:$ap("apTp").value, h1:$ap("apH1").value, h2:$ap("apH2").value,
+    sowActual:$ap("apSowActual").value, tpActual:$ap("apTpActual").value,
     rows:$ap("apRows").value, rowSpacing:$ap("apRowSpacing").value, plantSpacing:$ap("apPlantSpacing").value,
     seeder:$ap("apSeeder").value, harvestUnit:$ap("apHarvestUnit").value, plantsPerUnit:$ap("apPlantsPerUnit").value,
     price:$ap("apPrice").value, yield:$ap("apYield").value,
@@ -4917,6 +4975,11 @@ async function apDoCreate(){
   const germTemp=$ap("apGermTemp").value===""?null:(+$ap("apGermTemp").value);
   const pottingUp=apPottingUpVal();
   const notes=$ap("apNotes").value.trim();
+  // Actual dates only ever apply to a single planting being logged (possibly retroactively) —
+  // a succession run creates future plantings, so one "actual" value entered once wouldn't
+  // sensibly apply to every offset date in the run.
+  const sowActual = count===1 ? $ap("apSowActual").value : "";
+  const tpActual = count===1 ? $ap("apTpActual").value : "";
 
   const F=CFG.f, recs=[], recDates=[];
   for(let i=0;i<count;i++){
@@ -4960,6 +5023,8 @@ async function apDoCreate(){
     if(germTemp!=null) f[F.pl_germTemp]=germTemp;
     if(pottingUp) f[F.pl_pottingUp]=pottingUp;
     if(notes) f[F.pl_notes]=notes;
+    if(sowActual) f[F.pl_sowActual]=sowActual;
+    if(method==="transplant" && tpActual) f[F.pl_tpActual]=tpActual;
     recs.push(f);
     recDates.push({sow:sow_i, tp:(method==="transplant"&&tp_i)?tp_i:null, h1:h1_i||null, h2:h2_i||null});
   }
@@ -5019,6 +5084,8 @@ async function apDoSave(){
     f[F.pl_tp]=(method==="transplant" && $ap("apTp").value)?$ap("apTp").value:null;
     f[F.pl_h1]=$ap("apH1").value||null;
     f[F.pl_h2]=$ap("apH2").value||null;
+    f[F.pl_sowActual]=$ap("apSowActual").value||null;
+    f[F.pl_tpActual]=(method==="transplant" && $ap("apTpActual").value)?$ap("apTpActual").value:null;
     f[F.pl_bm]=(bm!=null && !isNaN(bm))?bm:null;
     f[F.pl_rows]=$ap("apRows").value===""?null:(+$ap("apRows").value);
     f[F.pl_rowSpacing]=$ap("apRowSpacing").value===""?null:(+$ap("apRowSpacing").value);
@@ -6245,11 +6312,16 @@ function buildWeekPlanner(){
 // Lifecycle milestones (sow/transplant) are all pre-harvest "planting" events — harvest milestones
 // aren't generated yet (deferred), so a single shared label covers everything this pill can show.
 function wkMsPillHTML(){ return `<span class="ct-cat wk-ms-pill">Planting</span>`; }
+function wkManualPillHTML(){ return `<span class="ct-cat wk-manual-pill">Manual</span>`; }
 function wkTaskRowHTML(r, showCtx, showDue){
   const isMs=r.kind==="milestone";
-  const cat=isMs?wkMsPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
+  const cat=isMs?wkMsPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
   const rep=r.t.repeat?`<span class="wk-repeat">↻ ${r.t.repeat}d</span>`:"";
-  const ctx=showCtx?`<span class="wk-ctx">${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}</span>`:"";
+  // manual tasks have no crop/bed to show — their name already carries all the context there is,
+  // so the ctx slot shows the assignee (if any) instead of duplicating the row's own name.
+  const ctx=showCtx?(r.manual
+    ? (r.t.assignee?`<span class="wk-ctx">${esc(r.t.assignee)}</span>`:"")
+    : `<span class="wk-ctx">${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}</span>`):"";
   const due=showDue?`<span class="wk-due${r.overdue?" wk-od":""}">${fmt(r.due)}</span>`:"";
   const cb=`<input type="checkbox" class="wk-check" ${r.t.done?"checked":""} ${isMs&&r.msLocked?"disabled":""} title="${isMs?(r.msLocked?"Already past this stage — manage in the planting":"Mark milestone done"):"Mark done"}">`;
   return `<div class="wk-task${r.t.done?" done":""}${isMs?" wk-ms":""}" data-id="${r.id}" data-plid="${r.p.id}"${isMs?` data-kind="milestone" data-df="${r.msDf}"`:""}>`
@@ -6296,10 +6368,14 @@ function wkBlockHTML(g, dayISO){
   const sorted=g.members.slice().sort((a,b)=>a.p.crop.localeCompare(b.p.crop));
   const mems = sorted.slice(0,1).map(m=>{
     const lock=m.kind==="milestone"&&m.msLocked;
+    // manual tasks have no crop/bed — the block header already carries their name, so show the
+    // assignee (if any) here instead of repeating it.
+    const memTxt = m.manual ? (m.t.assignee?esc(m.t.assignee):"")
+      : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}${bedNameOf(m.p)?" · "+esc(bedNameOf(m.p)):""}`;
     return `<div class="wk-mem${m.t.done?" done":""}">`
       +`<input type="checkbox" class="wk-check" ${m.t.done?"checked":""} ${lock?"disabled":""} `
         +`data-id="${m.id}" data-plid="${m.p.id}"${m.kind==="milestone"?` data-kind="milestone" data-df="${m.msDf}"`:""}>`
-      +`<span class="wk-mem-txt" data-pl="${m.p.id}">${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}${bedNameOf(m.p)?" · "+esc(bedNameOf(m.p)):""}</span>`
+      +`<span class="wk-mem-txt" data-pl="${m.p.id}">${memTxt}</span>`
       +`</div>`;
   }).join("") + (total>2?`<div class="wk-mem-more">+${total-1} more…</div>`:"");
   return `<div class="wk-block${allDone?" done":""}${total>1?" wk-block-grouped":""}" style="top:${top}px;height:${h}px;background:${col.bg};border-color:${col.bd}" `
@@ -6319,17 +6395,21 @@ function wkOpenGroupModal(key,dayISO){
   const {rows}=wkCollect();
   const members=rows.filter(r=>r.inWeek && wkSameDay(r.due,wkParse(dayISO)) && wkTypeKey(r)===key);
   if(!members.length){ wkCloseGroupModal(); return; }
+  const unit = members[0].manual ? "task" : "planting";
   document.getElementById("wkGroupTitle").textContent=
-    `${members[0].task.name} · ${members.length} planting${members.length===1?"":"s"}`;
+    `${members[0].task.name} · ${members.length} ${unit}${members.length===1?"":"s"}`;
   document.getElementById("wkGroupList").innerHTML=members.slice()
     .sort((a,b)=>a.p.crop.localeCompare(b.p.crop)).map(m=>{
       const lock=m.kind==="milestone"&&m.msLocked;
+      const crop = m.manual ? esc(m.task.name) : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}`;
+      const meta = m.manual ? `${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}`
+        : `${esc(bedNameOf(m.p)||"unassigned")} · ${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}`;
       return `<div class="wk-group-row${m.t.done?" done":""}">`
         +`<input type="checkbox" class="wk-check" ${m.t.done?"checked":""} ${lock?"disabled":""} `
           +`data-id="${m.id}" data-plid="${m.p.id}"${m.kind==="milestone"?` data-kind="milestone" data-df="${m.msDf}"`:""}>`
         +`<div class="wk-group-row-main" data-pl="${m.p.id}">`
-          +`<div class="wk-group-row-crop">${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}</div>`
-          +`<div class="wk-group-row-meta">${esc(bedNameOf(m.p)||"unassigned")} · ${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}</div>`
+          +`<div class="wk-group-row-crop">${crop}</div>`
+          +`<div class="wk-group-row-meta">${meta}</div>`
         +`</div></div>`;
     }).join("");
   document.getElementById("wkGroupModal").classList.add("open");
@@ -6349,16 +6429,100 @@ document.getElementById("wkGroupModal").addEventListener("change",e=>{
 document.getElementById("wkGroupList").addEventListener("click",e=>{
   if(e.target.closest(".wk-check")) return;
   const main=e.target.closest("[data-pl]");
-  if(main){ wkCloseGroupModal(); wkOpenPlanting(main.dataset.pl); }
+  if(!main) return;
+  wkCloseGroupModal();
+  if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
+  else wkOpenPlanting(main.dataset.pl);
 });
+
+// ---- Add/edit a manual task: a Planting Tasks record with no linked Planting (see the "manual
+// task" comment on wkCollect in planner-shared.js). id=null opens the dialog empty for a new task;
+// an existing Planting Task id pre-fills it for editing (reached by clicking a manual row's name).
+let wkTaskEditId=null;
+function wkTaskOpen(id){
+  wkTaskEditId=id||null;
+  const t = wkTaskEditId ? (data.plantingTasks||[]).find(x=>x.id===wkTaskEditId) : null;
+  document.getElementById("wkTaskTitle").textContent = t ? "Edit task" : "Add task";
+  document.getElementById("wkTaskLabel").value = t ? (t.label||"") : "";
+  document.getElementById("wkTaskDue").value = t ? (t.due||"") : (wkSelectedDay || wkStartISO || wkISO(new Date()));
+  document.getElementById("wkTaskDuration").value = (t && t.duration!=null) ? t.duration : "";
+  const curAssignee = t ? (t.assignee||"") : "";
+  const assigneeChoices=knownAssignees();
+  if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
+  document.getElementById("wkTaskAssignee").innerHTML =
+    `<option value=""${!curAssignee?" selected":""}>— Unassigned —</option>`
+    + assigneeChoices.map(a=>`<option value="${esc(a)}"${a===curAssignee?" selected":""}>${esc(a)}</option>`).join("")
+    + `<option value="__new__">+ Add new…</option>`;
+  document.getElementById("wkTaskDelete").style.display = t ? "" : "none";
+  document.getElementById("wkTaskModal").classList.add("open");
+  document.getElementById("wkTaskLabel").focus();
+}
+function wkTaskClose(){ wkTaskEditId=null; document.getElementById("wkTaskModal").classList.remove("open"); }
+document.getElementById("wkTaskAssignee").addEventListener("change",e=>{
+  if(e.target.value!=="__new__") return;
+  const name=(prompt("New assignee name:")||"").trim();
+  if(name){
+    const opt=document.createElement("option"); opt.value=name; opt.textContent=name; opt.selected=true;
+    e.target.insertBefore(opt, e.target.lastElementChild);
+  }else e.target.value="";
+});
+async function wkTaskSave(){
+  const label=document.getElementById("wkTaskLabel").value.trim();
+  const due=document.getElementById("wkTaskDue").value;
+  if(!label || !due){ alert("A task name and due date are both required."); return; }
+  const durRaw=document.getElementById("wkTaskDuration").value;
+  const duration = durRaw===""?null:Math.max(0, Number(durRaw));
+  const assigneeSel=document.getElementById("wkTaskAssignee").value;
+  const assignee = assigneeSel==="__new__" ? "" : assigneeSel;
+  const btn=document.getElementById("wkTaskSaveBtn"); btn.disabled=true;
+  try{
+    if(wkTaskEditId){
+      // editing: explicit null clears a field the user just blanked out (matches wkSetAssigneeFor).
+      const fields={ [CFG.f.pt_label]:label, [CFG.f.pt_due]:due,
+        [CFG.f.pt_assignee]:assignee||null, [CFG.f.pt_duration]:duration };
+      await atPatch(CFG.farmBase, CFG.tables.plantingTasks, wkTaskEditId, fields);
+      const t=(data.plantingTasks||[]).find(x=>x.id===wkTaskEditId);
+      if(t) Object.assign(t, {label, due, assignee, duration});
+    }else{
+      // creating: omit empty optional fields rather than sending null (matches materializePlantingTasksFor).
+      const fields={ [CFG.f.pt_label]:label, [CFG.f.pt_due]:due };
+      if(assignee) fields[CFG.f.pt_assignee]=assignee;
+      if(duration!=null) fields[CFG.f.pt_duration]=duration;
+      const [rec]=await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [fields]);
+      data.plantingTasks.push({id:rec.id, plantingId:null, taskId:null, label, anchor:"", offset:null,
+        due, done:false, start:null, repeat:null, until:"", duration, assignee, ttId:"", gcalId:""});
+    }
+    wkTaskClose(); buildWeekPlanner();
+  }catch(e){ alert("Couldn't save that task: "+e.message); }
+  finally{ btn.disabled=false; }
+}
+async function wkTaskDelete(){
+  if(!wkTaskEditId) return;
+  if(!confirm("Delete this task?\n\nThis permanently removes the record from Airtable.")) return;
+  const id=wkTaskEditId, btn=document.getElementById("wkTaskDelete"); btn.disabled=true;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.plantingTasks, [id]);
+    data.plantingTasks=(data.plantingTasks||[]).filter(t=>t.id!==id);
+    wkTaskClose(); buildWeekPlanner();
+  }catch(e){ alert("Couldn't delete: "+e.message); }
+  finally{ btn.disabled=false; }
+}
+document.getElementById("wkTaskClose").onclick=wkTaskClose;
+document.getElementById("wkTaskCancel").onclick=wkTaskClose;
+document.getElementById("wkTaskSaveBtn").onclick=wkTaskSave;
+document.getElementById("wkTaskDelete").onclick=wkTaskDelete;
+document.getElementById("wkTaskModal").addEventListener("mousedown",e=>{ if(e.target.id==="wkTaskModal") wkTaskClose(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElementById("wkTaskModal").classList.contains("open")) wkTaskClose(); });
 
 // ---- Overdue sidebar (left, collapsible): each item is a draggable mini-block, reusing the same
 // .wk-block-h[data-drag] handle convention as calendar blocks so wkOnPointerDown picks it up for
 // free — dragging one onto a day column reschedules it into the current week (wkCommitOverdueMove).
 function wkOdSidebarItemHTML(r){
   const isMs=r.kind==="milestone";
-  const pill=isMs?wkMsPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
+  const pill=isMs?wkMsPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
   const lock=isMs&&r.msLocked;
+  const ctxTxt = r.manual ? (r.t.assignee?esc(r.t.assignee):"")
+    : `${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}`;
   return `<div class="wk-odsb-block" data-overdue-row="${r.id}" data-min="${Math.round(wkBlockMin(r))}">`
     +`<div class="wk-block-h" data-drag="1" title="Drag onto a day to reschedule">`
       +`<span class="wk-block-name">${esc(r.task.name)}</span>${pill}</div>`
@@ -6366,7 +6530,7 @@ function wkOdSidebarItemHTML(r){
       +`<label class="wk-odsb-row">`
         +`<input type="checkbox" class="wk-check" ${r.t.done?"checked":""} ${lock?"disabled":""} `
           +`data-id="${r.id}" data-plid="${r.p.id}"${isMs?` data-kind="milestone" data-df="${r.msDf}"`:""}>`
-        +`<span class="wk-odsb-ctx" data-pl="${r.p.id}">${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}</span>`
+        +`<span class="wk-odsb-ctx" data-pl="${r.p.id}">${ctxTxt}</span>`
       +`</label>`
       +`<div class="wk-odsb-due">${fmt(r.due)}</div>`
     +`</div></div>`;
@@ -6452,14 +6616,18 @@ async function wkToggleDone(id,val){
 // milestone the planting has already advanced *beyond* is rendered locked (checkbox disabled).
 async function wkToggleMilestone(plantingId, df){
   const p=(data.plantings||[]).find(x=>x.id===plantingId); if(!p) return;
-  // the actual stepper rule lives in planner-shared.js (nextMilestoneStep) so it can't drift from
-  // whatever else advances a planting's status (e.g. an MCP tool) — null = locked, no-op.
-  const step=PlannerShared.nextMilestoneStep(p, df); if(!step) return;
-  const ns=step.status;
-  const prev=p.status; p.status=ns;                       // optimistic
+  // the actual stepper rule lives in planner-shared.js (buildMilestonePatch) so it can't drift
+  // from whatever else advances a planting's status (e.g. an MCP tool) — null = locked, no-op.
+  // Besides Status, it also stamps/clears the sow/tp "actual date" field, keyed by app-side prop
+  // name (status/sowActual/tpActual) — map those to Airtable field names for the PATCH below.
+  const patch=PlannerShared.buildMilestonePatch(p, df, todayISO()); if(!patch) return;
+  const propToField={status:CFG.f.pl_status, sowActual:CFG.f.pl_sowActual, tpActual:CFG.f.pl_tpActual};
+  const prev={}; Object.keys(patch).forEach(k=>prev[k]=p[k]);
+  Object.assign(p, patch);                                // optimistic
   buildWeekPlanner();
-  try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[CFG.f.pl_status]:ns}); }
-  catch(e){ p.status=prev; buildWeekPlanner(); alert("Couldn't update status: "+e.message); }
+  const atFields={}; Object.keys(patch).forEach(k=>{ atFields[propToField[k]]=patch[k]; });
+  try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, atFields); }
+  catch(e){ Object.assign(p, prev); buildWeekPlanner(); alert("Couldn't update status: "+e.message); }
 }
 // Clicking a planting opens the same read-only detail sidebar the Timeline uses (tlRenderPanel),
 // docked to the right of the week view — not straight into the edit dialog. Its own "Edit Planting"
@@ -6777,7 +6945,13 @@ function wkSetOdCollapsed(val){
     if(e.target.closest("#wkPanel")) return;            // clicks inside the open detail panel are its own business
     if(e.target.closest(".wk-block-h[data-drag]")) return; // handled directly by wkOnPointerUp (see wkOnPointerDown)
     const main=e.target.closest("[data-pl]");
-    if(main){ wkOpenPlanting(main.dataset.pl); return; }
+    if(main){
+      // manual tasks aren't real plantings — their synthetic id (see wkCollect in planner-shared.js)
+      // opens the add/edit task dialog instead of the (nonexistent) planting detail panel.
+      if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
+      else wkOpenPlanting(main.dataset.pl);
+      return;
+    }
     wkClosePlantingPanel();                             // clicked elsewhere in the view — close it
   });
   wrap.addEventListener("pointerdown", wkOnPointerDown);
@@ -6814,6 +6988,7 @@ function wkSetOdCollapsed(val){
     buildWeekPlanner();
   });
   const add=document.getElementById("wkAddBtn"); if(add) add.onclick=apOpen;
+  const addTask=document.getElementById("wkAddTaskBtn"); if(addTask) addTask.onclick=()=>wkTaskOpen(null);
 })();
 
 function saveUiState(){
@@ -7444,6 +7619,20 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch((e) => console.error('SW registration failed:', e));
   });
 }
+
+/* ---------- PWA: reload if resumed after a while ----------
+   Installed/home-screen apps (especially iOS "Add to Home Screen") commonly *resume* a suspended
+   page instead of reloading it when reopened from the icon — sw.js's fetch handler is network-first,
+   but that only helps if a fetch actually happens, and a resume never issues one. So an update (like
+   this file) can sit deployed indefinitely without ever showing up. Force a real reload once the app
+   has been backgrounded long enough that it's clearly a fresh "open the app" rather than a quick
+   app-switch mid-task (which would otherwise lose whatever dialog/input was in progress). */
+let wkHiddenAt = null;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden'){ wkHiddenAt = Date.now(); return; }
+  if (wkHiddenAt && Date.now() - wkHiddenAt > 10*60*1000) location.reload();
+  wkHiddenAt = null;
+});
 </script>
 </body>
 </html>

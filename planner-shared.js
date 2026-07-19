@@ -66,7 +66,11 @@
       // Written by the Seed book page from a photo of the paper seeding book. `pl_sowActual` is
       // deliberately NOT `pl_sow`: Sow date is the plan every task date anchors to, so the book
       // records what really happened beside it rather than silently reshuffling the schedule.
+      // `pl_tpActual` is the same idea for the transplant step — both are also auto-stamped by
+      // the milestone-tick stepper (see buildMilestonePatch below) and hand-editable in the
+      // Add/Edit Planting dialog.
       pl_seedRef:"Seed ref", pl_traysSown:"Trays sown", pl_sowActual:"Actual sow date",
+      pl_tpActual:"Actual transplant date",
       cr_type:"Type",
       cr_method:"Method", cr_nursery:"Days in nursery", cr_dtm:"Days to maturity",
       cr_window:"Harvest window days", cr_gap:"Succession interval days",
@@ -136,6 +140,14 @@
   // Plus lifecycle milestones (seed/transplant) derived from each planting's own dates + Status.
   // Harvest milestones (h1/h2) are deliberately excluded (handled elsewhere, not built yet).
   // `now` is injectable (defaults to the real clock) so callers/tests can pin "today".
+  //
+  // A Planting Task with no linked Planting is a "manual" task (added via the weekly planner's
+  // + Add task button — a one-off job, not tied to a crop/bed). Rather than threading a nullable
+  // `p` through every renderer, it gets a synthetic zero-bed planting-shaped object (`crop` = its
+  // own label, `bm:0` so the bed-metres-scaled minutes estimate below can't apply to it) so every
+  // existing consumer of `row.p` (block rendering, By-crop&bed grouping, drag/assign/delete) keeps
+  // working unchanged. `row.manual` flags it for the few call sites that DO want to tell the
+  // difference (skip the redundant crop/bed context line, word the group-modal title correctly).
   function wkCollect(data, wkStartISO, now){
     now = now || new Date();
     const start=wkParse(wkStartISO), end=wkAddDays(start,7), rows=[];
@@ -143,12 +155,21 @@
     const isCurrent=wkSameDay(start, wkMonday(now));
     (data.plantingTasks||[]).forEach(t=>{
       if(!t.due) return;
-      const p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
-      const task=ctTaskById(data,t.taskId)||{name:"(task)",category:""};
+      const manual=!t.plantingId;
+      let p=null;
+      if(manual){
+        p={id:`manual:${t.id}`, crop:t.label||"Task", variety:"", bedIds:[], bm:0, cropId:null};
+      }else{
+        p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
+      }
+      const task=manual ? {name:t.label||"Task", category:"Other", duration:t.duration}
+                         : (ctTaskById(data,t.taskId)||{name:"(task)",category:""});
       const due=wkParse(t.due), overdue=isCurrent && !t.done && due<start, inWeek=due>=start && due<end;
       if(!overdue && !inWeek) return;
       const dur=t.duration||task.duration||0;
-      rows.push({ id:t.id, t, p, task, due, overdue, inWeek, minutes:dur*(p.bm||0)/15 });
+      // manual tasks have no bed to scale against — their duration IS the minutes estimate.
+      const minutes = manual ? dur : dur*(p.bm||0)/15;
+      rows.push({ id:t.id, t, p, task, due, overdue, inWeek, minutes, manual });
     });
     (data.plantings||[]).forEach(p=>{
       apLifecycle(p.tp?"transplant":"direct").forEach(step=>{
@@ -186,6 +207,34 @@
     return null; // already past this stage — locked, no-op
   }
 
+  // sow/tp are the only milestones with an "actual date" counterpart (h1/h2 don't — see the
+  // pl_tpActual comment above); maps a milestone df to the app-side planting property to stamp.
+  const MILESTONE_ACTUAL_KEY = {sow:"sowActual", tp:"tpActual"};
+
+  // Wraps nextMilestoneStep with the actual-date side effect: ticking a milestone forward stamps
+  // today's date into its actual-date field (only if that field is still blank — never clobbers a
+  // hand-entered or previously-stamped value); unticking the frontier clears it again, since that
+  // reverses the whole "this happened" event, not just the Status label. Shared so the app and the
+  // MCP server's advance_milestone tool can't diverge on this either.
+  function buildMilestonePatch(planting, df, todayISO){
+    const lc = apLifecycle(planting.tp ? "transplant" : "direct");
+    const i = lc.findIndex(s=>s.df===df);
+    if(i<0) return null;
+    const cur=statusRank(planting.status), sr=statusRank(lc[i].stage);
+    const actualKey = MILESTONE_ACTUAL_KEY[df];
+    if(cur<sr){
+      const patch={status: lc[i].stage};
+      if(actualKey && !planting[actualKey]) patch[actualKey]=todayISO;
+      return patch;
+    }
+    if(cur===sr){
+      const patch={status: i===0?"Planned":lc[i-1].stage};
+      if(actualKey) patch[actualKey]=null;
+      return patch;
+    }
+    return null; // already past this stage — locked, no-op
+  }
+
   // Shared by loadAll() (browser) and any Node-side loader so both parse Planting Tasks identically.
   function parsePlantingTaskRecord(r){
     const F=CFG.f;
@@ -193,6 +242,7 @@
       id:r.id,
       plantingId:(r.fields[F.pt_planting]||[])[0] || null,
       taskId:(r.fields[F.pt_task]||[])[0] || null,
+      label:r.fields[F.pt_label] || "",
       anchor:r.fields[F.pt_anchor] || "",
       offset:num(r.fields[F.pt_offset]),
       due:r.fields[F.pt_due] || "",
@@ -264,7 +314,7 @@
       group:p.fields[F.pl_group]||"", bm:num(p.fields[F.pl_bm]),
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
-      sowActual:p.fields[F.pl_sowActual]||"",
+      sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
   }
@@ -330,7 +380,7 @@
     DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields,
     STATUS_ORDER, statusRank, apLifecycle,
     wkParse, wkISO, wkMonday, wkAddDays, wkSameDay,
-    ctTaskById, bedNameOf, wkCollect, nextMilestoneStep,
+    ctTaskById, bedNameOf, wkCollect, nextMilestoneStep, buildMilestonePatch,
     parsePlantingTaskRecord, parseCropsAndDefs, parseBeds, parseTasks, parsePlantings,
     createAirtableClient,
   };
