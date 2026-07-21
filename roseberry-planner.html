@@ -1899,13 +1899,11 @@
             </select>
           </div></label>
         <label class="ap-field"><span>Reason / target</span>
-          <input type="text" id="sprayReason" placeholder="deficiency, pest, routine feed…" list="sprayReasonList" autocomplete="off">
-          <datalist id="sprayReasonList"></datalist></label>
+          <select id="sprayReason"></select></label>
         <label class="ap-field"><span>Date</span>
           <input type="date" id="sprayDate"></label>
         <label class="ap-field"><span>Sprayed by</span>
-          <input type="text" id="sprayBy" placeholder="name" list="sprayByList" autocomplete="off">
-          <datalist id="sprayByList"></datalist></label>
+          <select id="sprayBy"></select></label>
         <label class="ap-field"><span>Withholding (days)</span>
           <input type="number" id="sprayWhp" min="0" step="1" placeholder="auto"></label>
       </div>
@@ -5387,6 +5385,7 @@ function knownAssignees(){
   (data.tarps||[]).forEach(t=>{
     PlannerShared.TARP_STEPS.forEach(s=>{ if(t[s.assignee]) set.add(t[s.assignee]); });
   });
+  (data.sprayApplications||[]).forEach(a=>{ if(a.sprayedBy) set.add(a.sprayedBy); });
   return [...set].sort((a,b)=>a.localeCompare(b));
 }
 function apRowFromSchedule(s){
@@ -9468,12 +9467,12 @@ function sprayOpen(prefill){
   spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null,
             method:"Backpack", whpManual:false };
   populateSprayMixSelect();
-  populateSprayDatalists();
   $s("sprayHead").textContent = "Log a spray";
-  ["sprayLocNote","sprayReason","sprayNotes","sprayAmount","sprayWhp","sprayBedSearch","sprayCropSearch"].forEach(id=>$s(id).value="");
+  ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayBedSearch","sprayCropSearch"].forEach(id=>$s(id).value="");
   $s("sprayAmountUnit").value="L";
   $s("sprayDate").value = sprayToday();
-  $s("sprayBy").value = localStorage.getItem(SPRAY_BY_KEY) || "";
+  sprayFillReason($s("sprayReason"), "");
+  sprayFillAssignee($s("sprayBy"), localStorage.getItem(SPRAY_BY_KEY) || "");
   $s("sprayFromMix").value = "";
   $s("sprayPhotoThumbs").innerHTML = "";
   $s("sprayBedSuggest").hidden = true; $s("sprayCropSuggest").hidden = true;
@@ -9493,11 +9492,43 @@ function populateSprayMixSelect(){
   $s("sprayFromMix").innerHTML = `<option value="">— build from scratch —</option>`+
     mixes.map(m=>`<option value="${m.id}">${esc(m.name)}${m.favourite?" ★":""}</option>`).join("");
 }
-function populateSprayDatalists(){
-  const reasons=[...new Set((data.sprayApplications||[]).map(a=>a.reason).filter(Boolean))].slice(0,25);
-  $s("sprayReasonList").innerHTML = reasons.map(r=>`<option value="${esc(r)}">`).join("");
-  const names=[...new Set((data.sprayApplications||[]).map(a=>a.sprayedBy).filter(Boolean))];
-  $s("sprayByList").innerHTML = names.map(n=>`<option value="${esc(n)}">`).join("");
+// A curated starter set (so the dropdown isn't empty before any history exists) unioned with every
+// reason actually used so far. Kept as a select+"Add new…" rather than a fixed enum — same reasoning
+// as trpFillAssignee below: a spray's reason is inherently freeform text for the organic-cert
+// record, the dropdown is for speed, not for restricting what can be recorded.
+function sprayKnownReasons(){
+  const curated=["Deficiency","Pest","Disease","Fungal","Weed control","Routine feed","Post-rain"];
+  const used=(data.sprayApplications||[]).map(a=>a.reason).filter(Boolean);
+  return [...new Set([...curated, ...used])].sort((a,b)=>a.localeCompare(b));
+}
+function sprayFillReason(sel, cur){
+  const names=sprayKnownReasons();
+  if(cur && !names.includes(cur)) names.push(cur);
+  sel.innerHTML=`<option value="">— none —</option>`
+    + names.map(n=>`<option value="${esc(n)}"${n===cur?" selected":""}>${esc(n)}</option>`).join("")
+    + `<option value="__add__">+ Add new…</option>`;
+  sel.value=cur||"";
+}
+function sprayOnReasonChange(sel){
+  if(sel.value!=="__add__") return;
+  const name=(prompt("New reason / target:")||"").trim();
+  sprayFillReason(sel, name || "");
+}
+// Sprayed-by select — the exact same freeform worker-name pool as every other assignee picker in the
+// app (knownAssignees(), which now also folds in past spray records), with the same "+ Add new…"
+// escape hatch as trpFillAssignee (see the tarp job picker) so a new name can be entered on the spot.
+function sprayFillAssignee(sel, cur){
+  const names=knownAssignees();
+  if(cur && !names.includes(cur)) names.push(cur);
+  sel.innerHTML=`<option value="">— Unassigned —</option>`
+    + names.map(n=>`<option value="${esc(n)}"${n===cur?" selected":""}>${esc(n)}</option>`).join("")
+    + `<option value="__add__">+ Add new…</option>`;
+  sel.value=cur||"";
+}
+function sprayOnAssigneeChange(sel){
+  if(sel.value!=="__add__") return;
+  const name=(prompt("New assignee name:")||"").trim();
+  sprayFillAssignee(sel, name || "");
 }
 function setSprayMethod(m){
   spray.method=m;
@@ -9550,12 +9581,34 @@ function sprayCropSuggest(q){
 }
 
 /* product/rate lines */
+// A product isn't freeform text like a reason or an assignee — it's a real link into the Spray
+// Products catalog — so "+ Add product…" has to actually create the Airtable record (minimal:
+// name + Category "Other" + Active), not just add a local option. The grower fills in rate/unit/WHP/
+// organic status later from Airtable; this just unblocks entry mid-form for a product not catalogued
+// yet. Shared by both product pickers below (spray entry + mix editor).
+async function sprayCreateProductInline(){
+  const name=(prompt("New product name:")||"").trim();
+  if(!name) return null;
+  const F=CFG.f;
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayProducts, [{
+      [F.spp_name]:name, [F.spp_cat]:"Other", [F.spp_active]:true,
+    }]);
+    const prod={ id:rec.id, name, category:"Other", unit:"", defaultRate:null, basis:"",
+                 whp:null, organic:"", active:true, notes:"" };
+    data.sprayProducts.push(prod);
+    data.sprayProducts.sort((a,b)=>a.name.localeCompare(b.name));
+    data.sprayProductsById[prod.id]=prod;
+    return prod;
+  }catch(e){ alert("Couldn't add product: "+e.message); return null; }
+}
 function renderSprayItems(){
   const el=$s("sprayItems");
   el.innerHTML = spray.items.map((it,i)=>{
     const opts=`<option value="">— product —</option>`+
       (data.sprayProducts||[]).filter(p=>p.active||p.id===it.productId)
-        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("");
+        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("")
+      + `<option value="__add__">+ Add product…</option>`;
     const units=["mL","L","g","kg"].map(u=>`<option ${u===it.unit?"selected":""}>${u}</option>`).join("");
     return `<div class="sp-item" data-i="${i}">
       <select data-item-product="${i}">${opts}</select>
@@ -9584,7 +9637,7 @@ function applyMixToForm(mixId){
   if(!m){ return; }
   spray.items=(m.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||"mL"}));
   if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
-  if(!$s("sprayReason").value && m.target) $s("sprayReason").value=m.target;
+  if(!$s("sprayReason").value && m.target) sprayFillReason($s("sprayReason"), m.target);
   spray.whpManual=false;
   renderSprayItems(); updateSprayWhp();
 }
@@ -9694,6 +9747,8 @@ async function sprayUploadPhotos(recordId){
   $s("sprayCancel").onclick=sprayClose;
   modal.addEventListener("mousedown",(e)=>{ if(e.target===modal) sprayClose(); });
   document.querySelectorAll("#sprayMethod button").forEach(b=>b.onclick=()=>setSprayMethod(b.dataset.method));
+  $s("sprayReason").addEventListener("change",(e)=>sprayOnReasonChange(e.target));
+  $s("sprayBy").addEventListener("change",(e)=>sprayOnAssigneeChange(e.target));
 
   const bedSearch=$s("sprayBedSearch");
   bedSearch.addEventListener("input",()=>sprayBedSuggest(bedSearch.value));
@@ -9722,7 +9777,15 @@ async function sprayUploadPhotos(recordId){
   const items=$s("sprayItems");
   items.addEventListener("change",(e)=>{
     const p=e.target.closest("[data-item-product]");
-    if(p){ const i=+p.dataset.itemProduct; spray.items[i].productId=p.value;
+    if(p){ const i=+p.dataset.itemProduct;
+      if(p.value==="__add__"){
+        sprayCreateProductInline().then(prod=>{
+          if(prod){ spray.items[i].productId=prod.id; if(!spray.items[i].unit) spray.items[i].unit=prod.unit||""; }
+          renderSprayItems(); updateSprayWhp();
+        });
+        return;
+      }
+      spray.items[i].productId=p.value;
       const prod=sprayProduct(p.value);
       if(prod){ if(spray.items[i].rate==null||spray.items[i].rate==="") spray.items[i].rate=prod.defaultRate;
                 if(!spray.items[i].unit) spray.items[i].unit=prod.unit; }
@@ -9782,7 +9845,8 @@ function renderMixItems(){
   $s("sprayMixItems").innerHTML = mixEdit.items.map((it,i)=>{
     const opts=`<option value="">— product —</option>`+
       (data.sprayProducts||[]).filter(p=>p.active||p.id===it.productId)
-        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("");
+        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("")
+      + `<option value="__add__">+ Add product…</option>`;
     const units=["mL","L","g","kg"].map(u=>`<option ${u===it.unit?"selected":""}>${u}</option>`).join("");
     return `<div class="sp-item" data-i="${i}">
       <select data-mixitem-product="${i}">${opts}</select>
@@ -9893,7 +9957,15 @@ async function sprayMixAction(action, mixId){
   const items=$s("sprayMixItems");
   items.addEventListener("change",(e)=>{
     const p=e.target.closest("[data-mixitem-product]");
-    if(p){ const i=+p.dataset.mixitemProduct; mixEdit.items[i].productId=p.value;
+    if(p){ const i=+p.dataset.mixitemProduct;
+      if(p.value==="__add__"){
+        sprayCreateProductInline().then(prod=>{
+          if(prod){ mixEdit.items[i].productId=prod.id; if(!mixEdit.items[i].unit) mixEdit.items[i].unit=prod.unit||""; }
+          renderMixItems(); updateMixWhp();
+        });
+        return;
+      }
+      mixEdit.items[i].productId=p.value;
       const prod=sprayProduct(p.value);
       if(prod){ if(mixEdit.items[i].rate==null||mixEdit.items[i].rate==="") mixEdit.items[i].rate=prod.defaultRate; if(!mixEdit.items[i].unit) mixEdit.items[i].unit=prod.unit; }
       renderMixItems(); updateMixWhp(); return; }
