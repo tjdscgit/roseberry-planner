@@ -28,6 +28,11 @@
     --grid-tint:rgba(0,0,0,.02);
     --band-a:rgba(31,78,95,.045);
     --band-b:rgba(31,78,95,.012);
+    /* Tarp hatch — deliberately achromatic. cropColor() owns the hue space, so a tarp must not
+       read as "some crop I don't recognise"; graphite stripes read as material, not planting. */
+    --tarp-a:rgba(38,44,48,.62);
+    --tarp-b:rgba(38,44,48,.16);
+    --tarp-edge:rgba(38,44,48,.55);
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color-scheme:light;
@@ -48,6 +53,10 @@
     --grid-tint:rgba(255,255,255,.035);
     --band-a:rgba(143,190,206,.09);
     --band-b:rgba(143,190,206,.025);
+    /* dark mode inverts the hatch to light-on-dark so it stays visible against --paper */
+    --tarp-a:rgba(226,224,214,.46);
+    --tarp-b:rgba(226,224,214,.10);
+    --tarp-edge:rgba(226,224,214,.42);
     color-scheme:dark;
   }
   *{box-sizing:border-box}
@@ -137,7 +146,14 @@
   .view.active{display:block}
 
   /* ---- Crop defaults tab ---- */
-  #view-crops.active{display:flex;flex-direction:column}
+  /* .view is position:absolute inside main{overflow:hidden}, so a view that wants to scroll has to
+     say so: column flex here + flex:1/overflow:auto on .cr-wrap. Without it .cr-wrap sizes to its
+     own content, grows straight past the fold, and the overflow is clipped by main with no
+     scrollbar to reach it. EVERY view built on .cm-top + .cr-wrap belongs in this list — five of
+     them were missing for a long time and only looked fine because their content happened to be
+     short enough to fit. If you add a view using .cr-wrap, add it here too. */
+  #view-crops.active,#view-beds.active,#view-seedbook.active,#view-outlets.active,
+  #view-misc.active,#view-tasklib.active,#view-croptasks.active{display:flex;flex-direction:column}
   .cr-wrap{flex:1 1 auto;overflow:auto;padding:.4rem 1.2rem 2rem}
   /* Mobile-only crop -> settings -> variety drill-down (replaces the grid, see buildCrMobileList) */
   .cr-mobile-list{display:none}
@@ -179,6 +195,64 @@
     font-family:var(--mono);font-size:.82rem;padding:.25rem 0}
   .cr-add-variety:hover{text-decoration:underline}
   .cr-empty{padding:1.3rem .75rem;color:var(--ink-2);font-size:.95rem}
+  /* ---- Beds tab ---- */
+  .bd-blockrow td{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);background:var(--paper-2);padding:.45rem .75rem}
+  .bd-chip{display:inline-block;min-width:1.4rem;text-align:center;font-family:var(--mono);
+    font-size:.72rem;padding:.05rem .35rem;border-radius:999px;
+    border:1px solid rgba(138,109,31,.5);color:#8a6d1f}
+  .bd-chip-avoid{border-color:var(--clay);color:var(--clay)}
+  .bd-chip-none{border-color:var(--line-2);color:var(--ink-2);opacity:.7}
+  .bd-expand{border:none;background:none;cursor:pointer;color:var(--steel);
+    font-family:var(--mono);font-size:.78rem;white-space:nowrap;padding:.2rem 0}
+  .bd-expand:hover{text-decoration:underline}
+  .bd-issuerow td{background:var(--paper-2);padding:.6rem .75rem .8rem}
+  .bd-issues{display:flex;flex-direction:column;gap:.7rem}
+  .bd-issue{border:1px solid var(--line-2);border-radius:10px;padding:.7rem .8rem;
+    background:var(--paper);display:flex;flex-direction:column;gap:.6rem}
+  .bd-issue-line{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.6rem}
+  .bd-issue-line label{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);
+    font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+  .bd-issue-line label.bd-grow{flex:1 1 100%}
+  .bd-excl-label{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);margin:.3rem 0 .25rem}
+  .bd-chips{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center}
+  /* .cm-type-chip's base look comes from the Crop Map popover, which supplies the button reset;
+     out here it needs its own, or it renders as a default browser button with a stray left border */
+  .bd-chips .cm-type-chip{border:1px solid var(--line-2);border-left-width:4px;border-radius:8px;
+    background:var(--paper-2);color:var(--ink);cursor:pointer;font-family:var(--sans);
+    font-size:.8rem;padding:.3rem .55rem;padding-left:.5rem}
+  .bd-chips .cm-type-chip:hover{border-color:var(--steel)}
+  .bd-chips .bd-cropchip{border-left-color:var(--clay)}
+  .cr-wrap .bd-chips select.bd-addcrop{width:auto;min-width:11rem;font-size:.8rem;padding:.3rem .5rem}
+  .bd-conflicts{display:flex;flex-direction:column;gap:.5rem;max-width:900px}
+  .bd-conflict{display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;
+    padding:.6rem .75rem;border-radius:10px;background:var(--paper-2);color:var(--ink);
+    border:1px solid rgba(138,109,31,.45);font-family:var(--sans)}
+  .bd-conflict:hover{border-color:var(--steel);background:var(--paper)}
+  .bd-conflict-avoid{border-color:var(--clay)}
+  .bd-conflict-head{font-size:.92rem;font-weight:600}
+  .bd-conflict-bed{font-weight:400;color:var(--ink-2)}
+  .bd-conflict-when,.bd-conflict-why{font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
+  /* Mobile drill-down — the eight-column bed table can't shrink to a phone, so it's replaced */
+  .bd-mobile{display:flex;flex-direction:column;gap:.3rem}
+  .bd-mob-block{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);margin:.7rem 0 .1rem}
+  .bd-mob-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
+    padding:.6rem .7rem;border:1px solid var(--line-2);border-radius:9px;background:var(--paper-2);
+    color:var(--ink);font-family:var(--sans);font-size:.9rem;cursor:pointer;text-align:left}
+  .bd-mob-tag{font-family:var(--mono);font-size:.66rem;color:var(--ink-2)}
+  .bd-mob-back{border:none;background:none;cursor:pointer;color:var(--steel);
+    font-family:var(--mono);font-size:.82rem;padding:.3rem 0;align-self:flex-start}
+  .bd-mob-title{font-size:1.05rem;font-weight:600;margin:.2rem 0 .6rem}
+  .bd-mob-form{display:flex;flex-direction:column;gap:.55rem}
+  .bd-mob-form label{display:flex;justify-content:space-between;align-items:center;gap:.7rem;
+    font-size:.88rem;padding:.4rem 0;border-bottom:1px solid var(--line-2)}
+  .cr-wrap .bd-mob-form input,.cr-wrap .bd-mob-form select{width:150px;max-width:50%;
+    padding:.45rem .55rem;border:1px solid var(--line-2);border-radius:8px;
+    background:var(--paper-2);color:var(--ink);font-family:var(--sans);font-size:.9rem}
+  .bd-mob-form .bd-mob-check{justify-content:flex-start}
+  .cr-wrap .bd-mob-form .bd-mob-check input{width:auto;max-width:none}
   /* Crop Tasks tree */
   .ct-summary{color:var(--ink-2);font-size:.9rem}
   tr.ct-task-row td{background:var(--band-b)}
@@ -355,6 +429,10 @@
   .seg button[aria-pressed="true"]{background:var(--steel);color:#fff}
   #cmLockBtn[aria-pressed="true"]{background:var(--clay);color:#fff;border-color:var(--clay)}
   .cm-locked .cm-bar, .cm-locked .cm-chip{cursor:default}
+  #cmTarpBtn[aria-pressed="true"]{background:var(--ink-2);color:var(--paper);border-color:var(--ink-2)}
+  /* while drawing a tarp the tracks are the canvas, so bars shouldn't advertise dragging */
+  .cm-tarping .cm-track{cursor:crosshair}
+  .cm-tarping .cm-bar,.cm-tarping .cm-tarp{pointer-events:none}
 
   /* ---- Weekly planner (This week) ---- */
   .wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;align-items:start}
@@ -396,6 +474,7 @@
   .wk-task.wk-ms .wk-task-name{font-weight:700}
   .ct-cat.wk-ms-pill{background:var(--steel);color:#fff;border-color:var(--steel)}
   .ct-cat.wk-manual-pill{background:var(--clay);color:#fff;border-color:var(--clay)}
+  .ct-cat.wk-tarp-pill{background:var(--ink-2);color:var(--paper);border-color:var(--ink-2)}
   /* ---- By-day clock calendar ---- */
   .wk-cal{min-width:860px}
   .wk-cal-grid{display:grid;grid-template-columns:54px repeat(7,minmax(104px,1fr))}
@@ -519,8 +598,51 @@
     border-top:1px solid var(--clay);z-index:3;pointer-events:none}
   .cm-col.cm-over .cm-track{outline:2px solid var(--steel);outline-offset:-1px;
     background-color:rgba(31,78,95,.12)}
+  /* ---- Tarping ----
+     One hatch definition shared by the Crop Map band, the Timeline band, the Farm Map overlay
+     and the drop-target badge, so a tarp looks the same wherever it appears. */
+  .tarp-hatch{
+    background-image:repeating-linear-gradient(45deg,
+      var(--tarp-a) 0 4px, var(--tarp-b) 4px 9px);
+  }
+  /* Farm Map's SVG twin — the <pattern>'s stroke is currentColor, so this sets the ink */
+  .tarp-pattern{color:var(--tarp-a)}
+  .bed-tarp{opacity:.9}
+  /* Withholding-period hatch — warning colour, drawn over a bed still inside a spray WHP today. */
+  .whp-pattern{color:var(--clay)}
+  .bed-whp{opacity:.85}
+  #whpLegend{bottom:2.7rem;left:.7rem;display:flex;align-items:center;gap:.35rem;
+    font-family:var(--mono);font-size:.6rem;color:var(--ink-2);
+    background:rgba(247,245,239,.86);padding:.22rem .45rem;border-radius:6px}
+  :root[data-theme="dark"] #whpLegend,:root[data-theme="dark"] #scalebar{background:rgba(20,24,27,.82)}
+  .whp-swatch{width:.8rem;height:.8rem;border-radius:2px;flex:0 0 auto;
+    background:repeating-linear-gradient(-45deg,var(--clay) 0 1.5px,transparent 1.5px 3.5px)}
+  /* Timeline: same bounds as .tl-bar (top:6px/height:26px in a 38px row) so tarps and plantings
+     read as the same size, laid behind the bars. Clicks go through the row-level fallback in
+     buildTimeline rather than depending on the band receiving the event. */
+  .tl-tarp{position:absolute;top:6px;bottom:6px;border-radius:4px;z-index:0;
+    border-left:1px solid var(--tarp-edge);border-right:1px solid var(--tarp-edge)}
+  /* Crop Map: same width as .cm-bar so a tarp reads as the same kind of object as a planting,
+     just hatched. It sits UNDER the bars (z-index 0 vs 1) so a follow-on planting drawn over a
+     still-running tarp stays legible. Clicking is NOT dependent on the band receiving the event —
+     see the track-level fallback in buildCropMap, which resolves a tarp by date. */
+  .cm-tarp{position:absolute;left:2px;right:2px;border-radius:3px;z-index:0;
+    border-top:1px solid var(--tarp-edge);border-bottom:1px solid var(--tarp-edge);
+    cursor:pointer}
+  .cm-tarp:hover{filter:brightness(1.15)}
+  .cm-tarp.cm-tarp-sel{outline:2px solid var(--steel);outline-offset:-1px}
+  /* the "you'd be planting into a tarped window" badge on a drop target — advisory only,
+     the bed still highlights as fitting (see bedFreeInfo) */
+  .cm-tarped-badge{position:absolute;left:1px;right:1px;top:1px;height:9px;border-radius:2px;
+    pointer-events:none;opacity:.85}
+  /* "this bed has a recorded issue with that crop" badge — same advisory contract as the tarp
+     badge above: the bed stays a valid drop target, you just get told before you let go */
+  .cm-issue-badge{position:absolute;right:1px;top:1px;font-size:.6rem;line-height:1;
+    padding:1px 2px;border-radius:2px;pointer-events:none;z-index:2;
+    color:#8a6d1f;background:rgba(255,255,255,.82)}
+  .cm-issue-badge.cm-issue-avoid{color:var(--clay)}
   .cm-bar{position:absolute;left:2px;right:2px;border-radius:3px;cursor:grab;color:#fff;
-    padding:2px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+    padding:2px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);z-index:1}
   .cm-bar:active{cursor:grabbing}
   .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
     box-shadow:0 1px 1px rgba(0,0,0,.18)}
@@ -650,6 +772,9 @@
   .tl-bedpick-block{font-family:var(--mono);font-size:.68rem;color:var(--ink-2)}
   .tl-bedpick-free{font-family:var(--mono);font-size:.68rem;color:#2f6b3c;white-space:nowrap}
   .tl-bedpick-row.tl-bedpick-tight .tl-bedpick-free{color:var(--clay)}
+  /* sits between the bed name and the spare-metres label; margin-left:auto keeps the pair
+     right-aligned when there's no metres label to anchor them */
+  .tl-bedpick-warn{font-size:.8rem;color:#8a6d1f;margin-left:auto}
   .tl-ctx{position:absolute;display:none;z-index:40;min-width:170px;
     background:var(--paper);border:1px solid var(--line-2);border-radius:10px;
     box-shadow:var(--shadow);padding:.3rem}
@@ -679,10 +804,14 @@
   .btn-danger:hover{background:var(--clay);color:#fff}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
-  /* ---- Add-planting dialog ---- */
-  #apModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
+  #apModal,#trpModal,#sprayModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open{display:flex}
+  #sprayMixModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.45);padding:1rem}
+  #sprayMixModal.open{display:flex}
+  #trpModal{z-index:70}   /* can be opened from on top of the Crop Map's own panels */
   .ap-card{position:relative;width:min(1040px,100%);max-height:92vh;overflow:auto;
     background:var(--paper);border:1px solid var(--line-2);border-radius:16px;
     box-shadow:var(--shadow);padding:1.9rem 2.1rem 1.7rem;font-size:1rem}
@@ -705,6 +834,20 @@
   .ap-succ-row{display:flex;align-items:center;gap:.5rem}
   .ap-succ-row input{width:5.4rem}
   .ap-x-lbl{font-family:var(--mono);font-size:.82rem;color:var(--ink-2)}
+  /* Bed suggestion cards — ranked, advisory, never auto-applied (see apRenderBedSuggestions). */
+  .ap-bed-suggest-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+  .ap-bed-suggest-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem}
+  .ap-suggest-empty{color:var(--ink-2);font-size:.84rem;padding:.3rem 0}
+  .ap-suggest-card{border:1px solid var(--line-2);border-radius:9px;padding:.55rem .7rem;
+    background:var(--paper-2);display:flex;flex-direction:column;gap:.3rem}
+  .ap-suggest-card.ap-suggest-unverified{border-style:dashed}
+  .ap-suggest-card.ap-suggest-chosen{border-color:var(--steel);background:rgba(70,120,150,.08)}
+  .ap-suggest-card-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+  .ap-suggest-name{font-weight:600;font-size:.92rem}
+  .ap-suggest-block{font-weight:400;color:var(--ink-2);font-size:.82rem}
+  .ap-suggest-flag{font-size:.74rem;color:#8a6d1f}
+  .ap-suggest-reasons{font-size:.8rem;color:var(--ink-2);display:flex;flex-direction:column;gap:.1rem}
+  .ap-suggest-card .btn-ghost{align-self:flex-start;padding:.28rem .6rem;font-size:.72rem}
   .ap-crop-list{max-height:400px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:.8rem}
   .ap-crop-item{padding:.75rem .9rem;cursor:pointer;font-size:1.02rem;border-bottom:1px solid var(--line);
     display:flex;align-items:center;gap:.6rem}
@@ -730,6 +873,17 @@
   .ap-side-group{display:flex;flex-direction:column;gap:.5rem;border-top:1px solid var(--line);padding-top:.8rem}
   .ap-side-label{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;
     letter-spacing:.08em;color:var(--ink-2);opacity:.8}
+  /* Bed-issue warning, pinned above the summary groups. Deliberately calm — it's a heads-up, not
+     an error, and the Create button stays live behind it. .ap-bedwarn-avoid only deepens the ink. */
+  .ap-bedwarn{display:flex;flex-direction:column;gap:.4rem;padding:.6rem .7rem;border-radius:6px;
+    border:1px solid rgba(138,109,31,.45);background:rgba(138,109,31,.07);font-size:.8rem}
+  .ap-bedwarn-avoid{border-color:var(--clay);background:rgba(166,74,54,.07)}
+  .ap-bedwarn-h{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;
+    letter-spacing:.07em;color:#8a6d1f}
+  .ap-bedwarn-avoid .ap-bedwarn-h{color:var(--clay)}
+  .ap-bedwarn-row{line-height:1.35}
+  .ap-bedwarn-row .sb-pill{margin-left:0;margin-right:.15rem}
+  .ap-bedwarn-foot{font-size:.74rem;color:var(--ink-2);opacity:.85}
   .ap-side-row{display:flex;justify-content:space-between;gap:.7rem;font-size:.84rem}
   .ap-side-row .k{color:var(--ink-2)}
   .ap-side-row .v{font-weight:600;font-family:var(--mono);text-align:right}
@@ -927,6 +1081,133 @@
            border:1px solid var(--line);border-radius:999px;padding:.05rem .45rem;margin-left:.4rem}
   .sb-pill.warn{color:var(--clay);border-color:var(--clay)}
   @media(max-width:760px){ .sb-fields input{width:100%} .sb-fields label{flex:1 1 100%} }
+
+  /* ---------- Spray log ---------- */
+  .spray-list,.spray-mix-list{padding:.8rem;display:flex;flex-direction:column;gap:.7rem;
+    max-width:860px;margin:0 auto;width:100%}
+  .spray-empty{color:var(--ink-2);text-align:center;padding:2.4rem 1rem;font-size:.9rem}
+  .spray-empty b{color:var(--ink)}
+  .spray-card{border:1px solid var(--line-2);border-radius:13px;background:var(--paper);
+    box-shadow:var(--shadow);padding:.7rem .85rem;display:flex;flex-direction:column;gap:.5rem}
+  .sc-top{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+  .sc-date{font-family:var(--mono);font-size:.82rem;color:var(--ink-2)}
+  .sc-title{font-weight:650;font-size:1rem;flex:1;min-width:0}
+  .sc-badge{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;
+    border:1px solid var(--line-2);border-radius:999px;padding:.06rem .5rem;color:var(--ink-2);white-space:nowrap}
+  .sc-whp{font-family:var(--mono);font-size:.64rem;border-radius:999px;padding:.08rem .5rem;white-space:nowrap;
+    color:var(--clay);border:1px solid var(--clay);background:color-mix(in srgb,var(--clay) 8%,transparent)}
+  .sc-whp.clear{color:var(--ok);border-color:var(--ok);background:color-mix(in srgb,var(--ok) 8%,transparent)}
+  .sc-line{display:flex;gap:.5rem;font-size:.86rem;flex-wrap:wrap}
+  .sc-line .k{color:var(--ink-2);min-width:3.4rem;flex:0 0 auto}
+  .sc-line .v{flex:1;min-width:0}
+  .sc-prods{display:flex;flex-wrap:wrap;gap:.3rem}
+  .sc-prod{font-size:.8rem;border:1px solid var(--line);border-radius:7px;padding:.08rem .45rem;background:var(--paper-2)}
+  .sc-prod .r{color:var(--ink-2);font-family:var(--mono);font-size:.72rem;margin-left:.2rem}
+  .sc-photos{display:flex;gap:.35rem;flex-wrap:wrap}
+  .sc-photos img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2)}
+  .sc-note{font-size:.82rem;color:var(--ink-2);white-space:pre-wrap}
+
+  /* Saved mixes — bigger type, built to be read across the shed */
+  .spray-mix-card{border:1px solid var(--line-2);border-radius:14px;background:var(--paper);
+    box-shadow:var(--shadow);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.55rem}
+  .smc-top{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+  .smc-name{font-weight:700;font-size:1.15rem;flex:1;min-width:0}
+  .smc-star{border:none;background:none;cursor:pointer;font-size:1.15rem;line-height:1;color:var(--line-2);padding:0}
+  .smc-star.on{color:#E0A81E}
+  .smc-target{font-size:.86rem;color:var(--ink-2)}
+  .smc-ing{list-style:none;margin:.1rem 0 0;padding:0;display:flex;flex-direction:column}
+  .smc-ing li{display:flex;justify-content:space-between;gap:1rem;align-items:baseline;
+    padding:.4rem 0;border-bottom:1px solid var(--line);font-size:1.02rem}
+  .smc-ing li:last-child{border-bottom:none}
+  .smc-ing .rate{font-family:var(--mono);font-size:.95rem;color:var(--steel);white-space:nowrap}
+  .smc-foot{display:flex;flex-wrap:wrap;gap:.4rem .8rem;align-items:center;font-size:.8rem;color:var(--ink-2)}
+  .smc-foot .spacer{flex:1}
+  .smc-actions{display:flex;gap:.4rem;flex-wrap:wrap}
+  .smc-actions button{font-size:.8rem;padding:.35rem .7rem;border-radius:8px;border:1px solid var(--line-2);
+    background:var(--paper);color:var(--ink);cursor:pointer}
+  .smc-actions .use{background:var(--ok);color:#fff;border:none}
+
+  /* ---------- Spray entry form ---------- */
+  .sp-card{width:min(680px,100%)}
+  .sp-bed-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+  .sp-bed-actions .btn-ghost{white-space:nowrap}
+  .sp-inline-search{position:relative;flex:1;min-width:150px}
+  .sp-suggest{border:1px solid var(--line-2);border-radius:9px;margin-top:.4rem;max-height:210px;
+    overflow:auto;background:var(--paper-2)}
+  .sp-suggest button{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    padding:.5rem .7rem;font-size:.9rem;color:var(--ink);border-bottom:1px solid var(--line)}
+  .sp-suggest button:last-child{border-bottom:none}
+  .sp-suggest button:hover{background:var(--paper)}
+  .sp-suggest .muted{color:var(--ink-2);font-size:.8rem}
+  .sp-chips{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.55rem}
+  .sp-chip{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line-2);border-radius:999px;
+    padding:.22rem .3rem .22rem .65rem;font-size:.86rem;background:var(--paper-2)}
+  .sp-chip .sub{font-size:.72rem;color:var(--ink-2)}
+  .sp-chip .x{border:none;background:none;cursor:pointer;color:var(--ink-2);font-family:var(--mono);
+    font-size:.9rem;line-height:1;padding:.05rem .25rem;border-radius:6px}
+  .sp-chip .x:hover{background:var(--line);color:var(--ink)}
+  .sp-chips-empty{color:var(--ink-2);font-size:.82rem;margin-top:.55rem}
+  .sp-items{display:flex;flex-direction:column;gap:.5rem;margin:.3rem 0 .6rem}
+  .sp-item{display:grid;grid-template-columns:1fr 5.2rem 4.6rem auto;gap:.5rem;align-items:center}
+  .sp-item .r-unit{font-family:var(--mono);font-size:.78rem}
+  .sp-item .x{border:1px solid var(--line-2);background:var(--paper);border-radius:8px;cursor:pointer;
+    color:var(--ink-2);width:2rem;height:2rem;font-family:var(--mono)}
+  .sp-item .x:hover{border-color:var(--clay);color:var(--clay)}
+  .sp-additem{align-self:flex-start}
+  .sp-amount{display:flex;gap:.4rem}
+  .sp-amount input{flex:1}
+  .sp-amount select{width:7rem}
+  .sp-safe{font-size:.85rem;color:var(--ink-2);margin-top:.5rem}
+  .sp-safe b{color:var(--clay)}
+  .sp-photos{display:flex;align-items:flex-start;gap:.7rem;flex-wrap:wrap}
+  .sp-photo-add{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;
+    border:1px dashed var(--line-2);border-radius:10px;padding:.7rem 1rem;font-size:.86rem;color:var(--steel);background:var(--paper-2)}
+  .sp-photo-thumbs{display:flex;gap:.5rem;flex-wrap:wrap}
+  .sp-photo-thumb{position:relative}
+  .sp-photo-thumb img{width:64px;height:64px;object-fit:cover;border-radius:9px;border:1px solid var(--line-2)}
+  .sp-photo-thumb .x{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+    border:none;background:var(--clay);color:#fff;cursor:pointer;font-size:.7rem;line-height:1}
+  .sp-err{color:var(--clay);font-size:.86rem;margin:1rem 0 0;padding:.5rem .7rem;
+    border:1px solid var(--clay);border-radius:9px;background:color-mix(in srgb,var(--clay) 7%,transparent)}
+  .sp-actions{display:flex;gap:.6rem;justify-content:flex-end;margin-top:1.4rem;flex-wrap:wrap}
+  .sp-actions .btn-primary,.sp-actions .btn-ghost{padding:.6rem 1.1rem}
+  .sp-fav-toggle{display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer}
+  .sp-fav-toggle input{width:auto}
+  @media(max-width:520px){
+    .sp-item{grid-template-columns:1fr 4.2rem 4rem auto}
+    .sp-actions{position:sticky;bottom:0;background:var(--paper);padding-top:.6rem;margin:1.2rem -.4rem 0}
+    .sp-actions .btn-primary{flex:1}
+  }
+
+  /* ---------- Spray bed picker (map multi-select) ---------- */
+  #sprayPickModal{position:fixed;inset:0;z-index:75;display:none;background:rgba(0,0,0,.5);padding:0}
+  #sprayPickModal.open{display:flex;align-items:center;justify-content:center}
+  .sp-pick-card{position:relative;width:min(1000px,100%);height:min(88vh,100%);
+    display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line-2);
+    border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  @media(max-width:640px){ .sp-pick-card{width:100%;height:100%;border-radius:0} #sprayPickModal{padding:0} }
+  .sp-pick-head{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-bottom:1px solid var(--line-2)}
+  .sp-pick-title{font-weight:650;font-size:.95rem;white-space:nowrap}
+  .sp-pick-head .sp-inline-search{flex:1}
+  .sp-pick-suggest{position:absolute;top:3rem;left:.8rem;right:3rem;z-index:2;max-height:230px;overflow:auto;
+    background:var(--paper-2);border:1px solid var(--line-2);border-radius:9px;box-shadow:var(--shadow)}
+  .sp-pick-suggest button{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    padding:.55rem .7rem;font-size:.9rem;color:var(--ink);border-bottom:1px solid var(--line)}
+  .sp-pick-suggest button:last-child{border-bottom:none}
+  .sp-pick-suggest button:hover{background:var(--paper)}
+  .sp-pick-suggest .muted{color:var(--ink-2);font-size:.8rem}
+  .sp-pick-suggest .on{color:var(--ok);font-weight:600}
+  #sprayPickWrap{flex:1;min-height:0;position:relative;overflow:hidden;background:var(--paper);
+    touch-action:none;cursor:grab}
+  #sprayPickWrap.dragging{cursor:grabbing}
+  #sprayPickSvg{width:100%;height:100%;display:block}
+  #sprayPickG .bed{cursor:pointer}
+  #sprayPickG .bed.pick-sel{stroke:var(--steel);stroke-width:.9;paint-order:stroke}
+  #sprayPickG .bed-check{fill:var(--steel);font-weight:700}
+  .sp-pick-foot{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;border-top:1px solid var(--line-2);flex-wrap:wrap}
+  .sp-pick-count{font-weight:650}
+  .sp-pick-crops{color:var(--ink-2);font-size:.86rem;flex:1;min-width:0}
+  .sp-pick-foot .spacer{flex:0}
 </style>
 </head>
 <body>
@@ -947,7 +1228,7 @@
     <button class="tab" role="tab" aria-selected="false" data-view="crops">Crops</button>
     <button class="tab" role="tab" aria-selected="false" id="harvestTab" aria-haspopup="true">Harvest ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="miscTab" aria-haspopup="true">Misc ▾</button>
-    <button class="tab" role="tab" aria-selected="false" data-view="spray">Spray log</button>
+    <button class="tab" role="tab" aria-selected="false" id="sprayTab" aria-haspopup="true">Spray log ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
   </nav>
   <div class="tab-dd" id="harvestDropdown" hidden>
@@ -956,10 +1237,15 @@
     <button type="button" data-view="season">Season</button>
   </div>
   <div class="tab-dd" id="miscDropdown" hidden>
+    <button type="button" data-view="beds">Beds</button>
     <button type="button" data-view="seedbook">Seed book</button>
     <button type="button" data-view="misc">Tray types</button>
     <button type="button" data-view="tasklib">Task library</button>
     <button type="button" data-view="croptasks">Crop tasks</button>
+  </div>
+  <div class="tab-dd" id="sprayDropdown" hidden>
+    <button type="button" data-view="sprayrec">Records</button>
+    <button type="button" data-view="spraymix">Saved mixes</button>
   </div>
 
   <!-- Mobile-only: nav[role=tablist] is hidden below 760px (see trailing mobile CSS) in favour of
@@ -983,13 +1269,15 @@
     <button class="nav-drawer-item" data-view="cropmap">Crop map</button>
     <button class="nav-drawer-item" data-view="timeline">Timeline</button>
     <button class="nav-drawer-item" data-view="crops">Crops</button>
-    <button class="nav-drawer-item" data-view="spray">Spray log</button>
+    <button class="nav-drawer-item" data-view="sprayrec">Spray log</button>
+    <button class="nav-drawer-item" data-view="spraymix">Saved mixes</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
     <div class="nav-drawer-sep">Harvest</div>
     <button class="nav-drawer-item" data-view="harvest">Harvest planner</button>
     <button class="nav-drawer-item" data-view="outlets">Sales outlets</button>
     <button class="nav-drawer-item" data-view="season">Season</button>
     <div class="nav-drawer-sep">More</div>
+    <button class="nav-drawer-item" data-view="beds">Beds</button>
     <button class="nav-drawer-item" data-view="seedbook">Seed book</button>
     <button class="nav-drawer-item" data-view="misc">Tray types</button>
     <button class="nav-drawer-item" data-view="tasklib">Task library</button>
@@ -1000,7 +1288,24 @@
     <!-- MAP -->
     <section class="view active" id="view-map">
       <div id="mapWrap">
-        <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg"><g id="mapG"></g></svg>
+        <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- SVG twin of the .tarp-hatch CSS gradient — the farm map is SVG, so the tarp
+                 overlay needs a real pattern. Stroke uses currentColor so the .tarp-pattern
+                 class can pick up the theme's --tarp-a. -->
+            <pattern id="tarpHatch" class="tarp-pattern" patternUnits="userSpaceOnUse"
+                     width="1.2" height="1.2" patternTransform="rotate(45)">
+              <line x1="0" y1="0" x2="0" y2="1.2" stroke="currentColor" stroke-width=".55"/>
+            </pattern>
+            <!-- Withholding-period hatch — warning colour, opposite diagonal to the tarp hatch so a
+                 bed under WHP can never be mistaken for a tarped one. -->
+            <pattern id="whpHatch" class="whp-pattern" patternUnits="userSpaceOnUse"
+                     width="1.1" height="1.1" patternTransform="rotate(-45)">
+              <line x1="0" y1="0" x2="0" y2="1.1" stroke="currentColor" stroke-width=".5"/>
+            </pattern>
+          </defs>
+          <g id="mapG"></g>
+        </svg>
       </div>
       <div id="chips" class="map-ui"></div>
       <div id="zoombar" class="map-ui">
@@ -1010,6 +1315,7 @@
       </div>
       <div id="scalebar" class="map-ui">10 m<div class="bar" style="width:40px"></div></div>
       <div id="northmark" class="map-ui"><div class="arr">↑</div>N</div>
+      <div id="whpLegend" class="map-ui" style="display:none"><span class="whp-swatch"></span><span class="whp-legend-txt"></span></div>
       <div class="banner" id="mapBanner" style="display:none"></div>
 
       <aside id="panel">
@@ -1038,6 +1344,8 @@
         </div>
         <button class="icon-btn" id="cmLockBtn" title="Click to lock — pan freely without moving plantings"
           aria-pressed="false" style="margin-left:.4rem">🔓 Unlocked</button>
+        <button class="icon-btn" id="cmTarpBtn" title="Draw a tarp: drag down a bed column to cover it for that stretch"
+          aria-pressed="false" style="margin-left:.4rem">▨ Tarp</button>
         <span class="sub" id="cmDragHint" style="margin-left:.5rem">drag to assign or move · Map pans/zooms the whole farm</span>
       </div>
       <div class="cm-block-picker" id="cmBlockPicker"></div>
@@ -1187,6 +1495,43 @@
       </div>
     </section>
 
+    <!-- BEDS -->
+    <section class="view" id="view-beds">
+      <div class="cm-top">
+        <span class="sub">Beds · what each one is and what's wrong with it · saves automatically</span>
+      </div>
+      <div class="cr-wrap">
+        <div class="ap-sect" style="margin-top:0">Beds</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+          Add an issue to a bed to record a problem with it — nutrition, weed pressure, disease.
+          Name the crops or crop families it rules out and the app flags any planting that lands
+          there. Like tarping, it's advisory: you'll be told, never stopped.
+        </p>
+        <table class="cr-table" id="bdTable">
+          <thead>
+            <tr>
+              <th>Bed</th>
+              <th>Category</th>
+              <th>Tunnel</th>
+              <th>Length m</th>
+              <th>Width m</th>
+              <th>Order</th>
+              <th>Notes</th>
+              <th>Issues</th>
+            </tr>
+          </thead>
+          <tbody id="bdBody"></tbody>
+        </table>
+        <div id="bdMobile" class="bd-mobile" hidden></div>
+
+        <div class="ap-sect">Flagged plantings</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+          Plantings already sitting on a bed with an issue against that crop. Click one to open it.
+        </p>
+        <div id="bdConflicts"></div>
+      </div>
+    </section>
+
     <section class="view" id="view-misc">
       <div class="cm-top">
         <span class="sub">Farm-wide reference data · saves automatically</span>
@@ -1202,6 +1547,27 @@
             </tr>
           </thead>
           <tbody id="ttBody"></tbody>
+        </table>
+
+        <div class="ap-sect">Tarps</div>
+        <p class="sub" style="max-width:60ch;margin:-.3rem 0 .8rem">
+          Bed tarping used to terminate a crop. Shows as a hatched band on the Crop Map, Timeline
+          and Farm Map — it never blocks a bed, so the next planting can still be placed over it.
+        </p>
+        <table class="cr-table" style="max-width:900px">
+          <thead>
+            <tr>
+              <th>Bed</th>
+              <th>After</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Metres</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="trpBody"></tbody>
         </table>
       </div>
     </section>
@@ -1264,10 +1630,32 @@
       </div>
     </section>
 
-    <!-- PLACEHOLDERS -->
-    <section class="view" id="view-spray">
-      <div class="placeholder"><div class="big">Spray &amp; fert log · coming in v3</div>
-        <p>One-screen quick entry writing to your Spray Data and Ferti Data tables, with NSW record-keeping fields and withholding-period flags on the map.</p></div>
+    <!-- SPRAY LOG · Records -->
+    <section class="view" id="view-sprayrec">
+      <div class="cm-top">
+        <span class="sub" id="sprayRecSummary">Spray &amp; fert log</span>
+        <div class="tl-search" style="width:220px;margin-left:.6rem">
+          <input type="text" id="sprayRecSearch" placeholder="Search crop, bed, product…" autocomplete="off" spellcheck="false">
+          <button type="button" id="sprayRecSearchClear" title="Clear search">✕</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn-primary" id="sprayLogBtn">＋ Log spray</button>
+      </div>
+      <div class="spray-list" id="sprayRecBody"></div>
+    </section>
+
+    <!-- SPRAY LOG · Saved mixes -->
+    <section class="view" id="view-spraymix">
+      <div class="cm-top">
+        <span class="sub">Saved mixes · your go-to recipes</span>
+        <div class="tl-search" style="width:220px;margin-left:.6rem">
+          <input type="text" id="sprayMixSearch" placeholder="Search mixes…" autocomplete="off" spellcheck="false">
+          <button type="button" id="sprayMixSearchClear" title="Clear search">✕</button>
+        </div>
+        <span class="spacer"></span>
+        <button class="btn-primary" id="sprayMixNewBtn">＋ New mix</button>
+      </div>
+      <div class="spray-mix-list" id="sprayMixBody"></div>
     </section>
     <section class="view" id="view-week">
       <div class="cm-top">
@@ -1458,6 +1846,154 @@
     </div>
   </div>
 
+  <!-- SPRAY ENTRY DIALOG -->
+  <div id="sprayModal">
+    <div class="ap-card sp-card">
+      <button class="ap-x" id="sprayClose" title="Close">✕</button>
+      <div class="ap-head" id="sprayHead">Log a spray</div>
+      <div class="ap-sub" id="spraySub">Record what went on, where — for the organic record.</div>
+
+      <div class="ap-sect">Where</div>
+      <div class="sp-bed-actions">
+        <button type="button" class="btn-ghost" id="sprayPickMapBtn">🗺 Pick beds on map</button>
+        <div class="tl-search sp-inline-search">
+          <input type="text" id="sprayBedSearch" placeholder="…or add a bed by name" autocomplete="off" spellcheck="false">
+          <button type="button" id="sprayBedSearchClear" title="Clear">✕</button>
+        </div>
+      </div>
+      <div class="sp-suggest" id="sprayBedSuggest" hidden></div>
+      <div class="sp-chips" id="sprayBedChips"></div>
+      <label class="ap-field" style="margin-top:.7rem"><span>Location note (optional)</span>
+        <input type="text" id="sprayLocNote" placeholder="e.g. middle of I kale and Sb — for when the map isn't exact"></label>
+
+      <div class="ap-sect">Crops</div>
+      <div class="ap-sub" id="sprayCropsAuto" style="margin:0 0 .5rem">Auto-filled from the beds you pick — edit if needed.</div>
+      <div class="sp-chips" id="sprayCropChips"></div>
+      <div class="tl-search sp-inline-search" style="margin-top:.5rem">
+        <input type="text" id="sprayCropSearch" placeholder="Add a crop manually" autocomplete="off" spellcheck="false">
+        <button type="button" id="sprayCropSearchClear" title="Clear">✕</button>
+      </div>
+      <div class="sp-suggest" id="sprayCropSuggest" hidden></div>
+
+      <div class="ap-sect">Products &amp; rates</div>
+      <label class="ap-field"><span>Start from a saved mix</span>
+        <select id="sprayFromMix"></select></label>
+      <div class="sp-items" id="sprayItems"></div>
+      <button type="button" class="btn-ghost sp-additem" id="sprayAddItem">＋ Add product</button>
+
+      <div class="ap-sect">Application</div>
+      <div class="ap-grid">
+        <div class="ap-field"><span>Method</span>
+          <div class="seg" id="sprayMethod">
+            <button type="button" data-method="Backpack" aria-pressed="true">Backpack</button>
+            <button type="button" data-method="Boom" aria-pressed="false">Boom</button>
+            <button type="button" data-method="Fertigation" aria-pressed="false">Fertigation</button>
+            <button type="button" data-method="Granular" aria-pressed="false">Granular</button>
+          </div>
+        </div>
+        <label class="ap-field"><span>Amount made up</span>
+          <div class="sp-amount">
+            <input type="number" id="sprayAmount" min="0" step="0.1" placeholder="e.g. 18">
+            <select id="sprayAmountUnit">
+              <option>L</option><option>mL</option><option>backpacks</option><option>kg</option>
+            </select>
+          </div></label>
+        <label class="ap-field"><span>Reason / target</span>
+          <input type="text" id="sprayReason" placeholder="deficiency, pest, routine feed…" list="sprayReasonList" autocomplete="off">
+          <datalist id="sprayReasonList"></datalist></label>
+        <label class="ap-field"><span>Date</span>
+          <input type="date" id="sprayDate"></label>
+        <label class="ap-field"><span>Sprayed by</span>
+          <input type="text" id="sprayBy" placeholder="name" list="sprayByList" autocomplete="off">
+          <datalist id="sprayByList"></datalist></label>
+        <label class="ap-field"><span>Withholding (days)</span>
+          <input type="number" id="sprayWhp" min="0" step="1" placeholder="auto"></label>
+      </div>
+      <div class="sp-safe" id="spraySafe"></div>
+
+      <div class="ap-sect">Photos</div>
+      <div class="sp-photos">
+        <label class="sp-photo-add" id="sprayPhotoAdd">＋ Add photo
+          <input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden>
+        </label>
+        <div class="sp-photo-thumbs" id="sprayPhotoThumbs"></div>
+      </div>
+
+      <div class="ap-sect">Notes</div>
+      <label class="ap-field"><span>Notes</span>
+        <textarea id="sprayNotes" rows="3" placeholder="Anything else worth recording…"></textarea></label>
+
+      <div class="sp-err" id="sprayErr" hidden></div>
+      <div class="sp-actions">
+        <button class="btn-ghost" id="sprayCancel">Cancel</button>
+        <button class="btn-ghost" id="spraySaveAsMix">Save as mix</button>
+        <button class="btn-primary" id="spraySave">Save record</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPRAY MIX EDITOR -->
+  <div id="sprayMixModal">
+    <div class="ap-card sp-card">
+      <button class="ap-x" id="sprayMixClose" title="Close">✕</button>
+      <div class="ap-head" id="sprayMixHead">New mix</div>
+      <div class="ap-sub">A saved recipe you can reuse and read at the shed.</div>
+      <div class="ap-grid">
+        <label class="ap-field"><span>Name</span>
+          <input type="text" id="sprayMixName" placeholder="e.g. Deficiency + rain foliar"></label>
+        <label class="ap-field"><span>Target / reason</span>
+          <input type="text" id="sprayMixTarget" placeholder="what it's for"></label>
+        <label class="ap-field"><span>Water volume</span>
+          <div class="sp-amount">
+            <input type="number" id="sprayMixWater" min="0" step="0.1" placeholder="e.g. 15">
+            <select id="sprayMixWaterBasis">
+              <option value="">—</option><option>per backpack</option><option>per 100 L</option><option>total</option>
+            </select>
+          </div></label>
+        <label class="ap-field"><span>Withholding (days)</span>
+          <input type="number" id="sprayMixWhp" min="0" step="1" placeholder="auto"></label>
+      </div>
+      <div class="ap-sect">Ingredients</div>
+      <div class="sp-items" id="sprayMixItems"></div>
+      <button type="button" class="btn-ghost sp-additem" id="sprayMixAddItem">＋ Add product</button>
+      <div class="sp-safe" id="sprayMixSafe"></div>
+      <div class="ap-sect">Method notes</div>
+      <label class="ap-field"><span>Method notes</span>
+        <textarea id="sprayMixMethod" rows="3" placeholder="Mixing order, cautions, agitation…"></textarea></label>
+      <label class="sp-fav-toggle" style="margin-top:.9rem">
+        <input type="checkbox" id="sprayMixFav"> <span>★ Favourite (pin to top of the shed list)</span></label>
+      <div class="sp-err" id="sprayMixErr" hidden></div>
+      <div class="sp-actions">
+        <button class="btn-ghost" id="sprayMixCancel">Cancel</button>
+        <button class="btn-primary" id="sprayMixSave">Save mix</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPRAY BED PICKER (map multi-select) -->
+  <div id="sprayPickModal">
+    <div class="sp-pick-card">
+      <div class="sp-pick-head">
+        <span class="sp-pick-title">Tap beds to select</span>
+        <div class="tl-search sp-inline-search">
+          <input type="text" id="sprayPickSearch" placeholder="Find a bed by name" autocomplete="off" spellcheck="false">
+          <button type="button" id="sprayPickSearchClear" title="Clear">✕</button>
+        </div>
+        <button class="icon-btn" id="sprayPickClose" title="Done">✕</button>
+      </div>
+      <div class="sp-pick-suggest" id="sprayPickSuggest" hidden></div>
+      <div id="sprayPickWrap">
+        <svg id="sprayPickSvg" xmlns="http://www.w3.org/2000/svg"><g id="sprayPickG"></g></svg>
+      </div>
+      <div class="sp-pick-foot">
+        <span class="sp-pick-count" id="sprayPickCount">0 beds</span>
+        <span class="sp-pick-crops" id="sprayPickCrops"></span>
+        <span class="spacer"></span>
+        <button class="btn-primary" id="sprayPickDone">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ADD PLANTING DIALOG -->
   <div id="apModal">
     <div class="ap-card">
@@ -1516,6 +2052,14 @@
               <span class="ap-x-lbl">days apart</span>
             </div>
           </div>
+
+          <div class="ap-field ap-bed-suggest" id="apBedSuggestWrap" style="grid-column:1/-1">
+            <div class="ap-bed-suggest-head">
+              <span>Bed suggestions</span>
+              <button type="button" class="btn-ghost" id="apSuggestBedsBtn">Suggest beds</button>
+            </div>
+            <div id="apBedSuggestList" class="ap-bed-suggest-list"></div>
+          </div>
         </div>
 
         <div class="ap-sect">Timing</div>
@@ -1552,6 +2096,18 @@
           <label class="ap-field" id="apTpActualWrap" style="display:none" title="When this was actually transplanted, if different from the plan above">
             <span>Actual transplant date</span>
             <input type="date" id="apTpActual"></label>
+        </div>
+
+        <div class="ap-sect">Termination</div>
+        <div class="ap-climate" id="apTarpWrap">
+          <label class="ap-climate-toggle">
+            <input type="checkbox" id="apTarp"> Tarp after this crop
+          </label>
+          <span class="ap-succ-row" id="apTarpWeeksRow" style="display:none">
+            <input type="number" id="apTarpWeeks" min="0" step="1" value="3" title="Weeks under tarp">
+            <span class="ap-x-lbl">weeks from last harvest</span>
+          </span>
+          <span class="ap-climate-hint" id="apTarpHint"></span>
         </div>
 
         <div class="ap-sect">Notes</div>
@@ -1669,6 +2225,47 @@
   </div>
 </div>
 
+<!-- Tarp editor — opened by clicking a tarp band on the Crop Map / Timeline, by the Misc page's
+     Tarps list, and to confirm a drag-drawn tarp on the Crop Map. Reuses the Add-planting
+     dialog's card/field styles rather than inventing a second dialog language. -->
+<div id="trpModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(520px,100%)" role="dialog" aria-modal="true" aria-labelledby="trpHead">
+    <button class="ap-x" id="trpClose" title="Close">✕</button>
+    <div class="ap-head" id="trpHead">Tarp</div>
+    <div class="ap-sub" id="trpSub">Crop termination — a bed covered to kill off plant material.</div>
+    <div class="ap-grid">
+      <label class="ap-field"><span>Bed</span><select id="trpBed"></select></label>
+      <label class="ap-field"><span>Status</span>
+        <select id="trpStatus">
+          <option value="Planned">Planned</option>
+          <option value="On">On</option>
+          <option value="Removed">Removed</option>
+        </select>
+      </label>
+      <label class="ap-field"><span>Start date</span><input type="date" id="trpStart"></label>
+      <label class="ap-field"><span>End date</span><input type="date" id="trpEnd"></label>
+      <label class="ap-field"><span>Weeks</span>
+        <input type="number" id="trpWeeks" min="0" step="1" placeholder="3">
+      </label>
+      <label class="ap-field"><span>Bed metres</span>
+        <input type="number" id="trpBm" min="0" step="0.5" placeholder="whole bed">
+      </label>
+      <label class="ap-field"><span>Lay assignee</span><select id="trpLayAssignee"></select></label>
+      <label class="ap-field"><span>Pull assignee</span><select id="trpPullAssignee"></select></label>
+    </div>
+    <label class="ap-field" style="margin-top:1.05rem"><span>Notes</span>
+      <textarea id="trpNotes" rows="2"></textarea>
+    </label>
+    <p class="sub" id="trpLinked" style="margin:.9rem 0 0"></p>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="trpSave">Save tarp</button>
+      <button class="btn-ghost" id="trpCancel">Cancel</button>
+      <span class="spacer" style="flex:1 1 auto"></span>
+      <button class="btn-danger" id="trpDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script src="planner-shared.js"></script>
 <script>
 "use strict";
@@ -1691,7 +2288,7 @@ setTheme(theme);
 // CFG + the default-fields helpers now live in planner-shared.js (loaded above), so the same
 // business rules can't drift between this app and anything else reading the same base (e.g. an
 // MCP server). See that file for the full field-map comments.
-const { CFG, DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields } = PlannerShared;
+const { CFG, DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields, bedConflicts, suggestBedsForPlanting } = PlannerShared;
 const DEFAULT_WID = 0.9, DEFAULT_LEN = 20; // metres, used when a bed has no size yet
 const OCCUPIED = new Set(["In ground","Harvesting"]);
 
@@ -1703,7 +2300,7 @@ const UI_KEY = "roseberry_ui";
 const AK_KEY = "roseberry_anthropic_key";
 let PAT = localStorage.getItem(LS_KEY) || "";
 let AKEY = localStorage.getItem(AK_KEY) || "";
-let data = { blocks:[], beds:[], plantings:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[] };
+let data = { blocks:[], beds:[], plantings:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -1741,7 +2338,7 @@ async function refreshPlantingTasks(){
 async function loadAll(){
   showLoading(true);
   try{
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -1753,6 +2350,13 @@ async function loadAll(){
       atFetch(CFG.farmBase, CFG.tables.plantingTasks),
       atFetch(CFG.farmBase, CFG.tables.salesOutlets),
       atFetch(CFG.farmBase, CFG.tables.harvestRecords),
+      atFetch(CFG.farmBase, CFG.tables.tarpings),
+      atFetch(CFG.farmBase, CFG.tables.bedIssues),
+      atFetch(CFG.farmBase, CFG.tables.sprayProducts),
+      atFetch(CFG.farmBase, CFG.tables.sprayMixes),
+      atFetch(CFG.farmBase, CFG.tables.sprayMixItems),
+      atFetch(CFG.farmBase, CFG.tables.sprayApplications),
+      atFetch(CFG.farmBase, CFG.tables.sprayApplicationItems),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -1815,7 +2419,12 @@ async function loadAll(){
       block:(b.fields[F.bed_block]||"").trim(),
       len:num(b.fields[F.bed_len]), wid:num(b.fields[F.bed_wid]),
       order:num(b.fields[F.bed_order]),
+      category:b.fields[F.bed_category]||"",
+      tunnel:!!b.fields[F.bed_tunnel],
+      notes:b.fields[F.bed_notes]||"",
     }));
+
+    data.bedIssues = PlannerShared.parseBedIssues(bedIssues);
 
     // parse every planting and keep the full list — the Crop Map needs unassigned
     // plantings and multiple (succession) plantings per bed, not just one headline.
@@ -1853,6 +2462,21 @@ async function loadAll(){
       planned:num(h.fields[F.hr_planned]), actual:num(h.fields[F.hr_actual]),
       priceOverride:num(h.fields[F.hr_priceOverride]),
     }));
+
+    // tarped bed × date-range spans (crop termination). Parsed via planner-shared so the MCP
+    // server reads them identically. Never feeds the occupancy maths — see bedFreeInfo.
+    data.tarps = PlannerShared.parseTarpings(tarpings);
+
+    // Spray log: catalog + saved mixes (with their ingredient lines) + the application records
+    // (with their product lines). Items are parsed flat then nested onto their parent by id.
+    data.sprayProducts = PlannerShared.parseSprayProducts(sprayProducts);
+    data.sprayProductsById = {};
+    data.sprayProducts.forEach(p=> data.sprayProductsById[p.id]=p);
+    data.sprayMixes = PlannerShared.attachSprayItems(
+      PlannerShared.parseSprayMixes(sprayMixes), PlannerShared.parseSprayMixItems(sprayMixItems), "mixId");
+    data.sprayApplications = PlannerShared.attachSprayItems(
+      PlannerShared.parseSprayApplications(sprayApplications), PlannerShared.parseSprayApplicationItems(sprayApplicationItems), "applicationId")
+      .sort((a,b)=> String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(a.id)); // newest first
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -1957,7 +2581,7 @@ function drawMap(placed){
   placedCache = placed;
   const g = document.getElementById("mapG");
   g.innerHTML="";
-  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9, whpBeds=0;
 
   placed.forEach(p=>{
     // block frame + label
@@ -1986,6 +2610,42 @@ function drawMap(placed){
       else cell.style.fill = "var(--empty-bed)";
       g.appendChild(cell);
 
+      // "under tarp right now" overlay. The farm map is a snapshot of today, so unlike the Crop
+      // Map and Timeline (which show whole date ranges) this only draws for a tarp covering today.
+      const tarpNow = tarpOnBedAt(b.id);
+      if(tarpNow){
+        const ov=document.createElementNS(SVG,"rect");
+        ov.setAttribute("class","bed-tarp");
+        ov.setAttribute("x",r.x);ov.setAttribute("y",r.y);
+        ov.setAttribute("width",r.w);ov.setAttribute("height",r.h);
+        ov.setAttribute("rx",".4");
+        ov.setAttribute("fill","url(#tarpHatch)");
+        ov.setAttribute("pointer-events","none");
+        const ti=document.createElementNS(SVG,"title");ti.textContent=tarpTitle(tarpNow);
+        ov.appendChild(ti);
+        g.appendChild(ov);
+      }
+
+      // "within a spray withholding period right now" overlay. Same today-snapshot idea as the tarp
+      // one above, but hatched in the warning colour so it can't be mistaken for a tarp. Advisory —
+      // it never changes bed occupancy, just flags that harvesting here isn't clear yet.
+      const whpNow = typeof sprayWhpOnBedAt==="function" ? sprayWhpOnBedAt(b.id) : null;
+      if(whpNow){
+        whpBeds++;
+        const ov=document.createElementNS(SVG,"rect");
+        ov.setAttribute("class","bed-whp");
+        ov.setAttribute("x",r.x);ov.setAttribute("y",r.y);
+        ov.setAttribute("width",r.w);ov.setAttribute("height",r.h);
+        ov.setAttribute("rx",".4");
+        ov.setAttribute("fill","url(#whpHatch)");
+        ov.setAttribute("pointer-events","none");
+        const prods=(whpNow.application.items||[]).map(it=>sprayProductName(it.productId)).join(", ");
+        const ti=document.createElementNS(SVG,"title");
+        ti.textContent=`Within withholding until ${fmt(whpNow.safeAfter)}${prods?" · "+prods:""}`;
+        ov.appendChild(ti);
+        g.appendChild(ov);
+      }
+
       // label: bed name, plus the crop currently in it, laid along the bed's long axis
       const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
       const cropTxt = (pl && pl.crop && pl.crop!=="—") ? pl.crop : "";
@@ -2005,6 +2665,9 @@ function drawMap(placed){
   });
   if(minX===1e9){minX=0;minY=0;maxX=100;maxY=100;}
   worldBounds={minX,minY,maxX,maxY};
+  const leg=document.getElementById("whpLegend");
+  if(leg){ leg.style.display = whpBeds ? "flex" : "none";
+    leg.querySelector(".whp-legend-txt").textContent = `${whpBeds} bed${whpBeds===1?"":"s"} within withholding`; }
   applyView();
   fitView();
 }
@@ -2195,6 +2858,7 @@ function showView(view){
   if(view==="cropmap") buildCropMap();
   if(view==="timeline") buildTimeline();
   if(view==="crops") buildCropsTab();
+  if(view==="beds") buildBedsTab();
   if(view==="seedbook") buildSeedbook();
   if(view==="misc") buildMiscTab();
   if(view==="tasklib") buildTaskLibrary();
@@ -2203,6 +2867,8 @@ function showView(view){
   if(view==="harvest") buildHarvestPlanner();
   if(view==="outlets") buildOutlets();
   if(view==="season") buildSeason();
+  if(view==="sprayrec") buildSprayRecords();
+  if(view==="spraymix") buildSprayMixes();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
@@ -2229,6 +2895,7 @@ function wireDropdownTab(tabId, ddId){
 }
 wireDropdownTab("harvestTab","harvestDropdown");
 wireDropdownTab("miscTab","miscDropdown");
+wireDropdownTab("sprayTab","sprayDropdown");
 document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").forEach(dd=>dd.hidden=true); });
 
 // Mobile nav drawer — hamburger bubble + slide-in list of all 9 destinations (see markup near
@@ -2238,7 +2905,7 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
         backdrop=document.getElementById("navDrawerBackdrop"), closeBtn=document.getElementById("navDrawerClose"),
         miscTab=document.getElementById("miscTab"), harvestTab=document.getElementById("harvestTab");
   // sub-views that live under a dropdown tab rather than their own top-level tab
-  const DROPDOWN_PARENT={ seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
+  const DROPDOWN_PARENT={ beds:miscTab, seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
                           harvest:harvestTab, outlets:harvestTab, season:harvestTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
@@ -2379,6 +3046,243 @@ function bedGroups(){
   return groups;
 }
 
+/* ---------- Tarping ----------
+   A tarp is a bed + a date range, optionally linked to the planting it terminates. It is a
+   PLANNING VISUAL ONLY: it draws as a hatched band on the bed views but is deliberately absent
+   from bedFreeInfo(), so a tarped bed never reads as unavailable and the follow-on planting can
+   always be placed over it. Overlap between a tarp and the next crop is normal and shown, not
+   prevented. */
+const TARP_DEFAULT_WEEKS = 3;
+function tarpsForBed(bedId){ return (data.tarps||[]).filter(t=>t.bedId===bedId && t.start && t.end); }
+function tarpForPlanting(pid){ return (data.tarps||[]).find(t=>t.plantingId===pid) || null; }
+// is this bed under tarp on `dstr` (default today)? — drives the Farm Map's "right now" overlay
+function tarpOnBedAt(bedId, dstr){
+  const d = dstr || todayISO();
+  return tarpsForBed(bedId).find(t=>t.start<=d && d<=t.end) || null;
+}
+function tarpLabel(t){
+  const p = t.plantingId ? (data.plantings||[]).find(x=>x.id===t.plantingId) : null;
+  return p ? `Tarped · after ${p.crop}${p.variety?" "+p.variety:""}` : "Tarped";
+}
+function tarpTitle(t){
+  return `${tarpLabel(t)}\n${fmt(t.start)} – ${fmt(t.end)}${t.bm!=null?`  ·  ${t.bm} m`:""}`
+       + (t.status&&t.status!=="Planned"?`\n${t.status}`:"");
+}
+// app-side tarp object -> Airtable field payload. Undefined keys are left untouched by atPatch.
+function tarpFields(t){
+  const F=CFG.f, o={};
+  if(t.bedId!==undefined)        o[F.tr_bed]        = t.bedId?[t.bedId]:[];
+  if(t.plantingId!==undefined)   o[F.tr_planting]   = t.plantingId?[t.plantingId]:[];
+  if(t.start!==undefined)        o[F.tr_start]      = t.start||null;
+  if(t.end!==undefined)          o[F.tr_end]        = t.end||null;
+  if(t.bm!==undefined)           o[F.tr_bm]         = t.bm;
+  if(t.status!==undefined)       o[F.tr_status]     = t.status||"Planned";
+  if(t.laidActual!==undefined)   o[F.tr_laidActual] = t.laidActual||null;
+  if(t.pulledActual!==undefined) o[F.tr_pulledActual]=t.pulledActual||null;
+  if(t.notes!==undefined)        o[F.tr_notes]      = t.notes||"";
+  if(t.name!==undefined)         o[F.tr_name]       = t.name||"";
+  // per-job scheduling + sync state, driven off TARP_STEPS so lay/pull stay symmetrical
+  PlannerShared.TARP_STEPS.forEach(s=>{
+    if(t[s.assignee]!==undefined) o[F[s.fAssignee]] = t[s.assignee]||null;
+    if(t[s.startMin]!==undefined) o[F[s.fStart]]    = t[s.startMin];
+    if(t[s.ttId]!==undefined)     o[F[s.fTt]]       = t[s.ttId]||"";
+    if(t[s.gcalId]!==undefined)   o[F[s.fGcal]]     = t[s.gcalId]||"";
+  });
+  return o;
+}
+// Readable primary-field label, matching the Harvest Records convention ("Bed 12 — Lettuce — date")
+function tarpName(t){
+  const bed=(data.beds||[]).find(b=>b.id===t.bedId), p=t.plantingId?(data.plantings||[]).find(x=>x.id===t.plantingId):null;
+  return [bed?bed.name:"?", p?p.crop:"Tarp", t.start||""].filter(Boolean).join(" — ");
+}
+// Create (no id) or update (id) one tarp, then patch data.tarps in place so every view can be
+// rebuilt without a full loadAll(). Throws on failure — callers roll back their own optimism.
+async function tarpSave(t, id){
+  const payload = tarpFields({...t, name:t.name!==undefined?t.name:tarpName({...t, id})});
+  if(id){
+    await atPatch(CFG.farmBase, CFG.tables.tarpings, id, payload);
+    const cur=(data.tarps||[]).find(x=>x.id===id);
+    if(cur) Object.assign(cur, t);
+    return cur;
+  }
+  const [rec] = await atCreate(CFG.farmBase, CFG.tables.tarpings, [payload]);
+  const parsed = PlannerShared.parseTarpings([rec])[0];
+  (data.tarps ||= []).push(parsed);
+  return parsed;
+}
+async function tarpDelete(id){
+  await atDelete(CFG.farmBase, CFG.tables.tarpings, [id]);
+  data.tarps = (data.tarps||[]).filter(t=>t.id!==id);
+}
+// Redraw whichever bed view is on screen after a tarp changes (cheaper than loadAll()).
+function tarpRefreshViews(){
+  const v=document.querySelector(".view.active");
+  const id=v?v.id:"";
+  if(id==="view-cropmap") buildCropMap();
+  else if(id==="view-timeline") buildTimeline();
+  else if(id==="view-map") layoutAndDraw();
+  else if(id==="view-misc") trpRenderList();
+  else if(id==="view-week") buildWeekPlanner();
+}
+
+/* ---- Tarp editor dialog + Misc-page list ----
+   One dialog serves every entry point (a band clicked on the Crop Map or Timeline, a row on the
+   Misc list, and the confirm step of a drag-drawn tarp), so the fields and validation can't drift
+   between them. */
+let trpEditingId=null;      // record being edited; null = creating
+let trpPrefill=null;        // {bedId, start, end} seeded by drag-to-draw
+function $trp(id){ return document.getElementById(id); }
+
+function trpFillBedSelect(sel, bedId){
+  sel.innerHTML="";
+  const groups=bedGroups();
+  Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(block=>{
+    const og=document.createElement("optgroup"); og.label="Block "+block;
+    groups[block].forEach(b=>{
+      const o=document.createElement("option"); o.value=b.id; o.textContent=b.name;
+      if(b.id===bedId) o.selected=true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+}
+
+// Assignee picker for one tarp job. Names come from knownAssignees() (the same freeform pool every
+// other assignable thing draws on), plus the current value if it's not in that pool yet, plus the
+// "+ Add new…" escape hatch every other assignee picker in the app offers (see the task quick-assign
+// selects and the weekly planner's context menu) — without it there'd be no way to name someone new.
+function trpFillAssignee(sel, cur){
+  const names=knownAssignees();
+  if(cur && !names.includes(cur)) names.push(cur);
+  sel.innerHTML=`<option value="">— Unassigned —</option>`
+    + names.map(n=>`<option value="${esc(n)}"${n===cur?" selected":""}>${esc(n)}</option>`).join("")
+    + `<option value="__add__">+ Add new…</option>`;
+  sel.value=cur||"";
+}
+// Shared handler for both tarp assignee selects: picking "+ Add new…" prompts for a name and adds
+// it to the list, exactly as the other pickers do.
+function trpOnAssigneeChange(sel){
+  if(sel.value!=="__add__") return;
+  const name=(prompt("New assignee name:")||"").trim();
+  trpFillAssignee(sel, name || "");
+}
+
+function trpOpenEditor(t, prefill){
+  trpEditingId = t ? t.id : null;
+  trpPrefill = prefill || null;
+  const src = t || {bedId:(prefill&&prefill.bedId)||null, plantingId:null,
+                    start:(prefill&&prefill.start)||todayISO(),
+                    end:(prefill&&prefill.end)||isoAddDays((prefill&&prefill.start)||todayISO(), TARP_DEFAULT_WEEKS*7),
+                    bm:null, status:"Planned", notes:""};
+  $trp("trpHead").textContent = t ? "Edit tarp" : "New tarp";
+  trpFillBedSelect($trp("trpBed"), src.bedId);
+  $trp("trpStatus").value = src.status||"Planned";
+  $trp("trpStart").value  = src.start||"";
+  $trp("trpEnd").value    = src.end||"";
+  $trp("trpBm").value     = src.bm!=null ? src.bm : "";
+  $trp("trpNotes").value  = src.notes||"";
+  trpFillAssignee($trp("trpLayAssignee"),  src.layAssignee||"");
+  trpFillAssignee($trp("trpPullAssignee"), src.pullAssignee||"");
+  trpSyncWeeks();
+  const p = src.plantingId ? (data.plantings||[]).find(x=>x.id===src.plantingId) : null;
+  $trp("trpLinked").textContent = p
+    ? `Terminates ${p.crop}${p.variety?" · "+p.variety:""} (last harvest ${fmt(p.h2||p.h1)}). Edit that planting's Tarp setting to move it with the crop.`
+    : "Standalone tarp — not attached to a planting.";
+  $trp("trpDelete").style.display = t ? "" : "none";
+  $trp("trpModal").classList.add("open");
+  $trp("trpModal").setAttribute("aria-hidden","false");
+}
+function trpCloseEditor(){
+  $trp("trpModal").classList.remove("open");
+  $trp("trpModal").setAttribute("aria-hidden","true");
+  trpEditingId=null; trpPrefill=null;
+}
+// Weeks is a convenience driver over End date, not a stored field — editing either updates the other.
+function trpSyncWeeks(){
+  const d=isoDiffDays($trp("trpStart").value, $trp("trpEnd").value);
+  $trp("trpWeeks").value = d!=null && d>=0 ? Math.round(d/7) : "";
+}
+function trpApplyWeeks(){
+  const w=parseFloat($trp("trpWeeks").value), s=$trp("trpStart").value;
+  if(!s || !isFinite(w)) return;
+  $trp("trpEnd").value = isoAddDays(s, Math.round(w*7));
+}
+async function trpSaveFromForm(){
+  const bedId=$trp("trpBed").value, start=$trp("trpStart").value, end=$trp("trpEnd").value;
+  if(!bedId){ alert("Pick a bed for this tarp."); return; }
+  if(!start || !end){ alert("A tarp needs both a start and an end date."); return; }
+  if(end < start){ alert("The tarp's end date is before its start date."); return; }
+  const bmRaw=$trp("trpBm").value.trim();
+  const patch={ bedId, start, end,
+    bm: bmRaw==="" ? null : parseFloat(bmRaw),
+    status: $trp("trpStatus").value,
+    notes: $trp("trpNotes").value.trim(),
+    // "__add__" is the picker's sentinel, never a real name — treat it as unassigned
+    layAssignee: $trp("trpLayAssignee").value==="__add__" ? "" : $trp("trpLayAssignee").value,
+    pullAssignee: $trp("trpPullAssignee").value==="__add__" ? "" : $trp("trpPullAssignee").value };
+  const btn=$trp("trpSave"); btn.disabled=true;
+  try{
+    await tarpSave(patch, trpEditingId);
+    trpCloseEditor();
+    tarpRefreshViews();
+  }catch(e){
+    console.error(e); alert("Couldn't save that tarp:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+async function trpDeleteCurrent(){
+  if(!trpEditingId) return;
+  if(!confirm("Delete this tarp? The planting it's attached to (if any) isn't affected.")) return;
+  const btn=$trp("trpDelete"); btn.disabled=true;
+  try{
+    await tarpDelete(trpEditingId);
+    trpCloseEditor();
+    tarpRefreshViews();
+  }catch(e){
+    console.error(e); alert("Couldn't delete that tarp:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+
+// ---- Misc page: the full tarp list (inline-editable, same shape as the Sales Outlets table) ----
+function trpRenderList(){
+  const body=document.getElementById("trpBody"); if(!body) return;
+  body.innerHTML="";
+  const bedName=id=>{const b=(data.beds||[]).find(x=>x.id===id); return b?b.name:"—";};
+  const list=(data.tarps||[]).slice().sort((a,b)=>
+    String(a.start||"").localeCompare(String(b.start||"")) || bedName(a.bedId).localeCompare(bedName(b.bedId),undefined,{numeric:true}));
+  if(!list.length){
+    const r=document.createElement("tr");
+    r.innerHTML=`<td colspan="8"><div class="cr-empty">No tarps yet. Add one here, or tick “Tarp after this crop” when editing a planting.</div></td>`;
+    body.appendChild(r);
+  }else list.forEach(t=>body.appendChild(trpRow(t)));
+  const add=document.createElement("tr"); add.className="cr-add-row";
+  add.innerHTML=`<td colspan="8"><button type="button" class="cr-add-variety">+ Add tarp…</button></td>`;
+  add.querySelector("button").onclick=()=>trpOpenEditor(null);
+  body.appendChild(add);
+}
+function trpRow(t){
+  const tr=document.createElement("tr");
+  const bed=(data.beds||[]).find(x=>x.id===t.bedId);
+  const p=t.plantingId?(data.plantings||[]).find(x=>x.id===t.plantingId):null;
+  tr.innerHTML=
+     `<td>${esc(bed?bed.name:"—")}</td>`
+    +`<td>${p?esc(p.crop+(p.variety?" · "+p.variety:"")):`<span class="sub">standalone</span>`}</td>`
+    +`<td>${esc(fmt(t.start))}</td>`
+    +`<td>${esc(fmt(t.end))}</td>`
+    +`<td>${t.bm!=null?esc(String(t.bm)):`<span class="sub">whole bed</span>`}</td>`
+    +`<td>${esc(t.status||"Planned")}</td>`
+    +`<td>${esc(t.notes||"")}</td>`
+    +`<td style="white-space:nowrap">`
+      +`<button type="button" class="btn-ghost" style="padding:.2rem .6rem;font-size:.8rem">Edit</button> `
+      +`<button type="button" class="btn-danger" style="padding:.2rem .6rem;font-size:.8rem">Delete</button></td>`;
+  tr.querySelector(".btn-ghost").onclick=()=>trpOpenEditor(t);
+  tr.querySelector(".btn-danger").onclick=async()=>{
+    if(!confirm(`Delete the tarp on ${bed?bed.name:"this bed"} (${fmt(t.start)} – ${fmt(t.end)})?`)) return;
+    try{ await tarpDelete(t.id); trpRenderList(); }
+    catch(e){ console.error(e); alert("Couldn't delete that tarp:\n"+e.message); }
+  };
+  return tr;
+}
+
 // Mobile-only block picker — same "All blocks + one chip per block" idea as the Farm Map's
 // activeBlock filter, but this one actually narrows which .cm-block elements get built (List
 // mode has no pan/zoom to fit-to-block the way the Farm Map's chips do).
@@ -2410,6 +3314,41 @@ function windowsOverlap(dragWin,otherWin){
   if(!dragWin.s||!dragWin.e||!otherWin.s||!otherWin.e) return true; // partial dates ⇒ assume a clash (safe)
   return dragWin.s<=otherWin.e && otherWin.s<=dragWin.e;
 }
+// Does a tarp cover this bed during the dragged planting's window? Advisory ONLY — the answer
+// never feeds `fits`. Tarping is a soft intention (often skipped when time is short), so it must
+// never stop you placing the next crop; you just get told you'd be planting into a tarped window.
+function bedTarpedIn(bed,win){
+  return tarpsForBed(bed.id).some(t=>windowsOverlap(win,{s:new Date(t.start), e:new Date(t.end)}));
+}
+
+/* ---------- Bed issues: advisory crop-placement flags ---------- */
+// Same contract as bedTarpedIn above and for the same reason — a bed issue NEVER feeds `fits`,
+// never blocks a save, never removes a drop target. It tells you the bed has a known problem with
+// this crop and leaves the call to you. See the Bed Issues table description in Airtable.
+// The rule itself lives in planner-shared.js (bedConflicts) so a Node consumer gets the same answer.
+function bedIssuesForCrop(bedId, cropId, win){
+  return bedConflicts({
+    issues:data.bedIssues, bedId, cropId,
+    cropType:(data.cropDefs[cropId]||{}).type || "",
+    win: win||{},
+  });
+}
+// Every issue recorded against a bed, including the informational ones bedIssuesForCrop skips.
+function bedIssuesOn(bedId){ return (data.bedIssues||[]).filter(i=>i.bedId===bedId); }
+// Conflicts for a planting as it already stands — used by the Beds tab's Conflicts card.
+function plantingConflicts(p){
+  const bedId=(p.bedIds||[])[0];
+  return bedId ? bedIssuesForCrop(bedId, p.cropId, planWindow(p)) : [];
+}
+// One-line summary for a title attribute / warning row, e.g. "Disease — no carrots after 2024".
+function issueLabel(i){
+  const bits=[i.type||"Issue"];
+  if(i.notes) bits.push(i.notes.split("\n")[0].trim());
+  return bits.join(" — ");
+}
+function issuesTitle(list){
+  return list.map(i=>(i.severity==="Avoid"?"Avoid: ":"")+issueLabel(i)).join("\n");
+}
 // how much room a bed has for the dragged planting during its date window
 function bedFreeInfo(bed,drag,win){
   let used=0, unknownOccupant=false, anyOccupant=false;
@@ -2436,19 +3375,32 @@ function highlightFits(drag){
     const info=bedFreeInfo(bed,drag,win);
     if(!info.fits) return;
     col.classList.add("cm-fit");
-    if(info.free!=null){                                    // show spare metres once lengths exist
-      const track=col.querySelector(".cm-track");
-      if(track){
-        const badge=document.createElement("div");badge.className="cm-free";
-        badge.textContent=(Math.round(info.free*10)/10)+" m";
-        track.appendChild(badge);
-      }
+    const track=col.querySelector(".cm-track");
+    if(info.free!=null && track){                           // show spare metres once lengths exist
+      const badge=document.createElement("div");badge.className="cm-free";
+      badge.textContent=(Math.round(info.free*10)/10)+" m";
+      track.appendChild(badge);
+    }
+    // still a valid drop target — this only warns that the window is partly under tarp
+    if(track && bedTarpedIn(bed,win)){
+      const t=document.createElement("div");t.className="cm-tarped-badge tarp-hatch";
+      t.title="This bed is under tarp during that window — you can still plant here";
+      track.appendChild(t);
+    }
+    // likewise advisory: this bed has a recorded issue with this crop, but it stays droppable
+    const issues = track ? bedIssuesForCrop(bed.id, drag.cropId, win) : [];
+    if(issues.length){
+      const w=document.createElement("div");
+      w.className="cm-issue-badge"+(issues.some(i=>i.severity==="Avoid")?" cm-issue-avoid":"");
+      w.textContent="⚠";
+      w.title=issuesTitle(issues)+"\n\nYou can still plant here.";
+      track.appendChild(w);
     }
   });
 }
 function clearFits(){
   document.querySelectorAll("#cmBlocks .cm-col.cm-fit").forEach(c=>c.classList.remove("cm-fit"));
-  document.querySelectorAll("#cmBlocks .cm-free").forEach(e=>e.remove());
+  document.querySelectorAll("#cmBlocks .cm-free, #cmBlocks .cm-tarped-badge, #cmBlocks .cm-issue-badge").forEach(e=>e.remove());
 }
 
 // Bed groups are keyed by the block's NAME (a plain string on Bed, matched against Block
@@ -2581,8 +3533,43 @@ function buildCropMap(){
           }
         }
       });
+      // tarped spans — hatched bands under the bars. Drawn from the same date track as the bars
+      // (cmY), so a tarp that runs into the next planting's window visibly overlaps it rather
+      // than pushing anything aside; nothing here touches occupancy or drop-target logic.
+      tarpsForBed(bed.id).forEach(t=>{
+        const y0=cmY(t.start), y1=cmY(t.end);
+        if(y0==null||y1==null) return;                         // outside the viewed year
+        const top=Math.min(y0,y1), height=Math.max(4,Math.abs(y1-y0));
+        const el=document.createElement("div");
+        el.className="cm-tarp tarp-hatch";
+        el.style.top=top+"px";el.style.height=height+"px";
+        el.dataset.tarp=t.id;
+        el.title=tarpTitle(t);
+        // No cmLocked guard here, unlike the planting bars above: the lock exists to stop an
+        // accidental drag reassigning a bed while you pan, and opening a tarp is just a read.
+        // stopPropagation so the track-level list-mode fallback doesn't also fire for the same click.
+        el.addEventListener("click",e=>{ e.stopPropagation(); if(!cmTarpMode) trpOpenEditor(t); });
+        track.appendChild(el);
+      });
       const ty=cmToday();
       if(ty!=null){const tl=document.createElement("div");tl.className="cm-today";tl.style.top=ty+"px";track.appendChild(tl);}
+
+      // Click fallback for tarps, on the TRACK rather than the band. Resolving by date instead of
+      // by event target makes opening a tarp independent of everything that can stop a band from
+      // receiving its own click — the bar stacking above it, the pointer-events:none that tarp-draw
+      // mode sets on every band, or a zero-height band. Planting bars call stopPropagation() on
+      // click, so anything arriving here did NOT hit a planting.
+      track.addEventListener("click",e=>{
+        // List mode only: under Map mode's zoom/pan transform, getBoundingClientRect is in scaled
+        // screen pixels while cmYToISO expects the track's own 0..CM_H space, so the date would be
+        // wrong. In Map mode the band is always on top and clickable via its own handler anyway.
+        if(cmTarpMode || cmViewMode!=="list") return;   // draw mode resolves its own taps on pointerup
+        const y=e.clientY-track.getBoundingClientRect().top;
+        const at=cmYToISO(y);
+        const hit=tarpsForBed(bed.id).find(t=>t.start<=at && at<=t.end);
+        if(hit) trpOpenEditor(hit);
+      });
+
       col.appendChild(track);
       col.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="move";col.classList.add("cm-over");});
       col.addEventListener("dragleave",()=>col.classList.remove("cm-over"));
@@ -2659,6 +3646,7 @@ function setCmViewMode(mode){
   document.getElementById("cmZoombar").style.display = mode==="map" ? "flex":"none";
   document.querySelectorAll("#cmViewToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.cmview===mode?"true":"false"));
   if(mode==="map"){ cmFitView(); } else { blocks.style.transform=""; vp.scrollTop=0; vp.scrollLeft=0; }
+  if(mode!=="list" && typeof setCmTarpMode==="function") setCmTarpMode(false); // tarp drawing is List-only
 }
 document.querySelectorAll("#cmViewToggle button").forEach(b=>b.addEventListener("click",()=>setCmViewMode(b.dataset.cmview)));
 
@@ -2679,6 +3667,81 @@ function setCmLocked(v){
                 : "Click to lock — pan freely without moving plantings";
 }
 document.getElementById("cmLockBtn").addEventListener("click",()=>setCmLocked(!cmLocked));
+
+/* ---- Tarp draw mode: drag down a bed column to lay a tarp over that stretch of the year ----
+   Desktop only. Plantings are dragged with HTML5 drag-and-drop, so a pointer-based gesture here
+   can't collide with them; touch gets the "+ Tarp" action in the Crop Map's detail sheet instead
+   (dragging is already swapped for tap-to-open there — see buildCropMap). */
+let cmTarpMode=false;
+function setCmTarpMode(v){
+  // List mode only: in Map mode the tracks are inside a pan/zoom transform, so a pixel offset no
+  // longer maps to CM_H, and the drag would fight the canvas pan.
+  cmTarpMode = v && !cmIsMobile() && cmViewMode==="list";
+  const btn=document.getElementById("cmTarpBtn");
+  btn.setAttribute("aria-pressed", cmTarpMode?"true":"false");
+  document.getElementById("view-cropmap").classList.toggle("cm-tarping", cmTarpMode);
+  document.getElementById("cmDragHint").textContent = cmTarpMode
+    ? "drag down a bed column to lay a tarp over those dates"
+    : "drag to assign or move · Map pans/zooms the whole farm";
+}
+// Drag-to-draw needs a pointer and an untransformed track, so on mobile (tap-to-open) and in Map
+// mode the button opens the tarp editor blank instead — same destination, no gesture required.
+document.getElementById("cmTarpBtn").addEventListener("click",()=>{
+  if(cmIsMobile() || cmViewMode!=="list"){ trpOpenEditor(null); return; }
+  setCmTarpMode(!cmTarpMode);
+});
+
+// Inverse of cmY(): a y-pixel in a track back to an ISO date in the viewed year.
+function cmYToISO(y){
+  const frac=Math.max(0,Math.min(1,y/CM_H));
+  const start=new Date(cmYear,0,1), end=new Date(cmYear+1,0,1);
+  return dateToISO(new Date(start.getTime()+frac*(end-start)));
+}
+(function(){
+  const blocks=document.getElementById("cmBlocks"); if(!blocks) return;
+  let draw=null;   // {bedId, track, y0, el}
+  blocks.addEventListener("pointerdown",e=>{
+    if(!cmTarpMode || cmIsMobile() || cmViewMode!=="list") return;
+    if(e.button!=null && e.button!==0) return;
+    const track=e.target.closest(".cm-track"); if(!track) return;
+    const col=track.closest(".cm-col"); if(!col) return;
+    e.preventDefault();                       // don't start a text selection or a native drag
+    const y0=e.clientY-track.getBoundingClientRect().top;
+    const el=document.createElement("div");
+    el.className="cm-tarp tarp-hatch cm-tarp-sel";
+    el.style.top=y0+"px"; el.style.height="2px"; el.style.pointerEvents="none";
+    track.appendChild(el);
+    draw={bedId:col.dataset.bed, track, y0, el};
+    try{ blocks.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  blocks.addEventListener("pointermove",e=>{
+    if(!draw) return;
+    const y=e.clientY-draw.track.getBoundingClientRect().top;
+    draw.el.style.top=Math.min(draw.y0,y)+"px";
+    draw.el.style.height=Math.max(2,Math.abs(y-draw.y0))+"px";
+  });
+  blocks.addEventListener("pointerup",e=>{
+    if(!draw) return;
+    const d=draw; draw=null;
+    try{ blocks.releasePointerCapture(e.pointerId); }catch(_){}
+    const y=e.clientY-d.track.getBoundingClientRect().top;
+    d.el.remove();
+    // A tap rather than a drag: too short to mean a date range. If it landed on an existing tarp,
+    // that's an edit, not a create — resolve which one by DATE rather than by hit-testing the
+    // element, because .cm-tarping sets pointer-events:none on every band (so e.target is the
+    // track, never the tarp). Only a tap on empty track opens a blank editor for a new tarp.
+    const tiny=Math.abs(y-d.y0)<6;
+    const a=cmYToISO(Math.min(d.y0,y)), b=cmYToISO(Math.max(d.y0,y));
+    if(tiny){
+      const at=cmYToISO(y);
+      const hit=tarpsForBed(d.bedId).find(t=>t.start<=at && at<=t.end);
+      trpOpenEditor(hit||null, hit?undefined:{bedId:d.bedId});
+    }else{
+      trpOpenEditor(null, {bedId:d.bedId, start:a, end:b});
+    }
+  });
+  blocks.addEventListener("pointercancel",()=>{ if(draw){ draw.el.remove(); draw=null; } });
+})();
 
 let cmUnCollapsed=false;
 function cmSetUnCollapsed(val){
@@ -2763,7 +3826,11 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") cmHideTypePopover(
   const vp=document.getElementById("cmViewport");
   let dragging=false,lastX,lastY;
   const pts=new Map();let pinchD=0;
-  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-chip, #cmZoombar, .cm-block-h");
+  // Elements that handle their own press in Map mode, so the viewport must NOT capture the pointer
+  // to pan when one is pressed — otherwise the capture eats their click. `.cm-tarp` is here so a
+  // tarp opens its editor in Map mode; without it the pan-capture swallowed the click (hover still
+  // worked, which is why it looked so baffling).
+  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-chip, .cm-tarp, #cmZoombar, .cm-block-h");
 
   vp.addEventListener("pointerdown",e=>{
     if(cmViewMode!=="map"||isDndTarget(e.target)) return; // let native drag-and-drop take over
@@ -3587,6 +4654,11 @@ function tlX(dstr,b){
   const d=(dstr instanceof Date)?dstr:new Date(dstr); if(isNaN(d)) return null;
   return Math.max(0,Math.min(b.days,(d-b.start)/86400000))*TL_DAY;
 }
+// Inverse of tlX: an x-pixel in a timeline row back to an ISO date in the viewed year.
+function tlXToISO(x,b){
+  const days=Math.max(0,Math.min(b.days,x/TL_DAY));
+  return dateToISO(new Date(b.start.getTime()+days*86400000));
+}
 function bedNameOf(p){ return (data.beds.find(x=>x.id===p.bedIds[0])||{}).name; }
 function fmtDM(d){ // compact DD/MM, matching Heirloom's date-label style
   if(!d) return "";
@@ -3629,7 +4701,9 @@ function tlGroupsByBed(){
   (data.plantings||[]).forEach(p=>{ if(p.sow&&p.bedIds[0]) (perBed[p.bedIds[0]] ||= []).push(p); });
   return Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(block=>({
     key:block, label:"Block "+block,
-    rows: groups[block].map(bd=>({label:bd.name, plantings:(perBed[bd.id]||[])})),
+    // bedId is carried through so the row can also draw that bed's tarped spans (see tlAddTarp) —
+    // By-crop rows have no single bed and so get none.
+    rows: groups[block].map(bd=>({label:bd.name, bedId:bd.id, plantings:(perBed[bd.id]||[])})),
   }));
 }
 
@@ -3647,6 +4721,22 @@ function taskExtentFor(p, rangeStart, rangeEnd){
   return {pre,post};
 }
 function taskName(t){ return t ? ((data.tasks||[]).find(x=>x.id===t.taskId)?.name || "Task") : ""; }
+
+// Tarped span on a By-bed timeline row. Appended BEFORE the bars so tree order puts the crop
+// capsules on top of the hatch — a follow-on planting overlapping the tail of a tarp stays fully
+// readable, which is the whole point of drawing tarps as an underlay rather than a blocker.
+// By-crop rows are crop-scoped rather than bed-scoped, so they get no tarps.
+function tlAddTarp(rowEl,t,b){
+  const x0=tlX(t.start,b), x1=tlX(t.end,b);
+  if(x0==null||x1==null) return;
+  const left=Math.min(x0,x1), w=Math.max(2,Math.abs(x1-x0));
+  const el=document.createElement("div");
+  el.className="tl-tarp tarp-hatch";
+  el.style.left=left+"px";el.style.width=w+"px";
+  el.title=tarpTitle(t);
+  el.onclick=e=>{ e.stopPropagation(); trpOpenEditor(t); };
+  rowEl.appendChild(el);
+}
 
 function tlAddBar(rowEl,p,b){
   const x0=tlX(p.sow,b), x3=tlX(p.h2||p.h1||p.sow,b);
@@ -3838,7 +4928,7 @@ function buildTimeline(){
   let groups = tlGroupMode==="crop" ? tlGroupsByCrop() : tlGroupsByBed();
   if(tlSearchQuery){
     groups = groups.map(g=>({key:g.key, label:g.label,
-        rows: g.rows.map(row=>({label:row.label, plantings:row.plantings.filter(tlMatchesQuery)}))
+        rows: g.rows.map(row=>({label:row.label, bedId:row.bedId, plantings:row.plantings.filter(tlMatchesQuery)}))
                      .filter(row=>row.plantings.length)}))
       .filter(g=>g.rows.length);
   }
@@ -3875,6 +4965,16 @@ function buildTimeline(){
       lbl.appendChild(txt);
       sideIn.appendChild(lbl);
       const rEl=document.createElement("div");rEl.className="tl-row";
+      if(row.bedId){
+        tarpsForBed(row.bedId).forEach(t=>tlAddTarp(rEl,t,b));             // underlay, before the bars
+        // same date-resolved click fallback as the Crop Map's track — see the comment there
+        rEl.addEventListener("click",e=>{
+          const x=e.clientX-rEl.getBoundingClientRect().left;
+          const at=tlXToISO(x,b);
+          const hit=at ? tarpsForBed(row.bedId).find(t=>t.start<=at && at<=t.end) : null;
+          if(hit) trpOpenEditor(hit);
+        });
+      }
       row.plantings.forEach(p=>tlAddBar(rEl,p,b));
       bodyIn.appendChild(rEl);
     });
@@ -4044,9 +5144,13 @@ function tlRenderPanel(p, panel, closeFn, opts){
       +rows.map(({bed,info})=>{
         const isCur=(p.bedIds||[])[0]===bed.id;
         const freeLabel=info.free!=null?`${Math.round(info.free*10)/10} m`:"";
+        // advisory only — a flagged bed is still tappable, same as on the desktop drag map
+        const issues=bedIssuesForCrop(bed.id,p.cropId,win);
+        const warn=issues.length?`<span class="tl-bedpick-warn" title="${esc(issuesTitle(issues))}">⚠</span>`:"";
         return `<button type="button" class="tl-bedpick-row${isCur?" tl-bedpick-cur":""}${!info.fits?" tl-bedpick-tight":""}"
           data-bed="${bed.id}"${isCur?" disabled":""}>
           <span class="tl-bedpick-name">${esc(bed.name)}${bed.block?` <span class="tl-bedpick-block">· ${esc(bed.block)}</span>`:""}</span>
+          ${warn}
           ${freeLabel?`<span class="tl-bedpick-free">${freeLabel}</span>`:""}
         </button>`;
       }).join("")
@@ -4280,6 +5384,9 @@ function knownAssignees(){
   (data.plantings||[]).forEach(p=>{
     [p.sowAssignee,p.tpAssignee,p.h1Assignee,p.h2Assignee].forEach(a=>{ if(a) set.add(a); });
   });
+  (data.tarps||[]).forEach(t=>{
+    PlannerShared.TARP_STEPS.forEach(s=>{ if(t[s.assignee]) set.add(t[s.assignee]); });
+  });
   return [...set].sort((a,b)=>a.localeCompare(b));
 }
 function apRowFromSchedule(s){
@@ -4474,17 +5581,34 @@ async function materializePlantingTasksFor(plantingId, cropName, varietyName, da
   });
   return created;
 }
+// The window this dialog's planting would occupy, in planWindow()'s {s,e} shape, so bed issues can
+// be date-filtered off the dates currently typed in rather than a saved record.
+function apWindow(){
+  const sow=$ap("apSow").value, h2=$ap("apH2").value||$ap("apH1").value||sow;
+  const d=v=>{ if(!v) return null; const t=new Date(v); return isNaN(t)?null:t; };
+  return {s:d(sow), e:d(h2)};
+}
+function apBedConflicts(bedId){
+  return bedId ? bedIssuesForCrop(bedId, apCropId, apWindow()) : [];
+}
 function apFillBeds(){
-  const s=$ap("apBed"); s.innerHTML="";
+  const s=$ap("apBed"); const keep=s.value; s.innerHTML="";
   const un=document.createElement("option"); un.value=""; un.textContent="— Unassigned —"; s.appendChild(un);
   const byBlock={};
   (data.beds||[]).forEach(bd=>{ (byBlock[bd.block||"—"] ||= []).push(bd); });
   Object.keys(byBlock).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(blk=>{
     const og=document.createElement("optgroup"); og.label="Block "+blk;
     byBlock[blk].sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}))
-      .forEach(bd=>{ const o=document.createElement("option"); o.value=bd.id; o.textContent=bd.name; og.appendChild(o); });
+      .forEach(bd=>{
+        const o=document.createElement("option"); o.value=bd.id; o.textContent=bd.name;
+        // mark, don't remove — a flagged bed stays fully selectable
+        const cf=apBedConflicts(bd.id);
+        if(cf.length){ o.textContent="⚠ "+bd.name; o.title=issuesTitle(cf); }
+        og.appendChild(o);
+      });
     s.appendChild(og);
   });
+  if(keep) s.value=keep;   // the list is rebuilt whenever crop/dates change; don't lose the pick
 }
 // ---- Variety dropdown: options are this crop's saved varieties (data.varietiesByCrop), plus
 // "Generic" (no specific variety) and "+ Add new variety…". Plantings still store the variety
@@ -4682,7 +5806,19 @@ function apUpdateSummarySidebar(){
       ["Trays required", traysRequired!=null ? `${traysRequired} × ${trayType}` : "–"],
     ]},
   ];
-  $ap("apSideRows").innerHTML = groups.map(g=>
+  // Bed issues sit above the summary, not inside it — they're the one thing here you might want to
+  // act on rather than just read. Advisory throughout: nothing below stops the planting being made.
+  const conflicts=apBedConflicts(bedSel.value);
+  const warnHTML = conflicts.length
+    ? `<div class="ap-bedwarn${conflicts.some(i=>i.severity==="Avoid")?" ap-bedwarn-avoid":""}">`
+      + `<div class="ap-bedwarn-h">⚠ ${esc(bedName.replace(/^⚠\s*/,""))} — ${conflicts.length===1?"known issue":conflicts.length+" known issues"}</div>`
+      + conflicts.map(i=>
+          `<div class="ap-bedwarn-row"><span class="sb-pill warn">${esc(i.severity||"Advisory")}</span> `
+          + `<strong>${esc(i.type||"Issue")}</strong>${i.notes?" — "+esc(i.notes.split("\n")[0]):""}</div>`).join("")
+      + `<div class="ap-bedwarn-foot">You can still plant here.</div></div>`
+    : "";
+
+  $ap("apSideRows").innerHTML = warnHTML + groups.map(g=>
     `<div class="ap-side-group"><div class="ap-side-label">${esc(g.label)}</div>`
     + g.rows.map(([k,v])=>`<div class="ap-side-row"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")
     + `</div>`).join("");
@@ -4796,8 +5932,59 @@ function apRecalcH1(){
 function apRecalcH2(){
   const win=parseInt($ap("apWindow").value), h1=$ap("apH1").value;
   if(h1 && !isNaN(win)) $ap("apH2").value = isoAddDays(h1,win);
+  apUpdateTarpVis();   // the tarp window hangs off Last harvest, so it moves with it
+  apRefreshBedFlags(); // …and so do the bed-issue flags, which are date-filtered
 }
+// Which beds are flagged depends on the crop AND the dates, so the picker has to be rebuilt
+// whenever either moves. Cheap enough to just redo it — apFillBeds preserves the selection.
+function apRefreshBedFlags(){ apFillBeds(); apUpdateSummarySidebar(); apScheduleSuggestBeds(); }
 function apCascadeFromSow(){ apRecalcTp(); apSyncDtm(); apRecalcH1(); apRecalcH2(); }
+
+// ---- Bed suggestions: ranks candidate beds via PlannerShared.suggestBedsForPlanting, purely
+// advisory — selecting a card is the only thing that writes to apBed (see apRenderBedSuggestions).
+let apSuggestDebounce=null;
+function apScheduleSuggestBeds(){ clearTimeout(apSuggestDebounce); apSuggestDebounce=setTimeout(apRunBedSuggestions,300); }
+function apCollectSuggestInput(){
+  return {
+    cropId: apCropId,
+    bm: $ap("apBm").value===""?null:(+$ap("apBm").value),
+    sow: $ap("apSow").value || "",
+    h1: $ap("apH1").value || "",
+    h2: $ap("apH2").value || "",
+    group: $ap("apGroup").value.trim(),
+    excludePlantingId: apMode==="edit" && apEditPlanting ? apEditPlanting.id : null,
+  };
+}
+function apRunBedSuggestions(){
+  const input=apCollectSuggestInput();
+  if(!input.cropId || !input.sow){ $ap("apBedSuggestList").innerHTML=""; return; }
+  const { candidates, excluded } = suggestBedsForPlanting(data, input, {limit:8});
+  apRenderBedSuggestions(candidates, excluded);
+}
+function apRenderBedSuggestions(candidates, excluded){
+  const box=$ap("apBedSuggestList"), chosen=$ap("apBed").value;
+  if(!candidates.length){
+    box.innerHTML = `<div class="ap-suggest-empty">No beds fit that window${excluded.length?` (${excluded.length} excluded — too small or already occupied)`:""}.</div>`;
+    return;
+  }
+  box.innerHTML = candidates.map(c => `
+    <div class="ap-suggest-card${c.geometryKnown?"":" ap-suggest-unverified"}${c.bed.id===chosen?" ap-suggest-chosen":""}" data-bed="${c.bed.id}">
+      <div class="ap-suggest-card-head">
+        <span class="ap-suggest-name">${esc(c.bed.name)}${c.bed.block?` <span class="ap-suggest-block">· Block ${esc(c.bed.block)}</span>`:""}</span>
+        <span class="pill">${c.score}</span>
+      </div>
+      ${!c.geometryKnown?`<div class="ap-suggest-flag">⚠ size unverified</div>`:""}
+      <div class="ap-suggest-reasons">${c.reasons.map(r=>`<div>${esc(r)}</div>`).join("")}</div>
+      <button type="button" class="btn-ghost" data-use="${c.bed.id}">Use this bed</button>
+    </div>`).join("");
+  box.querySelectorAll("[data-use]").forEach(btn=>{
+    btn.onclick=()=>{
+      $ap("apBed").value = btn.dataset.use;
+      $ap("apBed").dispatchEvent(new Event("change"));
+      box.querySelectorAll(".ap-suggest-card").forEach(c=>c.classList.toggle("ap-suggest-chosen", c.dataset.bed===btn.dataset.use));
+    };
+  });
+}
 
 function apRenderCropList(filter){
   const box=$ap("apCropList"); box.innerHTML="";
@@ -4828,11 +6015,12 @@ function apSelectCrop(cropId){
   $ap("apCount").value="1"; $ap("apGap").disabled=true;
   apStatusVal="Planned";
   $ap("apClimate").checked = loadClimatePref();
-  apFillBeds();
+  apFillBeds(); $ap("apBed").value="";   // apFillBeds preserves the selection, so clear it here
   $ap("apBm").value = "";
   $ap("apSow").value = todayISO();
   $ap("apTp").value=""; $ap("apH1").value=""; $ap("apH2").value="";
   $ap("apSowActual").value=""; $ap("apTpActual").value="";
+  $ap("apTarp").checked=false; $ap("apTarpWeeks").value=TARP_DEFAULT_WEEKS; apUpdateTarpVis();
   apApplyDefaults(cropId, "");   // sets method/nursery/dtm/window/gap/rows/harvest, the defaults note, and cascades dates
   apLoadTaskRows();   // prefills the Tasks tab's editable schedule from this crop's Crop Tasks
   apShowTab("details");
@@ -4895,6 +6083,14 @@ function apOpenEdit(p){
   apSyncDtm();   // edit: keeps apDtm editable, clears any climate hint
   apSyncYield();   // edit: keeps apYield editable, clears any derivation hint
   apUpdateRowsSummary(); apUpdateHarvestSummary();
+  // Termination: reflect this planting's existing tarp, if it has one. Weeks is back-computed
+  // from the record's own dates so a hand-adjusted tarp keeps its real length.
+  const tarp = tarpForPlanting(p.id);
+  $ap("apTarp").checked = !!tarp;
+  const tw = tarp ? isoDiffDays(tarp.start, tarp.end) : null;
+  $ap("apTarpWeeks").value = tw!=null && tw>=0 ? Math.round(tw/7) : TARP_DEFAULT_WEEKS;
+  apUpdateTarpVis();
+  apRefreshBedFlags();   // the dropdown was filled at the top, before this planting's dates landed
   apSnapshot();
   apLoadTaskRows();   // this planting's own saved task schedule, or crop defaults if none exist yet
   apShowTab("details");
@@ -4916,7 +6112,40 @@ function apSnapshot(){
     trayType:$ap("apTrayType").value, seedsPerCell:$ap("apSeedsPerCell").value,
     daysToGerminate:$ap("apDaysToGerminate").value, germTemp:$ap("apGermTemp").value, pottingUp:apPottingUpVal(),
     notes:$ap("apNotes").value,
+    tarp:$ap("apTarp").checked, tarpWeeks:$ap("apTarpWeeks").value,
   };
+}
+// Show the weeks input only when tarping is on, and echo the dates it works out to. Tarping runs
+// from Last harvest, so with no h2 yet there's nothing to anchor to and we say so.
+function apUpdateTarpVis(){
+  const on=$ap("apTarp").checked;
+  $ap("apTarpWeeksRow").style.display = on ? "" : "none";
+  const hint=$ap("apTarpHint");
+  if(!on){ hint.textContent=""; return; }
+  const r=apTarpRange($ap("apH2").value || $ap("apH1").value);
+  hint.textContent = r ? `${fmt(r.start)} → ${fmt(r.end)}`
+                       : "Set a last-harvest date and the tarp dates follow from it.";
+}
+// The tarp window implied by the form: starts when the crop finishes, runs for the given weeks.
+function apTarpRange(h2){
+  if(!h2) return null;
+  const w=parseFloat($ap("apTarpWeeks").value);
+  const days=Math.round((isFinite(w)?w:TARP_DEFAULT_WEEKS)*7);
+  return {start:h2, end:isoAddDays(h2, days)};
+}
+// Create / update / delete one planting's tarp so it matches the dialog. Kept out of the main
+// save path's try block on purpose: a tarp is an advisory extra, so failing to write it must not
+// make a successful planting save look like it failed.
+async function apSyncTarpFor(plantingId, bedId, h2, wantTarp, weeks){
+  const existing=tarpForPlanting(plantingId);
+  if(!wantTarp || !h2 || !bedId){
+    if(existing) await tarpDelete(existing.id);
+    return;
+  }
+  const days=Math.round((isFinite(weeks)?weeks:TARP_DEFAULT_WEEKS)*7);
+  const patch={bedId, plantingId, start:h2, end:isoAddDays(h2,days)};
+  if(existing) await tarpSave(patch, existing.id);
+  else await tarpSave({...patch, bm:null, status:"Planned", notes:""});
 }
 function apSetScope(scope){
   apEditScope=scope;
@@ -4937,11 +6166,26 @@ function apOpen(){
 }
 function apClose(){ $ap("apModal").classList.remove("open"); }
 
+// Last word before a planting is written to a bed with a recorded problem. Only "Avoid"-severity
+// issues interrupt — an "Advisory" one has already had its say in the sidebar, and making every
+// note raise a modal is how people learn to click through warnings without reading them.
+// Returns true to proceed. Never returns false for any reason other than the user saying no.
+function apConfirmBedIssues(bedId){
+  const bad=apBedConflicts(bedId).filter(i=>i.severity==="Avoid");
+  if(!bad.length) return true;
+  const bed=(data.beds||[]).find(b=>b.id===bedId);
+  return confirm(
+    `${bed?bed.name:"This bed"} has ${bad.length===1?"an issue":"issues"} recorded against `
+    + `${data.crops[apCropId]||"this crop"}:\n\n`
+    + bad.map(i=>"• "+issueLabel(i)).join("\n")
+    + `\n\nPlant here anyway?`);
+}
 async function apDoCreate(){
   const msg=$ap("apMsg"); msg.textContent="";
   if(!apCropId){ msg.textContent="Pick a crop first."; return; }
   const sow=$ap("apSow").value;
   if(!sow){ msg.textContent="A sow date is required."; return; }
+  if(!apConfirmBedIssues($ap("apBed").value)) return;
   const count=Math.max(1,parseInt($ap("apCount").value)||1);
   const gap=parseInt($ap("apGap").value)||0;
   const method=apMethod();
@@ -5046,6 +6290,17 @@ async function apDoCreate(){
         }
       }
     }catch(e2){ console.error("Couldn't generate planting tasks:", e2); }
+    // one tarp per succession, anchored to that succession's own last harvest — best-effort for
+    // the same reason as the tasks above: a tarp is advisory, and losing it mustn't read as a
+    // failed create when the plantings themselves went in fine
+    if($ap("apTarp").checked){
+      try{
+        const weeks=parseFloat($ap("apTarpWeeks").value);
+        for(let i=0;i<created.length;i++){
+          await apSyncTarpFor(created[i].id, bedId||null, recDates[i].h2, true, weeks);
+        }
+      }catch(e3){ console.error("Couldn't create tarps:", e3); }
+    }
     apClose();
     await loadAll();
     if(document.getElementById("view-timeline").classList.contains("active")) buildTimeline();
@@ -5066,6 +6321,7 @@ async function apDoSave(){
   const F=CFG.f;
   const method=apMethod();
   const bedVal=$ap("apBed").value;      // "" = unassigned
+  if(!apConfirmBedIssues(bedVal)) return;
   const bmRaw=$ap("apBm").value; const bm=bmRaw===""?null:(+bmRaw);
   const btn=$ap("apCreate");
 
@@ -5162,6 +6418,18 @@ async function apDoSave(){
   msg.textContent=`Saving ${patches.length} planting${patches.length>1?"s":""}…`;
   try{
     for(const pt of patches) await atPatch(CFG.farmBase, CFG.tables.plantings, pt.id, pt.fields);
+    // Keep each patched planting's tarp in step. Derived from the patch itself so this works for
+    // both scopes — a group save recomputes every member's own h2, and a field the patch didn't
+    // touch (group scope only writes what changed) falls back to the record's current value.
+    try{
+      const wantTarp=$ap("apTarp").checked, weeks=parseFloat($ap("apTarpWeeks").value);
+      for(const pt of patches){
+        const rec=(data.plantings||[]).find(x=>x.id===pt.id);
+        const h2  = F.pl_h2  in pt.fields ? pt.fields[F.pl_h2]  : (rec?rec.h2:null);
+        const bed = F.pl_bed in pt.fields ? (pt.fields[F.pl_bed]||[])[0] : (rec?rec.bedIds[0]:null);
+        await apSyncTarpFor(pt.id, bed||null, h2||null, wantTarp, weeks);
+      }
+    }catch(e2){ console.error("Couldn't sync tarps:", e2); }
     if(cascadeInfo){
       const {p,oldDate,newDate}=cascadeInfo;
       await wkConfirmAndShift([{p, dateShifts:[], taskShifts:wkTaskShiftsFor(p,oldDate,newDate)}]);
@@ -5195,6 +6463,9 @@ async function apDoDelete(){
   try{
     const orphanedTaskIds=(data.plantingTasks||[]).filter(t=>ids.includes(t.plantingId)).map(t=>t.id);
     if(orphanedTaskIds.length) await atDelete(CFG.farmBase, CFG.tables.plantingTasks, orphanedTaskIds);
+    // a tarp attached to a deleted planting has nothing left to terminate — take it with them
+    const orphanedTarpIds=(data.tarps||[]).filter(t=>ids.includes(t.plantingId)).map(t=>t.id);
+    if(orphanedTarpIds.length) await atDelete(CFG.farmBase, CFG.tables.tarpings, orphanedTarpIds);
     await atDelete(CFG.farmBase, CFG.tables.plantings, ids);
     await apReloadAndClose();
   }catch(e){
@@ -5223,8 +6494,13 @@ $ap("apTp").addEventListener("change",()=>{ apSyncDtm(); apRecalcH1(); apRecalcH
 $ap("apDtm").addEventListener("input",()=>{ const v=$ap("apDtm").value; apNominalDtm = v===""?null:parseInt(v); apRecalcH1(); apRecalcH2(); });
 $ap("apH1").addEventListener("change",apRecalcH2);
 $ap("apWindow").addEventListener("input",apRecalcH2);
+$ap("apH2").addEventListener("change",()=>{ apUpdateTarpVis(); apRefreshBedFlags(); });
+$ap("apTarp").addEventListener("change",apUpdateTarpVis);
+$ap("apTarpWeeks").addEventListener("input",apUpdateTarpVis);
 $ap("apBed").addEventListener("change",apUpdateSummarySidebar);
-$ap("apBm").addEventListener("input",()=>{ apUpdateRowsSummary(); apUpdateHarvestSummary(); });
+$ap("apBm").addEventListener("input",()=>{ apUpdateRowsSummary(); apUpdateHarvestSummary(); apScheduleSuggestBeds(); });
+$ap("apGroup").addEventListener("input",apScheduleSuggestBeds);
+$ap("apSuggestBedsBtn").addEventListener("click",apRunBedSuggestions);
 $ap("apRows").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apRowSpacing").addEventListener("input",apUpdateRowsSummary);
 $ap("apPlantSpacing").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
@@ -5243,6 +6519,20 @@ $ap("apPottingUp").querySelectorAll("button").forEach(b=>b.addEventListener("cli
 }));
 $ap("apTabBar").querySelectorAll(".ap-tab-btn").forEach(b=>b.addEventListener("click",()=>apShowTab(b.dataset.tab)));
 $ap("apModal").addEventListener("mousedown",e=>{ if(e.target.id==="apModal") apClose(); });
+
+/* ---- Tarp editor wiring ---- */
+$trp("trpClose").addEventListener("click",trpCloseEditor);
+$trp("trpCancel").addEventListener("click",trpCloseEditor);
+$trp("trpSave").addEventListener("click",trpSaveFromForm);
+$trp("trpDelete").addEventListener("click",trpDeleteCurrent);
+$trp("trpModal").addEventListener("mousedown",e=>{ if(e.target.id==="trpModal") trpCloseEditor(); });
+// Start/End and Weeks drive each other — whichever the user touched last wins.
+$trp("trpStart").addEventListener("change",()=>{ trpApplyWeeks(); trpSyncWeeks(); });
+$trp("trpEnd").addEventListener("change",trpSyncWeeks);
+$trp("trpWeeks").addEventListener("input",trpApplyWeeks);
+["trpLayAssignee","trpPullAssignee"].forEach(id=>
+  $trp(id).addEventListener("change",()=>trpOnAssigneeChange($trp(id))));
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $trp("trpModal").classList.contains("open")) trpCloseEditor(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $ap("apModal").classList.contains("open")) apClose(); });
 
 /* ---------- Crops tab: per-crop timing defaults, and per-variety overrides of them,
@@ -5650,8 +6940,293 @@ document.getElementById("crSearchClear").addEventListener("click",()=>{
   buildCropsTab(""); inp.focus();
 });
 
+/* ---------- Beds tab: what each bed is, and what's wrong with it ----------
+   Two cards. The first is every bed grouped by block, each editable inline and expandable to
+   show its issues. The second lists plantings already sitting on a bed flagged against their
+   crop — the flagging at create-time can't catch anything planned before the issue was recorded,
+   so this is where those surface. Nothing here refuses or rewrites a planting; see bedIssuesForCrop. */
+const BD_ISSUE_TYPES=["Nutrition","Weed pressure","Disease","Pest","Drainage","Soil structure","Contamination","Other"];
+const BD_SEVERITIES=["Advisory","Avoid"];
+const BD_CATEGORIES=["Field","Tunnel","Nursery","Perennial","Trial","Retired"];
+let bdExpanded=new Set();   // bed ids whose issue sub-rows are open
+let bdMobileBed=null;       // mobile drill-down: which bed is being viewed
+
+function buildBedsTab(){
+  bdRenderConflicts();
+  const table=document.getElementById("bdTable"), mob=document.getElementById("bdMobile");
+  if(!table||!mob) return;
+  const mobile=cmIsMobile();
+  table.hidden=mobile; mob.hidden=!mobile;
+  if(mobile){ bdBuildMobile(); return; }
+
+  const body=document.getElementById("bdBody"); body.innerHTML="";
+  const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  if(!keys.length){
+    body.innerHTML=`<tr><td colspan="8"><div class="cr-empty">No beds yet.</div></td></tr>`;
+    return;
+  }
+  keys.forEach(blk=>{
+    const hd=document.createElement("tr"); hd.className="bd-blockrow";
+    hd.innerHTML=`<td colspan="8">Block ${esc(blk)}</td>`;
+    body.appendChild(hd);
+    groups[blk].forEach(bed=>{
+      body.appendChild(bdBedRow(bed));
+      if(bdExpanded.has(bed.id)) body.appendChild(bdIssuesRow(bed));
+    });
+  });
+}
+
+function bdSelectHTML(options, val, blank){
+  return `<option value="">${esc(blank)}</option>`
+    + options.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
+}
+
+function bdBedRow(bed){
+  const tr=document.createElement("tr");
+  const issues=bedIssuesOn(bed.id);
+  const chip=issues.length
+    ? `<span class="bd-chip${issues.some(i=>i.severity==="Avoid")?" bd-chip-avoid":""}">${issues.length}</span>`
+    : `<span class="bd-chip bd-chip-none">–</span>`;
+  tr.innerHTML=
+    `<td><strong>${esc(bed.name)}</strong></td>`
+   +`<td><select data-k="category">${bdSelectHTML(BD_CATEGORIES,bed.category,"—")}</select></td>`
+   +`<td style="text-align:center"><input type="checkbox" data-k="tunnel"${bed.tunnel?" checked":""}></td>`
+   +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="len" value="${bed.len??""}"></td>`
+   +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></td>`
+   +`<td><input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></td>`
+   +`<td><input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></td>`
+   +`<td><button type="button" class="bd-expand">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`;
+  tr.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
+  tr.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
+  tr.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
+  ["len","wid","order"].forEach(k=>{
+    tr.querySelector(`[data-k="${k}"]`).onchange=e=>saveBed(bed.id,k,e.target.value===""?null:(+e.target.value));
+  });
+  tr.querySelector(".bd-expand").onclick=()=>{
+    bdExpanded.has(bed.id) ? bdExpanded.delete(bed.id) : bdExpanded.add(bed.id);
+    buildBedsTab();
+  };
+  return tr;
+}
+
+// The expanded panel under a bed: one block per issue, plus an add button.
+function bdIssuesRow(bed){
+  const tr=document.createElement("tr"); tr.className="bd-issuerow";
+  const td=document.createElement("td"); td.colSpan=8;
+  const wrap=document.createElement("div"); wrap.className="bd-issues";
+  const issues=bedIssuesOn(bed.id);
+  if(!issues.length){
+    const p=document.createElement("div"); p.className="cr-empty";
+    p.textContent="No issues recorded for this bed.";
+    wrap.appendChild(p);
+  }
+  issues.forEach(i=>wrap.appendChild(bdIssueCard(bed,i)));
+  const add=document.createElement("button");
+  add.type="button"; add.className="cr-add-variety"; add.textContent="+ Add issue…";
+  add.onclick=async()=>{ if(await bdAddIssue(bed)) buildBedsTab(); };
+  wrap.appendChild(add);
+  td.appendChild(wrap); tr.appendChild(td);
+  return tr;
+}
+
+function bdIssueCard(bed,i){
+  const box=document.createElement("div"); box.className="bd-issue";
+  const cropOpts=Object.keys(data.crops).map(id=>({id,name:data.crops[id]}))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  box.innerHTML=
+    `<div class="bd-issue-line">`
+     +`<label>Type<select data-k="type">${bdSelectHTML(BD_ISSUE_TYPES,i.type,"—")}</select></label>`
+     +`<label>Severity<select data-k="severity">${bdSelectHTML(BD_SEVERITIES,i.severity,"—")}</select></label>`
+     +`<label>Active from<input type="date" data-k="from" value="${esc(i.from||"")}"></label>`
+     +`<label>Active until<input type="date" data-k="until" value="${esc(i.until||"")}"></label>`
+     +`<button type="button" class="btn-danger bd-issue-del">Delete</button>`
+   +`</div>`
+   +`<div class="bd-issue-line">`
+     +`<label class="bd-grow">Notes<input type="text" data-k="notes" value="${esc(i.notes||"")}" placeholder="What's the problem?"></label>`
+   +`</div>`
+   +`<div class="bd-issue-excl">`
+     +`<div class="bd-excl-label">Excludes crop types</div>`
+     +`<div class="bd-chips">`+CROP_TYPES.map(t=>{
+        const on=(i.types||[]).includes(t);
+        return `<button type="button" class="cm-type-chip${on?" on":""}" data-type="${esc(t)}"
+                  style="border-left-color:${cropTypeColor(t)}">${on?"✓ ":""}${esc(t)}</button>`;
+      }).join("")+`</div>`
+     +`<div class="bd-excl-label">Excludes crops</div>`
+     +`<div class="bd-chips">`
+       +`<select class="bd-addcrop"><option value="">+ Add a crop…</option>`
+       + cropOpts.filter(c=>!(i.cropIds||[]).includes(c.id))
+           .map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join("")
+       +`</select>`
+       +(i.cropIds||[]).map(id=>
+          `<button type="button" class="cm-type-chip on bd-cropchip" data-crop="${id}">✕ ${esc(data.crops[id]||"?")}</button>`).join("")
+     +`</div>`
+   +`</div>`;
+
+  box.querySelector('[data-k="type"]').onchange=e=>saveBedIssue(i.id,"type",e.target.value);
+  box.querySelector('[data-k="severity"]').onchange=e=>saveBedIssue(i.id,"severity",e.target.value||"Advisory");
+  box.querySelector('[data-k="from"]').onchange=e=>saveBedIssue(i.id,"from",e.target.value||null);
+  box.querySelector('[data-k="until"]').onchange=e=>saveBedIssue(i.id,"until",e.target.value||null);
+  box.querySelector('[data-k="notes"]').onchange=e=>saveBedIssue(i.id,"notes",e.target.value.trim());
+  box.querySelector(".bd-issue-del").onclick=()=>bdDeleteIssue(i,bed);
+  box.querySelectorAll(".cm-type-chip[data-type]").forEach(b=>b.onclick=()=>{
+    const cur=i.types||[], t=b.dataset.type;
+    saveBedIssue(i.id,"types", cur.includes(t)?cur.filter(x=>x!==t):[...cur,t]);
+  });
+  box.querySelector(".bd-addcrop").onchange=e=>{
+    const id=e.target.value; if(!id) return;
+    saveBedIssue(i.id,"cropIds",[...(i.cropIds||[]),id]);
+  };
+  box.querySelectorAll(".bd-cropchip").forEach(b=>b.onclick=()=>
+    saveBedIssue(i.id,"cropIds",(i.cropIds||[]).filter(x=>x!==b.dataset.crop)));
+  return box;
+}
+
+/* ---- Bed + issue writes. Optimistic with rollback, same shape as saveTrayType. ---- */
+const BD_BED_FIELDS={ category:"bed_category", tunnel:"bed_tunnel", notes:"bed_notes",
+                      len:"bed_len", wid:"bed_wid", order:"bed_order" };
+async function saveBed(id,key,val){
+  const bed=(data.beds||[]).find(b=>b.id===id); if(!bed) return;
+  const prev=bed[key];
+  bed[key]=val;   // optimistic
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.beds, id, {[CFG.f[BD_BED_FIELDS[key]]]:val});
+    // length/width/order feed the map layout, so redraw once the write lands
+    if(key==="len"||key==="wid"||key==="order") layoutAndDraw();
+  }catch(e){
+    bed[key]=prev;   // rollback
+    console.error(e);
+    alert("Couldn't save bed:\n"+e.message);
+    buildBedsTab();
+  }
+}
+
+const BD_ISSUE_FIELDS={ type:"bi_type", severity:"bi_severity", types:"bi_types",
+                        cropIds:"bi_crops", from:"bi_from", until:"bi_until", notes:"bi_notes" };
+async function saveBedIssue(id,key,val){
+  const iss=(data.bedIssues||[]).find(x=>x.id===id); if(!iss) return;
+  const prev=iss[key];
+  iss[key]=val;   // optimistic
+  buildBedsTab();
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.bedIssues, id, {[CFG.f[BD_ISSUE_FIELDS[key]]]:val});
+    layoutAndDraw();   // a changed exclusion can add or clear flags on the bed views
+  }catch(e){
+    iss[key]=prev;   // rollback
+    console.error(e);
+    alert("Couldn't save bed issue:\n"+e.message);
+    buildBedsTab();
+  }
+}
+
+async function bdAddIssue(bed){
+  const fields={
+    [CFG.f.bi_name]:`${bed.name} — new issue`,
+    [CFG.f.bi_bed]:[bed.id],
+    [CFG.f.bi_severity]:"Advisory",
+  };
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.bedIssues, [fields]);
+    data.bedIssues.push({id:created[0].id, bedId:bed.id, type:"", severity:"Advisory",
+      types:[], cropIds:[], from:"", until:"", notes:""});
+    bdExpanded.add(bed.id);
+    return true;
+  }catch(e){
+    console.error(e);
+    alert("Couldn't add bed issue:\n"+e.message);
+    return false;
+  }
+}
+
+async function bdDeleteIssue(i,bed){
+  if(!confirm(`Delete this ${(i.type||"issue").toLowerCase()} on ${bed.name}?\n\nThis permanently removes it from Airtable.`)) return;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.bedIssues, [i.id]);
+    data.bedIssues=data.bedIssues.filter(x=>x.id!==i.id);
+    buildBedsTab(); layoutAndDraw();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't delete bed issue:\n"+e.message);
+  }
+}
+
+/* ---- Flagged plantings: existing plantings that violate a bed issue ---- */
+function bdRenderConflicts(){
+  const box=document.getElementById("bdConflicts"); if(!box) return;
+  const hits=[];
+  (data.plantings||[]).forEach(p=>{
+    const cf=plantingConflicts(p);
+    if(cf.length) hits.push({p,cf});
+  });
+  if(!hits.length){
+    box.innerHTML=`<div class="cr-empty">No plantings are currently flagged.</div>`;
+    return;
+  }
+  hits.sort((a,b)=>String(a.p.sow||"").localeCompare(String(b.p.sow||"")));
+  box.innerHTML=`<div class="bd-conflicts">`+hits.map(({p,cf})=>{
+    const bed=(data.beds||[]).find(b=>b.id===(p.bedIds||[])[0]);
+    return `<button type="button" class="bd-conflict${cf.some(i=>i.severity==="Avoid")?" bd-conflict-avoid":""}" data-pid="${p.id}">`
+      +`<span class="bd-conflict-head">⚠ ${esc(p.crop||"Crop")}${p.variety?" · "+esc(p.variety):""} `
+        +`<span class="bd-conflict-bed">in ${esc(bed?bed.name:"—")}</span></span>`
+      +`<span class="bd-conflict-when">${esc(fmt(p.sow))} → ${esc(fmt(p.h2||p.h1))}</span>`
+      +`<span class="bd-conflict-why">${cf.map(i=>esc(issueLabel(i))).join(" · ")}</span>`
+    +`</button>`;
+  }).join("")+`</div>`;
+  box.querySelectorAll(".bd-conflict").forEach(b=>b.onclick=()=>{
+    const p=(data.plantings||[]).find(x=>x.id===b.dataset.pid);
+    if(p) apOpenEdit(p);
+  });
+}
+
+/* ---- Mobile: the eight-column table doesn't fit, so drill down bed by bed ---- */
+function bdBuildMobile(){
+  const box=document.getElementById("bdMobile"); if(!box) return;
+  const bed=bdMobileBed ? (data.beds||[]).find(b=>b.id===bdMobileBed) : null;
+  if(!bed){
+    const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    box.innerHTML=keys.map(blk=>
+      `<div class="bd-mob-block">Block ${esc(blk)}</div>`
+      + groups[blk].map(b=>{
+          const n=bedIssuesOn(b.id).length;
+          return `<button type="button" class="bd-mob-row" data-bed="${b.id}">`
+            +`<span>${esc(b.name)}${b.tunnel?' <span class="bd-mob-tag">tunnel</span>':""}</span>`
+            +`<span class="bd-chip${n?"":" bd-chip-none"}">${n||"–"}</span>`
+          +`</button>`;
+        }).join("")).join("");
+    box.querySelectorAll(".bd-mob-row").forEach(b=>b.onclick=()=>{ bdMobileBed=b.dataset.bed; bdBuildMobile(); });
+    return;
+  }
+  box.innerHTML=`<button type="button" class="bd-mob-back">← All beds</button>
+    <div class="bd-mob-title">${esc(bed.name)}${bed.block?` · Block ${esc(bed.block)}`:""}</div>
+    <div class="bd-mob-form">
+      <label>Category<select data-k="category">${bdSelectHTML(BD_CATEGORIES,bed.category,"—")}</select></label>
+      <label class="bd-mob-check"><input type="checkbox" data-k="tunnel"${bed.tunnel?" checked":""}> Under tunnel</label>
+      <label>Length m<input class="cr-num" type="number" min="0" step="0.1" data-k="len" value="${bed.len??""}"></label>
+      <label>Width m<input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></label>
+      <label>Order in block<input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></label>
+      <label>Notes<input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></label>
+    </div>
+    <div class="ap-sect">Issues</div>
+    <div id="bdMobIssues"></div>`;
+  box.querySelector(".bd-mob-back").onclick=()=>{ bdMobileBed=null; bdBuildMobile(); };
+  box.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
+  box.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
+  box.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
+  ["len","wid","order"].forEach(k=>{
+    box.querySelector(`[data-k="${k}"]`).onchange=e=>saveBed(bed.id,k,e.target.value===""?null:(+e.target.value));
+  });
+  const wrap=box.querySelector("#bdMobIssues");
+  const issues=bedIssuesOn(bed.id);
+  if(!issues.length) wrap.innerHTML=`<div class="cr-empty">No issues recorded for this bed.</div>`;
+  issues.forEach(i=>wrap.appendChild(bdIssueCard(bed,i)));
+  const add=document.createElement("button");
+  add.type="button"; add.className="cr-add-variety"; add.textContent="+ Add issue…";
+  add.onclick=async()=>{ if(await bdAddIssue(bed)) bdBuildMobile(); };
+  wrap.appendChild(add);
+}
+
 /* ---------- Misc tab: farm-wide reference data (currently just Tray Types) ---------- */
 function buildMiscTab(){
+  trpRenderList();                    // the page's second card — tarps
   const body=document.getElementById("ttBody"); if(!body) return;
   body.innerHTML="";
   const list=data.trayTypes||[];
@@ -6233,7 +7808,56 @@ function wkClock(min){ min=Math.max(0,Math.round(min)); const h=Math.floor(min/6
 // null explicitly rather than `r.minutes || WK_MS_MIN`: 0 is falsy but a meaningful computed value.
 function wkBlockMin(r){ return r.kind==="milestone" ? Math.max(r.minutes!=null?r.minutes:WK_MS_MIN, 0) : Math.max(r.minutes||0, 0); }
 // grouping key + name: same task type on the same day merges into one block
-function wkTypeKey(r){ return r.kind==="milestone" ? "ms:"+r.task.name : "task:"+((r.t&&r.t.taskId)||r.task.name); }
+function wkTypeKey(r){
+  if(r.kind==="milestone") return "ms:"+r.task.name;
+  if(r.kind==="tarp") return "tarp:"+r.tarpStep;   // lay and pull group separately, like distinct task types
+  return "task:"+((r.t&&r.t.taskId)||r.task.name);
+}
+/* ---- Row accessors: one place that knows how each KIND of week-planner row stores its
+   assignee, its pinned clock time and its outbound sync ids.
+
+   There are three kinds — a cultural task (a real Planting Tasks record), a sow/transplant
+   milestone (fields on the Planting), and a tarp lay/pull job (fields on the Tarping, picked by
+   TARP_STEPS). The push/pull code used to branch `isMs ? planting-field : task-field` inline at
+   half a dozen call sites; adding a third kind to each of those ternaries is exactly how they
+   drift apart, so every one of them now goes through these instead. */
+function wkRowStep(r){ return r.kind==="tarp" ? (r.step || PlannerShared.tarpStep(r.tarpStep)) : null; }
+function rowAssignee(r){
+  if(r.kind==="milestone") return (r.msDf==="tp" ? r.p.tpAssignee : r.p.sowAssignee) || "";
+  if(r.kind==="tarp"){ const s=wkRowStep(r); return (s && r.tarp[s.assignee]) || ""; }
+  return (r.t && r.t.assignee) || "";
+}
+// The row's OWN pinned start time, or null when it's never been dragged to one (in which case the
+// calendar auto-packs it and a pushed task/event stays all-day rather than guessing a time).
+function rowStartMinute(r){
+  if(r.kind==="milestone") return r.msDf==="tp" ? r.p.tpStart : r.p.sowStart;
+  if(r.kind==="tarp"){ const s=wkRowStep(r); return s ? (r.tarp[s.startMin] ?? null) : null; }
+  return r.t ? r.t.start : null;
+}
+// Read/write the external-system id this row syncs against. `which` is "tt" | "gcal".
+// set() writes Airtable AND the in-memory copy, so a second push in the same session updates
+// rather than duplicating — that's the whole reason these ids exist.
+function rowSyncId(r, which){
+  const tt = which==="tt";
+  if(r.kind==="milestone"){
+    const isTp=r.msDf==="tp";
+    const key = tt ? (isTp?"tpTtId":"sowTtId") : (isTp?"tpGcalId":"sowGcalId");
+    const field = tt ? (isTp?CFG.f.pl_tpTtId:CFG.f.pl_sowTtId) : (isTp?CFG.f.pl_tpGcalId:CFG.f.pl_sowGcalId);
+    return { get:()=>r.p[key]||"",
+             set:async id=>{ await atPatch(CFG.farmBase,CFG.tables.plantings,r.p.id,{[field]:id}); r.p[key]=id; } };
+  }
+  if(r.kind==="tarp"){
+    const s=wkRowStep(r);
+    if(!s) return { get:()=>"", set:async()=>{} };
+    const key = tt ? s.ttId : s.gcalId, field = CFG.f[tt ? s.fTt : s.fGcal];
+    return { get:()=>r.tarp[key]||"",
+             set:async id=>{ await atPatch(CFG.farmBase,CFG.tables.tarpings,r.tarp.id,{[field]:id}); r.tarp[key]=id; } };
+  }
+  const key = tt ? "ttId" : "gcalId", field = tt ? CFG.f.pt_ttid : CFG.f.pt_gcalid;
+  return { get:()=>r.t[key]||"",
+           set:async id=>{ await atPatch(CFG.farmBase,CFG.tables.plantingTasks,r.t.id,{[field]:id}); r.t[key]=id; } };
+}
+
 const WK_CATCOL={Cultivation:"--ok",Fertility:"--steel-soft","Pest & Disease":"--clay",Irrigation:"--steel","Bed prep":"--ink-2",Harvest:"--clay",Other:"--ink-2"};
 function wkBlockColor(g){
   const v = g.kind==="milestone" ? "--steel" : (WK_CATCOL[g.category]||"--steel-soft");
@@ -6285,10 +7909,13 @@ function buildWeekPlanner(){
     if(showOd) wkRenderOdSidebar(overdueRows);
   }
 
-  if(!(data.plantingTasks||[]).length){
-    body.innerHTML=`<div class="wk-planner-empty">No tasks yet. Open a planting from the Timeline or Crop map and use its <b>Tasks</b> tab to generate a schedule — they'll show up here by due date.</div>`;
-  }else if(!rows.length){
-    body.innerHTML=`<div class="wk-planner-empty">Nothing due this week. Use ◀ ▶ to look at other weeks.</div>`;
+  // Emptiness is decided by the rows actually collected, not by the Planting Tasks table alone —
+  // sow/transplant milestones and tarp lay/pull jobs are derived, not stored there, so a farm with
+  // no cultural tasks yet can still have a real week's work to show.
+  if(!rows.length){
+    body.innerHTML = (data.plantingTasks||[]).length
+      ? `<div class="wk-planner-empty">Nothing due this week. Use ◀ ▶ to look at other weeks.</div>`
+      : `<div class="wk-planner-empty">No tasks yet. Open a planting from the Timeline or Crop map and use its <b>Tasks</b> tab to generate a schedule — they'll show up here by due date.</div>`;
   }else{
     // stretch the clock-grid to fill the actual available height instead of a fixed px/min, so
     // "By day" uses the full window rather than a small fixed-height block with wasted space below
@@ -6313,17 +7940,25 @@ function buildWeekPlanner(){
 // aren't generated yet (deferred), so a single shared label covers everything this pill can show.
 function wkMsPillHTML(){ return `<span class="ct-cat wk-ms-pill">Planting</span>`; }
 function wkManualPillHTML(){ return `<span class="ct-cat wk-manual-pill">Manual</span>`; }
+function wkTarpPillHTML(){ return `<span class="ct-cat wk-tarp-pill">Tarp</span>`; }
 function wkTaskRowHTML(r, showCtx, showDue){
   const isMs=r.kind==="milestone";
-  const cat=isMs?wkMsPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
+  const cat=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
   const rep=r.t.repeat?`<span class="wk-repeat">↻ ${r.t.repeat}d</span>`:"";
   // manual tasks have no crop/bed to show — their name already carries all the context there is,
   // so the ctx slot shows the assignee (if any) instead of duplicating the row's own name.
+  // Tarp rows carry their own "Tarp"/"Tarp · after X" label in r.p.crop (it's the group heading in
+  // By-crop&bed mode), which would read as a stutter next to the Tarp pill and the "Lay tarp" name
+  // — so here the context line shows only the bed and, when attached, the crop it terminates.
   const ctx=showCtx?(r.manual
     ? (r.t.assignee?`<span class="wk-ctx">${esc(r.t.assignee)}</span>`:"")
-    : `<span class="wk-ctx">${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}</span>`):"";
+    : r.kind==="tarp"
+      ? `<span class="wk-ctx">${esc(bedNameOf(r.p)||"unassigned")}${r.p.crop.startsWith("Tarp · ")?" · "+esc(r.p.crop.slice(7)):""}</span>`
+      : `<span class="wk-ctx">${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}</span>`):"";
   const due=showDue?`<span class="wk-due${r.overdue?" wk-od":""}">${fmt(r.due)}</span>`:"";
-  const cb=`<input type="checkbox" class="wk-check" ${r.t.done?"checked":""} ${isMs&&r.msLocked?"disabled":""} title="${isMs?(r.msLocked?"Already past this stage — manage in the planting":"Mark milestone done"):"Mark done"}">`;
+  // msLocked is only ever set on milestone and tarp rows (both are linear steppers), so testing it
+  // directly covers both without another kind check
+  const cb=`<input type="checkbox" class="wk-check" ${r.t.done?"checked":""} ${r.msLocked?"disabled":""} title="${r.msLocked?"Already past this stage":isMs?"Mark milestone done":"Mark done"}">`;
   return `<div class="wk-task${r.t.done?" done":""}${isMs?" wk-ms":""}" data-id="${r.id}" data-plid="${r.p.id}"${isMs?` data-kind="milestone" data-df="${r.msDf}"`:""}>`
     +cb
     +`<div class="wk-task-main" data-pl="${r.p.id}">`
@@ -6400,7 +8035,7 @@ function wkOpenGroupModal(key,dayISO){
     `${members[0].task.name} · ${members.length} ${unit}${members.length===1?"":"s"}`;
   document.getElementById("wkGroupList").innerHTML=members.slice()
     .sort((a,b)=>a.p.crop.localeCompare(b.p.crop)).map(m=>{
-      const lock=m.kind==="milestone"&&m.msLocked;
+      const lock=!!m.msLocked;   // milestone or tarp step already stepped past
       const crop = m.manual ? esc(m.task.name) : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}`;
       const meta = m.manual ? `${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}`
         : `${esc(bedNameOf(m.p)||"unassigned")} · ${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}`;
@@ -6423,7 +8058,9 @@ document.getElementById("wkGroupModal").addEventListener("change",e=>{
   const cb=e.target.closest(".wk-check"); if(!cb) return;
   const p = cb.dataset.kind==="milestone"
     ? wkToggleMilestone(cb.dataset.plid,cb.dataset.df)
-    : wkToggleDone(cb.dataset.id,cb.checked);
+    : wkIsTarpRowId(cb.dataset.id)
+      ? wkToggleTarp(cb.dataset.id)
+      : wkToggleDone(cb.dataset.id,cb.checked);
   p.then(()=>{ if(wkGroupKey) wkOpenGroupModal(wkGroupKey,wkGroupDay); });
 });
 document.getElementById("wkGroupList").addEventListener("click",e=>{
@@ -6432,6 +8069,7 @@ document.getElementById("wkGroupList").addEventListener("click",e=>{
   if(!main) return;
   wkCloseGroupModal();
   if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
+  else if(main.dataset.pl.startsWith("tarp:")) wkOpenTarp(main.dataset.pl.slice(5));
   else wkOpenPlanting(main.dataset.pl);
 });
 
@@ -6519,8 +8157,8 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElem
 // free — dragging one onto a day column reschedules it into the current week (wkCommitOverdueMove).
 function wkOdSidebarItemHTML(r){
   const isMs=r.kind==="milestone";
-  const pill=isMs?wkMsPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
-  const lock=isMs&&r.msLocked;
+  const pill=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
+  const lock=!!r.msLocked;
   const ctxTxt = r.manual ? (r.t.assignee?esc(r.t.assignee):"")
     : `${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}`;
   return `<div class="wk-odsb-block" data-overdue-row="${r.id}" data-min="${Math.round(wkBlockMin(r))}">`
@@ -6614,6 +8252,25 @@ async function wkToggleDone(id,val){
 // Milestone completion writes the planting's Status. Linear stepper (mirrors the dialog's Progress
 // checklist): ticking advances Status to that stage; unticking the frontier steps back one. A
 // milestone the planting has already advanced *beyond* is rendered locked (checkbox disabled).
+// Tarp jobs are synthetic rows keyed "tarp:<recordId>:<lay|pull>" (see wkCollect), so they're
+// recognised from the row id rather than needing a data-kind on every render site. Ticking runs
+// the same linear-stepper contract as a planting milestone, via buildTarpPatch.
+function wkIsTarpRowId(id){ return typeof id==="string" && id.startsWith("tarp:"); }
+async function wkToggleTarp(rowId){
+  const [,tarpId,step]=rowId.split(":");
+  const t=(data.tarps||[]).find(x=>x.id===tarpId); if(!t) return;
+  const patch=PlannerShared.buildTarpPatch(t, step, todayISO());
+  if(!patch) return;                                  // already past this step — locked
+  const prev={status:t.status, laidActual:t.laidActual, pulledActual:t.pulledActual};
+  Object.assign(t, patch);                            // optimistic
+  buildWeekPlanner();
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.tarpings, tarpId, tarpFields(patch));
+  }catch(e){
+    Object.assign(t, prev); buildWeekPlanner();
+    alert("Couldn't save that: "+e.message);
+  }
+}
 async function wkToggleMilestone(plantingId, df){
   const p=(data.plantings||[]).find(x=>x.id===plantingId); if(!p) return;
   // the actual stepper rule lives in planner-shared.js (buildMilestonePatch) so it can't drift
@@ -6649,6 +8306,11 @@ function wkOpenPlanting(id){
   const p=(data.plantings||[]).find(x=>x.id===id); if(!p) return;
   if(cmIsMobile()){ apOpenEdit(p); return; }
   wkOpenPlantingPanel(p);
+}
+// clicking a tarp job's body opens the tarp itself, not a planting
+function wkOpenTarp(tarpId){
+  const t=(data.tarps||[]).find(x=>x.id===tarpId); if(!t) return;
+  trpOpenEditor(t);
 }
 
 // ---- Calendar drag-and-drop: drag a block's header to another day/time. ----
@@ -6757,6 +8419,25 @@ function wkMoveOneRow(r, toDayISO, startMin){
     return { patch: atPatch(CFG.farmBase,CFG.tables.plantings,r.p.id,{[field]:toDayISO,[startField]:startMin}),
              rollback:()=>{ r.p[df]=prev; r.p[startKey]=prevStart; } };
   }
+  // Tarp jobs have no Planting Task record — they're derived from the Tarping's own dates, so
+  // dragging one moves that date. Laying it later slides the whole tarp (keeping its length);
+  // pulling it later just extends it.
+  if(r.kind==="tarp"){
+    const tp=r.tarp, s=wkRowStep(r);
+    const prevS=tp.start, prevE=tp.end, prevMin=s?tp[s.startMin]:null;
+    if(r.tarpStep==="lay"){
+      const len=isoDiffDays(prevS,prevE);
+      tp.start=toDayISO;
+      tp.end = len!=null ? isoAddDays(toDayISO,len) : prevE;
+    }else{
+      tp.end=toDayISO;
+    }
+    // the dragged clock position is this job's own pinned time, same as a task's Start minute
+    const fields={[CFG.f.tr_start]:tp.start,[CFG.f.tr_end]:tp.end};
+    if(s){ tp[s.startMin]=startMin; fields[CFG.f[s.fStart]]=startMin; }
+    return { patch: atPatch(CFG.farmBase,CFG.tables.tarpings,tp.id,fields),
+             rollback:()=>{ tp.start=prevS; tp.end=prevE; if(s) tp[s.startMin]=prevMin; } };
+  }
   const t=r.t, prevDue=t.due, prevStart=t.start;
   t.due=toDayISO; t.start=startMin;
   return { patch: atPatch(CFG.farmBase,CFG.tables.plantingTasks,t.id,{[CFG.f.pt_due]:toDayISO,[CFG.f.pt_start]:startMin}), rollback:()=>{ t.due=prevDue; t.start=prevStart; } };
@@ -6855,15 +8536,18 @@ function wkCtxDescs(target){
   if(target.kind==="member") return [target.desc];
   const {rows}=wkCollect();
   const members=rows.filter(r=>wkTypeKey(r)===target.grp && wkSameDay(r.due,wkParse(target.day)));
-  return members.map(r=>r.kind==="milestone"
-    ? {isMilestone:true, msDf:r.msDf, plantingId:r.p.id}
-    : {isMilestone:false, taskId:r.t.id});
+  // Three descriptor shapes, one per row kind. Tarps are assignable but NOT deletable (there's no
+  // Planting Task behind them), which the delete action filters on via isMilestone/isTarp.
+  return members.map(r=>
+    r.kind==="milestone" ? {isMilestone:true, msDf:r.msDf, plantingId:r.p.id}
+  : r.kind==="tarp"      ? {isTarp:true, tarpId:r.tarp.id, tarpStep:r.tarpStep}
+  :                        {isMilestone:false, taskId:r.t.id});
 }
 function wkShowCtxMenu(ev,target){
   wkCtxTarget=target;
   const menu=document.getElementById("wkCtxMenu");
   const names=knownAssignees();
-  const taskCount=wkCtxDescs(target).filter(d=>!d.isMilestone).length;
+  const taskCount=wkCtxDescs(target).filter(d=>!d.isMilestone && !d.isTarp).length;
   menu.innerHTML=`<div class="tl-ctx-label">Assign to…</div>`
     +`<button data-act="unassign">— Unassign —</button>`
     +(names.length?`<div class="tl-ctx-sep"></div>`+names.map(n=>`<button data-assign="${esc(n)}">${esc(n)}</button>`).join(""):"")
@@ -6883,6 +8567,12 @@ async function wkSetAssigneeFor(desc,name){
     const akey=MS_ASSIGNEE_KEY[desc.msDf], prev=p[akey]; p[akey]=name;
     try{ await atPatch(CFG.farmBase,CFG.tables.plantings,p.id,{[CFG.f[MS_ASSIGNEE_FIELD[akey]]]:name||null}); }
     catch(e){ p[akey]=prev; throw e; }
+  }else if(desc.isTarp){
+    const tarp=(data.tarps||[]).find(x=>x.id===desc.tarpId); if(!tarp) return;
+    const s=PlannerShared.tarpStep(desc.tarpStep); if(!s) return;
+    const prev=tarp[s.assignee]; tarp[s.assignee]=name;
+    try{ await atPatch(CFG.farmBase,CFG.tables.tarpings,tarp.id,{[CFG.f[s.fAssignee]]:name||null}); }
+    catch(e){ tarp[s.assignee]=prev; throw e; }
   }else{
     const t=(data.plantingTasks||[]).find(x=>x.id===desc.taskId); if(!t) return;
     const prev=t.assignee; t.assignee=name;
@@ -6901,7 +8591,7 @@ async function wkApplyCtxAssign(name){
 async function wkApplyCtxDelete(){
   const target=wkCtxTarget; wkHideCtxMenu();
   if(!target) return;
-  const ids=wkCtxDescs(target).filter(d=>!d.isMilestone).map(d=>d.taskId);
+  const ids=wkCtxDescs(target).filter(d=>!d.isMilestone && !d.isTarp).map(d=>d.taskId);
   if(!ids.length) return;
   const label = ids.length===1 ? "Delete this task?" : `Delete these ${ids.length} tasks?`;
   if(!confirm(label+"\n\nThis permanently removes the record"+(ids.length>1?"s":"")+" from Airtable.")) return;
@@ -6938,6 +8628,7 @@ function wkSetOdCollapsed(val){
     // calendar/overdue-sidebar items carry the data on the checkbox; bed/type rows carry it on the .wk-task row
     const ds = cb.dataset.id ? cb.dataset : (cb.closest(".wk-task")||{}).dataset || {};
     if(ds.kind==="milestone") wkToggleMilestone(ds.plid, ds.df);
+    else if(wkIsTarpRowId(ds.id)) wkToggleTarp(ds.id);
     else if(ds.id) wkToggleDone(ds.id, cb.checked);
   });
   wrap.addEventListener("click",e=>{
@@ -6946,9 +8637,10 @@ function wkSetOdCollapsed(val){
     if(e.target.closest(".wk-block-h[data-drag]")) return; // handled directly by wkOnPointerUp (see wkOnPointerDown)
     const main=e.target.closest("[data-pl]");
     if(main){
-      // manual tasks aren't real plantings — their synthetic id (see wkCollect in planner-shared.js)
-      // opens the add/edit task dialog instead of the (nonexistent) planting detail panel.
+      // manual tasks and tarps aren't real plantings — their synthetic ids (see wkCollect in
+      // planner-shared.js) open their own editor instead of the (nonexistent) planting panel.
       if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
+      else if(main.dataset.pl.startsWith("tarp:")) wkOpenTarp(main.dataset.pl.slice(5));
       else wkOpenPlanting(main.dataset.pl);
       return;
     }
@@ -6961,11 +8653,14 @@ function wkSetOdCollapsed(val){
       const cb=mem.querySelector(".wk-check");
       if(cb){
         e.preventDefault();
-        // data-id is a real Planting Task id for a task row, but a synthetic "ms:<pid>:<df>" string
-        // for a milestone row (see wkCollect) — plantingId always comes from data-plid instead
+        // data-id is a real Planting Task id for a task row, but a synthetic id for the derived
+        // kinds — "ms:<pid>:<df>" for a milestone, "tarp:<recId>:<step>" for a tarp job (see
+        // wkCollect). A milestone takes its plantingId from data-plid; a tarp parses its own id.
         const desc = cb.dataset.kind==="milestone"
           ? {isMilestone:true, msDf:cb.dataset.df, plantingId:cb.dataset.plid}
-          : {isMilestone:false, taskId:cb.dataset.id};
+          : wkIsTarpRowId(cb.dataset.id)
+            ? {isTarp:true, tarpId:cb.dataset.id.split(":")[1], tarpStep:cb.dataset.id.split(":")[2]}
+            : {isMilestone:false, taskId:cb.dataset.id};
         wkShowCtxMenu(e, {kind:"member", desc});
       }
       return;
@@ -7047,7 +8742,7 @@ function restoreUiState(){
   const tab=saved.tab||"map";
   if(tab!=="map"){
     // normal tabs plus the Harvest/Misc dropdowns' sub-pages
-    const btn=document.querySelector(`.tab[data-view="${tab}"], #harvestDropdown button[data-view="${tab}"], #miscDropdown button[data-view="${tab}"]`);
+    const btn=document.querySelector(`.tab[data-view="${tab}"], #harvestDropdown button[data-view="${tab}"], #miscDropdown button[data-view="${tab}"], #sprayDropdown button[data-view="${tab}"]`);
     if(btn) btn.click(); // reuses the normal tab-switch handler (builds the crop map with the restored year)
   }
   if(tab==="cropmap" && saved.cropMap && saved.cropMap.mode==="map"){
@@ -7243,12 +8938,8 @@ function ttDateTimeStr(dateOnly, minutesFromMidnight){
   const p2=n=>String(n).padStart(2,"0");
   return `${dt.getFullYear()}-${p2(dt.getMonth()+1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}:00${ttOffsetStr(dt)}`;
 }
-// A row's explicit start time, if it has one — Start minute for a cultural task, Sow/Transplant
-// start minute for a milestone. Null means "never dragged to a specific time" (still auto-arranged),
-// in which case the pushed task stays all-day rather than guessing a time.
-function ttMinutesFor(r){
-  return r.kind==="milestone" ? (r.msDf==="tp"?r.p.tpStart:r.p.sowStart) : r.t.start;
-}
+// A row's explicit start time, if it has one — see rowStartMinute for the per-kind rules.
+function ttMinutesFor(r){ return rowStartMinute(r); }
 function ttBodyForRow(r, listId, minutesOverride){
   const minutes = minutesOverride!=null ? minutesOverride : ttMinutesFor(r);
   if(minutes==null){
@@ -7263,8 +8954,8 @@ function ttBodyForRow(r, listId, minutesOverride){
 // and for a fresh create, write the new TickTick id straight back onto the Airtable record so the
 // next sync knows to update instead of duplicating.
 async function ttPushOneRow(r, assignee, acc, minutesOverride){
-  const isMs=r.kind==="milestone";
-  const existingId = isMs ? (r.msDf==="tp"?r.p.tpTtId:r.p.sowTtId) : r.t.ttId;
+  const sync=rowSyncId(r,"tt");
+  const existingId=sync.get();
   const body=ttBodyForRow(r, acc.listId, minutesOverride);
   if(existingId){
     const resp=await ttApiFetch(assignee, TT_API_BASE+"/task/"+existingId, {method:"POST", body:JSON.stringify(Object.assign({id:existingId}, body))});
@@ -7274,15 +8965,7 @@ async function ttPushOneRow(r, assignee, acc, minutesOverride){
   const resp=await ttApiFetch(assignee, TT_API_BASE+"/task", {method:"POST", body:JSON.stringify(body)});
   if(!resp.ok) throw new Error("create failed: "+resp.status);
   const created=await resp.json();
-  const newId=created.id;
-  if(isMs){
-    const field = r.msDf==="tp" ? CFG.f.pl_tpTtId : CFG.f.pl_sowTtId;
-    await atPatch(CFG.farmBase, CFG.tables.plantings, r.p.id, {[field]: newId});
-    if(r.msDf==="tp") r.p.tpTtId=newId; else r.p.sowTtId=newId;
-  }else{
-    await atPatch(CFG.farmBase, CFG.tables.plantingTasks, r.t.id, {[CFG.f.pt_ttid]: newId});
-    r.t.ttId=newId;
-  }
+  await sync.set(created.id);
 }
 // Pushes every row wkCollect() currently considers relevant (this week + still-open overdue) whose
 // assignee has a connected TickTick account. Rows with no assignee, or an assignee who isn't
@@ -7309,7 +8992,7 @@ async function ttPushWeek(){
   });
   let pushed=0, notConnected=0, failed=0;
   for(const r of rows){
-    const assignee = r.kind==="milestone" ? (r.msDf==="tp"?r.p.tpAssignee:r.p.sowAssignee) : r.t.assignee;
+    const assignee = rowAssignee(r);
     if(!assignee) continue;
     const acc=accounts[assignee];
     if(!acc || !acc.listId){ notConnected++; continue; }
@@ -7357,6 +9040,24 @@ async function ttPullCompletions(){
         const tt=await resp.json();
         if(tt.status===2){ await wkToggleMilestone(p.id, df); advanced++; }
       }catch(e){ failed++; console.error("TickTick pull failed for planting",p.id,df,e); }
+    }
+  }
+  // Tarps: same shape as the planting-milestone loop above — skip a step the tarp has already
+  // advanced past, and route a completion through wkToggleTarp so a pull is indistinguishable
+  // from ticking the box by hand (status advance + actual-date stamp, both via buildTarpPatch).
+  for(const tarp of (data.tarps||[])){
+    for(const s of PlannerShared.TARP_STEPS){
+      const ttId=tarp[s.ttId]; if(!ttId) continue;
+      const assignee=tarp[s.assignee];
+      const acc=accounts[assignee]; if(!acc || !acc.listId) continue;
+      if(PlannerShared.tarpRank(tarp.status) >= PlannerShared.tarpRank(s.stage)) continue; // already done
+      checked++;
+      try{
+        const resp=await ttApiFetch(assignee, TT_API_BASE+"/project/"+acc.listId+"/task/"+ttId);
+        if(!resp.ok) continue;
+        const tt=await resp.json();
+        if(tt.status===2){ await wkToggleTarp(`tarp:${tarp.id}:${s.step}`); advanced++; }
+      }catch(e){ failed++; console.error("TickTick pull failed for tarp",tarp.id,s.step,e); }
     }
   }
   if(advanced) return `Pulled ${advanced} completion${advanced===1?"":"s"}.`;
@@ -7511,7 +9212,7 @@ async function gcalEnsureCalendar(){
 // calendars didn't need this — the calendar itself was the assignee).
 function gcalTitleFor(r){
   const bed=bedNameOf(r.p);
-  const who = (r.kind==="milestone" ? (r.msDf==="tp"?r.p.tpAssignee:r.p.sowAssignee) : r.t.assignee) || "Unassigned";
+  const who = rowAssignee(r) || "Unassigned";
   return `${r.task.name} — ${r.p.crop}${r.p.variety?" "+r.p.variety:""}${bed?" · "+bed:""} (${who})`;
 }
 function gcalDateStr(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
@@ -7521,9 +9222,7 @@ function gcalDateTimeStr(dateOnly, minutesFromMidnight){
   const p2=n=>String(n).padStart(2,"0");
   return `${dt.getFullYear()}-${p2(dt.getMonth()+1)}-${p2(dt.getDate())}T${p2(dt.getHours())}:${p2(dt.getMinutes())}:00`;
 }
-function gcalMinutesFor(r){
-  return r.kind==="milestone" ? (r.msDf==="tp"?r.p.tpStart:r.p.sowStart) : r.t.start;
-}
+function gcalMinutesFor(r){ return rowStartMinute(r); }
 // Calendar events need a real start+end range (unlike a TickTick task, which can be a bare point in
 // time) — an all-day event when the row has no explicit clock time, otherwise a timed event running
 // for the row's own workload-estimate minutes (floored at 30, so a near-zero estimate doesn't render
@@ -7540,12 +9239,12 @@ function gcalEventBodyForRow(r, minutesOverride){
            start:{dateTime:gcalDateTimeStr(r.due, minutes), timeZone:tz},
            end:{dateTime:gcalDateTimeStr(r.due, minutes+durationMin), timeZone:tz} };
 }
-// One row (a cultural task or a sow/transplant milestone) → create or update its Calendar event, and
-// for a fresh create, write the new event id straight back onto the Airtable record so the next sync
-// knows to update instead of duplicating.
+// One row (a cultural task, a sow/transplant milestone, or a tarp lay/pull job) → create or update
+// its Calendar event, and for a fresh create, write the new event id straight back onto the
+// Airtable record so the next sync knows to update instead of duplicating.
 async function gcalPushOneRow(r, calendarId, minutesOverride){
-  const isMs=r.kind==="milestone";
-  const existingId = isMs ? (r.msDf==="tp"?r.p.tpGcalId:r.p.sowGcalId) : r.t.gcalId;
+  const sync=rowSyncId(r,"gcal");
+  const existingId=sync.get();
   const body=gcalEventBodyForRow(r, minutesOverride);
   const base=GCAL_API_BASE+"/calendars/"+encodeURIComponent(calendarId)+"/events";
   if(existingId){
@@ -7556,15 +9255,7 @@ async function gcalPushOneRow(r, calendarId, minutesOverride){
   const resp=await gcalApiFetch(base, {method:"POST", body:JSON.stringify(body)});
   if(!resp.ok) throw new Error("create failed: "+resp.status);
   const created=await resp.json();
-  const newId=created.id;
-  if(isMs){
-    const field = r.msDf==="tp" ? CFG.f.pl_tpGcalId : CFG.f.pl_sowGcalId;
-    await atPatch(CFG.farmBase, CFG.tables.plantings, r.p.id, {[field]: newId});
-    if(r.msDf==="tp") r.p.tpGcalId=newId; else r.p.sowGcalId=newId;
-  }else{
-    await atPatch(CFG.farmBase, CFG.tables.plantingTasks, r.t.id, {[CFG.f.pt_gcalid]: newId});
-    r.t.gcalId=newId;
-  }
+  await sync.set(created.id);
 }
 // Pushes every row wkCollect() currently considers relevant, regardless of assignee — one shared
 // calendar, so there's no per-person "not connected" skip the way TickTick's push has.
@@ -7609,14 +9300,776 @@ document.getElementById("wkGcalSyncBtn")?.addEventListener("click", async()=>{
   btn.disabled=false;
 });
 
+/* ======================================================================
+   SPRAY LOG
+   Records + Saved mixes pages, the quick-entry overlay, the map bed-picker,
+   and the farm-map withholding-period overlay. Data is loaded in loadAll()
+   into data.sprayProducts / .sprayMixes / .sprayApplications; the parse +
+   WHP/mix business rules live in planner-shared.js.
+   ====================================================================== */
+const sprayToday = () => PlannerShared.wkISO(new Date());
+const sprayProduct = id => data.sprayProductsById[id] || null;
+const sprayProductName = id => (sprayProduct(id)||{}).name || "?";
+const sprayBed = id => data.beds.find(b=>b.id===id) || null;
+// An application's withholding period: its own override if set, else the max WHP of its products.
+function sprayAppWhp(a){ return a.whp!=null ? a.whp : PlannerShared.mixWhp(a.items, data.sprayProductsById); }
+// "Safe to harvest after" info for an application, or null if it carries no withholding.
+function sprayAppSafe(a){
+  const whp = sprayAppWhp(a);
+  if(!a.date || !whp) return null;
+  const safe = PlannerShared.safeAfterISO(a.date, whp);
+  return { whp, safe, active: sprayToday() < safe };
+}
+function sprayBedsLabel(bedIds){
+  return (bedIds||[]).map(id=>(sprayBed(id)||{}).name).filter(Boolean).join(", ");
+}
+// The spray application currently keeping this bed inside a withholding period on `onISO` (today by
+// default), or null. Uses each application's *effective* WHP (its own override, else the max of its
+// products), which is why it's here rather than the plain shared bedWhpActive. Drives the farm-map
+// WHP hatch (see drawMap).
+function sprayWhpOnBedAt(bedId, onISO){
+  onISO = onISO || sprayToday();
+  let best=null;
+  (data.sprayApplications||[]).forEach(a=>{
+    if(!a.date || !(a.bedIds||[]).includes(bedId)) return;
+    const whp=sprayAppWhp(a); if(!whp) return;
+    const safe=PlannerShared.safeAfterISO(a.date, whp);
+    if(a.date<=onISO && onISO<safe && (!best || safe>best.safeAfter)) best={application:a, safeAfter:safe, whp};
+  });
+  return best;
+}
+function sprayCropsLabel(cropIds){
+  return (cropIds||[]).map(id=>data.crops[id]).filter(Boolean).join(", ");
+}
+// One product line rendered as a chip: "Nutrisea  74 mL"
+function sprayProdChip(it){
+  const nm = esc(sprayProductName(it.productId));
+  const rate = it.rate!=null ? `<span class="r">${it.rate} ${esc(it.unit||"")}</span>` : "";
+  return `<span class="sc-prod">${nm}${rate}</span>`;
+}
+
+/* ---------- Records page ---------- */
+function sprayRecMatch(a, q){
+  if(!q) return true;
+  const hay = [
+    a.date, a.sprayedBy, a.reason, a.notes, a.locationNote, a.method,
+    sprayCropsLabel(a.cropIds), sprayBedsLabel(a.bedIds),
+    (a.items||[]).map(it=>sprayProductName(it.productId)).join(" "),
+  ].join(" ").toLowerCase();
+  return hay.includes(q);
+}
+function buildSprayRecords(){
+  const body = document.getElementById("sprayRecBody");
+  const all = data.sprayApplications||[];
+  document.getElementById("sprayRecSummary").textContent =
+    all.length ? `${all.length} record${all.length===1?"":"s"}` : "Spray & fert log";
+  if(!all.length){
+    body.innerHTML = `<div class="spray-empty">No sprays logged yet.<br>Tap <b>＋ Log spray</b> to record your first one.</div>`;
+    return;
+  }
+  const q = (document.getElementById("sprayRecSearch").value||"").trim().toLowerCase();
+  const rows = all.filter(a=>sprayRecMatch(a,q));
+  body.innerHTML = rows.length
+    ? rows.map(sprayRecCard).join("")
+    : `<div class="spray-empty">No records match “${esc(q)}”.</div>`;
+}
+function sprayRecCard(a){
+  const crops = sprayCropsLabel(a.cropIds);
+  const beds  = sprayBedsLabel(a.bedIds);
+  const title = crops || a.locationNote || "—";
+  const safe  = sprayAppSafe(a);
+  const whpTag = safe
+    ? (safe.active
+        ? `<span class="sc-whp">WHP · safe to harvest ${fmt(safe.safe)}</span>`
+        : `<span class="sc-whp clear">WHP cleared</span>`)
+    : "";
+  const method = a.method ? `<span class="sc-badge">${esc(a.method)}</span>` : "";
+  const prods = (a.items||[]).length
+    ? `<div class="sc-prods">${a.items.map(sprayProdChip).join("")}</div>` : "";
+  const amount = a.amount!=null ? `${a.amount} ${esc(a.amountUnit||"L")}` : "";
+  const metaBits = [
+    beds ? `<span class="k">Beds</span><span class="v">${esc(beds)}</span>` : "",
+    a.locationNote && crops ? `<span class="k">Where</span><span class="v">${esc(a.locationNote)}</span>` : "",
+    a.reason ? `<span class="k">Reason</span><span class="v">${esc(a.reason)}</span>` : "",
+    (amount||a.sprayedBy) ? `<span class="k">Applied</span><span class="v">${esc([amount, a.sprayedBy&&("by "+a.sprayedBy)].filter(Boolean).join(" · "))}</span>` : "",
+  ].filter(Boolean).map(x=>`<div class="sc-line">${x}</div>`).join("");
+  const photos = (a.photos||[]).length
+    ? `<div class="sc-photos">${a.photos.map(p=>{
+        const u=(p.thumbnails&&p.thumbnails.small&&p.thumbnails.small.url)||p.url;
+        return `<a href="${p.url}" target="_blank" rel="noopener"><img src="${u}" alt="${esc(p.filename||"photo")}" loading="lazy"></a>`;
+      }).join("")}</div>` : "";
+  const note = a.notes ? `<div class="sc-note">${esc(a.notes)}</div>` : "";
+  return `<div class="spray-card" data-app="${a.id}">
+    <div class="sc-top">
+      <span class="sc-date">${fmt(a.date)}</span>
+      <span class="sc-title">${esc(title)}</span>
+      ${method}${whpTag}
+    </div>
+    ${prods}${metaBits}${photos}${note}
+  </div>`;
+}
+
+/* ---------- Saved mixes page (read view; editing added later) ---------- */
+function sprayMixMatch(m, q){
+  if(!q) return true;
+  const hay = [m.name, m.target, m.method,
+    (m.items||[]).map(it=>sprayProductName(it.productId)).join(" ")].join(" ").toLowerCase();
+  return hay.includes(q);
+}
+function buildSprayMixes(){
+  const body = document.getElementById("sprayMixBody");
+  const all = (data.sprayMixes||[]).filter(m=>m.active);
+  if(!all.length){
+    body.innerHTML = `<div class="spray-empty">No saved mixes yet.<br>Build a mix while logging a spray and tap <b>Save as mix</b>, or use <b>＋ New mix</b>.</div>`;
+    return;
+  }
+  const q = (document.getElementById("sprayMixSearch").value||"").trim().toLowerCase();
+  const rows = all.filter(m=>sprayMixMatch(m,q))
+    .sort((x,y)=> (y.favourite-x.favourite) || x.name.localeCompare(y.name));
+  body.innerHTML = rows.length
+    ? rows.map(sprayMixCard).join("")
+    : `<div class="spray-empty">No mixes match “${esc(q)}”.</div>`;
+}
+function sprayMixCard(m){
+  const whp = m.whp!=null ? m.whp : PlannerShared.mixWhp(m.items, data.sprayProductsById);
+  const ing = (m.items||[]).length
+    ? `<ul class="smc-ing">${m.items.map(it=>`<li><span>${esc(sprayProductName(it.productId))}</span><span class="rate">${it.rate!=null?it.rate+" "+esc(it.unit||""):""}</span></li>`).join("")}</ul>`
+    : `<div class="empty-note">No ingredients yet.</div>`;
+  const water = m.water!=null ? `Water: ${m.water} ${esc(m.waterBasis||"")}` : "";
+  const whpTxt = whp ? `WHP ${whp} day${whp===1?"":"s"}` : "WHP 0";
+  return `<div class="spray-mix-card" data-mix="${m.id}">
+    <div class="smc-top">
+      <span class="smc-name">${esc(m.name||"Untitled mix")}</span>
+      <button class="smc-star ${m.favourite?"on":""}" data-mix-star="${m.id}" title="Favourite">★</button>
+    </div>
+    ${m.target?`<div class="smc-target">${esc(m.target)}</div>`:""}
+    ${ing}
+    ${m.method?`<div class="sc-note">${esc(m.method)}</div>`:""}
+    <div class="smc-foot">
+      ${water?`<span>${esc(water)}</span>`:""}
+      <span>${whpTxt}</span>
+      <span class="spacer"></span>
+      <span class="smc-actions">
+        <button class="use" data-mix-use="${m.id}">Use</button>
+        <button data-mix-edit="${m.id}">Edit</button>
+        <button data-mix-dup="${m.id}">Duplicate</button>
+        <button data-mix-del="${m.id}">Delete</button>
+      </span>
+    </div>
+  </div>`;
+}
+
+/* ---------- Entry form (log a spray) ---------- */
+const SPRAY_BY_KEY = "roseberry_spray_by";
+const $s = id => document.getElementById(id);
+let spray = null;   // active entry-form state, or null when closed
+
+function sprayOpen(prefill){
+  spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null,
+            method:"Backpack", whpManual:false };
+  populateSprayMixSelect();
+  populateSprayDatalists();
+  $s("sprayHead").textContent = "Log a spray";
+  ["sprayLocNote","sprayReason","sprayNotes","sprayAmount","sprayWhp","sprayBedSearch","sprayCropSearch"].forEach(id=>$s(id).value="");
+  $s("sprayAmountUnit").value="L";
+  $s("sprayDate").value = sprayToday();
+  $s("sprayBy").value = localStorage.getItem(SPRAY_BY_KEY) || "";
+  $s("sprayFromMix").value = "";
+  $s("sprayPhotoThumbs").innerHTML = "";
+  $s("sprayBedSuggest").hidden = true; $s("sprayCropSuggest").hidden = true;
+  $s("sprayErr").hidden = true;
+  setSprayMethod("Backpack");
+  if(prefill && prefill.mixId){ $s("sprayFromMix").value = prefill.mixId; applyMixToForm(prefill.mixId); }
+  else spray.items = [{ productId:"", rate:null, unit:"" }];
+  renderSprayBedChips(); renderSprayCropChips(); renderSprayItems(); updateSprayWhp();
+  $s("sprayModal").classList.add("open");
+  setTimeout(()=>$s("sprayBedSearch").focus(), 40);
+}
+function sprayClose(){ $s("sprayModal").classList.remove("open"); spray=null; }
+
+function populateSprayMixSelect(){
+  const mixes=(data.sprayMixes||[]).filter(m=>m.active)
+    .sort((a,b)=>(b.favourite-a.favourite)||a.name.localeCompare(b.name));
+  $s("sprayFromMix").innerHTML = `<option value="">— build from scratch —</option>`+
+    mixes.map(m=>`<option value="${m.id}">${esc(m.name)}${m.favourite?" ★":""}</option>`).join("");
+}
+function populateSprayDatalists(){
+  const reasons=[...new Set((data.sprayApplications||[]).map(a=>a.reason).filter(Boolean))].slice(0,25);
+  $s("sprayReasonList").innerHTML = reasons.map(r=>`<option value="${esc(r)}">`).join("");
+  const names=[...new Set((data.sprayApplications||[]).map(a=>a.sprayedBy).filter(Boolean))];
+  $s("sprayByList").innerHTML = names.map(n=>`<option value="${esc(n)}">`).join("");
+}
+function setSprayMethod(m){
+  spray.method=m;
+  document.querySelectorAll("#sprayMethod button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.method===m?"true":"false"));
+}
+
+/* beds + crops (shared by the manual search here and the map picker in the next phase) */
+function sprayAddBed(id){
+  if(!id || spray.beds.has(id)) return;
+  spray.beds.add(id);
+  const pl=(sprayBed(id)||{}).planting;
+  if(pl && pl.cropId) spray.cropIds.add(pl.cropId);
+  renderSprayBedChips(); renderSprayCropChips();
+}
+function sprayRemoveBed(id){ spray.beds.delete(id); renderSprayBedChips(); }
+function sprayAddCrop(id){ if(id){ spray.cropIds.add(id); renderSprayCropChips(); } }
+function sprayRemoveCrop(id){ spray.cropIds.delete(id); renderSprayCropChips(); }
+
+function renderSprayBedChips(){
+  const el=$s("sprayBedChips");
+  if(!spray.beds.size){ el.innerHTML=`<div class="sp-chips-empty">No beds yet — pick on the map or add by name.</div>`; return; }
+  el.innerHTML=[...spray.beds].map(id=>{
+    const b=sprayBed(id)||{name:"?"};
+    const crop=b.planting&&b.planting.crop&&b.planting.crop!=="—"?b.planting.crop:"";
+    return `<span class="sp-chip">${esc(b.name)}${crop?` <span class="sub">${esc(crop)}</span>`:""}<button class="x" data-rm-bed="${id}" title="Remove">✕</button></span>`;
+  }).join("");
+}
+function renderSprayCropChips(){
+  const el=$s("sprayCropChips");
+  if(!spray.cropIds.size){ el.innerHTML=`<div class="sp-chips-empty">No crops yet.</div>`; return; }
+  el.innerHTML=[...spray.cropIds].map(id=>
+    `<span class="sp-chip">${esc(data.crops[id]||"?")}<button class="x" data-rm-crop="${id}" title="Remove">✕</button></span>`).join("");
+}
+function sprayBedSuggest(q){
+  const el=$s("sprayBedSuggest"); q=(q||"").trim().toLowerCase();
+  if(!q){ el.hidden=true; el.innerHTML=""; return; }
+  const matches=data.beds.filter(b=>!spray.beds.has(b.id) && `${b.block||""} ${b.name}`.toLowerCase().includes(q)).slice(0,12);
+  el.hidden=!matches.length;
+  el.innerHTML=matches.map(b=>{
+    const crop=b.planting&&b.planting.crop&&b.planting.crop!=="—"?b.planting.crop:"empty";
+    return `<button type="button" data-add-bed="${b.id}">${esc(b.name)} <span class="muted">${b.block?"· "+esc(b.block)+" ":""}· ${esc(crop)}</span></button>`;
+  }).join("");
+}
+function sprayCropSuggest(q){
+  const el=$s("sprayCropSuggest"); q=(q||"").trim().toLowerCase();
+  if(!q){ el.hidden=true; el.innerHTML=""; return; }
+  const matches=Object.entries(data.crops).filter(([id,name])=>!spray.cropIds.has(id)&&String(name).toLowerCase().includes(q)).slice(0,12);
+  el.hidden=!matches.length;
+  el.innerHTML=matches.map(([id,name])=>`<button type="button" data-add-crop="${id}">${esc(name)}</button>`).join("");
+}
+
+/* product/rate lines */
+function renderSprayItems(){
+  const el=$s("sprayItems");
+  el.innerHTML = spray.items.map((it,i)=>{
+    const opts=`<option value="">— product —</option>`+
+      (data.sprayProducts||[]).filter(p=>p.active||p.id===it.productId)
+        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("");
+    const units=["mL","L","g","kg"].map(u=>`<option ${u===it.unit?"selected":""}>${u}</option>`).join("");
+    return `<div class="sp-item" data-i="${i}">
+      <select data-item-product="${i}">${opts}</select>
+      <input type="number" step="0.1" min="0" placeholder="rate" data-item-rate="${i}" value="${it.rate!=null?it.rate:""}">
+      <select data-item-unit="${i}">${units}</select>
+      <button type="button" class="x" data-item-del="${i}" title="Remove">✕</button>
+    </div>`;
+  }).join("");
+}
+function updateSprayWhp(){
+  const auto=PlannerShared.mixWhp(spray.items.filter(it=>it.productId), data.sprayProductsById);
+  if(!spray.whpManual) $s("sprayWhp").value = auto;
+  renderSpraySafe();
+}
+function currentSprayWhp(){ const v=$s("sprayWhp").value; return v===""?null:Number(v); }
+function renderSpraySafe(){
+  const el=$s("spraySafe"), whp=currentSprayWhp(), date=$s("sprayDate").value;
+  if(whp==null){ el.innerHTML=""; return; }
+  if(!whp){ el.innerHTML=`No withholding period — safe to harvest immediately.`; return; }
+  if(!date){ el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"}.`; return; }
+  el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"} → <b>do not harvest until ${fmt(PlannerShared.safeAfterISO(date,whp))}</b>.`;
+}
+function applyMixToForm(mixId){
+  spray.fromMixId=mixId||null;
+  const m=(data.sprayMixes||[]).find(x=>x.id===mixId);
+  if(!m){ return; }
+  spray.items=(m.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||"mL"}));
+  if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
+  if(!$s("sprayReason").value && m.target) $s("sprayReason").value=m.target;
+  spray.whpManual=false;
+  renderSprayItems(); updateSprayWhp();
+}
+function sprayShowErr(msg){ const el=$s("sprayErr"); el.textContent=msg; el.hidden=false; el.scrollIntoView({block:"nearest"}); }
+
+async function spraySaveRecord(){
+  const items=spray.items.filter(it=>it.productId);
+  const bedIds=[...spray.beds], cropIds=[...spray.cropIds];
+  const locNote=$s("sprayLocNote").value.trim();
+  if(!bedIds.length && !locNote) return sprayShowErr("Add at least one bed, or a location note.");
+  if(!items.length) return sprayShowErr("Add at least one product.");
+  const date=$s("sprayDate").value || sprayToday();
+  const by=$s("sprayBy").value.trim();
+  const amount=$s("sprayAmount").value===""?null:Number($s("sprayAmount").value);
+  const reason=$s("sprayReason").value.trim();
+  const whp=currentSprayWhp();
+  const notes=$s("sprayNotes").value.trim();
+  const cropsLabel=cropIds.map(id=>data.crops[id]).filter(Boolean).join(", ");
+  const bedsLabel=sprayBedsLabel(bedIds);
+  const name=[date, cropsLabel||locNote||"spray", bedsLabel.split(",")[0].trim()].filter(Boolean).join(" · ").slice(0,120);
+  const F=CFG.f;
+  const fields={ [F.sap_name]:name, [F.sap_date]:date, [F.sap_method]:spray.method };
+  if(by) fields[F.sap_by]=by;
+  if(bedIds.length) fields[F.sap_beds]=bedIds;
+  if(cropIds.length) fields[F.sap_crops]=cropIds;
+  if(locNote) fields[F.sap_locNote]=locNote;
+  if(spray.fromMixId) fields[F.sap_fromMix]=[spray.fromMixId];
+  if(amount!=null) fields[F.sap_amount]=amount;
+  fields[F.sap_amountUnit]=$s("sprayAmountUnit").value;
+  if(reason) fields[F.sap_reason]=reason;
+  if(whp!=null) fields[F.sap_whp]=whp;
+  if(notes) fields[F.sap_notes]=notes;
+  const btn=$s("spraySave"); btn.disabled=true; btn.textContent="Saving…"; $s("sprayErr").hidden=true;
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayApplications, [fields]);
+    const itemFields=items.map((it,i)=>{
+      const f={ [F.sai_app]:[rec.id], [F.sai_product]:[it.productId], [F.sai_order]:i,
+                [F.sai_name]:`${date} — ${sprayProductName(it.productId)}` };
+      if(it.rate!=null && it.rate!=="") f[F.sai_rate]=Number(it.rate);
+      if(it.unit) f[F.sai_unit]=it.unit;
+      return f;
+    });
+    if(itemFields.length) await atCreate(CFG.farmBase, CFG.tables.sprayApplicationItems, itemFields);
+    if(typeof sprayUploadPhotos==="function") await sprayUploadPhotos(rec.id);
+    if(by) localStorage.setItem(SPRAY_BY_KEY, by);
+    sprayClose();
+    await loadAll();
+    showView("sprayrec");
+  }catch(e){
+    sprayShowErr("Couldn't save: "+e.message);
+  }finally{ btn.disabled=false; btn.textContent="Save record"; }
+}
+
+/* ---------- Photos ---------- */
+// Phone photos are often several MB — too big for Airtable's base64 upload endpoint and needlessly
+// heavy for a record shot. Downscale to a max edge of 1600px and re-encode as JPEG before keeping
+// or uploading. spray.photos holds compressed data URLs; upload strips the prefix to base64.
+function sprayCompressImage(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      const max=1600, scale=Math.min(1, max/Math.max(img.width,img.height));
+      const cw=Math.max(1,Math.round(img.width*scale)), ch=Math.max(1,Math.round(img.height*scale));
+      const cv=document.createElement("canvas"); cv.width=cw; cv.height=ch;
+      cv.getContext("2d").drawImage(img,0,0,cw,ch);
+      const dataUrl=cv.toDataURL("image/jpeg",0.82);
+      resolve({ dataUrl, filename:(file.name||"photo").replace(/\.[^.]+$/,"")+".jpg" });
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error("Couldn't read image")); };
+    img.src=url;
+  });
+}
+async function sprayAddPhotos(files){
+  if(!spray) return;
+  for(const f of files){
+    if(!f.type || !f.type.startsWith("image/")) continue;
+    try{ spray.photos.push(await sprayCompressImage(f)); }catch(_){}
+  }
+  renderSprayPhotos();
+}
+function renderSprayPhotos(){
+  $s("sprayPhotoThumbs").innerHTML = spray.photos.map((p,i)=>
+    `<div class="sp-photo-thumb"><img src="${p.dataUrl}" alt=""><button type="button" class="x" data-photo-del="${i}" title="Remove">✕</button></div>`).join("");
+}
+async function sprayUploadPhotos(recordId){
+  if(!spray || !spray.photos.length) return;
+  const errs=[];
+  for(const p of spray.photos){
+    const base64=(p.dataUrl.split(",")[1])||"";
+    try{
+      const r=await fetch(`https://content.airtable.com/v0/${CFG.farmBase}/${recordId}/${encodeURIComponent(CFG.f.sap_photos)}/uploadAttachment`,{
+        method:"POST",
+        headers:{Authorization:`Bearer ${PAT}`,"Content-Type":"application/json"},
+        body:JSON.stringify({ contentType:"image/jpeg", file:base64, filename:p.filename }),
+      });
+      if(!r.ok){ const t=await r.text().catch(()=>""); errs.push(`${r.status}: ${t.slice(0,90)}`); }
+    }catch(e){ errs.push(e.message); }
+  }
+  if(errs.length) alert("Record saved, but some photos didn't upload:\n"+errs.join("\n"));
+}
+
+/* ---------- Entry-form wiring ---------- */
+(function wireSprayForm(){
+  const modal=$s("sprayModal"); if(!modal) return;
+  $s("sprayClose").onclick=sprayClose;
+  $s("sprayCancel").onclick=sprayClose;
+  modal.addEventListener("mousedown",(e)=>{ if(e.target===modal) sprayClose(); });
+  document.querySelectorAll("#sprayMethod button").forEach(b=>b.onclick=()=>setSprayMethod(b.dataset.method));
+
+  const bedSearch=$s("sprayBedSearch");
+  bedSearch.addEventListener("input",()=>sprayBedSuggest(bedSearch.value));
+  $s("sprayBedSearchClear").onclick=()=>{ bedSearch.value=""; sprayBedSuggest(""); };
+  $s("sprayBedSuggest").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-add-bed]"); if(!b) return;
+    sprayAddBed(b.dataset.addBed); bedSearch.value=""; sprayBedSuggest("");
+  });
+  $s("sprayBedChips").addEventListener("click",(e)=>{
+    const x=e.target.closest("[data-rm-bed]"); if(x) sprayRemoveBed(x.dataset.rmBed);
+  });
+
+  const cropSearch=$s("sprayCropSearch");
+  cropSearch.addEventListener("input",()=>sprayCropSuggest(cropSearch.value));
+  $s("sprayCropSearchClear").onclick=()=>{ cropSearch.value=""; sprayCropSuggest(""); };
+  $s("sprayCropSuggest").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-add-crop]"); if(!b) return;
+    sprayAddCrop(b.dataset.addCrop); cropSearch.value=""; sprayCropSuggest("");
+  });
+  $s("sprayCropChips").addEventListener("click",(e)=>{
+    const x=e.target.closest("[data-rm-crop]"); if(x) sprayRemoveCrop(x.dataset.rmCrop);
+  });
+
+  $s("sprayFromMix").addEventListener("change",(e)=>applyMixToForm(e.target.value));
+  $s("sprayAddItem").onclick=()=>{ spray.items.push({productId:"",rate:null,unit:""}); renderSprayItems(); };
+  const items=$s("sprayItems");
+  items.addEventListener("change",(e)=>{
+    const p=e.target.closest("[data-item-product]");
+    if(p){ const i=+p.dataset.itemProduct; spray.items[i].productId=p.value;
+      const prod=sprayProduct(p.value);
+      if(prod){ if(spray.items[i].rate==null||spray.items[i].rate==="") spray.items[i].rate=prod.defaultRate;
+                if(!spray.items[i].unit) spray.items[i].unit=prod.unit; }
+      renderSprayItems(); updateSprayWhp(); return; }
+    const u=e.target.closest("[data-item-unit]");
+    if(u){ spray.items[+u.dataset.itemUnit].unit=u.value; }
+  });
+  items.addEventListener("input",(e)=>{
+    const r=e.target.closest("[data-item-rate]");
+    if(r){ const v=r.value; spray.items[+r.dataset.itemRate].rate = v===""?null:Number(v); }
+  });
+  items.addEventListener("click",(e)=>{
+    const d=e.target.closest("[data-item-del]"); if(!d) return;
+    spray.items.splice(+d.dataset.itemDel,1);
+    if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
+    renderSprayItems(); updateSprayWhp();
+  });
+
+  $s("sprayWhp").addEventListener("input",()=>{ spray.whpManual=true; renderSpraySafe(); });
+  $s("sprayDate").addEventListener("change", renderSpraySafe);
+  $s("spraySave").onclick=spraySaveRecord;
+  $s("spraySaveAsMix").onclick=()=>{ if(typeof sprayMixSaveFrom==="function") sprayMixSaveFrom(); };
+  $s("sprayPickMapBtn").onclick=()=>{ if(typeof sprayBedPickerOpen==="function") sprayBedPickerOpen(); };
+  $s("sprayPhotoInput").addEventListener("change",(e)=>{ if(typeof sprayAddPhotos==="function") sprayAddPhotos(e.target.files); e.target.value=""; });
+  $s("sprayPhotoThumbs").addEventListener("click",(e)=>{ const d=e.target.closest("[data-photo-del]"); if(!d||!spray) return; spray.photos.splice(+d.dataset.photoDel,1); renderSprayPhotos(); });
+})();
+
+/* ---------- Saved mixes: editor + card actions ---------- */
+let mixEdit = null;
+
+function sprayMixOpen(mixId, seed){
+  const m = mixId ? (data.sprayMixes||[]).find(x=>x.id===mixId) : null;
+  mixEdit = { id:m?m.id:null, items:[], whpManual:!!(m && m.whp!=null) };
+  $s("sprayMixHead").textContent = m ? "Edit mix" : "New mix";
+  $s("sprayMixName").value = m?m.name:"";
+  $s("sprayMixTarget").value = m?m.target:((seed&&seed.target)||"");
+  $s("sprayMixWater").value = m&&m.water!=null?m.water:"";
+  $s("sprayMixWaterBasis").value = m?(m.waterBasis||""):"";
+  $s("sprayMixMethod").value = m?m.method:"";
+  $s("sprayMixFav").checked = m?!!m.favourite:false;
+  $s("sprayMixWhp").value = m&&m.whp!=null?m.whp:"";
+  const src = m ? m.items : ((seed&&seed.items)||[]);
+  mixEdit.items = src.map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||"mL"}));
+  if(!mixEdit.items.length) mixEdit.items=[{productId:"",rate:null,unit:""}];
+  $s("sprayMixErr").hidden=true;
+  renderMixItems(); updateMixWhp();
+  $s("sprayMixModal").classList.add("open");
+}
+function sprayMixClose(){ $s("sprayMixModal").classList.remove("open"); mixEdit=null; }
+function sprayMixSaveFrom(){
+  if(!spray) return;
+  const items=spray.items.filter(it=>it.productId).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit}));
+  if(!items.length){ sprayShowErr("Add at least one product before saving as a mix."); return; }
+  sprayMixOpen(null, { items, target:$s("sprayReason").value.trim() });
+}
+function renderMixItems(){
+  $s("sprayMixItems").innerHTML = mixEdit.items.map((it,i)=>{
+    const opts=`<option value="">— product —</option>`+
+      (data.sprayProducts||[]).filter(p=>p.active||p.id===it.productId)
+        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("");
+    const units=["mL","L","g","kg"].map(u=>`<option ${u===it.unit?"selected":""}>${u}</option>`).join("");
+    return `<div class="sp-item" data-i="${i}">
+      <select data-mixitem-product="${i}">${opts}</select>
+      <input type="number" step="0.1" min="0" placeholder="rate" data-mixitem-rate="${i}" value="${it.rate!=null?it.rate:""}">
+      <select data-mixitem-unit="${i}">${units}</select>
+      <button type="button" class="x" data-mixitem-del="${i}" title="Remove">✕</button>
+    </div>`;
+  }).join("");
+}
+function currentMixWhp(){ const v=$s("sprayMixWhp").value; return v===""?null:Number(v); }
+function updateMixWhp(){
+  const auto=PlannerShared.mixWhp(mixEdit.items.filter(it=>it.productId), data.sprayProductsById);
+  if(!mixEdit.whpManual) $s("sprayMixWhp").value=auto;
+  renderMixSafe();
+}
+function renderMixSafe(){
+  const whp=currentMixWhp();
+  $s("sprayMixSafe").innerHTML = whp ? `Withholding ${whp} day${whp===1?"":"s"} after use.` : (whp===0?"No withholding period.":"");
+}
+function sprayMixShowErr(msg){ const el=$s("sprayMixErr"); el.textContent=msg; el.hidden=false; el.scrollIntoView({block:"nearest"}); }
+async function sprayMixSave(){
+  const name=$s("sprayMixName").value.trim();
+  const items=mixEdit.items.filter(it=>it.productId);
+  if(!name) return sprayMixShowErr("Give the mix a name.");
+  if(!items.length) return sprayMixShowErr("Add at least one product.");
+  const F=CFG.f;
+  const water=$s("sprayMixWater").value===""?null:Number($s("sprayMixWater").value);
+  const whp=currentMixWhp();
+  const fields={ [F.smx_name]:name, [F.smx_active]:true, [F.smx_fav]:$s("sprayMixFav").checked,
+    [F.smx_target]:$s("sprayMixTarget").value.trim(), [F.smx_waterBasis]:$s("sprayMixWaterBasis").value||"",
+    [F.smx_method]:$s("sprayMixMethod").value.trim() };
+  if(water!=null) fields[F.smx_water]=water;
+  if(whp!=null) fields[F.smx_whp]=whp;
+  const btn=$s("sprayMixSave"); btn.disabled=true; btn.textContent="Saving…"; $s("sprayMixErr").hidden=true;
+  try{
+    let mixId=mixEdit.id;
+    if(mixId){
+      await atPatch(CFG.farmBase, CFG.tables.sprayMixes, mixId, fields);
+      const old=(data.sprayMixes||[]).find(x=>x.id===mixId);
+      const oldItemIds=((old&&old.items)||[]).map(it=>it.id);
+      if(oldItemIds.length) await atDelete(CFG.farmBase, CFG.tables.sprayMixItems, oldItemIds);
+    }else{
+      const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayMixes, [fields]); mixId=rec.id;
+    }
+    const itemFields=items.map((it,i)=>{
+      const f={ [F.smi_mix]:[mixId], [F.smi_product]:[it.productId], [F.smi_order]:i,
+                [F.smi_name]:`${name} — ${sprayProductName(it.productId)}` };
+      if(it.rate!=null && it.rate!=="") f[F.smi_rate]=Number(it.rate);
+      if(it.unit) f[F.smi_unit]=it.unit;
+      return f;
+    });
+    if(itemFields.length) await atCreate(CFG.farmBase, CFG.tables.sprayMixItems, itemFields);
+    sprayMixClose();
+    await loadAll();
+    buildSprayMixes();
+    if(spray) populateSprayMixSelect();
+  }catch(e){ sprayMixShowErr("Couldn't save: "+e.message); }
+  finally{ btn.disabled=false; btn.textContent="Save mix"; }
+}
+
+async function sprayMixAction(action, mixId){
+  const F=CFG.f;
+  const m=(data.sprayMixes||[]).find(x=>x.id===mixId);
+  if(action==="use"){ sprayOpen({mixId}); return; }
+  if(!m) return;
+  if(action==="edit"){ sprayMixOpen(mixId); return; }
+  if(action==="star"){
+    const next=!m.favourite; m.favourite=next; buildSprayMixes();
+    try{ await atPatch(CFG.farmBase, CFG.tables.sprayMixes, mixId, {[F.smx_fav]:next}); }
+    catch(e){ m.favourite=!next; buildSprayMixes(); alert("Couldn't update favourite: "+e.message); }
+    return;
+  }
+  if(action==="dup"){
+    const fields={ [F.smx_name]:(m.name||"Mix")+" (copy)", [F.smx_active]:true, [F.smx_fav]:false,
+      [F.smx_target]:m.target||"", [F.smx_waterBasis]:m.waterBasis||"", [F.smx_method]:m.method||"" };
+    if(m.water!=null) fields[F.smx_water]=m.water;
+    if(m.whp!=null) fields[F.smx_whp]=m.whp;
+    try{
+      const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayMixes,[fields]);
+      const itemFields=(m.items||[]).map((it,i)=>{
+        const f={ [F.smi_mix]:[rec.id], [F.smi_product]:[it.productId], [F.smi_order]:i,
+                  [F.smi_name]:`${fields[F.smx_name]} — ${sprayProductName(it.productId)}` };
+        if(it.rate!=null) f[F.smi_rate]=it.rate; if(it.unit) f[F.smi_unit]=it.unit; return f;
+      });
+      if(itemFields.length) await atCreate(CFG.farmBase, CFG.tables.sprayMixItems, itemFields);
+      await loadAll(); buildSprayMixes();
+    }catch(e){ alert("Couldn't duplicate: "+e.message); }
+    return;
+  }
+  if(action==="del"){
+    if(!confirm(`Delete mix “${m.name||"Untitled"}”? This can't be undone.`)) return;
+    try{
+      const itemIds=(m.items||[]).map(it=>it.id);
+      if(itemIds.length) await atDelete(CFG.farmBase, CFG.tables.sprayMixItems, itemIds);
+      await atDelete(CFG.farmBase, CFG.tables.sprayMixes, [mixId]);
+      await loadAll(); buildSprayMixes();
+    }catch(e){ alert("Couldn't delete: "+e.message); }
+    return;
+  }
+}
+
+(function wireSprayMix(){
+  const modal=$s("sprayMixModal"); if(!modal) return;
+  $s("sprayMixClose").onclick=sprayMixClose;
+  $s("sprayMixCancel").onclick=sprayMixClose;
+  modal.addEventListener("mousedown",(e)=>{ if(e.target===modal) sprayMixClose(); });
+  $s("sprayMixAddItem").onclick=()=>{ mixEdit.items.push({productId:"",rate:null,unit:""}); renderMixItems(); };
+  const items=$s("sprayMixItems");
+  items.addEventListener("change",(e)=>{
+    const p=e.target.closest("[data-mixitem-product]");
+    if(p){ const i=+p.dataset.mixitemProduct; mixEdit.items[i].productId=p.value;
+      const prod=sprayProduct(p.value);
+      if(prod){ if(mixEdit.items[i].rate==null||mixEdit.items[i].rate==="") mixEdit.items[i].rate=prod.defaultRate; if(!mixEdit.items[i].unit) mixEdit.items[i].unit=prod.unit; }
+      renderMixItems(); updateMixWhp(); return; }
+    const u=e.target.closest("[data-mixitem-unit]"); if(u){ mixEdit.items[+u.dataset.mixitemUnit].unit=u.value; }
+  });
+  items.addEventListener("input",(e)=>{ const r=e.target.closest("[data-mixitem-rate]"); if(r){ const v=r.value; mixEdit.items[+r.dataset.mixitemRate].rate=v===""?null:Number(v); } });
+  items.addEventListener("click",(e)=>{ const d=e.target.closest("[data-mixitem-del]"); if(!d) return;
+    mixEdit.items.splice(+d.dataset.mixitemDel,1); if(!mixEdit.items.length) mixEdit.items=[{productId:"",rate:null,unit:""}]; renderMixItems(); updateMixWhp(); });
+  $s("sprayMixWhp").addEventListener("input",()=>{ mixEdit.whpManual=true; renderMixSafe(); });
+  $s("sprayMixSave").onclick=sprayMixSave;
+})();
+
+/* ---------- Map bed picker ---------- */
+// Reuses the farm map's already-computed geometry (placedCache) in a lightweight multi-select SVG,
+// toggling straight into the entry form's spray.beds set. Its own pan/zoom so it never disturbs the
+// Farm map tab's view state.
+let sprayPickView = {k:4, tx:40, ty:40};
+let sprayPickBounds = {minX:0,minY:0,maxX:100,maxY:100};
+
+function sprayBedPickerOpen(){
+  if(!spray) return;
+  if(!placedCache || !placedCache.length){ sprayShowErr("Farm map isn't loaded yet — add beds by name instead."); return; }
+  let a=1e9,b=1e9,c=-1e9,d=-1e9;
+  placedCache.forEach(p=>{ a=Math.min(a,p.frame.x); b=Math.min(b,p.frame.y); c=Math.max(c,p.frame.x+p.frame.w); d=Math.max(d,p.frame.y+p.frame.h); });
+  sprayPickBounds={minX:a,minY:b,maxX:c,maxY:d};
+  $s("sprayPickSearch").value=""; $s("sprayPickSuggest").hidden=true;
+  $s("sprayPickModal").classList.add("open");
+  drawSprayPicker();
+  requestAnimationFrame(sprayPickFit);
+}
+function sprayBedPickerClose(){ $s("sprayPickModal").classList.remove("open"); }
+function applySprayPickView(){
+  $s("sprayPickG").setAttribute("transform", `translate(${sprayPickView.tx},${sprayPickView.ty}) scale(${sprayPickView.k})`);
+}
+function sprayPickFit(){
+  const wrap=$s("sprayPickWrap"), W=wrap.clientWidth, H=wrap.clientHeight;
+  const bw=(sprayPickBounds.maxX-sprayPickBounds.minX)||100, bh=(sprayPickBounds.maxY-sprayPickBounds.minY)||100, pad=24;
+  const k=Math.min((W-pad*2)/bw,(H-pad*2)/bh);
+  sprayPickView.k=Math.max(0.5,Math.min(k,40));
+  sprayPickView.tx=pad - sprayPickBounds.minX*sprayPickView.k + (W-pad*2-bw*sprayPickView.k)/2;
+  sprayPickView.ty=pad - sprayPickBounds.minY*sprayPickView.k + (H-pad*2-bh*sprayPickView.k)/2;
+  applySprayPickView();
+}
+function drawSprayPicker(){
+  const g=$s("sprayPickG"); g.innerHTML="";
+  placedCache.forEach(p=>{
+    const fr=p.frame;
+    const rect=document.createElementNS(SVG,"rect");
+    rect.setAttribute("class","block-frame");
+    rect.setAttribute("x",fr.x-1.2);rect.setAttribute("y",fr.y-1.2);
+    rect.setAttribute("width",fr.w+2.4);rect.setAttribute("height",fr.h+2.4);rect.setAttribute("rx","1");
+    g.appendChild(rect);
+    const lab=document.createElementNS(SVG,"text");
+    lab.setAttribute("class","block-label");lab.setAttribute("x",fr.x-1.2);lab.setAttribute("y",fr.y-2.4);
+    lab.setAttribute("font-size","3.4");lab.textContent=p.key;g.appendChild(lab);
+    p.beds.forEach(r=>{
+      const b=r.bed, pl=b.planting, sel=spray.beds.has(b.id);
+      const cell=document.createElementNS(SVG,"rect");
+      cell.setAttribute("class","bed"+(sel?" pick-sel":""));cell.dataset.bed=b.id;
+      cell.setAttribute("x",r.x);cell.setAttribute("y",r.y);
+      cell.setAttribute("width",r.w);cell.setAttribute("height",r.h);cell.setAttribute("rx",".4");
+      if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
+      else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
+      else cell.style.fill="var(--empty-bed)";
+      g.appendChild(cell);
+      const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
+      const cropTxt=(pl&&pl.crop&&pl.crop!=="—")?pl.crop:"";
+      const t=document.createElementNS(SVG,"text");
+      t.setAttribute("class","bed-label"+(sel?" bed-check":""));t.setAttribute("x",cx);t.setAttribute("y",cy);
+      t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
+      t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.5, 2.4).toFixed(2));
+      if(tall) t.setAttribute("transform",`rotate(-90 ${cx} ${cy})`);
+      t.textContent = sel ? `✓ ${b.name}` : (cropTxt?`${b.name} · ${cropTxt}`:b.name);
+      t.style.pointerEvents="none";
+      g.appendChild(t);
+    });
+  });
+  updateSprayPickFoot();
+}
+function updateSprayPickFoot(){
+  const n=spray.beds.size;
+  $s("sprayPickCount").textContent = `${n} bed${n===1?"":"s"}`;
+  const crops=[...new Set([...spray.beds].map(id=>(sprayBed(id)||{}).planting).filter(Boolean).map(pl=>pl.crop).filter(c=>c&&c!=="—"))];
+  $s("sprayPickCrops").textContent = crops.length ? ("· "+crops.join(", ")) : "";
+}
+function sprayPickToggle(id){
+  if(spray.beds.has(id)) sprayRemoveBed(id); else sprayAddBed(id);
+  drawSprayPicker(); applySprayPickView();
+}
+function sprayPickSearchSuggest(q){
+  const el=$s("sprayPickSuggest"); q=(q||"").trim().toLowerCase();
+  if(!q){ el.hidden=true; el.innerHTML=""; return; }
+  const matches=data.beds.filter(b=>`${b.block||""} ${b.name}`.toLowerCase().includes(q)).slice(0,14);
+  el.hidden=!matches.length;
+  el.innerHTML=matches.map(b=>{
+    const on=spray.beds.has(b.id);
+    const crop=b.planting&&b.planting.crop&&b.planting.crop!=="—"?b.planting.crop:"empty";
+    return `<button type="button" data-pick-bed="${b.id}">${on?'<span class="on">✓ </span>':""}${esc(b.name)} <span class="muted">${b.block?"· "+esc(b.block)+" ":""}· ${esc(crop)}</span></button>`;
+  }).join("");
+}
+(function wireSprayPicker(){
+  const wrap=$s("sprayPickWrap"); if(!wrap) return;
+  $s("sprayPickClose").onclick=sprayBedPickerClose;
+  $s("sprayPickDone").onclick=sprayBedPickerClose;
+  const search=$s("sprayPickSearch");
+  search.addEventListener("input",()=>sprayPickSearchSuggest(search.value));
+  $s("sprayPickSearchClear").onclick=()=>{ search.value=""; sprayPickSearchSuggest(""); };
+  $s("sprayPickSuggest").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-pick-bed]"); if(!b) return;
+    sprayPickToggle(b.dataset.pickBed); sprayPickSearchSuggest(search.value);
+  });
+  // pan / zoom + tap-to-toggle (mirrors the farm map's handler, on this SVG only)
+  let dragging=false,lastX,lastY,moved=false,downTarget=null; const pts=new Map(); let pinchD=0;
+  const bedFrom=el=>{ while(el&&el!==wrap){ if(el.dataset&&el.dataset.bed) return el.dataset.bed; el=el.parentNode; } return null; };
+  function zoomAt(cx,cy,f){
+    const r=wrap.getBoundingClientRect(), mx=cx-r.left, my=cy-r.top;
+    const nk=Math.max(0.5,Math.min(sprayPickView.k*f,60)), rf=nk/sprayPickView.k;
+    sprayPickView.tx=mx-(mx-sprayPickView.tx)*rf; sprayPickView.ty=my-(my-sprayPickView.ty)*rf; sprayPickView.k=nk; applySprayPickView();
+  }
+  wrap.addEventListener("pointerdown",e=>{ wrap.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===1){ dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;wrap.classList.add("dragging"); } });
+  wrap.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId))return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){ const [a,b]=[...pts.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(pinchD){ zoomAt((a.x+b.x)/2,(a.y+b.y)/2,d/pinchD); } pinchD=d; return; }
+    if(dragging){ const dx=e.clientX-lastX,dy=e.clientY-lastY; if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
+      sprayPickView.tx+=dx;sprayPickView.ty+=dy;lastX=e.clientX;lastY=e.clientY;applySprayPickView(); } });
+  function up(e){ const wasCancel=e.type==="pointercancel"; pts.delete(e.pointerId); if(pts.size<2)pinchD=0;
+    if(pts.size===0){ dragging=false;wrap.classList.remove("dragging");
+      if(!moved && !wasCancel){ const id=bedFrom(downTarget); if(id) sprayPickToggle(id); } downTarget=null; } }
+  wrap.addEventListener("pointerup",up); wrap.addEventListener("pointercancel",up);
+  wrap.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY, e.deltaY<0?1.12:1/1.12); },{passive:false});
+})();
+
+/* ---------- Wiring ---------- */
+(function wireSpray(){
+  const recSearch = document.getElementById("sprayRecSearch");
+  recSearch?.addEventListener("input", buildSprayRecords);
+  document.getElementById("sprayRecSearchClear")?.addEventListener("click", ()=>{ recSearch.value=""; buildSprayRecords(); });
+  const mixSearch = document.getElementById("sprayMixSearch");
+  mixSearch?.addEventListener("input", buildSprayMixes);
+  document.getElementById("sprayMixSearchClear")?.addEventListener("click", ()=>{ mixSearch.value=""; buildSprayMixes(); });
+  // Entry / editor overlays are added in later phases — guard so the buttons are inert until then.
+  document.getElementById("sprayLogBtn")?.addEventListener("click", ()=>{ if(typeof sprayOpen==="function") sprayOpen(); });
+  document.getElementById("sprayMixNewBtn")?.addEventListener("click", ()=>{ if(typeof sprayMixOpen==="function") sprayMixOpen(null); });
+  // Mix card action buttons (delegated) — handlers wired in the Saved-mixes phase.
+  document.getElementById("sprayMixBody")?.addEventListener("click", (e)=>{
+    const t=e.target.closest("[data-mix-star],[data-mix-use],[data-mix-edit],[data-mix-dup],[data-mix-del]");
+    if(!t || typeof sprayMixAction!=="function") return;
+    if(t.dataset.mixStar!=null) sprayMixAction("star", t.dataset.mixStar);
+    else if(t.dataset.mixUse!=null) sprayMixAction("use", t.dataset.mixUse);
+    else if(t.dataset.mixEdit!=null) sprayMixAction("edit", t.dataset.mixEdit);
+    else if(t.dataset.mixDup!=null) sprayMixAction("dup", t.dataset.mixDup);
+    else if(t.dataset.mixDel!=null) sprayMixAction("del", t.dataset.mixDel);
+  });
+})();
+
 /* ---------- boot ---------- */
 if(PAT){ document.getElementById("patInput").value=PAT; loadAll(); }
 else gate(true);
 
 /* ---------- PWA service worker ---------- */
+// updateViaCache:'none' stops the browser's own HTTP cache from shielding sw.js itself — without
+// this, a phone can sit for a long time (App Store/PWA guidance says up to 24h, sometimes longer
+// in practice) before it even checks whether sw.js changed, so a new CACHE_NAME never gets picked
+// up. The controllerchange listener then reloads automatically the moment a new worker takes over
+// (skipWaiting + clients.claim in sw.js), so a stale install self-heals on its next open instead of
+// silently keeping the old shell — this is what was serving an old page with no Spray log tab.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((e) => console.error('SW registration failed:', e));
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).catch((e) => console.error('SW registration failed:', e));
+  });
+  let swReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloaded) return;
+    swReloaded = true;
+    location.reload();
   });
 }
 
