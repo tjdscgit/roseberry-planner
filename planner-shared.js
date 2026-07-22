@@ -67,6 +67,7 @@
       pt_due:"Due date", pt_done:"Done", pt_start:"Start minute",
       pt_repeat:"Repeat every (days)", pt_until:"Repeat until", pt_duration:"Minutes per 15m bed",
       pt_assignee:"Assignee", pt_ttid:"TickTick Task ID", pt_gcalid:"Google Cal Event ID",
+      pt_bed:"Bed",   // optional bed a task attaches to when it isn't tied to a planting
       pl_crop:"Crop", pl_bed:"Bed", pl_var:"Variety", pl_status:"Status", pl_bm:"Bed metres", pl_notes:"Notes",
       pl_sow:"Sow date", pl_tp:"Transplant date", pl_h1:"First harvest", pl_h2:"Last harvest",
       pl_sowTtId:"Sow TickTick Task ID", pl_tpTtId:"Transplant TickTick Task ID",
@@ -135,6 +136,10 @@
       sap_locNote:"Location note", sap_fromMix:"From mix", sap_method:"Application method",
       sap_amount:"Amount sprayed", sap_amountUnit:"Amount unit", sap_reason:"Reason / target",
       sap_whp:"WHP days", sap_photos:"Photos", sap_notes:"Notes", sap_legacy:"Legacy ref",
+      // Status: "Planned" (a scheduled spray, shown as a task in the weekly planner) vs "Logged"
+      // (actually applied). Blank ⇒ Logged. `sap_followUp` links a scheduled follow-up back to the
+      // spray it follows.
+      sap_status:"Status", sap_followUp:"Follow-up of",
       sai_name:"Name", sai_app:"Application", sai_product:"Product", sai_rate:"Rate",
       sai_unit:"Unit", sai_amountUsed:"Amount used", sai_order:"Order",
     }
@@ -206,12 +211,19 @@
       const manual=!t.plantingId;
       let p=null;
       if(manual){
-        p={id:`manual:${t.id}`, crop:t.label||"Task", variety:"", bedIds:[], bm:0, cropId:null};
+        // A manual task may still name a Bed (added via the enhanced Add-task dialog) — carry it on
+        // the synthetic planting so bedNameOf() and the By-bed grouping give it real context.
+        p={id:`manual:${t.id}`, crop:t.label||"Task", variety:"", bedIds:t.bedId?[t.bedId]:[], bm:0, cropId:null};
       }else{
         p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
       }
-      const task=manual ? {name:t.label||"Task", category:"Other", duration:t.duration}
-                         : (ctTaskById(data,t.taskId)||{name:"(task)",category:""});
+      // A manual task that references a library Task (a library task placed on a bed, not a planting)
+      // shows that task's name/category rather than the bare label.
+      const libTask = t.taskId ? ctTaskById(data,t.taskId) : null;
+      const task=manual
+        ? (libTask ? {name:libTask.name, category:libTask.category, duration:t.duration}
+                   : {name:t.label||"Task", category:"Other", duration:t.duration})
+        : (ctTaskById(data,t.taskId)||{name:"(task)",category:""});
       const due=wkParse(t.due), overdue=isCurrent && !t.done && due<start, inWeek=due>=start && due<end;
       if(!overdue && !inWeek) return;
       const dur=t.duration||task.duration||0;
@@ -267,6 +279,23 @@
           due, overdue, inWeek,
           minutes: task && task.duration!=null ? task.duration*bm/15 : null,
         });
+      });
+    });
+    // Scheduled sprays (Status "Planned") surface as one synthetic "spray" task each — the whole
+    // spray is one job (unlike tarps, which split per bed), so a single row covers all its beds.
+    // Same synthetic-planting trick as the branches above; ticking it done is handled app-side by
+    // opening the log prefilled, which flips the record to Logged and drops it back out of here.
+    (data.sprayApplications||[]).forEach(a=>{
+      if(a.status!=="Planned" || !a.date) return;
+      const due=wkParse(a.date), overdue=isCurrent && due<start, inWeek=due>=start && due<end;
+      if(!overdue && !inWeek) return;
+      const crops=(a.cropIds||[]).map(id=>(data.crops||{})[id]).filter(Boolean).join(", ");
+      rows.push({
+        id:`spray:${a.id}`, kind:"spray", app:a,
+        t:{done:false, repeat:0, start:null, assignee:a.sprayedBy||""},
+        p:{ id:`spray:${a.id}`, crop:crops||"Spray", variety:"", bedIds:(a.bedIds||[]).slice(), bm:0, cropId:null },
+        task:{name:"Spray", category:"Spray"},
+        due, overdue, inWeek, minutes:null,
       });
     });
     return {rows,start};
@@ -334,6 +363,7 @@
       assignee:r.fields[F.pt_assignee] || "",
       ttId:r.fields[F.pt_ttid] || "",
       gcalId:r.fields[F.pt_gcalid] || "",
+      bedId:(r.fields[F.pt_bed]||[])[0] || null,
     };
   }
 
@@ -574,6 +604,8 @@
       photos:(r.fields[F.sap_photos]||[]).slice(),
       notes:r.fields[F.sap_notes]||"",
       legacyRef:r.fields[F.sap_legacy]||"",
+      status:r.fields[F.sap_status]||"Logged",   // blank ⇒ Logged, so legacy rows need no backfill
+      followUpOfId:(r.fields[F.sap_followUp]||[])[0]||null,
       items:[],
     }));
   }

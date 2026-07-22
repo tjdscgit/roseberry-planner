@@ -475,6 +475,7 @@
   .ct-cat.wk-ms-pill{background:var(--steel);color:#fff;border-color:var(--steel)}
   .ct-cat.wk-manual-pill{background:var(--clay);color:#fff;border-color:var(--clay)}
   .ct-cat.wk-tarp-pill{background:var(--ink-2);color:var(--paper);border-color:var(--ink-2)}
+  .ct-cat.wk-spray-pill{background:var(--steel);color:#fff;border-color:var(--steel)}
   /* ---- By-day clock calendar ---- */
   .wk-cal{min-width:860px}
   .wk-cal-grid{display:grid;grid-template-columns:54px repeat(7,minmax(104px,1fr))}
@@ -537,6 +538,9 @@
   #wkTaskModal.open{display:flex}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
   .wk-task-form-row{display:flex;gap:.9rem}
+  .wk-task-typeseg{align-self:stretch}
+  .wk-task-typeseg button{flex:1}
+  .wk-task-form-row .ap-trow-f{flex:1;min-width:0}
   .wk-task-form-row .ap-trow-f{flex:1 1 0}
   .wk-task-form input,.wk-task-form select{width:100%}
   /* ---- week view layout: overdue sidebar (left) · main body · planting-detail panel (right) ---- */
@@ -1106,6 +1110,13 @@
   .sc-photos{display:flex;gap:.35rem;flex-wrap:wrap}
   .sc-photos img{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2)}
   .sc-note{font-size:.82rem;color:var(--ink-2);white-space:pre-wrap}
+  .sp-sched-hdr{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--ink-2);margin:.4rem .1rem -.1rem;padding-top:.3rem}
+  .spray-card.sp-sched{border-left:3px solid var(--clay)}
+  .sc-badge.sc-planned{color:var(--clay);border-color:var(--clay)}
+  .sp-sched-actions{display:flex;gap:.5rem;margin-top:.2rem}
+  .sp-sched-actions button{font-size:.82rem;padding:.4rem .8rem;border-radius:8px;cursor:pointer}
+  .sp-sched-actions .btn-ghost{border:1px solid var(--line-2);background:var(--paper);color:var(--ink)}
 
   /* Saved mixes — bigger type, built to be read across the shed */
   .spray-mix-card{border:1px solid var(--line-2);border-radius:14px;background:var(--paper);
@@ -1173,6 +1184,13 @@
   .sp-actions .btn-primary,.sp-actions .btn-ghost{padding:.6rem 1.1rem}
   .sp-fav-toggle{display:flex;align-items:center;gap:.5rem;font-size:.9rem;cursor:pointer}
   .sp-fav-toggle input{width:auto}
+  .sp-fu-row{display:flex;align-items:center;gap:.5rem;margin:.6rem 0}
+  .sp-fu-row input{width:4.6rem}
+  .sp-fu-lbl{font-size:.9rem;color:var(--ink-2)}
+  .sp-fu-list{display:flex;flex-direction:column;gap:.4rem;margin-top:.2rem}
+  .sp-fu-item{display:flex;align-items:center;gap:.5rem;font-size:.88rem}
+  .sp-fu-item input[type=date]{width:auto;flex:0 0 auto}
+  .sp-fu-item .sp-fu-n{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);min-width:2.2rem}
   @media(max-width:520px){
     .sp-item{grid-template-columns:1fr 4.2rem 4rem auto}
     .sp-actions{position:sticky;bottom:0;background:var(--paper);padding-top:.6rem;margin:1.2rem -.4rem 0}
@@ -1639,6 +1657,7 @@
           <button type="button" id="sprayRecSearchClear" title="Clear search">✕</button>
         </div>
         <span class="spacer"></span>
+        <button class="btn-ghost" id="sprayScheduleBtn">＋ Schedule</button>
         <button class="btn-primary" id="sprayLogBtn">＋ Log spray</button>
       </div>
       <div class="spray-list" id="sprayRecBody"></div>
@@ -1754,9 +1773,27 @@
       <button class="ap-x" id="wkTaskClose" title="Close">✕</button>
       <div class="wk-group-title" id="wkTaskTitle">Add task</div>
       <div class="wk-task-form">
-        <label class="ap-trow-f"><span>Task</span>
+        <div class="seg wk-task-typeseg" id="wkTaskTypeSeg">
+          <button type="button" data-tasktype="quick" aria-pressed="true">Quick task</button>
+          <button type="button" data-tasktype="library" aria-pressed="false">From library</button>
+          <button type="button" data-tasktype="spray" aria-pressed="false">Spray</button>
+        </div>
+        <label class="ap-trow-f" id="wkTaskLabelField"><span>Task</span>
           <input type="text" id="wkTaskLabel" placeholder="e.g. Fix drip line on Block C" maxlength="140">
         </label>
+        <label class="ap-trow-f" id="wkTaskLibField" style="display:none"><span>Library task</span>
+          <select id="wkTaskLibSelect"></select>
+        </label>
+        <div class="wk-task-form-row" id="wkTaskLinkRow">
+          <label class="ap-trow-f"><span>Link to</span>
+            <select id="wkTaskLinkType">
+              <option value="">Nothing</option>
+              <option value="planting">A planting</option>
+              <option value="bed">A bed</option>
+            </select></label>
+          <label class="ap-trow-f" id="wkTaskLinkField" style="display:none"><span id="wkTaskLinkLbl">Planting</span>
+            <select id="wkTaskLinkSelect"></select></label>
+        </div>
         <div class="wk-task-form-row">
           <label class="ap-trow-f"><span>Due date</span><input type="date" id="wkTaskDue"></label>
           <label class="ap-trow-f"><span>Est. minutes</span><input type="number" id="wkTaskDuration" min="0" step="5" placeholder="optional"></label>
@@ -1909,22 +1946,40 @@
       </div>
       <div class="sp-safe" id="spraySafe"></div>
 
-      <div class="ap-sect">Photos</div>
-      <div class="sp-photos">
-        <label class="sp-photo-add" id="sprayPhotoAdd">＋ Add photo
-          <input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden>
-        </label>
-        <div class="sp-photo-thumbs" id="sprayPhotoThumbs"></div>
+      <div id="sprayPhotoSection">
+        <div class="ap-sect">Photos</div>
+        <div class="sp-photos">
+          <label class="sp-photo-add" id="sprayPhotoAdd">＋ Add photo
+            <input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden>
+          </label>
+          <div class="sp-photo-thumbs" id="sprayPhotoThumbs"></div>
+        </div>
       </div>
 
       <div class="ap-sect">Notes</div>
       <label class="ap-field"><span>Notes</span>
         <textarea id="sprayNotes" rows="3" placeholder="Anything else worth recording…"></textarea></label>
 
+      <div id="sprayFollowupSection">
+        <div class="ap-sect">Follow-up sprays</div>
+        <label class="sp-fav-toggle"><input type="checkbox" id="sprayFollowupOn"> <span>Schedule follow-up sprays (same beds &amp; mix)</span></label>
+        <div id="sprayFollowupControls" hidden>
+          <div class="sp-fu-row">
+            <span class="sp-fu-lbl">every</span>
+            <input type="number" id="sprayFollowupEvery" min="1" step="1" value="7">
+            <span class="sp-fu-lbl">days ×</span>
+            <input type="number" id="sprayFollowupCount" min="1" max="12" step="1" value="1">
+            <span class="sp-fu-lbl">time(s)</span>
+          </div>
+          <div class="sp-fu-list" id="sprayFollowupList"></div>
+        </div>
+      </div>
+
       <div class="sp-err" id="sprayErr" hidden></div>
       <div class="sp-actions">
         <button class="btn-ghost" id="sprayCancel">Cancel</button>
         <button class="btn-ghost" id="spraySaveAsMix">Save as mix</button>
+        <button class="btn-ghost" id="sprayLogAsPlannedBtn" style="display:none">Log as planned</button>
         <button class="btn-primary" id="spraySave">Save record</button>
       </div>
     </div>
@@ -7810,6 +7865,7 @@ function wkBlockMin(r){ return r.kind==="milestone" ? Math.max(r.minutes!=null?r
 function wkTypeKey(r){
   if(r.kind==="milestone") return "ms:"+r.task.name;
   if(r.kind==="tarp") return "tarp:"+r.tarpStep;   // lay and pull group separately, like distinct task types
+  if(r.kind==="spray") return "spray:"+r.app.id;   // each scheduled spray is its own job, never merged
   return "task:"+((r.t&&r.t.taskId)||r.task.name);
 }
 /* ---- Row accessors: one place that knows how each KIND of week-planner row stores its
@@ -7857,7 +7913,7 @@ function rowSyncId(r, which){
            set:async id=>{ await atPatch(CFG.farmBase,CFG.tables.plantingTasks,r.t.id,{[field]:id}); r.t[key]=id; } };
 }
 
-const WK_CATCOL={Cultivation:"--ok",Fertility:"--steel-soft","Pest & Disease":"--clay",Irrigation:"--steel","Bed prep":"--ink-2",Harvest:"--clay",Other:"--ink-2"};
+const WK_CATCOL={Cultivation:"--ok",Fertility:"--steel-soft","Pest & Disease":"--clay",Irrigation:"--steel","Bed prep":"--ink-2",Harvest:"--clay",Spray:"--steel",Other:"--ink-2"};
 function wkBlockColor(g){
   const v = g.kind==="milestone" ? "--steel" : (WK_CATCOL[g.category]||"--steel-soft");
   return {bg:`color-mix(in srgb, var(${v}) 18%, var(--paper))`, bd:`var(${v})`};
@@ -7940,9 +7996,10 @@ function buildWeekPlanner(){
 function wkMsPillHTML(){ return `<span class="ct-cat wk-ms-pill">Planting</span>`; }
 function wkManualPillHTML(){ return `<span class="ct-cat wk-manual-pill">Manual</span>`; }
 function wkTarpPillHTML(){ return `<span class="ct-cat wk-tarp-pill">Tarp</span>`; }
+function wkSprayPillHTML(){ return `<span class="ct-cat wk-spray-pill">Spray</span>`; }
 function wkTaskRowHTML(r, showCtx, showDue){
   const isMs=r.kind==="milestone";
-  const cat=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
+  const cat=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.kind==="spray"?wkSprayPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
   const rep=r.t.repeat?`<span class="wk-repeat">↻ ${r.t.repeat}d</span>`:"";
   // manual tasks have no crop/bed to show — their name already carries all the context there is,
   // so the ctx slot shows the assignee (if any) instead of duplicating the row's own name.
@@ -8055,6 +8112,7 @@ document.getElementById("wkGroupModal").addEventListener("click",e=>{
 });
 document.getElementById("wkGroupModal").addEventListener("change",e=>{
   const cb=e.target.closest(".wk-check"); if(!cb) return;
+  if(wkIsSprayRowId(cb.dataset.id)){ cb.checked=false; wkCloseGroupModal(); wkToggleSpray(cb.dataset.id); return; }
   const p = cb.dataset.kind==="milestone"
     ? wkToggleMilestone(cb.dataset.plid,cb.dataset.df)
     : wkIsTarpRowId(cb.dataset.id)
@@ -8069,18 +8127,24 @@ document.getElementById("wkGroupList").addEventListener("click",e=>{
   wkCloseGroupModal();
   if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
   else if(main.dataset.pl.startsWith("tarp:")) wkOpenTarp(main.dataset.pl.slice(5));
+  else if(main.dataset.pl.startsWith("spray:")) sprayOpenPlan(main.dataset.pl.slice(6));
   else wkOpenPlanting(main.dataset.pl);
 });
 
 // ---- Add/edit a manual task: a Planting Tasks record with no linked Planting (see the "manual
 // task" comment on wkCollect in planner-shared.js). id=null opens the dialog empty for a new task;
 // an existing Planting Task id pre-fills it for editing (reached by clicking a manual row's name).
-let wkTaskEditId=null;
+let wkTaskEditId=null, wkTaskType="quick", wkTaskDueManual=false, wkTaskLinkPre={};
 function wkTaskOpen(id){
   wkTaskEditId=id||null;
   const t = wkTaskEditId ? (data.plantingTasks||[]).find(x=>x.id===wkTaskEditId) : null;
+  wkTaskDueManual = !!t;   // when editing, don't auto-overwrite an existing due date
+  wkTaskLinkPre = { plantingId: t&&t.plantingId, bedId: t&&t.bedId };
   document.getElementById("wkTaskTitle").textContent = t ? "Edit task" : "Add task";
+  document.getElementById("wkTaskTypeSeg").style.display = t ? "none" : "";   // type toggle is for new tasks only
   document.getElementById("wkTaskLabel").value = t ? (t.label||"") : "";
+  wkFillTaskLibrary(t ? t.taskId : null);
+  document.getElementById("wkTaskLinkType").value = t ? (t.plantingId?"planting":t.bedId?"bed":"") : "";
   document.getElementById("wkTaskDue").value = t ? (t.due||"") : (wkSelectedDay || wkStartISO || wkISO(new Date()));
   document.getElementById("wkTaskDuration").value = (t && t.duration!=null) ? t.duration : "";
   const curAssignee = t ? (t.assignee||"") : "";
@@ -8091,10 +8155,80 @@ function wkTaskOpen(id){
     + assigneeChoices.map(a=>`<option value="${esc(a)}"${a===curAssignee?" selected":""}>${esc(a)}</option>`).join("")
     + `<option value="__new__">+ Add new…</option>`;
   document.getElementById("wkTaskDelete").style.display = t ? "" : "none";
+  // apply the type (library if the existing task references one) without re-entering the spray branch
+  wkTaskType = t && t.taskId ? "library" : "quick";
+  document.querySelectorAll("#wkTaskTypeSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.tasktype===wkTaskType?"true":"false"));
+  document.getElementById("wkTaskLabelField").style.display = wkTaskType==="library" ? "none" : "";
+  document.getElementById("wkTaskLibField").style.display = wkTaskType==="library" ? "" : "none";
+  wkFillTaskLink();
   document.getElementById("wkTaskModal").classList.add("open");
-  document.getElementById("wkTaskLabel").focus();
+  if(wkTaskType!=="library") document.getElementById("wkTaskLabel").focus();
 }
 function wkTaskClose(){ wkTaskEditId=null; document.getElementById("wkTaskModal").classList.remove("open"); }
+// Quick / Library / Spray chooser. Spray isn't really a task type — it hands straight off to the
+// spray planner (a scheduled spray is a Planned Spray Application, not a Planting Task).
+function wkSetTaskType(type){
+  if(type==="spray"){ wkTaskClose(); sprayOpenPlan(null); return; }
+  wkTaskType=type;
+  document.querySelectorAll("#wkTaskTypeSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.tasktype===type?"true":"false"));
+  document.getElementById("wkTaskLabelField").style.display = type==="library" ? "none" : "";
+  document.getElementById("wkTaskLibField").style.display = type==="library" ? "" : "none";
+  if(type==="library") wkFillTaskLibrary(document.getElementById("wkTaskLibSelect").value||null);
+  wkTaskAutoDue();
+}
+function wkFillTaskLibrary(preId){
+  const sel=document.getElementById("wkTaskLibSelect");
+  const byCat={};
+  (data.tasks||[]).forEach(t=>{ (byCat[t.category||"Other"] ||= []).push(t); });
+  let html=`<option value="">— pick a task —</option>`;
+  Object.keys(byCat).sort().forEach(cat=>{
+    html+=`<optgroup label="${esc(cat)}">`
+      + byCat[cat].slice().sort((a,b)=>a.name.localeCompare(b.name))
+          .map(t=>`<option value="${t.id}"${t.id===preId?" selected":""}>${esc(t.name)}</option>`).join("")
+      + `</optgroup>`;
+  });
+  sel.innerHTML=html;
+}
+// Populate the planting/bed picker for the current "Link to" choice, preselecting the edited task's link.
+function wkFillTaskLink(){
+  const type=document.getElementById("wkTaskLinkType").value;
+  const field=document.getElementById("wkTaskLinkField");
+  const sel=document.getElementById("wkTaskLinkSelect");
+  const lbl=document.getElementById("wkTaskLinkLbl");
+  if(!type){ field.style.display="none"; sel.innerHTML=""; wkTaskAutoDue(); return; }
+  field.style.display="";
+  if(type==="bed"){ lbl.textContent="Bed"; trpFillBedSelect(sel, wkTaskLinkPre.bedId); }
+  else {
+    lbl.textContent="Planting"; sel.innerHTML="";
+    const byCrop={};
+    (data.plantings||[]).forEach(p=>{ (byCrop[p.crop||"—"] ||= []).push(p); });
+    Object.keys(byCrop).sort((a,b)=>a.localeCompare(b)).forEach(crop=>{
+      const og=document.createElement("optgroup"); og.label=crop;
+      byCrop[crop].sort((a,b)=>String(a.sow||"").localeCompare(String(b.sow||""))).forEach(p=>{
+        const bed=(data.beds.find(b=>b.id===p.bedIds[0])||{}).name||"—";
+        const o=document.createElement("option"); o.value=p.id;
+        o.textContent=`${p.variety?p.variety+" · ":""}${bed}${p.sow?" · "+fmt(p.sow):""}`;
+        if(p.id===wkTaskLinkPre.plantingId) o.selected=true;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+  }
+  wkTaskAutoDue();
+}
+// When a library task is tied to a planting, seed the due date from the task's anchor + offset
+// against that planting's real dates (reusing the same resolver the Add-planting Tasks tab uses).
+function wkTaskAutoDue(){
+  if(wkTaskType!=="library" || wkTaskDueManual) return;
+  const taskId=document.getElementById("wkTaskLibSelect").value;
+  if(!taskId || document.getElementById("wkTaskLinkType").value!=="planting") return;
+  const p=(data.plantings||[]).find(x=>x.id===document.getElementById("wkTaskLinkSelect").value);
+  if(!p) return;
+  const sched=effectiveScheduleForTask(p.cropId, null, taskId); if(!sched) return;
+  const anchorD=anchorDateFor({sow:p.sow, tp:p.tp, h1:p.h1, h2:p.h2}, sched.anchor||"Transplant");
+  if(!anchorD) return;
+  document.getElementById("wkTaskDue").value = wkISO(wkAddDays(wkParse(anchorD), sched.offset||0));
+}
 document.getElementById("wkTaskAssignee").addEventListener("change",e=>{
   if(e.target.value!=="__new__") return;
   const name=(prompt("New assignee name:")||"").trim();
@@ -8103,10 +8237,30 @@ document.getElementById("wkTaskAssignee").addEventListener("change",e=>{
     e.target.insertBefore(opt, e.target.lastElementChild);
   }else e.target.value="";
 });
+document.querySelectorAll("#wkTaskTypeSeg button").forEach(b=>b.addEventListener("click",()=>wkSetTaskType(b.dataset.tasktype)));
+document.getElementById("wkTaskLibSelect").addEventListener("change", wkTaskAutoDue);
+document.getElementById("wkTaskLinkType").addEventListener("change", wkFillTaskLink);
+document.getElementById("wkTaskLinkSelect").addEventListener("change", wkTaskAutoDue);
+document.getElementById("wkTaskDue").addEventListener("change", ()=>{ wkTaskDueManual=true; });
 async function wkTaskSave(){
-  const label=document.getElementById("wkTaskLabel").value.trim();
+  const F=CFG.f;
   const due=document.getElementById("wkTaskDue").value;
-  if(!label || !due){ alert("A task name and due date are both required."); return; }
+  const linkType=document.getElementById("wkTaskLinkType").value;
+  const linkId=document.getElementById("wkTaskLinkSelect").value;
+  const plantingId = linkType==="planting" ? (linkId||null) : null;
+  const bedId = linkType==="bed" ? (linkId||null) : null;
+  let taskId=null, label;
+  if(wkTaskType==="library"){
+    taskId=document.getElementById("wkTaskLibSelect").value;
+    if(!taskId){ alert("Pick a library task."); return; }
+    const lib=ctTaskById(taskId);
+    const crop = plantingId ? (data.plantings.find(p=>p.id===plantingId)||{}).crop : "";
+    label = [crop, lib?lib.name:"Task"].filter(Boolean).join(" — ");
+  }else{
+    label=document.getElementById("wkTaskLabel").value.trim();
+    if(!label){ alert("Enter a task name."); return; }
+  }
+  if(!due){ alert("A due date is required."); return; }
   const durRaw=document.getElementById("wkTaskDuration").value;
   const duration = durRaw===""?null:Math.max(0, Number(durRaw));
   const assigneeSel=document.getElementById("wkTaskAssignee").value;
@@ -8114,20 +8268,22 @@ async function wkTaskSave(){
   const btn=document.getElementById("wkTaskSaveBtn"); btn.disabled=true;
   try{
     if(wkTaskEditId){
-      // editing: explicit null clears a field the user just blanked out (matches wkSetAssigneeFor).
-      const fields={ [CFG.f.pt_label]:label, [CFG.f.pt_due]:due,
-        [CFG.f.pt_assignee]:assignee||null, [CFG.f.pt_duration]:duration };
+      // editing: explicit []/null clears a link/field the user just cleared.
+      const fields={ [F.pt_label]:label, [F.pt_due]:due, [F.pt_assignee]:assignee||null, [F.pt_duration]:duration,
+        [F.pt_task]: taskId?[taskId]:[], [F.pt_planting]: plantingId?[plantingId]:[], [F.pt_bed]: bedId?[bedId]:[] };
       await atPatch(CFG.farmBase, CFG.tables.plantingTasks, wkTaskEditId, fields);
       const t=(data.plantingTasks||[]).find(x=>x.id===wkTaskEditId);
-      if(t) Object.assign(t, {label, due, assignee, duration});
+      if(t) Object.assign(t, {label, due, assignee, duration, taskId:taskId||null, plantingId:plantingId||null, bedId:bedId||null});
     }else{
-      // creating: omit empty optional fields rather than sending null (matches materializePlantingTasksFor).
-      const fields={ [CFG.f.pt_label]:label, [CFG.f.pt_due]:due };
-      if(assignee) fields[CFG.f.pt_assignee]=assignee;
-      if(duration!=null) fields[CFG.f.pt_duration]=duration;
+      const fields={ [F.pt_label]:label, [F.pt_due]:due };
+      if(assignee) fields[F.pt_assignee]=assignee;
+      if(duration!=null) fields[F.pt_duration]=duration;
+      if(taskId) fields[F.pt_task]=[taskId];
+      if(plantingId) fields[F.pt_planting]=[plantingId];
+      if(bedId) fields[F.pt_bed]=[bedId];
       const [rec]=await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [fields]);
-      data.plantingTasks.push({id:rec.id, plantingId:null, taskId:null, label, anchor:"", offset:null,
-        due, done:false, start:null, repeat:null, until:"", duration, assignee, ttId:"", gcalId:""});
+      data.plantingTasks.push({id:rec.id, plantingId:plantingId||null, taskId:taskId||null, label, anchor:"", offset:null,
+        due, done:false, start:null, repeat:null, until:"", duration, assignee, ttId:"", gcalId:"", bedId:bedId||null});
     }
     wkTaskClose(); buildWeekPlanner();
   }catch(e){ alert("Couldn't save that task: "+e.message); }
@@ -8156,7 +8312,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElem
 // free — dragging one onto a day column reschedules it into the current week (wkCommitOverdueMove).
 function wkOdSidebarItemHTML(r){
   const isMs=r.kind==="milestone";
-  const pill=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
+  const pill=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.kind==="spray"?wkSprayPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
   const lock=!!r.msLocked;
   const ctxTxt = r.manual ? (r.t.assignee?esc(r.t.assignee):"")
     : `${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}`;
@@ -8255,6 +8411,11 @@ async function wkToggleDone(id,val){
 // recognised from the row id rather than needing a data-kind on every render site. Ticking runs
 // the same linear-stepper contract as a planting milestone, via buildTarpPatch.
 function wkIsTarpRowId(id){ return typeof id==="string" && id.startsWith("tarp:"); }
+// Scheduled sprays are synthetic rows keyed "spray:<applicationId>" (see wkCollect). Ticking one
+// doesn't "complete" it inline — it opens the log prefilled from the plan (which flips the record to
+// Logged and drops it out of here on the next rebuild). The caller resets the checkbox first.
+function wkIsSprayRowId(id){ return typeof id==="string" && id.startsWith("spray:"); }
+function wkToggleSpray(rowId){ sprayOpenLogFromPlan(rowId.slice(6)); return Promise.resolve(); }
 async function wkToggleTarp(rowId){
   const [,tarpId,step]=rowId.split(":");
   const t=(data.tarps||[]).find(x=>x.id===tarpId); if(!t) return;
@@ -8628,6 +8789,7 @@ function wkSetOdCollapsed(val){
     const ds = cb.dataset.id ? cb.dataset : (cb.closest(".wk-task")||{}).dataset || {};
     if(ds.kind==="milestone") wkToggleMilestone(ds.plid, ds.df);
     else if(wkIsTarpRowId(ds.id)) wkToggleTarp(ds.id);
+    else if(wkIsSprayRowId(ds.id)){ cb.checked=false; wkToggleSpray(ds.id); } // opens the log, doesn't tick inline
     else if(ds.id) wkToggleDone(ds.id, cb.checked);
   });
   wrap.addEventListener("click",e=>{
@@ -8640,6 +8802,7 @@ function wkSetOdCollapsed(val){
       // planner-shared.js) open their own editor instead of the (nonexistent) planting panel.
       if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
       else if(main.dataset.pl.startsWith("tarp:")) wkOpenTarp(main.dataset.pl.slice(5));
+      else if(main.dataset.pl.startsWith("spray:")) sprayOpenPlan(main.dataset.pl.slice(6));
       else wkOpenPlanting(main.dataset.pl);
       return;
     }
@@ -8651,6 +8814,9 @@ function wkSetOdCollapsed(val){
     if(mem){
       const cb=mem.querySelector(".wk-check");
       if(cb){
+        // A scheduled spray has no assignee/reschedule context menu — right-click just opens its
+        // plan editor, same as a left-click on the row.
+        if(wkIsSprayRowId(cb.dataset.id)){ e.preventDefault(); sprayOpenPlan(cb.dataset.id.slice(6)); return; }
         e.preventDefault();
         // data-id is a real Planting Task id for a task row, but a synthetic id for the derived
         // kinds — "ms:<pid>:<df>" for a milestone, "tarp:<recId>:<step>" for a tarp job (see
@@ -9360,17 +9526,51 @@ function sprayRecMatch(a, q){
 function buildSprayRecords(){
   const body = document.getElementById("sprayRecBody");
   const all = data.sprayApplications||[];
+  const logged = all.filter(a=>a.status!=="Planned");
+  const planned = all.filter(a=>a.status==="Planned")
+    .sort((a,b)=>String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(b.id)); // soonest first
   document.getElementById("sprayRecSummary").textContent =
-    all.length ? `${all.length} record${all.length===1?"":"s"}` : "Spray & fert log";
+    logged.length ? `${logged.length} record${logged.length===1?"":"s"}` : "Spray & fert log";
   if(!all.length){
-    body.innerHTML = `<div class="spray-empty">No sprays logged yet.<br>Tap <b>＋ Log spray</b> to record your first one.</div>`;
+    body.innerHTML = `<div class="spray-empty">No sprays logged yet.<br>Tap <b>＋ Log spray</b> to record one, or <b>＋ Schedule</b> to plan one.</div>`;
     return;
   }
   const q = (document.getElementById("sprayRecSearch").value||"").trim().toLowerCase();
-  const rows = all.filter(a=>sprayRecMatch(a,q));
-  body.innerHTML = rows.length
-    ? rows.map(sprayRecCard).join("")
-    : `<div class="spray-empty">No records match “${esc(q)}”.</div>`;
+  const schedRows = planned.filter(a=>sprayRecMatch(a,q));
+  const logRows = logged.filter(a=>sprayRecMatch(a,q));
+  let html="";
+  if(schedRows.length){
+    html += `<div class="sp-sched-hdr">Scheduled · ${schedRows.length}</div>`
+      + schedRows.map(sprayScheduledCard).join("");
+  }
+  if(logRows.length){
+    if(schedRows.length) html += `<div class="sp-sched-hdr">Logged</div>`;
+    html += logRows.map(sprayRecCard).join("");
+  }
+  body.innerHTML = html || `<div class="spray-empty">No records match “${esc(q)}”.</div>`;
+}
+// A planned/upcoming spray — dated ahead, with Log + Edit actions.
+function sprayScheduledCard(a){
+  const crops = sprayCropsLabel(a.cropIds), beds = sprayBedsLabel(a.bedIds);
+  const title = crops || a.locationNote || "Spray";
+  const method = a.method ? `<span class="sc-badge">${esc(a.method)}</span>` : "";
+  const prods = (a.items||[]).length ? `<div class="sc-prods">${a.items.map(sprayProdChip).join("")}</div>` : "";
+  const metaBits = [
+    beds ? `<span class="k">Beds</span><span class="v">${esc(beds)}</span>` : "",
+    a.reason ? `<span class="k">Reason</span><span class="v">${esc(a.reason)}</span>` : "",
+  ].filter(Boolean).map(x=>`<div class="sc-line">${x}</div>`).join("");
+  return `<div class="spray-card sp-sched" data-app="${a.id}" data-planned="1">
+    <div class="sc-top">
+      <span class="sc-date">${fmt(a.date)}</span>
+      <span class="sc-title">${esc(title)}</span>
+      <span class="sc-badge sc-planned">Scheduled</span>${method}
+    </div>
+    ${prods}${metaBits}
+    <div class="sp-sched-actions">
+      <button class="btn-primary" data-sched-log="${a.id}">Log now</button>
+      <button class="btn-ghost" data-sched-edit="${a.id}">Edit</button>
+    </div>
+  </div>`;
 }
 function sprayRecCard(a){
   const crops = sprayCropsLabel(a.cropIds);
@@ -9463,11 +9663,16 @@ const SPRAY_BY_KEY = "roseberry_spray_by";
 const $s = id => document.getElementById(id);
 let spray = null;   // active entry-form state, or null when closed
 
-function sprayOpen(prefill){
+// The spray overlay runs in three modes:
+//  "log"          — record a spray applied now (Status Logged). The default.
+//  "plan"         — schedule an upcoming spray (Status Planned) → a task in This Week. editId set
+//                   when editing an existing scheduled spray.
+//  "logFromPlan"  — a scheduled spray came due; log what actually happened, flipping it to Logged.
+// sprayResetState + sprayApplyMode + the three sprayOpen* wrappers share one form.
+function sprayResetState(mode){
   spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null,
-            method:"Backpack", whpManual:false };
+            method:"Backpack", whpManual:false, mode:mode||"log", editId:null, followups:[] };
   populateSprayMixSelect();
-  $s("sprayHead").textContent = "Log a spray";
   ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayBedSearch","sprayCropSearch"].forEach(id=>$s(id).value="");
   $s("sprayAmountUnit").value="L";
   $s("sprayDate").value = sprayToday();
@@ -9475,14 +9680,70 @@ function sprayOpen(prefill){
   sprayFillAssignee($s("sprayBy"), localStorage.getItem(SPRAY_BY_KEY) || "");
   $s("sprayFromMix").value = "";
   $s("sprayPhotoThumbs").innerHTML = "";
+  $s("sprayFollowupOn").checked = false; $s("sprayFollowupControls").hidden = true; $s("sprayFollowupList").innerHTML = "";
   $s("sprayBedSuggest").hidden = true; $s("sprayCropSuggest").hidden = true;
   $s("sprayErr").hidden = true;
   setSprayMethod("Backpack");
+}
+function sprayApplyMode(){
+  const m = spray.mode, isPlan = m==="plan", editing = !!spray.editId;
+  $s("sprayHead").textContent = isPlan ? (editing?"Edit scheduled spray":"Schedule a spray")
+    : m==="logFromPlan" ? "Log this spray" : "Log a spray";
+  $s("spraySub").textContent = isPlan
+    ? "Plan an upcoming spray — it shows as a task in This Week."
+    : "Record what went on, where — for the organic record.";
+  $s("spraySave").textContent = isPlan ? "Schedule spray" : "Save record";
+  $s("sprayPhotoSection").style.display = isPlan ? "none" : "";          // no photos of a future spray
+  $s("sprayLogAsPlannedBtn").style.display = m==="logFromPlan" ? "" : "none";
+  $s("sprayFollowupSection").style.display = editing ? "none" : "";       // follow-ups only for a fresh record
+}
+// Load an existing application's data into the open form (edit-plan / log-from-plan).
+function sprayPrefillFromApp(a){
+  (a.bedIds||[]).forEach(id=>spray.beds.add(id));
+  (a.cropIds||[]).forEach(id=>spray.cropIds.add(id));
+  spray.items = (a.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||""}));
+  if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
+  spray.fromMixId = a.fromMixId||null;
+  spray.method = a.method || "Backpack";
+  $s("sprayLocNote").value = a.locationNote||"";
+  $s("sprayNotes").value = a.notes||"";
+  $s("sprayAmount").value = a.amount!=null?a.amount:"";
+  $s("sprayAmountUnit").value = a.amountUnit||"L";
+  sprayFillReason($s("sprayReason"), a.reason||"");
+  sprayFillAssignee($s("sprayBy"), a.sprayedBy||localStorage.getItem(SPRAY_BY_KEY)||"");
+  if(a.whp!=null){ $s("sprayWhp").value=a.whp; spray.whpManual=true; }
+  setSprayMethod(spray.method);
+}
+function sprayFinishOpen(focusBeds){
+  sprayApplyMode();
+  renderSprayBedChips(); renderSprayCropChips(); renderSprayItems(); updateSprayWhp(); renderSprayFollowups();
+  $s("sprayModal").classList.add("open");
+  if(focusBeds) setTimeout(()=>$s("sprayBedSearch").focus(), 40);
+}
+function sprayOpen(prefill){
+  sprayResetState("log");
   if(prefill && prefill.mixId){ $s("sprayFromMix").value = prefill.mixId; applyMixToForm(prefill.mixId); }
   else spray.items = [{ productId:"", rate:null, unit:"" }];
-  renderSprayBedChips(); renderSprayCropChips(); renderSprayItems(); updateSprayWhp();
-  $s("sprayModal").classList.add("open");
-  setTimeout(()=>$s("sprayBedSearch").focus(), 40);
+  sprayFinishOpen(true);
+}
+// Schedule a new spray (id=null) or edit an existing scheduled one.
+function sprayOpenPlan(id){
+  sprayResetState("plan");
+  const a = id ? (data.sprayApplications||[]).find(x=>x.id===id) : null;
+  spray.editId = a ? a.id : null;
+  if(a){ sprayPrefillFromApp(a); $s("sprayDate").value = a.date || sprayToday(); }
+  else spray.items = [{ productId:"", rate:null, unit:"" }];
+  sprayFinishOpen(!a);
+}
+// A scheduled spray came due — log what actually happened (flips it to Logged on save).
+function sprayOpenLogFromPlan(id){
+  const a = (data.sprayApplications||[]).find(x=>x.id===id);
+  if(!a) return;
+  sprayResetState("logFromPlan");
+  spray.editId = a.id;
+  sprayPrefillFromApp(a);
+  $s("sprayDate").value = sprayToday();   // the actual application happens today
+  sprayFinishOpen(false);
 }
 function sprayClose(){ $s("sprayModal").classList.remove("open"); spray=null; }
 
@@ -9643,13 +9904,11 @@ function applyMixToForm(mixId){
 }
 function sprayShowErr(msg){ const el=$s("sprayErr"); el.textContent=msg; el.hidden=false; el.scrollIntoView({block:"nearest"}); }
 
-async function spraySaveRecord(){
-  const items=spray.items.filter(it=>it.productId);
+// Build the Spray Applications field object from the current form (shared by create/patch/follow-ups).
+function sprayBuildFields({date, status, followUpOf}){
+  const F=CFG.f;
   const bedIds=[...spray.beds], cropIds=[...spray.cropIds];
   const locNote=$s("sprayLocNote").value.trim();
-  if(!bedIds.length && !locNote) return sprayShowErr("Add at least one bed, or a location note.");
-  if(!items.length) return sprayShowErr("Add at least one product.");
-  const date=$s("sprayDate").value || sprayToday();
   const by=$s("sprayBy").value.trim();
   const amount=$s("sprayAmount").value===""?null:Number($s("sprayAmount").value);
   const reason=$s("sprayReason").value.trim();
@@ -9657,38 +9916,111 @@ async function spraySaveRecord(){
   const notes=$s("sprayNotes").value.trim();
   const cropsLabel=cropIds.map(id=>data.crops[id]).filter(Boolean).join(", ");
   const bedsLabel=sprayBedsLabel(bedIds);
-  const name=[date, cropsLabel||locNote||"spray", bedsLabel.split(",")[0].trim()].filter(Boolean).join(" · ").slice(0,120);
+  const name=[date, cropsLabel||locNote||"spray", (bedsLabel.split(",")[0]||"").trim()].filter(Boolean).join(" · ").slice(0,120);
+  const f={ [F.sap_name]:name, [F.sap_date]:date, [F.sap_method]:spray.method, [F.sap_status]:status };
+  if(by) f[F.sap_by]=by;
+  if(bedIds.length) f[F.sap_beds]=bedIds;
+  if(cropIds.length) f[F.sap_crops]=cropIds;
+  if(locNote) f[F.sap_locNote]=locNote;
+  if(spray.fromMixId) f[F.sap_fromMix]=[spray.fromMixId];
+  if(amount!=null) f[F.sap_amount]=amount;
+  f[F.sap_amountUnit]=$s("sprayAmountUnit").value;
+  if(reason) f[F.sap_reason]=reason;
+  if(whp!=null) f[F.sap_whp]=whp;
+  if(notes) f[F.sap_notes]=notes;
+  if(followUpOf) f[F.sap_followUp]=[followUpOf];
+  return f;
+}
+function sprayItemFieldsFor(appId, dateLabel){
   const F=CFG.f;
-  const fields={ [F.sap_name]:name, [F.sap_date]:date, [F.sap_method]:spray.method };
-  if(by) fields[F.sap_by]=by;
-  if(bedIds.length) fields[F.sap_beds]=bedIds;
-  if(cropIds.length) fields[F.sap_crops]=cropIds;
-  if(locNote) fields[F.sap_locNote]=locNote;
-  if(spray.fromMixId) fields[F.sap_fromMix]=[spray.fromMixId];
-  if(amount!=null) fields[F.sap_amount]=amount;
-  fields[F.sap_amountUnit]=$s("sprayAmountUnit").value;
-  if(reason) fields[F.sap_reason]=reason;
-  if(whp!=null) fields[F.sap_whp]=whp;
-  if(notes) fields[F.sap_notes]=notes;
-  const btn=$s("spraySave"); btn.disabled=true; btn.textContent="Saving…"; $s("sprayErr").hidden=true;
-  try{
-    const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayApplications, [fields]);
-    const itemFields=items.map((it,i)=>{
-      const f={ [F.sai_app]:[rec.id], [F.sai_product]:[it.productId], [F.sai_order]:i,
-                [F.sai_name]:`${date} — ${sprayProductName(it.productId)}` };
-      if(it.rate!=null && it.rate!=="") f[F.sai_rate]=Number(it.rate);
-      if(it.unit) f[F.sai_unit]=it.unit;
-      return f;
-    });
+  return spray.items.filter(it=>it.productId).map((it,i)=>{
+    const f={ [F.sai_app]:[appId], [F.sai_product]:[it.productId], [F.sai_order]:i,
+              [F.sai_name]:`${dateLabel} — ${sprayProductName(it.productId)}` };
+    if(it.rate!=null && it.rate!=="") f[F.sai_rate]=Number(it.rate);
+    if(it.unit) f[F.sai_unit]=it.unit;
+    return f;
+  });
+}
+async function sprayCreateFollowups(mainAppId){
+  if(!$s("sprayFollowupOn").checked) return;
+  const dates=(spray.followups||[]).map(f=>f.date).filter(Boolean);
+  for(const d of dates){
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayApplications, [sprayBuildFields({date:d, status:"Planned", followUpOf:mainAppId})]);
+    const itemFields=sprayItemFieldsFor(rec.id, d);
     if(itemFields.length) await atCreate(CFG.farmBase, CFG.tables.sprayApplicationItems, itemFields);
-    if(typeof sprayUploadPhotos==="function") await sprayUploadPhotos(rec.id);
+  }
+}
+function sprayAfterSaveView(){
+  const active=document.querySelector(".view.active");
+  if(active && active.id==="view-week") buildWeekPlanner();
+  else showView("sprayrec");
+}
+
+async function spraySaveRecord(){
+  const items=spray.items.filter(it=>it.productId);
+  const bedIds=[...spray.beds];
+  const locNote=$s("sprayLocNote").value.trim();
+  if(!bedIds.length && !locNote) return sprayShowErr("Add at least one bed, or a location note.");
+  if(!items.length) return sprayShowErr("Add at least one product.");
+  const date=$s("sprayDate").value || sprayToday();
+  const by=$s("sprayBy").value.trim();
+  const status = spray.mode==="plan" ? "Planned" : "Logged";
+  const fields = sprayBuildFields({date, status});
+  const btn=$s("spraySave"); btn.disabled=true; const origLabel=btn.textContent; btn.textContent="Saving…"; $s("sprayErr").hidden=true;
+  try{
+    let appId;
+    if(spray.editId){
+      // editing an existing scheduled spray (plan-edit), or logging one that came due (logFromPlan)
+      await atPatch(CFG.farmBase, CFG.tables.sprayApplications, spray.editId, fields);
+      const existing=(data.sprayApplications||[]).find(x=>x.id===spray.editId);
+      const oldItemIds=((existing&&existing.items)||[]).map(it=>it.id);
+      if(oldItemIds.length) await atDelete(CFG.farmBase, CFG.tables.sprayApplicationItems, oldItemIds);
+      appId=spray.editId;
+    }else{
+      const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayApplications, [fields]);
+      appId=rec.id;
+    }
+    const itemFields=sprayItemFieldsFor(appId, date);
+    if(itemFields.length) await atCreate(CFG.farmBase, CFG.tables.sprayApplicationItems, itemFields);
+    if(spray.mode!=="plan" && typeof sprayUploadPhotos==="function") await sprayUploadPhotos(appId);  // no photos of a future plan
+    if(!spray.editId) await sprayCreateFollowups(appId);
     if(by) localStorage.setItem(SPRAY_BY_KEY, by);
     sprayClose();
     await loadAll();
-    showView("sprayrec");
+    sprayAfterSaveView();
   }catch(e){
     sprayShowErr("Couldn't save: "+e.message);
-  }finally{ btn.disabled=false; btn.textContent="Save record"; }
+  }finally{ btn.disabled=false; btn.textContent=origLabel; }
+}
+// Complete a scheduled spray exactly as planned — flip it to Logged, keeping the planned date/details.
+async function sprayLogAsPlanned(){
+  if(!spray || spray.mode!=="logFromPlan" || !spray.editId) return;
+  const btn=$s("sprayLogAsPlannedBtn"); btn.disabled=true; const o=btn.textContent; btn.textContent="Logging…";
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.sprayApplications, spray.editId, {[CFG.f.sap_status]:"Logged"});
+    sprayClose(); await loadAll(); sprayAfterSaveView();
+  }catch(e){ sprayShowErr("Couldn't log: "+e.message); btn.disabled=false; btn.textContent=o; }
+}
+// Follow-up date list: interval × count from the main date, each editable; edits survive regen.
+function sprayRecomputeFollowups(){
+  const every=Math.max(1, Number($s("sprayFollowupEvery").value)||7);
+  const count=Math.max(0, Math.min(12, Number($s("sprayFollowupCount").value)||0));
+  const base=$s("sprayDate").value || sprayToday();
+  const prev=spray.followups||[];
+  spray.followups=[];
+  for(let i=1;i<=count;i++){
+    const def=PlannerShared.wkISO(PlannerShared.wkAddDays(PlannerShared.wkParse(base), every*i));
+    const keep = prev[i-1] && prev[i-1].edited;
+    spray.followups.push({date: keep?prev[i-1].date:def, edited: !!keep});
+  }
+  renderSprayFollowups();
+}
+function renderSprayFollowups(){
+  const on=$s("sprayFollowupOn").checked;
+  $s("sprayFollowupControls").hidden=!on;
+  $s("sprayFollowupList").innerHTML = on
+    ? (spray.followups||[]).map((f,i)=>`<div class="sp-fu-item"><span class="sp-fu-n">#${i+1}</span><input type="date" data-fu="${i}" value="${f.date}"></div>`).join("")
+    : "";
 }
 
 /* ---------- Photos ---------- */
@@ -9805,8 +10137,20 @@ async function sprayUploadPhotos(recordId){
   });
 
   $s("sprayWhp").addEventListener("input",()=>{ spray.whpManual=true; renderSpraySafe(); });
-  $s("sprayDate").addEventListener("change", renderSpraySafe);
+  $s("sprayDate").addEventListener("change",()=>{ renderSpraySafe(); if($s("sprayFollowupOn").checked) sprayRecomputeFollowups(); });
   $s("spraySave").onclick=spraySaveRecord;
+  $s("sprayLogAsPlannedBtn").onclick=sprayLogAsPlanned;
+  // follow-ups
+  $s("sprayFollowupOn").addEventListener("change",()=>{
+    if($s("sprayFollowupOn").checked && !(spray.followups||[]).length) sprayRecomputeFollowups();
+    else renderSprayFollowups();
+  });
+  $s("sprayFollowupEvery").addEventListener("input", sprayRecomputeFollowups);
+  $s("sprayFollowupCount").addEventListener("input", sprayRecomputeFollowups);
+  $s("sprayFollowupList").addEventListener("change",(e)=>{
+    const d=e.target.closest("[data-fu]"); if(!d) return;
+    const i=+d.dataset.fu; if(spray.followups[i]){ spray.followups[i].date=d.value; spray.followups[i].edited=true; }
+  });
   $s("spraySaveAsMix").onclick=()=>{ if(typeof sprayMixSaveFrom==="function") sprayMixSaveFrom(); };
   $s("sprayPickMapBtn").onclick=()=>{ if(typeof sprayBedPickerOpen==="function") sprayBedPickerOpen(); };
   $s("sprayPhotoInput").addEventListener("change",(e)=>{ if(typeof sprayAddPhotos==="function") sprayAddPhotos(e.target.files); e.target.value=""; });
@@ -10109,7 +10453,14 @@ function sprayPickSearchSuggest(q){
   document.getElementById("sprayMixSearchClear")?.addEventListener("click", ()=>{ mixSearch.value=""; buildSprayMixes(); });
   // Entry / editor overlays are added in later phases — guard so the buttons are inert until then.
   document.getElementById("sprayLogBtn")?.addEventListener("click", ()=>{ if(typeof sprayOpen==="function") sprayOpen(); });
+  document.getElementById("sprayScheduleBtn")?.addEventListener("click", ()=>{ if(typeof sprayOpenPlan==="function") sprayOpenPlan(null); });
   document.getElementById("sprayMixNewBtn")?.addEventListener("click", ()=>{ if(typeof sprayMixOpen==="function") sprayMixOpen(null); });
+  // Records "Scheduled" section actions (delegated): Log the scheduled spray, or edit the plan.
+  document.getElementById("sprayRecBody")?.addEventListener("click", (e)=>{
+    const log=e.target.closest("[data-sched-log]"); if(log){ sprayOpenLogFromPlan(log.dataset.schedLog); return; }
+    const edit=e.target.closest("[data-sched-edit]"); if(edit){ sprayOpenPlan(edit.dataset.schedEdit); return; }
+    const card=e.target.closest(".spray-card[data-app]"); if(card && card.dataset.planned==="1") sprayOpenPlan(card.dataset.app);
+  });
   // Mix card action buttons (delegated) — handlers wired in the Saved-mixes phase.
   document.getElementById("sprayMixBody")?.addEventListener("click", (e)=>{
     const t=e.target.closest("[data-mix-star],[data-mix-use],[data-mix-edit],[data-mix-dup],[data-mix-del]");
