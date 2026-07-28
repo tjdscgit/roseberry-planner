@@ -153,6 +153,7 @@
      them were missing for a long time and only looked fine because their content happened to be
      short enough to fit. If you add a view using .cr-wrap, add it here too. */
   #view-crops.active,#view-beds.active,#view-seedbook.active,#view-outlets.active,
+  #view-whiteboard.active,
   #view-misc.active,#view-tasklib.active,#view-croptasks.active{display:flex;flex-direction:column}
   .cr-wrap{flex:1 1 auto;overflow:auto;padding:.4rem 1.2rem 2rem}
   /* Mobile-only crop -> settings -> variety drill-down (replaces the grid, see buildCrMobileList) */
@@ -568,7 +569,7 @@
     border-left:1px solid var(--line-2);background:var(--paper-2);transition:flex-basis .15s ease}
   #cmUnassigned.collapsed{flex:0 0 40px}
   #cmUnassigned.collapsed .cm-un-title,#cmUnassigned.collapsed .cm-un-n,
-  #cmUnassigned.collapsed .cm-un-body{display:none}
+  #cmUnassigned.collapsed .cm-un-body,#cmUnassigned.collapsed .cm-un-auto-btn{display:none}
   #cmUnassigned.collapsed .cm-un-arrow{transform:rotate(180deg)}
   .cm-un-head{display:flex;align-items:center;gap:.4rem;padding:.5rem .55rem;cursor:pointer;
     border-bottom:1px solid var(--line-2);background:var(--paper)}
@@ -577,6 +578,31 @@
     letter-spacing:.08em;color:var(--ink-2);white-space:nowrap}
   .cm-un-n{font-family:var(--mono);font-size:.66rem;color:var(--clay);font-weight:700;margin-left:auto}
   .cm-un-body{flex:1 1 auto;overflow-y:auto;padding:.55rem}
+  .cm-un-auto-btn{display:block;width:calc(100% - 1.1rem);margin:.55rem .55rem 0;
+    padding:.4rem .5rem;font-size:.7rem;text-align:center}
+  /* ---- Bulk auto-place: priorities panel + pending (not-yet-applied) map overlay ---- */
+  .cm-bulk-summary{font-size:.74rem;color:var(--ink-2);margin-bottom:.6rem;line-height:1.35}
+  .cm-bulk-weights{display:flex;flex-direction:column;gap:.55rem;margin-bottom:.7rem}
+  .cm-bulk-weight-row{display:flex;flex-direction:column;gap:.15rem}
+  .cm-bulk-weight-row label{display:flex;justify-content:space-between;font-family:var(--mono);
+    font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2)}
+  .cm-bulk-weight-row input[type="range"]{width:100%}
+  .cm-bulk-actions{display:flex;flex-direction:column;gap:.4rem;margin-top:.3rem}
+  .cm-bulk-actions .btn-primary,.cm-bulk-actions .btn-ghost{width:100%;text-align:center}
+  .cm-bulk-skip{margin-top:.8rem;padding-top:.6rem;border-top:1px solid var(--line)}
+  .cm-bulk-skip-h{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-2);margin-bottom:.35rem}
+  .cm-bulk-skip-row{font-size:.72rem;color:var(--ink-2);margin-bottom:.3rem;line-height:1.3}
+  /* Pending proposal bars — dashed + translucent so they read as "not real yet" against the
+     solid .cm-bar occupants; draggable to a different bed column to override (see dragPendingIndex). */
+  .cm-bar-pending{position:absolute;left:2px;right:2px;border-radius:3px;cursor:grab;color:#fff;
+    padding:2px 1px;overflow:hidden;z-index:1;opacity:.62;
+    border:1px dashed rgba(255,255,255,.85)}
+  .cm-bar-pending:active{cursor:grabbing}
+  .cm-bar-pending .cm-bar-l{position:relative;z-index:2;font-family:var(--mono);font-size:.52rem;
+    line-height:1;white-space:nowrap;writing-mode:vertical-rl;text-orientation:mixed}
+  .cm-bar-pending-score{position:absolute;left:1px;right:1px;top:1px;font-family:var(--mono);
+    font-size:.5rem;text-align:center;background:rgba(0,0,0,.35);border-radius:2px;pointer-events:none}
   .cm-block{min-width:0;padding:.5rem;border-radius:10px;transition:background .15s}
   .cm-block-h{font-family:var(--mono);font-weight:700;font-size:1.05rem;margin:0 0 .35rem;
     padding:.15rem .4rem;border-radius:5px}
@@ -1062,6 +1088,10 @@
        above), give them their own guaranteed full-width row so they're always reachable. */
     #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.5rem}
     #view-week .wk-add-group button{flex:1 1 0}
+    /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
+       @media(max-width:760px) block at the very end of this stylesheet. The field-walk base rules
+       are declared after this block, so at equal specificity they would win the cascade and
+       override anything written here. */
   }
   @media(pointer:coarse){
     .cm-bar{min-height:14px}   /* shortest bars render 6px tall (Math.max(6,...) in buildCropMap) — keep them tappable */
@@ -1085,6 +1115,21 @@
            border:1px solid var(--line);border-radius:999px;padding:.05rem .45rem;margin-left:.4rem}
   .sb-pill.warn{color:var(--clay);border-color:var(--clay)}
   @media(max-width:760px){ .sb-fields input{width:100%} .sb-fields label{flex:1 1 100%} }
+
+  /* Harvest whiteboard — same card shape as the Seed book, plus the write-mode row. Reuses
+     .sb-card/.sb-fields/.sb-match wholesale; only the extras below are new. */
+  .wb-head{display:flex;flex-wrap:wrap;gap:.5rem .9rem;align-items:flex-end;
+           border:1px solid var(--line);border-radius:10px;padding:.6rem .8rem;margin-bottom:.9rem;max-width:820px}
+  .wb-head label{display:flex;flex-direction:column;gap:.15rem;font-size:.72rem}
+  .wb-head label span{text-transform:uppercase;letter-spacing:.06em;opacity:.65}
+  /* the write-mode choice: shown only when a record already holds an Actual for that
+     planting × outlet × week, because that is the only time add-vs-replace can be got wrong */
+  .wb-mode{flex:1 1 100%;display:flex;flex-wrap:wrap;gap:.2rem .9rem;align-items:center;
+           font-size:.75rem;margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--line)}
+  .wb-mode label{display:flex;flex-direction:row;align-items:center;gap:.3rem}
+  .wb-delta{font-family:var(--mono);font-size:.72rem;opacity:.8;flex:1 1 100%}
+  .wb-warn{color:var(--clay);font-size:.73rem;flex:1 1 100%}
+  @media(max-width:760px){ .wb-head label{flex:1 1 100%} .wb-head label select,.wb-head label input{width:100%} }
 
   /* ---------- Spray log ---------- */
   .spray-list,.spray-mix-list{padding:.8rem;display:flex;flex-direction:column;gap:.7rem;
@@ -1226,6 +1271,124 @@
   .sp-pick-count{font-weight:650}
   .sp-pick-crops{color:var(--ink-2);font-size:.86rem;flex:1;min-width:0}
   .sp-pick-foot .spacer{flex:0}
+
+  /* ---------- Field walk ---------- */
+  .fw-top{flex-wrap:wrap;row-gap:.5rem}
+  #fwWalkers{width:11rem;flex:0 1 auto}
+  .fw-warn{margin:.6rem .8rem 0;padding:.5rem .7rem;border:1px solid var(--clay);border-radius:9px;
+    background:color-mix(in srgb,var(--clay) 7%,transparent);color:var(--clay);font-size:.86rem}
+  /* Sync badge. Four states, colour-coded, because the only thing worse than an unsynced note is
+     an unsynced note you don't know about. Always a button — tapping retries the flush. */
+  #fwSyncBadge{margin-left:auto;border-radius:999px;border:1px solid var(--line-2);cursor:pointer;
+    padding:.3rem .7rem;font-size:.8rem;font-family:inherit;background:var(--paper-2);color:var(--ink-2);white-space:nowrap}
+  #fwSyncBadge.fw-sync-pending{border-color:var(--steel);color:var(--steel)}
+  #fwSyncBadge.fw-sync-offline{border-color:var(--sun,var(--clay));color:var(--ink);
+    background:color-mix(in srgb,var(--clay) 10%,transparent)}
+  #fwSyncBadge.fw-sync-err{border-color:var(--clay);color:var(--clay);font-weight:650}
+  /* Unsynced work has to be visible from any tab, not just this one — the drawer FAB is the only
+     chrome that's on screen everywhere on a phone. */
+  .nav-fab[data-fw-pending]{position:relative}
+  .nav-fab[data-fw-pending]::after{content:"";position:absolute;top:6px;right:6px;width:9px;height:9px;
+    border-radius:50%;background:var(--clay);border:1.5px solid var(--paper)}
+
+  .fw-seg{display:none;gap:.4rem;padding:.2rem .8rem .5rem}
+  .fw-seg button{flex:1 1 0;padding:.55rem .9rem;border:1px solid var(--line-2);border-radius:8px;
+    background:var(--paper-2);color:var(--ink-2);font-family:inherit;font-size:.9rem;cursor:pointer}
+  .fw-seg button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:600}
+
+  #fwCols{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:1rem;padding:0 .8rem .8rem;
+    align-items:start}
+  #fwWalkPane{min-width:0}
+  #fwListsPane{min-width:0}
+
+  .fw-quick{position:relative;padding-bottom:.5rem}
+  #fwQuickText{width:100%;resize:vertical;min-height:3.2rem}
+  .fw-quick-row{display:flex;align-items:center;gap:.6rem;margin-top:.45rem}
+  .fw-tags{display:flex;gap:.35rem;flex:1;min-width:0;flex-wrap:wrap}
+  .fw-tag{padding:.3rem .6rem;border:1px solid var(--line-2);border-radius:999px;background:var(--paper-2);
+    color:var(--ink-2);font-family:inherit;font-size:.78rem;cursor:pointer;white-space:nowrap}
+  .fw-tag.on{background:var(--steel);border-color:var(--steel);color:#fff}
+  /* Sub-pills sit indented under the parent row and read quieter, so the two tiers are obviously
+     a hierarchy rather than fourteen equal-weight options. */
+  .fw-subs{margin-top:.35rem;padding-left:.9rem;border-left:2px solid var(--line-2)}
+  .fw-tag.fw-sub{font-size:.75rem;padding:.25rem .55rem}
+  /* A sub backed by a real Tasks-library row — ticking it preselects that task in ＋ Task. */
+  .fw-tag.fw-sub-lib{border-color:var(--steel);color:var(--steel)}
+  .fw-tag.fw-sub-lib.on{color:#fff}
+  /* Advisory, not an error — a second task on the same bed is often legitimate, so this informs
+     rather than blocks (same principle as bed issues flagging but never refusing a planting). */
+  .fw-task-hint{margin-top:.4rem;padding:.4rem .6rem;border:1px solid var(--line-2);border-radius:8px;
+    background:var(--paper-2);font-size:.8rem;color:var(--ink-2);line-height:1.5}
+  .fw-task-hint b{color:var(--ink);font-weight:650}
+  .fw-task-hint .fw-hint-bed{font-family:var(--mono);color:var(--steel)}
+  .fw-task-hint .fw-hint-due{font-family:var(--mono);font-size:.92em}
+  #fwSuggest{top:auto;left:0;right:0;margin-top:.15rem;position:absolute}
+  #fwSuggest button[aria-selected="true"]{background:var(--paper)}
+  #fwSuggest .kind{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-left:.4rem}
+
+  .fw-obs-card{border:1px solid var(--line);border-radius:10px;padding:.6rem .75rem;margin-bottom:.55rem}
+  .fw-obs-card.fw-unsynced{border-style:dashed;border-color:var(--line-2)}
+  .fw-obs-text{white-space:pre-wrap;line-height:1.45}
+  .fw-chip{background:var(--paper-2);border:1px solid var(--line-2);border-radius:6px;
+    padding:.05rem .35rem;font-family:var(--mono);font-size:.85em}
+  .fw-chip-crop{color:var(--ink-2);font-size:.85em}
+  .fw-obs-meta{display:flex;align-items:center;gap:.5rem;margin-top:.45rem;font-size:.78rem;color:var(--ink-2);flex-wrap:wrap}
+  .fw-obs-meta .fw-obs-tag{border:1px solid var(--line-2);border-radius:999px;padding:.05rem .45rem}
+  .fw-obs-meta .fw-obs-task{border:1px solid var(--ok,var(--steel));color:var(--ok,var(--steel));
+    border-radius:999px;padding:.05rem .45rem;cursor:pointer;background:none;font-family:inherit;font-size:1em}
+  .fw-obs-meta .fw-obs-noted{border:1px solid var(--line-2);border-radius:999px;padding:.05rem .45rem}
+  .fw-obs-actions{margin-left:auto;display:flex;gap:.35rem}
+  .fw-obs-actions button{border:none;background:none;cursor:pointer;color:var(--ink-2);
+    font-family:inherit;font-size:.78rem;padding:.15rem .3rem}
+  .fw-obs-actions button:hover{color:var(--clay)}
+  .fw-obs-edit{width:100%;resize:vertical}
+  .fw-obs-empty{color:var(--ink-2);font-size:.9rem;padding:1.2rem .2rem;text-align:center}
+
+  .fw-lists-top{display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap}
+  .fw-list-card{border:1px solid var(--line);border-radius:10px;padding:.6rem .75rem;margin-bottom:.6rem}
+  .fw-list-head{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .fw-list-head .fw-list-name{font-weight:650}
+  .fw-list-count{font-size:.78rem;color:var(--ink-2)}
+  .fw-list-head .fw-list-x{margin-left:auto;border:none;background:none;cursor:pointer;
+    color:var(--ink-2);font-family:inherit;font-size:.8rem}
+  .fw-list-head .fw-list-x:hover{color:var(--clay)}
+  .fw-item{display:flex;align-items:flex-start;gap:.5rem;padding:.35rem 0;border-top:1px solid var(--line);font-size:.9rem}
+  .fw-item:first-of-type{border-top:none}
+  .fw-item input[type=checkbox]{width:auto;margin-top:.15rem;flex:0 0 auto}
+  .fw-item-body{flex:1;min-width:0}
+  .fw-item-bed{font-family:var(--mono);font-size:.85em;color:var(--steel)}
+  .fw-item-crop{color:var(--ink-2);font-size:.85em}
+  .fw-item-done .fw-item-body{opacity:.5;text-decoration:line-through}
+  .fw-item .x{border:none;background:none;cursor:pointer;color:var(--ink-2);font-family:inherit;padding:0 .2rem}
+  .fw-item .x:hover{color:var(--clay)}
+  .fw-item-add{display:flex;gap:.4rem;margin-top:.5rem;position:relative}
+  .fw-item-add input{flex:1;min-width:0}
+  .fw-list-empty{color:var(--ink-2);font-size:.85rem;padding:.4rem 0}
+  .fw-done-toggle{border:none;background:none;cursor:pointer;color:var(--ink-2);font-family:inherit;
+    font-size:.8rem;padding:.3rem 0}
+
+  /* Field walk — phone. This has to sit AFTER the field-walk base rules above, not in the main
+     mobile block up at :1040: these override base rules of equal specificity (#fwCols beats
+     #fwCols), so declaring them earlier in the file would silently lose the cascade and leave the
+     walk pane collapsed to 0px with no way to reach the Lists pane. */
+  @media(max-width:760px){
+    /* The two desktop columns become one pane at a time, picked by #fwSeg. */
+    #fwCols{grid-template-columns:1fr;padding:0 .6rem .6rem}
+    .fw-seg{display:flex}
+    /* The quick-add bar sticks to the top so it stays reachable however far the feed has scrolled.
+       This page gets used one-handed while walking, and hunting for the input is the whole failure. */
+    #fwQuickBar{position:sticky;top:0;z-index:5;background:var(--paper);padding-bottom:.5rem}
+    /* Below 16px iOS Safari force-zooms the whole page when the textarea takes focus, which is
+       genuinely disorienting mid-walk and needs a pinch to undo. Not cosmetic. */
+    #fwQuickText{font-size:16px}
+    #fwTagRow{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    #view-fieldwalk .cm-top{flex-wrap:wrap;row-gap:.4rem}
+    /* Who's walking and the sync badge share the wrapped second row rather than taking one each.
+       Neither is worth a full row of a phone screen on the page whose whole point is that the
+       note input is reachable without scrolling. */
+    .fw-top #fwWalkers{order:5;flex:1 1 8rem;width:auto;min-width:0}
+    .fw-top #fwSyncBadge{order:6;margin-left:0;flex:0 0 auto}
+  }
 </style>
 </head>
 <body>
@@ -1247,10 +1410,12 @@
     <button class="tab" role="tab" aria-selected="false" id="harvestTab" aria-haspopup="true">Harvest ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="miscTab" aria-haspopup="true">Misc ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="sprayTab" aria-haspopup="true">Spray log ▾</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="fieldwalk">Field walk</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
   </nav>
   <div class="tab-dd" id="harvestDropdown" hidden>
     <button type="button" data-view="harvest">Harvest planner</button>
+    <button type="button" data-view="whiteboard">Whiteboard</button>
     <button type="button" data-view="outlets">Sales outlets</button>
     <button type="button" data-view="season">Season</button>
   </div>
@@ -1267,7 +1432,7 @@
   </div>
 
   <!-- Mobile-only: nav[role=tablist] is hidden below 760px (see trailing mobile CSS) in favour of
-       this hamburger bubble + slide-in drawer, which flattens all 9 destinations into one list. -->
+       this hamburger bubble + slide-in drawer, which flattens all 16 destinations into one list. -->
   <button class="icon-btn nav-fab" id="navFab" title="Menu" aria-label="Open menu" aria-expanded="false">☰</button>
   <div class="nav-drawer-backdrop" id="navDrawerBackdrop"></div>
   <aside class="nav-drawer" id="navDrawer">
@@ -1284,6 +1449,9 @@
       <button class="icon-btn" id="gearBtnDrawer" title="Settings">⚙</button>
     </div>
     <button class="nav-drawer-item" data-view="map">Farm map</button>
+    <!-- Field walk sits second deliberately: it's the phone-first page, and burying it partway
+         down a 16-item drawer would cost a scroll every time someone opens it in the paddock. -->
+    <button class="nav-drawer-item" data-view="fieldwalk">Field walk</button>
     <button class="nav-drawer-item" data-view="cropmap">Crop map</button>
     <button class="nav-drawer-item" data-view="timeline">Timeline</button>
     <button class="nav-drawer-item" data-view="crops">Crops</button>
@@ -1292,6 +1460,7 @@
     <button class="nav-drawer-item" data-view="week">This week</button>
     <div class="nav-drawer-sep">Harvest</div>
     <button class="nav-drawer-item" data-view="harvest">Harvest planner</button>
+    <button class="nav-drawer-item" data-view="whiteboard">Whiteboard</button>
     <button class="nav-drawer-item" data-view="outlets">Sales outlets</button>
     <button class="nav-drawer-item" data-view="season">Season</button>
     <div class="nav-drawer-sep">More</div>
@@ -1382,7 +1551,10 @@
             <span class="cm-un-title">Unassigned</span>
             <span class="cm-un-n" id="cmUnCount">0</span>
           </div>
+          <button type="button" class="cm-un-auto-btn btn-ghost" id="cmUnAutoBtn"
+            title="Suggest bed placements for every unassigned planting at once">⚡ Auto-place all</button>
           <div class="cm-un-body" id="cmUnList"></div>
+          <div class="cm-un-body" id="cmBulkPanel" style="display:none"></div>
         </aside>
         <aside class="tl-panel" id="cmPanel"></aside>
       </div>
@@ -1450,26 +1622,26 @@
             </tr>
             <tr>
               <th>Crop</th>
-              <th>Type</th>
-              <th>Method</th>
-              <th>Days&nbsp;in&nbsp;nursery</th>
-              <th>Days&nbsp;to&nbsp;maturity</th>
-              <th>Harvest&nbsp;window</th>
-              <th>Succession&nbsp;gap</th>
-              <th>DTM&nbsp;across&nbsp;the&nbsp;year</th>
-              <th class="cr-divider">Number&nbsp;of&nbsp;rows</th>
-              <th>Row&nbsp;spacing&nbsp;(cm)</th>
-              <th>Plant&nbsp;spacing&nbsp;(cm)</th>
-              <th>Seeder</th>
-              <th class="cr-divider">Unit</th>
-              <th>Number&nbsp;/&nbsp;unit</th>
-              <th>Price</th>
-              <th>Yield&nbsp;/&nbsp;bed&nbsp;m</th>
-              <th class="cr-divider">Tray&nbsp;type</th>
-              <th>Seeds&nbsp;/&nbsp;cell</th>
-              <th>Days&nbsp;to&nbsp;germinate</th>
-              <th>Optimal&nbsp;germ&nbsp;temp</th>
-              <th>Potting&nbsp;up</th>
+              <th title="Rotation family — used to avoid replanting the same family too soon, and by bed issues to rule out related crops">Type</th>
+              <th title="Direct sow into the bed, or start in trays/nursery and transplant out">Method</th>
+              <th title="How long a tray-started crop spends in the nursery before it's ready to transplant">Days&nbsp;in&nbsp;nursery</th>
+              <th title="Days to maturity — sow (or transplant, depending on method) to first harvest, at this farm's average conditions. Adjusted per-planting by actual weather (see Climate-adjusted DTM)">Days&nbsp;to&nbsp;maturity</th>
+              <th title="How many days a planting keeps producing once it starts — sets the end of its harvest bar on the Timeline">Harvest&nbsp;window</th>
+              <th title="Default gap in days between successive sowings of this crop, when adding a run of successions">Succession&nbsp;gap</th>
+              <th title="How much days-to-maturity swings across the year (faster in warm months, slower in cool) — feeds the climate/season adjustment to harvest date estimates">DTM&nbsp;across&nbsp;the&nbsp;year</th>
+              <th class="cr-divider" title="Default number of rows planted along the bed">Number&nbsp;of&nbsp;rows</th>
+              <th title="Default gap between rows, in cm">Row&nbsp;spacing&nbsp;(cm)</th>
+              <th title="Default gap between plants within a row, in cm">Plant&nbsp;spacing&nbsp;(cm)</th>
+              <th title="Which seeder/tool is normally used to sow this crop">Seeder</th>
+              <th class="cr-divider" title="What harvest is counted in — bunches, kg, heads, punnets, etc.">Unit</th>
+              <th title="How many of that unit one plant typically yields — used to estimate total harvest from bed length">Number&nbsp;/&nbsp;unit</th>
+              <th title="Default sale price per unit — feeds the Harvest tab's season-earnings estimate">Price</th>
+              <th title="Expected yield (in the Unit above) per metre of bed — the other way of estimating total harvest, for crops sold by length rather than by plant count">Yield&nbsp;/&nbsp;bed&nbsp;m</th>
+              <th class="cr-divider" title="Default tray type used when starting this crop in the nursery">Tray&nbsp;type</th>
+              <th title="How many seeds sown per cell — more than 1 for crops normally multi-sown (e.g. beets, spring onions)">Seeds&nbsp;/&nbsp;cell</th>
+              <th title="Typical days from sowing to germination">Days&nbsp;to&nbsp;germinate</th>
+              <th title="Ideal soil/air temperature (°C) for germination">Optimal&nbsp;germ&nbsp;temp</th>
+              <th title="Whether seedlings normally need potting up into a bigger cell before transplanting">Potting&nbsp;up</th>
             </tr>
           </thead>
           <tbody id="crBody"></tbody>
@@ -1529,13 +1701,13 @@
           <thead>
             <tr>
               <th>Bed</th>
-              <th>Category</th>
-              <th>Tunnel</th>
-              <th>Length m</th>
-              <th>Width m</th>
-              <th>Order</th>
+              <th title="A grouping tag for this bed — informational only, doesn't affect rotation or scheduling">Category</th>
+              <th title="Whether this bed is under cover (tunnel/hoophouse) — affects which crops/timing make sense here">Tunnel</th>
+              <th title="Bed length in metres, along its long axis — with Width, draws the bed to true scale on the Farm map">Length m</th>
+              <th title="Bed width in metres, across its short axis — with Length, draws the bed to true scale on the Farm map">Width m</th>
+              <th title="Position of this bed within its block, lowest first — sets left-to-right/top-to-bottom order on the Farm map. Blank falls back to sorting by bed name">Order</th>
               <th>Notes</th>
-              <th>Issues</th>
+              <th title="Issues flagged against this bed (nutrition, weeds, disease, etc.) that rule out certain crops — advisory, never blocks a planting">Issues</th>
             </tr>
           </thead>
           <tbody id="bdBody"></tbody>
@@ -1576,10 +1748,10 @@
           <thead>
             <tr>
               <th>Bed</th>
-              <th>After</th>
-              <th>Start</th>
-              <th>End</th>
-              <th>Metres</th>
+              <th title="The planting this tarp is terminating, if any">After</th>
+              <th title="Date the tarp goes down">Start</th>
+              <th title="Date the tarp comes off — the bed's free to plant again from here">End</th>
+              <th title="Bed length covered, in metres — defaults to the bed's own length">Metres</th>
               <th>Status</th>
               <th>Notes</th>
               <th></th>
@@ -1605,12 +1777,13 @@
           <thead>
             <tr>
               <th>Task</th>
-              <th>Category</th>
-              <th>Anchor</th>
-              <th>Offset&nbsp;days</th>
-              <th>Repeat&nbsp;every</th>
-              <th>Repeat&nbsp;until</th>
-              <th>Min&nbsp;/&nbsp;15m</th>
+              <th title="Grouping used for filtering/coloring — not tied to anything functional">Category</th>
+              <th title="Which planting-lifecycle date this task's due date is counted from (Sow, Transplant, First harvest, Last harvest)">Anchor</th>
+              <th title="Days from the Anchor date this task falls due — negative is before the anchor, positive is after">Offset&nbsp;days</th>
+              <th title="If set, the task recurs every N days after its first due date">Repeat&nbsp;every</th>
+              <th title="Which lifecycle stage stops the repeat (e.g. keeps recurring until First harvest)">Repeat&nbsp;until</th>
+              <th title="Minutes of work this task takes per 15m of bed — scales with a planting's actual bed length to estimate workload in This week">Min&nbsp;/&nbsp;15m</th>
+              <th title="Which field-walk note pill opens ＋ Task straight to this task. Pick '+ Add new tag…' to create one under an existing category.">Field&nbsp;walk&nbsp;tag</th>
               <th>Description</th>
               <th></th>
             </tr>
@@ -1634,12 +1807,12 @@
         <table class="cr-table">
           <thead>
             <tr>
-              <th>Crop / Task</th>
-              <th>Anchor</th>
-              <th>Offset&nbsp;days</th>
-              <th>Repeat&nbsp;every</th>
-              <th>Repeat&nbsp;until</th>
-              <th>Min&nbsp;/&nbsp;15m</th>
+              <th title="A row here overrides the library task's own defaults for this crop (or variety) only — blank cells fall back to the library">Crop / Task</th>
+              <th title="Which planting-lifecycle date this task's due date is counted from (Sow, Transplant, First harvest, Last harvest). Blank = inherit from the library task">Anchor</th>
+              <th title="Days from the Anchor date this task falls due — negative is before, positive is after. Blank = inherit">Offset&nbsp;days</th>
+              <th title="If set, the task recurs every N days after its first due date. Blank = inherit">Repeat&nbsp;every</th>
+              <th title="Which lifecycle stage stops the repeat. Blank = inherit">Repeat&nbsp;until</th>
+              <th title="Minutes of work per 15m of bed, scaled by this planting's actual bed length. Blank = inherit">Min&nbsp;/&nbsp;15m</th>
               <th></th>
             </tr>
           </thead>
@@ -1725,6 +1898,40 @@
       </div>
     </section>
 
+    <!-- HARVEST WHITEBOARD — photograph the picking whiteboard, read it, write it to Actuals -->
+    <section class="view" id="view-whiteboard">
+      <div class="cm-top">
+        <span class="sub">Whiteboard · photograph what was picked and post it to the harvest actuals</span>
+        <span class="spacer"></span>
+        <button class="btn ghost" id="wbResetBtn" style="display:none">Start over</button>
+      </div>
+      <div class="cr-wrap">
+        <!-- swapped by buildWhiteboard(): no-key notice / capture / reading / review -->
+        <div id="wbNoKey" style="display:none"></div>
+        <div id="wbCapture" style="display:none">
+          <div class="ap-sect" style="margin-top:0">Photograph the whiteboard</div>
+          <p class="sub" style="max-width:52ch">Straight on, whole board in frame, no glare off the marker. One board per photo.</p>
+          <input type="file" id="wbFile" accept="image/*" capture="environment" style="display:none">
+          <button class="btn" id="wbShoot">📷 Take photo / choose image</button>
+        </div>
+        <div id="wbBusy" style="display:none">
+          <div class="ap-sect" style="margin-top:0">Reading the board…</div>
+          <p class="sub" id="wbBusyMsg">Sending the photo to Claude.</p>
+        </div>
+        <div id="wbError" class="status err" style="display:none"></div>
+        <div id="wbReview" style="display:none">
+          <div class="ap-sect" style="margin-top:0">Check before saving</div>
+          <p class="sub" id="wbReviewSummary"></p>
+          <div class="wb-head" id="wbHead"></div>
+          <div id="wbCards"></div>
+          <div style="margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn" id="wbApply">Post confirmed lines</button>
+            <span class="sub" id="wbApplyNote"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- SALES OUTLETS (CRUD) -->
     <section class="view" id="view-outlets">
       <div class="cm-top">
@@ -1735,8 +1942,8 @@
           <thead>
             <tr>
               <th>Name</th>
-              <th>Type</th>
-              <th>Active</th>
+              <th title="e.g. Market, Restaurant, Wholesale — informational only">Type</th>
+              <th title="Inactive outlets are hidden from the Harvest planner's outlet pickers, but past records against them are kept">Active</th>
               <th>Notes</th>
               <th></th>
             </tr>
@@ -1755,6 +1962,56 @@
         <span class="sub" style="margin-left:.6rem">Season harvest &amp; earnings</span>
       </div>
       <div id="seasonBody"></div>
+    </section>
+
+    <!-- FIELD WALK — the weekly prep walk, designed phone-first.
+         Everything above #fwFeed is chrome and is kept deliberately tight (~236px on a 375x812
+         phone) so most of the screen is the act of taking a note. The quick-add bar is sticky so
+         it stays reachable however far the feed has scrolled, and #fwSuggest hangs off the bar
+         rather than the caret — a caret-anchored popup ends up under the on-screen keyboard. -->
+    <section class="view" id="view-fieldwalk">
+      <div class="cm-top fw-top">
+        <button class="icon-btn" id="fwPrev" title="Previous walk">◀</button>
+        <span class="cm-year" id="fwDateLabel">—</span>
+        <button class="icon-btn" id="fwNext" title="Next walk">▶</button>
+        <button class="btn-ghost" id="fwToday" title="Jump to today">Today</button>
+        <input id="fwWalkers" type="text" placeholder="Who's walking" list="fwWalkerNames" autocomplete="off">
+        <datalist id="fwWalkerNames"></datalist>
+        <button type="button" id="fwSyncBadge" class="fw-sync-ok" title="Sync status — tap to retry">✓ saved</button>
+      </div>
+      <div id="fwBackendWarn" class="fw-warn" hidden></div>
+
+      <div class="fw-seg" id="fwSeg" role="tablist">
+        <button type="button" data-fwpane="walk" aria-pressed="true">Walk</button>
+        <button type="button" data-fwpane="lists" aria-pressed="false">Lists</button>
+      </div>
+
+      <div id="fwCols">
+        <div id="fwWalkPane">
+          <div class="fw-quick" id="fwQuickBar">
+            <textarea id="fwQuickText" rows="2" placeholder="What are you seeing? Type @ to tag a bed or block…"></textarea>
+            <div class="sp-pick-suggest" id="fwSuggest" hidden></div>
+            <!-- Live warning that the bed you just tagged already has open jobs against it, shown
+                 before you commit rather than after — the whole point is not creating the duplicate. -->
+            <div class="fw-task-hint" id="fwTaskHint" hidden></div>
+            <div class="fw-quick-row">
+              <span class="fw-tags" id="fwTagRow"></span>
+              <button class="btn-primary" id="fwQuickAdd" type="button">Add note</button>
+            </div>
+            <!-- Revealed only when a parent tag is ticked (see fwRenderSubRow). -->
+            <div class="fw-tags fw-subs" id="fwSubRow" hidden></div>
+          </div>
+          <div id="fwFeed"></div>
+        </div>
+
+        <div id="fwListsPane" hidden>
+          <div class="fw-lists-top">
+            <span class="sub">Standing lists · roll over between walks</span>
+            <button class="btn-ghost" id="fwNewListBtn" type="button">＋ New list</button>
+          </div>
+          <div id="fwLists"></div>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -1962,7 +2219,7 @@
           <input type="date" id="sprayDate"></label>
         <label class="ap-field"><span>Sprayed by</span>
           <select id="sprayBy"></select></label>
-        <label class="ap-field"><span>Withholding (days)</span>
+        <label class="ap-field" title="Days before it's safe to harvest — auto-filled as the longest withholding period of any product in the mix; override if a product's label says otherwise"><span>Withholding (days)</span>
           <input type="number" id="sprayWhp" min="0" step="1" placeholder="auto"></label>
       </div>
       <div class="sp-safe" id="spraySafe"></div>
@@ -2093,6 +2350,7 @@
 
         <div class="ap-tabs" id="apTabBar">
           <button type="button" class="ap-tab-btn" data-tab="details" aria-selected="true">Planting Details</button>
+          <button type="button" class="ap-tab-btn" data-tab="bed" aria-selected="false">Bed</button>
           <button type="button" class="ap-tab-btn" data-tab="rows" aria-selected="false">Row Spacing</button>
           <button type="button" class="ap-tab-btn" data-tab="harvest" aria-selected="false">Harvest</button>
           <button type="button" class="ap-tab-btn" data-tab="nursery" aria-selected="false">Nursery</button>
@@ -2112,9 +2370,6 @@
               <button type="button" data-method="transplant" aria-pressed="false">Transplant</button>
             </div>
           </div>
-          <label class="ap-field"><span>Bed</span>
-            <select id="apBed"></select></label>
-
           <label class="ap-field"><span>Bed metres</span>
             <input type="number" id="apBm" min="0" step="0.1" placeholder="e.g. 15"></label>
           <div class="ap-field ap-succ" id="apSuccField">
@@ -2125,14 +2380,6 @@
               <input type="number" id="apGap" min="0" step="1" value="14" title="Days between plantings" disabled>
               <span class="ap-x-lbl">days apart</span>
             </div>
-          </div>
-
-          <div class="ap-field ap-bed-suggest" id="apBedSuggestWrap" style="grid-column:1/-1">
-            <div class="ap-bed-suggest-head">
-              <span>Bed suggestions</span>
-              <button type="button" class="btn-ghost" id="apSuggestBedsBtn">Suggest beds</button>
-            </div>
-            <div id="apBedSuggestList" class="ap-bed-suggest-list"></div>
           </div>
         </div>
 
@@ -2188,6 +2435,20 @@
         <label class="ap-field"><span>Notes</span>
           <textarea id="apNotes" rows="4" placeholder="Anything worth remembering about this planting…"></textarea></label>
         </div><!-- /apTab-details -->
+
+        <div class="ap-tabpane" id="apTab-bed" style="display:none">
+          <div class="ap-grid">
+            <label class="ap-field"><span>Bed</span>
+              <select id="apBed"></select></label>
+          </div>
+          <div class="ap-field ap-bed-suggest" id="apBedSuggestWrap" style="margin-top:1.1rem">
+            <div class="ap-bed-suggest-head">
+              <span>Bed suggestions</span>
+              <button type="button" class="btn-ghost" id="apSuggestBedsBtn">Suggest beds</button>
+            </div>
+            <div id="apBedSuggestList" class="ap-bed-suggest-list"></div>
+          </div>
+        </div><!-- /apTab-bed -->
 
         <div class="ap-tabpane" id="apTab-rows" style="display:none">
           <div class="ap-grid">
@@ -2362,7 +2623,7 @@ setTheme(theme);
 // CFG + the default-fields helpers now live in planner-shared.js (loaded above), so the same
 // business rules can't drift between this app and anything else reading the same base (e.g. an
 // MCP server). See that file for the full field-map comments.
-const { CFG, DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields, bedConflicts, suggestBedsForPlanting } = PlannerShared;
+const { CFG, DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields, bedConflicts, suggestBedsForPlanting, suggestBedsForUnassigned } = PlannerShared;
 const DEFAULT_WID = 0.9, DEFAULT_LEN = 20; // metres, used when a bed has no size yet
 const OCCUPIED = new Set(["In ground","Harvesting"]);
 
@@ -2390,7 +2651,7 @@ let SB_KEY = localStorage.getItem(SB_KEY_KEY) || "";
 function normalizeSbUrl(v){
   return v.trim().replace(/\/+$/,"").replace(/\/rest\/v1$/,"");
 }
-let data = { blocks:[], beds:[], plantings:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[] };
+let data = { blocks:[], beds:[], plantings:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -2463,7 +2724,13 @@ async function refreshPlantingTasks(){
 async function loadAll(){
   showLoading(true);
   try{
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems] = await Promise.all([
+    // The field walk tables are newer than some deployed schemas and have no Airtable origin, so
+    // each one is fetched behind its own catch: a missing table (the SQL hasn't been run yet) or a
+    // BACKEND flipped back to "airtable" degrades to an empty Field walk tab instead of taking the
+    // whole app down with it. Every other fetch below is deliberately left unguarded — those
+    // tables are load-bearing and failing loudly is the right answer for them.
+    const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -2482,6 +2749,11 @@ async function loadAll(){
       atFetch(CFG.farmBase, CFG.tables.sprayMixItems),
       atFetch(CFG.farmBase, CFG.tables.sprayApplications),
       atFetch(CFG.farmBase, CFG.tables.sprayApplicationItems),
+      fwFetch(CFG.tables.fieldWalks),
+      fwFetch(CFG.tables.walkObservations),
+      fwFetch(CFG.tables.walkLists),
+      fwFetch(CFG.tables.walkListItems),
+      fwFetch(CFG.tables.fieldWalkTags),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -2514,6 +2786,7 @@ async function loadAll(){
       repeat:num(t.fields[F.tk_repeat]),
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
+      fwTag:t.fields[F.tk_fwtag] || "",
     })).sort((a,b)=>a.name.localeCompare(b.name));
 
     // crop→task assignments (renders in the Misc → Crop tasks tree)
@@ -2603,10 +2876,22 @@ async function loadAll(){
       PlannerShared.parseSprayApplications(sprayApplications), PlannerShared.parseSprayApplicationItems(sprayApplicationItems), "applicationId")
       .sort((a,b)=> String(b.date).localeCompare(String(a.date)) || String(b.id).localeCompare(a.id)); // newest first
 
+    // Field walk: dated walk sessions + the notes taken on them, plus the standing rolling lists
+    // (Bed prep, Spray, …) with their items nested on.
+    data.fieldWalks = PlannerShared.parseFieldWalks(fieldWalks);
+    data.walkObservations = PlannerShared.parseWalkObservations(walkObservations);
+    data.walkListItems = PlannerShared.parseWalkListItems(walkListItems);
+    data.walkLists = PlannerShared.attachWalkItems(
+      PlannerShared.parseWalkLists(walkLists), data.walkListItems);
+    data.fieldWalkTags = PlannerShared.parseFieldWalkTags(fieldWalkTags);
+    fwApplyCustomTags();
+
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
     setStat(`${data.beds.length} beds · ${data.blocks.length} blocks · ${pl.length} plantings`);
     layoutAndDraw();
+    fwBuildIndex();  // @bed autocomplete index — must run after rebuildDerived(), it reads bed.planting
+    fwFlush();       // push anything written while offline now that we've clearly got a connection
     gate(false);
     if(!uiRestored){ uiRestored=true; restoreUiState(); }
   }catch(e){
@@ -2990,10 +3275,12 @@ function showView(view){
   if(view==="croptasks") buildCropTasks();
   if(view==="week") buildWeekPlanner();
   if(view==="harvest") buildHarvestPlanner();
+  if(view==="whiteboard") buildWhiteboard();
   if(view==="outlets") buildOutlets();
   if(view==="season") buildSeason();
   if(view==="sprayrec") buildSprayRecords();
   if(view==="spraymix") buildSprayMixes();
+  if(view==="fieldwalk") buildFieldWalk();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
@@ -3031,7 +3318,7 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
         miscTab=document.getElementById("miscTab"), harvestTab=document.getElementById("harvestTab");
   // sub-views that live under a dropdown tab rather than their own top-level tab
   const DROPDOWN_PARENT={ beds:miscTab, seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
-                          harvest:harvestTab, outlets:harvestTab, season:harvestTab };
+                          harvest:harvestTab, whiteboard:harvestTab, outlets:harvestTab, season:harvestTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
   function close(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); fab.setAttribute("aria-expanded","false"); }
@@ -3137,6 +3424,8 @@ function showLoading(b){document.getElementById("loading").classList.toggle("sho
 /* ---------- Crop Map (calendar grid + drag/drop assignment) ---------- */
 let cmYear = new Date().getFullYear();
 let dragPid = null;
+let dragPendingIndex = null;   // set while dragging a bulk-auto-place PROPOSAL bar (see cmBulkState)
+let cmBulkState = null;        // {weights, proposals, skipped} while the Auto-place panel is open, else null
 let cmViewMode = "list";
 let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-type colour)
 let cmMapState = {k:1, tx:0, ty:0};
@@ -3729,7 +4018,11 @@ function buildCropMap(){
       col.appendChild(track);
       col.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="move";col.classList.add("cm-over");});
       col.addEventListener("dragleave",()=>col.classList.remove("cm-over"));
-      col.addEventListener("drop",e=>{e.preventDefault();col.classList.remove("cm-over");assignBed(bed.id);});
+      col.addEventListener("drop",e=>{
+        e.preventDefault();col.classList.remove("cm-over");
+        if(dragPendingIndex!=null){ cmBulkMoveProposal(dragPendingIndex, bed); dragPendingIndex=null; return; }
+        assignBed(bed.id);
+      });
       grid.appendChild(col);
     });
     blk.appendChild(grid);wrap.appendChild(blk);
@@ -3752,6 +4045,7 @@ function buildCropMap(){
     }
   }
   buildUnassigned();
+  cmRenderPendingOverlay();   // no-op unless an Auto-place review is open (see cmBulkState)
 }
 
 function buildUnassigned(){
@@ -3905,6 +4199,7 @@ function cmSetUnCollapsed(val){
   const side=document.getElementById("cmUnassigned"); if(side) side.classList.toggle("collapsed",val);
 }
 document.getElementById("cmUnToggle").addEventListener("click",()=>{ cmSetUnCollapsed(!cmUnCollapsed); saveUiState(); });
+document.getElementById("cmUnAutoBtn").addEventListener("click",e=>{ e.stopPropagation(); cmOpenBulk(); });
 
 // Right-click a placed planting to unassign it from its bed (sends it back to the
 // Unassigned list) — the drag-and-drop equivalent of dragging it off the map.
@@ -3986,7 +4281,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") cmHideTypePopover(
   // to pan when one is pressed — otherwise the capture eats their click. `.cm-tarp` is here so a
   // tarp opens its editor in Map mode; without it the pan-capture swallowed the click (hover still
   // worked, which is why it looked so baffling).
-  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-chip, .cm-tarp, #cmZoombar, .cm-block-h");
+  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-bar-pending, .cm-chip, .cm-tarp, #cmZoombar, .cm-block-h");
 
   vp.addEventListener("pointerdown",e=>{
     if(cmViewMode!=="map"||isDndTarget(e.target)) return; // let native drag-and-drop take over
@@ -4043,6 +4338,153 @@ async function assignBed(bedId, pidOverride){
     p.bedIds=prev; rebuildDerived(); buildCropMap();   // roll back on failure
     alert("Couldn't move planting:\n"+e.message);
   }
+}
+
+/* ---------- Bulk auto-place (Crop Map "Auto-place all" review) ----------
+   Draft/simulate only — see suggestBedsForUnassigned in planner-shared.js. Nothing here writes
+   anything until cmBulkApply runs. Proposals render as dashed .cm-bar-pending bars on the map
+   (cmRenderPendingOverlay) and are draggable to a different bed column to override
+   (dragPendingIndex, handled in buildCropMap's drop listener). */
+const CM_WEIGHT_LABELS = { fit:"Fit / space", rotation:"Rotation", succession:"Succession", weekCluster:"Week clustering", blockPref:"Block preference" };
+
+function cmOpenBulk(){
+  const weights = loadSuggestWeights();
+  const { proposals, skipped } = suggestBedsForUnassigned(data, { limit:8, weights });
+  cmBulkState = { weights, proposals, skipped };
+  document.getElementById("cmUnList").style.display="none";
+  document.getElementById("cmBulkPanel").style.display="block";
+  cmRenderBulkPanel();
+  cmRenderPendingOverlay();
+}
+function cmCloseBulk(){
+  cmBulkState=null;
+  cmClearPendingOverlay();
+  const panel=document.getElementById("cmBulkPanel");
+  panel.style.display="none"; panel.innerHTML="";
+  document.getElementById("cmUnList").style.display="";
+}
+
+let cmBulkRerunTimer=null;
+function cmBulkRerun(){
+  clearTimeout(cmBulkRerunTimer);
+  cmBulkRerunTimer=setTimeout(()=>{
+    if(!cmBulkState) return;
+    const { proposals, skipped } = suggestBedsForUnassigned(data, { limit:8, weights:cmBulkState.weights });
+    cmBulkState.proposals=proposals; cmBulkState.skipped=skipped;
+    cmRenderBulkPanel(); cmRenderPendingOverlay();
+  }, 200);
+}
+
+function cmRenderBulkPanel(){
+  const panel=document.getElementById("cmBulkPanel"); if(!panel||!cmBulkState) return;
+  const { proposals, skipped, weights } = cmBulkState;
+  const n=proposals.length;
+  const summary = n
+    ? `${n} planting${n===1?"":"s"} matched to a bed — shown as dashed bars on the map. Drag any bar to a different bed column to override, adjust priorities below to re-rank, then apply.`
+    : "No unassigned plantings could be matched to a bed.";
+  const sliders = Object.keys(CM_WEIGHT_LABELS).map(k=>`
+    <div class="cm-bulk-weight-row">
+      <label><span>${CM_WEIGHT_LABELS[k]}</span><span>${weights[k]}</span></label>
+      <input type="range" min="0" max="100" step="5" value="${weights[k]}" data-wkey="${k}">
+    </div>`).join("");
+  const skipHtml = skipped.length ? `
+    <div class="cm-bulk-skip">
+      <div class="cm-bulk-skip-h">Could not place (${skipped.length})</div>
+      ${skipped.map(s=>`<div class="cm-bulk-skip-row">${esc(s.planting.crop)}${s.planting.variety?" · "+esc(s.planting.variety):""} — ${esc(s.reason)}</div>`).join("")}
+    </div>` : "";
+  panel.innerHTML = `
+    <div class="cm-bulk-summary">${summary}</div>
+    <div class="cm-bulk-weights">${sliders}</div>
+    <div class="cm-bulk-actions">
+      <button type="button" class="btn-primary" id="cmBulkApplyBtn"${n?"":" disabled"}>Apply ${n} placement${n===1?"":"s"}</button>
+      <button type="button" class="btn-ghost" id="cmBulkCancelBtn">Cancel</button>
+    </div>
+    ${skipHtml}`;
+  panel.querySelectorAll('input[type="range"]').forEach(sl=>{
+    sl.addEventListener("input",()=>{
+      cmBulkState.weights[sl.dataset.wkey]=+sl.value;
+      saveSuggestWeights(cmBulkState.weights);
+      cmBulkRerun();
+    });
+  });
+  const applyBtn=document.getElementById("cmBulkApplyBtn"); if(applyBtn) applyBtn.onclick=cmBulkApply;
+  document.getElementById("cmBulkCancelBtn").onclick=cmCloseBulk;
+}
+
+function cmClearPendingOverlay(){
+  document.querySelectorAll(".cm-bar-pending").forEach(el=>el.remove());
+}
+function cmRenderPendingOverlay(){
+  cmClearPendingOverlay();
+  if(!cmBulkState) return;
+  const trackByBed={};
+  document.querySelectorAll("#cmBlocks .cm-col").forEach(col=>{
+    const track=col.querySelector(".cm-track"); if(track) trackByBed[col.dataset.bed]=track;
+  });
+  cmBulkState.proposals.forEach((row,i)=>{
+    const track=trackByBed[row.bed.id]; if(!track) return;   // bed not visible under the current block filter/year
+    const p=row.planting;
+    const groundStart=p.tp||p.sow;
+    const y0=cmY(groundStart), y1=cmY(p.h2||p.h1||groundStart);
+    if(y0==null||y1==null) return;
+    const top=Math.min(y0,y1), height=Math.max(6,Math.abs(y1-y0));
+    const bar=document.createElement("div");bar.className="cm-bar-pending";
+    bar.style.top=top+"px";bar.style.height=height+"px";
+    bar.style.background=cropColor(p.cropId||p.crop);
+    bar.title=`${p.crop}${p.variety?" "+p.variety:""} — proposed: ${row.bed.name} (${row.score})\n${row.reasons.join("\n")}\nDrag to a different bed to override.`;
+    const scoreEl=document.createElement("div");scoreEl.className="cm-bar-pending-score";scoreEl.textContent=row.score;bar.appendChild(scoreEl);
+    const l=document.createElement("span");l.className="cm-bar-l";l.textContent=p.crop;bar.appendChild(l);
+    if(!cmIsMobile()){
+      bar.draggable=true;
+      bar.addEventListener("dragstart",e=>{
+        dragPendingIndex=i; e.dataTransfer.effectAllowed="move";
+        try{e.dataTransfer.setData("text/plain","pending:"+i);}catch(_){}
+      });
+    }
+    track.appendChild(bar);
+  });
+}
+
+// Drop-to-override for one proposal: re-scores it against the picked bed using its own
+// already-computed candidate list (nothing new to validate), then nudges any other
+// not-yet-manually-moved proposal for the SAME crop toward the same block — the mechanism
+// behind "bunch the zucchinis together": drag one, its still-undecided siblings follow.
+function cmBulkMoveProposal(i, bed){
+  if(!cmBulkState) return;
+  const row=cmBulkState.proposals[i]; if(!row) return;
+  const picked=row.candidates.find(c=>c.bed.id===bed.id);
+  row.bed = picked ? picked.bed : bed;
+  row.score = picked ? picked.score : row.score;
+  row.reasons = picked ? picked.reasons : ["Manually placed — not one of the ranked candidates."];
+  row.userMoved = true;
+  cmBulkState.proposals.forEach(other=>{
+    if(other===row || other.userMoved) return;
+    if(other.planting.cropId && other.planting.cropId===row.planting.cropId){
+      const near=other.candidates.find(c=>c.bed.block===row.bed.block);
+      if(near){ other.bed=near.bed; other.score=near.score; other.reasons=near.reasons; }
+    }
+  });
+  cmRenderBulkPanel();
+  cmRenderPendingOverlay();
+}
+
+async function cmBulkApply(){
+  if(!cmBulkState || !cmBulkState.proposals.length) return;
+  const rows=cmBulkState.proposals.slice();
+  const btn=document.getElementById("cmBulkApplyBtn");
+  if(btn){ btn.disabled=true; btn.textContent="Saving…"; }
+  let ok=0; const failed=[];
+  for(const row of rows){
+    const p=(data.plantings||[]).find(x=>x.id===row.planting.id);
+    if(!p) continue;
+    const prev=p.bedIds.slice();
+    p.bedIds=[row.bed.id];                          // optimistic, per-row
+    try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[CFG.f.pl_bed]:[row.bed.id]}); ok++; }
+    catch(e){ p.bedIds=prev; failed.push(`${p.crop}: ${e.message}`); }
+  }
+  cmCloseBulk();
+  rebuildDerived(); buildCropMap(); layoutAndDraw();   // ONE refresh at the end, not per row
+  if(failed.length) alert(`Placed ${ok} of ${rows.length}. Some failed:\n`+failed.join("\n"));
 }
 
 // remove the Bed link entirely, sending the planting back to the Unassigned list
@@ -4217,7 +4659,10 @@ async function sbEncode(file){
 }
 
 // --- the vision call -------------------------------------------------------
-async function sbReadPage(b64, mediaType){
+// Shared by the Seed book and the Harvest whiteboard: one photo in, one structured-outputs JSON
+// object out. `tooLong` is the message shown when the model runs out of tokens mid-read, since
+// what to do about it differs per page (half a page of the book vs half the board).
+async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooLong}){
   const r=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{
@@ -4229,11 +4674,11 @@ async function sbReadPage(b64, mediaType){
     },
     body:JSON.stringify({
       model:SB_MODEL,
-      max_tokens:8000,
-      output_config:{ format:{ type:"json_schema", schema:SB_SCHEMA } },
+      max_tokens:maxTokens,
+      output_config:{ format:{ type:"json_schema", schema } },
       messages:[{role:"user",content:[
         {type:"image",source:{type:"base64",media_type:mediaType,data:b64}},
-        {type:"text",text:sbPrompt()},
+        {type:"text",text:prompt},
       ]}],
     }),
   });
@@ -4245,12 +4690,17 @@ async function sbReadPage(b64, mediaType){
   }
   const j=await r.json();
   if(j.stop_reason==="refusal") throw new Error("Claude declined to read that image.");
-  if(j.stop_reason==="max_tokens") throw new Error("The page was too long to read in one go. Try photographing half a page at a time.");
+  if(j.stop_reason==="max_tokens") throw new Error(tooLong||"There was too much on that image to read in one go. Try photographing half of it at a time.");
   const text=(j.content||[]).find(b=>b.type==="text")?.text;
   if(!text) throw new Error("Claude returned no readable output.");
   try{ return JSON.parse(text); }
   catch{ throw new Error("Couldn't parse Claude's response as JSON."); }
 }
+
+const sbReadPage = (b64, mediaType) => aiReadImage({
+  b64, mediaType, prompt:sbPrompt(), schema:SB_SCHEMA,
+  tooLong:"The page was too long to read in one go. Try photographing half a page at a time.",
+});
 
 // --- matching --------------------------------------------------------------
 const sbNorm = s => String(s||"").toLowerCase().replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();
@@ -4815,6 +5265,389 @@ function buildSeason(){
   body.appendChild(sect);
 }
 
+/* ==================== HARVEST WHITEBOARD ====================
+   The picking crew tallies what actually came out of the field on a whiteboard. This page
+   photographs it, has Claude read it, matches each line to a planting that is inside its harvest
+   window, and posts the number to that planting × outlet × week Harvest Record's Actual — the
+   same field the Harvest planner's Actual column writes. Nothing is saved until "Post".
+
+   Two things here that the Seed book didn't have to deal with:
+
+   1. Harvest Records are WEEKLY but a whiteboard is usually a DAY's picking. Photographing
+      Thursday's board and then Friday's must ADD to the week's Actual, not overwrite it — so a
+      row whose target already holds an Actual defaults to "add to" and says so in words. Replace
+      is there for re-reading a board you already posted, and has to be chosen deliberately.
+   2. Rows can collide: two lines of the same crop for the same outlet land on one record. The
+      delta preview is therefore computed cumulatively down the list (wbBaselines), so what each
+      card promises is what actually happens when they all run. */
+
+const WB_STR = {anyOf:[{type:"string"},{type:"null"}]};
+const WB_NUM = {anyOf:[{type:"number"},{type:"null"}]};
+const WB_SCHEMA = {
+  type:"object",
+  properties:{
+    board_date:{...WB_STR, description:"The date the board as a whole covers, ISO YYYY-MM-DD, or null if the board shows no date."},
+    entries:{type:"array", items:{
+      type:"object",
+      properties:{
+        raw_text:{type:"string", description:"The line transcribed verbatim, exactly as written, including anything you could not parse."},
+        crop:WB_STR, variety:WB_STR,
+        quantity:{...WB_NUM, description:"How much was picked, as a number. Null if there is no number against this line."},
+        unit:WB_STR, outlet:WB_STR, date:WB_STR,
+        note:{...WB_STR, description:"Anything else written against the line — 'small', 'seconds', 'for Tues' — or null."},
+        confidence:{type:"string", enum:["high","medium","low"]},
+      },
+      required:["raw_text","crop","variety","quantity","unit","outlet","date","note","confidence"],
+      additionalProperties:false,
+    }},
+  },
+  required:["board_date","entries"],
+  additionalProperties:false,
+};
+
+// Built per-call: the board rarely writes a year, and often no date at all, so the model needs
+// today's date to resolve one.
+const wbPrompt = () => `This is a photograph of a whiteboard in a market garden's packing shed. The crew writes on it what was actually picked. Transcribe every harvest line on the board.
+
+Today's date is ${PlannerShared.wkISO(new Date())}. Use it to resolve dates (see dates, below).
+
+Boards like this are laid out in one of a few ways, and you must work out which one you are looking at before transcribing:
+- A simple list: one crop per line with a number beside it.
+- A grid: crops down the left, and columns across the top that are either destinations (a market, a shop, a restaurant, "CSA", "wholesale") or days of the week. Every filled cell is its own entry — repeat the crop for each one and put the column heading in outlet (if it names a destination) or resolve it to a date (if it names a day).
+- Several separate blocks on one board, each with its own heading.
+If a column heading names a destination, put it in outlet verbatim. If it names a day or a date, resolve it and put it in date. Column and row headings are not entries themselves.
+
+Reading the numbers:
+- quantity is a number. "12" is 12. "3.5" is 3.5. "½" is 0.5.
+- Tally marks are common: four strokes with a fifth struck through is 5. Count them and give the total.
+- A running sum like "5+3+2" means 13 — add them up, and keep the original in raw_text.
+- Some numbers carry a unit: "6kg", "12 bu", "3 bx", "2 doz", "4 punnets". Put the number in quantity and the unit in unit, transcribed as written. If no unit is written, leave unit null — do NOT guess one.
+- A number with no crop against it (a running total at the foot of a column, a date, a time) is not an entry.
+
+Crops:
+- "Cherry Toms" is the crop "Cherry Toms" — transcribe crop and variety exactly as written, do not tidy or expand abbreviations, and do not translate a nickname into what you think the real crop is.
+- Where a line names a variety as well ("Miyako Bok Choy"), split it: variety "Miyako", crop "Bok Choy". If you cannot tell which part is which, put the whole string in crop and leave variety null.
+
+Dates:
+- Put any date written on the board as a whole in board_date, and leave the per-entry date null unless that particular line or column carries its own date.
+- The board normally omits the year, and often the month. Resolve to the date nearest to today, and output ISO YYYY-MM-DD. A bare weekday ("Thurs") means the most recent one.
+
+Rules:
+- Always fill raw_text with a verbatim transcription of the whole line — it is shown to the user for checking.
+- Whiteboards carry ghosting from previous weeks: faint, half-erased, or smeared writing that was NOT rewritten this time. Do not transcribe it. Only transcribe writing that is clearly and freshly on the board. When in doubt, leave it out.
+- Corrections are made by wiping or striking out a number and writing the replacement beside or above it. Always use the corrected value, never the struck-out one.
+- Use null for any value you cannot read. Do not guess, do not infer a plausible variety, and do not invent a number.
+- Set confidence to "low" whenever the handwriting is unclear or you are unsure of a parse, "medium" if mostly legible, "high" only when the line is unambiguous.
+- Ignore totals, prices, reminders and notes to self that are not a harvest line. An empty board is a valid answer — return zero entries.`;
+
+// --- units -----------------------------------------------------------------
+// The board's shorthand vs the Crops tab's Harvest unit list. Used only to WARN on a mismatch —
+// nothing is ever converted, because "6kg" against a planting measured in bunches is a question
+// for a person, not an arithmetic problem.
+const WB_UNIT_ALIASES = {
+  each:"Each", ea:"Each", ["#"]:"Each", pc:"Each", pcs:"Each", piece:"Each", pieces:"Each",
+  bunch:"Bunch", bunches:"Bunch", bu:"Bunch", bch:"Bunch", bnch:"Bunch",
+  kg:"Kilogram", kgs:"Kilogram", kilo:"Kilogram", kilos:"Kilogram", kilogram:"Kilogram", kilograms:"Kilogram",
+  box:"Box", boxes:"Box", bx:"Box", crate:"Box", crates:"Box",
+  bag:"Bag", bags:"Bag",
+  punnet:"Punnet", punnets:"Punnet", pun:"Punnet",
+  dozen:"Dozen", doz:"Dozen", dz:"Dozen",
+  bundle:"Bundle", bundles:"Bundle", bdl:"Bundle",
+};
+function wbUnitKey(s){
+  const n=String(s||"").toLowerCase().replace(/[^a-z#]/g,"");
+  return WB_UNIT_ALIASES[n] || (n ? null : "");   // "" = nothing written, null = unrecognised
+}
+
+// --- matching --------------------------------------------------------------
+// Rank this crop's plantings against one board line. Being inside the harvest window on the day
+// the board covers is the strongest signal by far — unlike sowing, harvest happens over a span,
+// so the window is what identifies the succession being picked.
+function wbMatch(entry, resolved, dateISO){
+  if(!resolved) return [];
+  const {wkParse} = PlannerShared;
+  const d = dateISO ? wkParse(dateISO) : null;
+  const wantVar = sbSquash(resolved.variety);
+  return (data.plantings||[])
+    .filter(p=>p.cropId===resolved.cropId)
+    .map(p=>{
+      let score=0, tier="loose";
+      const pVar=sbSquash(p.variety);
+      if(wantVar && pVar===wantVar) score+=3;
+      else if(!wantVar && !pVar) score+=1;
+      else if(wantVar && pVar) score-=1;      // both named but different — likely another succession
+      if(d && p.h1 && p.h2){
+        const h1=wkParse(p.h1), h2=wkParse(p.h2);
+        const outBy = d<h1 ? (h1-d)/86400000 : d>h2 ? (d-h2)/86400000 : 0;
+        if(outBy===0){ score+=5; tier="window"; }
+        // A window's ends are an estimate, so a few days either side is still a strong candidate.
+        else if(outBy<=10){ score+=2; tier="near"; }
+        else score-=2;
+      }
+      // already being picked this season — a good sign this is the succession in production
+      if((data.harvestRecords||[]).some(h=>h.plantingId===p.id && (h.actual||h.planned))) score+=1;
+      return {p,score,tier};
+    })
+    .filter(c=>c.score>0)
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,4);
+}
+
+// --- page ------------------------------------------------------------------
+let wbState={rows:[], phase:"capture", boardDate:"", defaultOutlet:""};
+
+function wbShow(phase,msg,cls){
+  wbState.phase=phase;
+  const set=(id,on)=>{const e=document.getElementById(id); if(e) e.style.display=on?"":"none";};
+  set("wbNoKey",  phase==="nokey");
+  set("wbCapture",phase==="capture");
+  set("wbBusy",   phase==="busy");
+  set("wbReview", phase==="review");
+  const eb=document.getElementById("wbError");
+  eb.className="status "+(cls||"err");
+  eb.style.display=msg?"":"none"; eb.textContent=msg||"";
+  document.getElementById("wbResetBtn").style.display=(phase==="review")?"":"none";
+}
+
+function buildWhiteboard(){
+  if(!AKEY){
+    document.getElementById("wbNoKey").innerHTML=
+      `<div class="ap-sect" style="margin-top:0">An Anthropic API key is needed</div>
+       <p class="sub" style="max-width:52ch">This page sends a photo of the harvest whiteboard to Claude to read the handwriting. Add an Anthropic API key under settings (⚙, top right) to switch it on.</p>`;
+    wbShow("nokey"); return;
+  }
+  if(!activeOutlets().length){
+    document.getElementById("wbNoKey").innerHTML=
+      `<div class="ap-sect" style="margin-top:0">No active sales outlets</div>
+       <p class="sub" style="max-width:52ch">Harvest is recorded against the outlet it was picked for. Add one under <b>Harvest ▾ → Sales outlets</b> first.</p>`;
+    wbShow("nokey"); return;
+  }
+  // coming back to a review already in progress shouldn't throw away the read
+  if(wbState.phase==="review" && wbState.rows.length){ wbRenderHead(); wbRenderCards(); wbShow("review"); return; }
+  wbShow("capture");
+}
+
+// The date and outlet a row falls back to when the board didn't say.
+function wbRowDate(row){ return row.entry.date || wbState.boardDate || todayISO(); }
+function wbRowOutlet(row){ return row.outletId || wbState.defaultOutlet || ""; }
+
+// Walk the selected rows in order, tracking the running Actual per planting × outlet × week, so
+// two rows landing on the same record preview honestly instead of both claiming the same before-value.
+function wbBaselines(){
+  const running=new Map();
+  return wbState.rows.map(row=>{
+    const oid=wbRowOutlet(row), qty=row.entry.quantity;
+    if(!row.choice || !oid || qty==null) return null;
+    const week=mondayOfISO(wbRowDate(row));
+    const key=`${row.choice}|${oid}|${week}`;
+    const rec=hrFor(row.choice,oid,week);
+    const before = running.has(key) ? running.get(key) : (rec ? rec.actual : null);
+    const after  = row.mode==="replace" ? qty : (before||0)+qty;
+    running.set(key,after);
+    return {week, outletId:oid, before, after, recId:rec?rec.id:null};
+  });
+}
+
+function wbRenderHead(){
+  const outs=activeOutlets();
+  document.getElementById("wbHead").innerHTML=
+    `<label><span>Board date</span><input type="date" id="wbBoardDate" value="${esc(wbState.boardDate||todayISO())}"></label>`
+    +`<label><span>Outlet for lines the board didn't name</span><select id="wbDefaultOutlet">`
+      +`<option value=""${wbState.defaultOutlet?"":" selected"}>— pick one —</option>`
+      +outs.map(o=>`<option value="${o.id}"${wbState.defaultOutlet===o.id?" selected":""}>${esc(o.name)}</option>`).join("")
+    +`</select></label>`;
+  document.getElementById("wbBoardDate").onchange=(e)=>{
+    wbState.boardDate=e.target.value;
+    wbState.rows.forEach(r=>{ r.candidates=wbMatch(r.entry,r.resolved,wbRowDate(r));
+      if(!r.candidates.some(c=>c.p.id===r.choice)) r.choice=""; });
+    wbRenderCards();
+  };
+  document.getElementById("wbDefaultOutlet").onchange=(e)=>{ wbState.defaultOutlet=e.target.value; wbRenderCards(); };
+}
+
+function wbRenderCards(){
+  const rows=wbState.rows, outs=activeOutlets(), bases=wbBaselines();
+  document.getElementById("wbReviewSummary").textContent =
+    `${rows.length} ${rows.length===1?"line":"lines"} read. Check each against the board, then post. Nothing is saved until you do.`;
+  document.getElementById("wbCards").innerHTML = rows.map((row,i)=>{
+    const e=row.entry, b=bases[i];
+    const conf = e.confidence==="low"    ? `<span class="sb-pill warn">low confidence</span>`
+               : e.confidence==="medium" ? `<span class="sb-pill">medium</span>` : "";
+    const chosen=row.candidates.find(c=>c.p.id===row.choice);
+    const opts = row.candidates.map(c=>{
+      const tier = c.tier==="window" ? "picking now" : c.tier==="near" ? "just outside its window" : "outside its harvest window";
+      const bed  = PlannerShared.bedNameOf(data,c.p) || "no bed";
+      const lbl  = `${c.p.crop}${c.p.variety?" · "+c.p.variety:""} · ${bed} · harvest ${c.p.h1||"—"} → ${c.p.h2||"—"} · ${tier}`;
+      return `<option value="${c.p.id}"${row.choice===c.p.id?" selected":""}>${esc(lbl)}</option>`;
+    }).join("");
+    const oid=wbRowOutlet(row);
+    const outOpts = outs.map(o=>`<option value="${o.id}"${oid===o.id?" selected":""}>${esc(o.name)}</option>`).join("");
+
+    // Unit sanity — warn, never convert. "" means the board wrote no unit at all, which is normal.
+    const boardUnit=wbUnitKey(e.unit);
+    const plantUnit=chosen ? (chosen.p.harvestUnit||"") : "";
+    const unitWarn = (chosen && boardUnit && plantUnit && boardUnit!==plantUnit)
+      ? `<span class="wb-warn">Board says ${esc(e.unit)} but this planting is measured in ${esc(plantUnit.toLowerCase())}. The number is posted as written — check it's the same thing.</span>`
+      : (chosen && boardUnit===null && e.unit)
+      ? `<span class="wb-warn">Unrecognised unit “${esc(e.unit)}” — the number is posted as written.</span>` : "";
+
+    // Add-vs-replace, shown only when there is already an Actual to collide with.
+    const mode = (b && b.before!=null)
+      ? `<div class="wb-mode">
+           <label><input type="radio" name="wbm${i}" data-f="mode" value="add"${row.mode!=="replace"?" checked":""}> Add to what's there</label>
+           <label><input type="radio" name="wbm${i}" data-f="mode" value="replace"${row.mode==="replace"?" checked":""}> Replace it</label>
+           <span class="wb-delta">week of ${esc(fmt(b.week))} · ${b.before} → <b>${b.after}</b></span>
+         </div>`
+      : (b ? `<div class="wb-mode"><span class="wb-delta">week of ${esc(fmt(b.week))} · new record · <b>${b.after}</b></span></div>` : "");
+
+    const problem = !row.resolved
+      ? `<span class="wb-warn">Crop not recognised — correct the crop above, or skip this line.</span>`
+      : !row.candidates.length
+      ? `<span class="wb-warn">No planting of this crop has a harvest window near ${esc(fmt(wbRowDate(row)))}. Check the date, or the planting's First/Last harvest.</span>`
+      : (row.choice && e.quantity==null)
+      ? `<span class="wb-warn">No quantity read for this line — type one in, or it will be skipped.</span>` : "";
+
+    return `<div class="sb-card" data-i="${i}">
+      <div class="sb-raw">${esc(e.raw_text||"(blank line)")}${conf}</div>
+      <div class="sb-fields">
+        <label><span>Crop</span><input data-f="crop" value="${esc(e.crop||"")}"></label>
+        <label><span>Variety</span><input data-f="variety" value="${esc(e.variety||"")}"></label>
+        <label><span>Qty</span><input data-f="quantity" type="number" min="0" step="any" value="${e.quantity??""}"></label>
+        <label><span>Unit</span><input data-f="unit" value="${esc(e.unit||"")}" placeholder="${esc(plantUnit||"")}"></label>
+        <label><span>Date</span><input data-f="date" type="date" value="${esc(row.entry.date||"")}" placeholder="${esc(wbState.boardDate||todayISO())}"></label>
+      </div>
+      <div class="sb-match">
+        <label><span>Planting</span><select data-f="choice">
+          <option value=""${row.choice?"":" selected"}>— skip this line —</option>
+          ${opts}
+        </select></label>
+        <label style="flex:0 1 16rem"><span>Outlet</span><select data-f="outlet">
+          ${outOpts}
+        </select></label>
+        ${problem}${unitWarn}${mode}
+      </div>
+      ${e.note?`<div class="sub" style="margin-top:.4rem;font-size:.73rem">Board note: ${esc(e.note)}</div>`:""}
+    </div>`;
+  }).join("");
+  const n=rows.filter((r,i)=>r.choice && bases[i]).length;
+  document.getElementById("wbApplyNote").textContent =
+    n ? `${n} of ${rows.length} ready to post.` : "Nothing ready to post yet.";
+}
+
+// Same focus rule as the Seed book: text edits are read on `input`, but only re-matched and
+// re-rendered on `change` (blur), so retyping a crop name doesn't yank the cursor out mid-word.
+function wbRow(ev){
+  const card=ev.target.closest(".sb-card"); if(!card) return null;
+  const row=wbState.rows[+card.dataset.i], f=ev.target.dataset.f;
+  return (row && f) ? {row,f} : null;
+}
+function wbReadField(ev){
+  const hit=wbRow(ev); if(!hit) return null;
+  const {row,f}=hit;
+  if(f==="choice"||f==="outlet"||f==="mode") return hit;
+  row.entry[f] = (f==="quantity") ? (ev.target.value===""?null:+ev.target.value) : ev.target.value;
+  return hit;
+}
+document.getElementById("wbCards").addEventListener("input", wbReadField);
+document.getElementById("wbCards").addEventListener("change",(ev)=>{
+  const hit=wbReadField(ev); if(!hit) return;
+  const {row,f}=hit;
+  if(f==="mode"){ row.mode=ev.target.value; }
+  if(f==="outlet"){ row.outletId=ev.target.value; }
+  if(f==="choice"){ row.choice=ev.target.value; }
+  if(f==="crop"||f==="variety"||f==="date"){
+    row.resolved=sbResolveCrop(row.entry.crop,row.entry.variety);
+    row.candidates=wbMatch(row.entry,row.resolved,wbRowDate(row));
+    if(!row.candidates.some(c=>c.p.id===row.choice)) row.choice="";
+  }
+  wbRenderCards();
+});
+
+document.getElementById("wbShoot").onclick=()=>document.getElementById("wbFile").click();
+document.getElementById("wbResetBtn").onclick=()=>{
+  wbState={rows:[], phase:"capture", boardDate:"", defaultOutlet:wbState.defaultOutlet};
+  wbShow("capture");
+};
+document.getElementById("wbFile").onchange=async(ev)=>{
+  const file=ev.target.files && ev.target.files[0];
+  ev.target.value="";                 // let the same file be re-picked after a failure
+  if(!file) return;
+  wbShow("busy");
+  try{
+    const {b64,mediaType}=await sbEncode(file);
+    document.getElementById("wbBusyMsg").textContent="Reading the board — usually 10–30 seconds.";
+    const out=await aiReadImage({ b64, mediaType, prompt:wbPrompt(), schema:WB_SCHEMA,
+      tooLong:"There was too much on that board to read in one go. Try photographing half of it at a time." });
+    const entries=out.entries||[];
+    if(!entries.length){ wbShow("capture","No harvest lines found on that board. Try a straighter photo with less glare."); return; }
+    wbState.boardDate = out.board_date || todayISO();
+    const outs=activeOutlets();
+    // Only one active outlet means there is nothing to choose — preselect it rather than making
+    // every row ask the same question.
+    if(!wbState.defaultOutlet && outs.length===1) wbState.defaultOutlet=outs[0].id;
+    wbState.rows=entries.map(en=>{
+      const entry={...en};
+      const resolved=sbResolveCrop(entry.crop,entry.variety);
+      const dateISO=entry.date || wbState.boardDate;
+      const candidates=wbMatch(entry,resolved,dateISO);
+      // The board names a destination as often as not; match it to an outlet by name when it does.
+      const named = entry.outlet
+        ? outs.find(o=>sbSquash(o.name)===sbSquash(entry.outlet))
+          || outs.find(o=>sbSquash(o.name).includes(sbSquash(entry.outlet)) || sbSquash(entry.outlet).includes(sbSquash(o.name)))
+        : null;
+      // Only a confident line already inside its harvest window is preselected.
+      const auto = candidates[0] && candidates[0].tier==="window" && entry.confidence!=="low";
+      return {entry, resolved, candidates, choice: auto?candidates[0].p.id:"",
+              outletId: named?named.id:"", mode:"add"};
+    });
+    wbRenderHead(); wbRenderCards(); wbShow("review");
+  }catch(err){ wbShow("capture", err.message||String(err)); }
+};
+
+document.getElementById("wbApply").onclick=async()=>{
+  const F=CFG.f;
+  const bases=wbBaselines();
+  const picks=wbState.rows.map((row,i)=>({row,b:bases[i]})).filter(x=>x.row.choice && x.b);
+  if(!picks.length){ wbShow("review","Nothing ready to post — each line needs a planting, an outlet and a quantity."); return; }
+  const btn=document.getElementById("wbApply"), note=document.getElementById("wbApplyNote");
+  btn.disabled=true;
+  let done=0; const failed=[];
+  for(const {row} of picks){
+    const p=(data.plantings||[]).find(x=>x.id===row.choice);
+    const o=(data.salesOutlets||[]).find(x=>x.id===wbRowOutlet(row));
+    if(!p||!o){ failed.push("a planting or outlet that no longer exists"); continue; }
+    const week=mondayOfISO(wbRowDate(row));
+    // Re-read the record each time rather than trusting the preview: earlier rows in this same
+    // loop may already have written to it, and that write is the value to add onto.
+    const rec=hrFor(p.id,o.id,week);
+    const value = row.mode==="replace" ? row.entry.quantity : ((rec&&rec.actual!=null?rec.actual:0)+row.entry.quantity);
+    note.textContent=`Posting ${done+1} of ${picks.length}…`;
+    try{
+      if(rec){
+        const prev=rec.actual; rec.actual=value;                 // optimistic
+        try{ await atPatch(CFG.farmBase, CFG.tables.harvestRecords, rec.id, {[F.hr_actual]:value}); }
+        catch(err){ rec.actual=prev; throw err; }
+      }else{
+        const label=`${p.crop}${p.variety?" · "+p.variety:""} — ${o.name} — ${week}`;
+        const created=await atCreate(CFG.farmBase, CFG.tables.harvestRecords, [{
+          [F.hr_name]:label, [F.hr_planting]:[p.id], [F.hr_outlet]:[o.id],
+          [F.hr_week]:week, [F.hr_actual]:value,
+          [F.hr_notes]:`From whiteboard ${wbRowDate(row)}: ${row.entry.raw_text||""}`.slice(0,500),
+        }]);
+        data.harvestRecords.push({ id:created[0].id, plantingId:p.id, outletId:o.id, week,
+          planned:null, actual:value, priceOverride:null });
+      }
+      done++;
+    }catch(err){ failed.push(`${p.crop}: ${err.message}`); }
+  }
+  btn.disabled=false; note.textContent="";
+  if(failed.length){ wbRenderCards(); wbShow("review",`Posted ${done}. Failed — ${failed.join(" · ")}`); return; }
+  wbState={rows:[], phase:"capture", boardDate:"", defaultOutlet:wbState.defaultOutlet};
+  await loadAll();
+  showView("whiteboard");
+  wbShow("capture",`Posted ${done} ${done===1?"line":"lines"} to the harvest actuals.`,"ok");
+};
+
 document.getElementById("cmPrev").onclick=()=>{cmYear--;buildCropMap();};
 document.getElementById("cmNext").onclick=()=>{cmYear++;buildCropMap();};
 document.getElementById("seasonPrev").onclick=()=>{seasonYear--;buildSeason();};
@@ -4838,8 +5671,11 @@ function tlShade(hex,m){ // darken a #hex by fraction m (0..1)
   const n=parseInt(hex.slice(1),16),r=n>>16,g=(n>>8)&255,b=n&255,d=c=>Math.round(c*(1-m));
   return `rgb(${d(r)},${d(g)},${d(b)})`;
 }
+// 18 months (Jan of tlYear through Jun of tlYear+1) rather than a bare calendar year, so
+// successions sown late in tlYear that harvest into the following year aren't clipped at
+// Dec 31 — the extra 6 months makes that year-boundary crossover visible instead of cut off.
 function tlBounds(){
-  const start=new Date(tlYear,0,1), end=new Date(tlYear+1,0,1);
+  const start=new Date(tlYear,0,1), end=new Date(tlYear+1,6,1);
   return {start,end,days:(end-start)/86400000};
 }
 function tlX(dstr,b){
@@ -5083,20 +5919,24 @@ function buildTimeline(){
   if(cmIsMobile()){ buildTlMobileList(); return; }
   const bodyIn=document.getElementById("tlBodyInner"); if(!bodyIn) return;
   tlHideCtxMenu();
-  document.getElementById("tlYearLabel").textContent=tlYear;
+  document.getElementById("tlYearLabel").textContent=tlYear+"–"+(tlYear+1);
   const b=tlBounds();
-  // fit the whole year across the available width (like Heirloom), with a readable floor
+  // fit just the 12 months of tlYear across the available width (like Heirloom did before the
+  // 18-month extension); the extra 6 months of crossover context then overflow to the right and
+  // are reached by scrolling rather than being squeezed to fit alongside the main year.
   let availW=document.getElementById("tlBody").clientWidth; if(!availW) availW=1000;
-  TL_DAY=Math.max(TL_MIN_DAY,(availW-2)/b.days);
+  const yearDays=(new Date(tlYear+1,0,1)-new Date(tlYear,0,1))/86400000;
+  TL_DAY=Math.max(TL_MIN_DAY,(availW-2)/yearDays);
   const W=Math.round(b.days*TL_DAY);
 
   // header: months + week numbers
   const hIn=document.getElementById("tlHeaderInner");
   hIn.style.width=W+"px"; hIn.innerHTML="";
-  for(let m=0;m<12;m++){
+  for(let m=0;m<18;m++){
     const x0=tlX(new Date(tlYear,m,1),b), x1=tlX(new Date(tlYear,m+1,1),b);
     const mon=document.createElement("div");mon.className="tl-mon";
-    mon.style.left=x0+"px";mon.style.width=(x1-x0)+"px";mon.textContent=TL_MON[m];
+    mon.style.left=x0+"px";mon.style.width=(x1-x0)+"px";
+    mon.textContent=TL_MON[m%12]+(m%12===0?" '"+String(tlYear+Math.floor(m/12)).slice(2):"");
     hIn.appendChild(mon);
   }
   let wk=1;
@@ -5112,9 +5952,9 @@ function buildTimeline(){
   sideIn.innerHTML=""; bodyIn.innerHTML=""; bodyIn.style.width=W+"px";
 
   const glines=document.createElement("div");glines.className="tl-glines";glines.style.width=W+"px";
-  for(let m=0;m<=12;m++){const gl=document.createElement("div");gl.className="tl-gl mon";gl.style.left=tlX(new Date(tlYear,m,1),b)+"px";glines.appendChild(gl);}
+  for(let m=0;m<=18;m++){const gl=document.createElement("div");gl.className="tl-gl mon";gl.style.left=tlX(new Date(tlYear,m,1),b)+"px";glines.appendChild(gl);}
   const now=new Date();
-  if(now.getFullYear()===tlYear){const gl=document.createElement("div");gl.className="tl-gl today";gl.style.left=tlX(now,b)+"px";glines.appendChild(gl);}
+  if(now>=b.start && now<b.end){const gl=document.createElement("div");gl.className="tl-gl today";gl.style.left=tlX(now,b)+"px";glines.appendChild(gl);}
   bodyIn.appendChild(glines);
 
   let groups = tlGroupMode==="crop" ? tlGroupsByCrop() : tlGroupsByBed();
@@ -5552,6 +6392,15 @@ const CLIMATE_PREF_KEY = "roseberry_climate_dtm";
 function loadClimatePref(){ return localStorage.getItem(CLIMATE_PREF_KEY) !== "0"; }   // default ON
 function saveClimatePref(on){ localStorage.setItem(CLIMATE_PREF_KEY, on ? "1" : "0"); }
 
+// Bed-suggestion scoring weights — adjustable via the Crop Map's Auto-place priorities panel,
+// remembered across sessions the same way the climate-DTM preference is.
+const SUGGEST_WEIGHTS_KEY = "roseberry_suggest_weights";
+function loadSuggestWeights(){
+  try{ return { ...PlannerShared.SUGGEST_WEIGHTS, ...JSON.parse(localStorage.getItem(SUGGEST_WEIGHTS_KEY)||"{}") }; }
+  catch(_){ return { ...PlannerShared.SUGGEST_WEIGHTS }; }
+}
+function saveSuggestWeights(w){ localStorage.setItem(SUGGEST_WEIGHTS_KEY, JSON.stringify(w)); }
+
 // ---- Lifecycle tasks: ticking a task advances the planting's status ----
 // A new planting starts "Planned"; each ticked task moves it one stage on. (shared, see planner-shared.js)
 let apStatusVal = "Planned";
@@ -5937,7 +6786,7 @@ function apUpdateVis(){
 }
 
 // ---- Tabs: Planting Details / Row Spacing / Harvest / Nursery ----
-const AP_TABS=["details","rows","harvest","nursery","tasks"];
+const AP_TABS=["details","bed","rows","harvest","nursery","tasks"];
 function apShowTab(name){
   AP_TABS.forEach(t=>{ $ap("apTab-"+t).style.display = (t===name) ? "block" : "none"; });
   $ap("apTabBar").querySelectorAll(".ap-tab-btn").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===name?"true":"false"));
@@ -7228,23 +8077,23 @@ function bdIssueCard(bed,i){
     .sort((a,b)=>a.name.localeCompare(b.name));
   box.innerHTML=
     `<div class="bd-issue-line">`
-     +`<label>Type<select data-k="type">${bdSelectHTML(BD_ISSUE_TYPES,i.type,"—")}</select></label>`
-     +`<label>Severity<select data-k="severity">${bdSelectHTML(BD_SEVERITIES,i.severity,"—")}</select></label>`
-     +`<label>Active from<input type="date" data-k="from" value="${esc(i.from||"")}"></label>`
-     +`<label>Active until<input type="date" data-k="until" value="${esc(i.until||"")}"></label>`
+     +`<label title="What kind of problem this is">Type<select data-k="type">${bdSelectHTML(BD_ISSUE_TYPES,i.type,"—")}</select></label>`
+     +`<label title="How serious — informational only, doesn't change what's flagged or blocked">Severity<select data-k="severity">${bdSelectHTML(BD_SEVERITIES,i.severity,"—")}</select></label>`
+     +`<label title="Blank = active from now. Set a future date if the issue doesn't start applying yet">Active from<input type="date" data-k="from" value="${esc(i.from||"")}"></label>`
+     +`<label title="Blank = active indefinitely. Set a date once you expect the problem to have cleared">Active until<input type="date" data-k="until" value="${esc(i.until||"")}"></label>`
      +`<button type="button" class="btn-danger bd-issue-del">Delete</button>`
    +`</div>`
    +`<div class="bd-issue-line">`
      +`<label class="bd-grow">Notes<input type="text" data-k="notes" value="${esc(i.notes||"")}" placeholder="What's the problem?"></label>`
    +`</div>`
    +`<div class="bd-issue-excl">`
-     +`<div class="bd-excl-label">Excludes crop types</div>`
+     +`<div class="bd-excl-label" title="Any crop of this family gets flagged if planted on this bed while the issue is active">Excludes crop types</div>`
      +`<div class="bd-chips">`+CROP_TYPES.map(t=>{
         const on=(i.types||[]).includes(t);
         return `<button type="button" class="cm-type-chip${on?" on":""}" data-type="${esc(t)}"
                   style="border-left-color:${cropTypeColor(t)}">${on?"✓ ":""}${esc(t)}</button>`;
       }).join("")+`</div>`
-     +`<div class="bd-excl-label">Excludes crops</div>`
+     +`<div class="bd-excl-label" title="Individually named crops that get flagged if planted on this bed while the issue is active — on top of any whole type excluded above">Excludes crops</div>`
      +`<div class="bd-chips">`
        +`<select class="bd-addcrop"><option value="">+ Add a crop…</option>`
        + cropOpts.filter(c=>!(i.cropIds||[]).includes(c.id))
@@ -7500,7 +8349,8 @@ const TASK_ANCHORS = ["Sow","Transplant","First harvest","Last harvest"];
 const TASK_CATEGORIES = ["Cultivation","Fertility","Pest & Disease","Irrigation","Bed prep","Harvest","Other"];
 const TASK_SELECT_KEYS = new Set(["category","anchor","until"]);
 const TASK_FIELD = { name:"tk_name", category:"tk_cat", anchor:"tk_anchor",
-  offset:"tk_offset", repeat:"tk_repeat", until:"tk_until", duration:"tk_duration", desc:"tk_desc" };
+  offset:"tk_offset", repeat:"tk_repeat", until:"tk_until", duration:"tk_duration", desc:"tk_desc",
+  fwTag:"tk_fwtag" };
 // <option> list with a leading blank; marks the current value selected.
 function tkOptions(opts,val){
   return `<option value=""></option>`+opts.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
@@ -7515,7 +8365,7 @@ function buildTaskLibrary(query){
   if(q) list=list.filter(t=>(t.name+" "+t.category).toLowerCase().includes(q));
   if(!list.length){
     const r=document.createElement("tr");
-    r.innerHTML=`<td colspan="9"><div class="cr-empty">${q?"No tasks match your search.":"No tasks yet."}</div></td>`;
+    r.innerHTML=`<td colspan="10"><div class="cr-empty">${q?"No tasks match your search.":"No tasks yet."}</div></td>`;
     body.appendChild(r);
   }else{
     list.forEach(t=>body.appendChild(tkRow(t)));
@@ -7532,6 +8382,7 @@ function tkRow(t){
     +`<td><input class="cr-num" type="number" min="0" step="1" data-k="repeat" value="${t.repeat??""}"></td>`
     +`<td><select data-k="until">${tkOptions(TASK_ANCHORS,t.until)}</select></td>`
     +`<td><input class="cr-num" type="number" min="0" step="0.01" data-k="duration" value="${t.duration??""}"></td>`
+    +`<td><select data-k="fwTag">${fwTagOptionsHTML(t.fwTag)}</select></td>`
     +`<td><input type="text" data-k="desc" value="${esc(t.desc)}"></td>`
     +`<td><button type="button" class="btn-danger" style="padding:.2rem .6rem;font-size:.8rem">Delete</button></td>`;
   const bind=(k,parse)=>{ const el=tr.querySelector(`[data-k="${k}"]`);
@@ -7543,13 +8394,33 @@ function tkRow(t){
   bind("repeat",v=>v===""?null:(+v));
   bind("until",v=>v||null);
   bind("duration",v=>v===""?null:(+v));
+  // The "+ Add new tag…"/"− Delete a tag…" options are commands, not values — intercepted here
+  // instead of going through the generic bind() so picking one never writes a sentinel string onto
+  // the task. A delete can affect other rows too (any task pointing at the removed tag gets
+  // unlinked), so that path re-renders the whole table rather than patching just this row.
+  tr.querySelector('[data-k="fwTag"]').onchange=async(e)=>{
+    const v=e.target.value;
+    if(v==="__add_fwtag__"){
+      const added=await fwAddCustomTagFlow();
+      e.target.innerHTML=fwTagOptionsHTML(added||t.fwTag);
+      e.target.value=added||t.fwTag||"";
+      if(added) saveTask(t.id,"fwTag",added);
+      return;
+    }
+    if(v==="__del_fwtag__"){
+      await fwDeleteCustomTagFlow();
+      buildTaskLibrary();
+      return;
+    }
+    saveTask(t.id,"fwTag",v||null);
+  };
   bind("desc");
   tr.querySelector(".btn-danger").onclick=()=>deleteTask(t.id,t.name);
   return tr;
 }
 function tkAddRow(){
   const tr=document.createElement("tr"); tr.className="cr-add-row";
-  tr.innerHTML=`<td colspan="9"><button type="button" class="cr-add-variety">+ Add task…</button></td>`;
+  tr.innerHTML=`<td colspan="10"><button type="button" class="cr-add-variety">+ Add task…</button></td>`;
   tr.querySelector("button").onclick=async()=>{ if(await addTask()) buildTaskLibrary(); };
   return tr;
 }
@@ -7574,7 +8445,7 @@ async function addTask(){
   try{
     const created=await atCreate(CFG.farmBase, CFG.tables.tasks, [{[CFG.f.tk_name]:name}]);
     const rec=created[0];
-    data.tasks.push({id:rec.id, name, category:"", desc:"", anchor:"", offset:null, repeat:null, until:"", duration:null});
+    data.tasks.push({id:rec.id, name, category:"", desc:"", anchor:"", offset:null, repeat:null, until:"", duration:null, fwTag:""});
     data.tasks.sort((a,b)=>a.name.localeCompare(b.name));
     return true;
   }catch(e){
@@ -8274,17 +9145,24 @@ document.getElementById("wkGroupList").addEventListener("click",e=>{
 // task" comment on wkCollect in planner-shared.js). id=null opens the dialog empty for a new task;
 // an existing Planting Task id pre-fills it for editing (reached by clicking a manual row's name).
 let wkTaskEditId=null, wkTaskType="quick", wkTaskDueManual=false, wkTaskLinkPre={};
-function wkTaskOpen(id){
+// Set by a right-click on an empty spot in the day-grid — a start-minute to pin the new task at,
+// consumed once by wkTaskSave and cleared on close so it can never leak onto an unrelated task.
+let wkTaskStartPre=null;
+function wkTaskOpen(id, opts){
+  opts=opts||{};
   wkTaskEditId=id||null;
   const t = wkTaskEditId ? (data.plantingTasks||[]).find(x=>x.id===wkTaskEditId) : null;
-  wkTaskDueManual = !!t;   // when editing, don't auto-overwrite an existing due date
+  // editing an existing task, or adding one at a specific day/time picked by right-click, both mean
+  // "don't auto-overwrite the due date" once a library task/planting gets picked afterwards
+  wkTaskDueManual = !!t || !!opts.due;
   wkTaskLinkPre = { plantingId: t&&t.plantingId, bedId: t&&t.bedId };
+  wkTaskStartPre = (!t && opts.startMin!=null) ? opts.startMin : null;
   document.getElementById("wkTaskTitle").textContent = t ? "Edit task" : "Add task";
   document.getElementById("wkTaskTypeSeg").style.display = t ? "none" : "";   // type toggle is for new tasks only
   document.getElementById("wkTaskLabel").value = t ? (t.label||"") : "";
   wkFillTaskLibrary(t ? t.taskId : null);
   document.getElementById("wkTaskLinkType").value = t ? (t.plantingId?"planting":t.bedId?"bed":"") : "";
-  document.getElementById("wkTaskDue").value = t ? (t.due||"") : (wkSelectedDay || wkStartISO || wkISO(new Date()));
+  document.getElementById("wkTaskDue").value = t ? (t.due||"") : (opts.due || wkSelectedDay || wkStartISO || wkISO(new Date()));
   document.getElementById("wkTaskDuration").value = (t && t.duration!=null) ? t.duration : "";
   const curAssignee = t ? (t.assignee||"") : "";
   const assigneeChoices=knownAssignees();
@@ -8303,7 +9181,14 @@ function wkTaskOpen(id){
   document.getElementById("wkTaskModal").classList.add("open");
   if(wkTaskType!=="library") document.getElementById("wkTaskLabel").focus();
 }
-function wkTaskClose(){ wkTaskEditId=null; document.getElementById("wkTaskModal").classList.remove("open"); }
+function wkTaskClose(){
+  wkTaskEditId=null;
+  // Cleared on close, not just on save — cancelling out of a walk-raised task must not leave the
+  // next desk-added task routed through the field-walk queue and linked to a stale note.
+  fwTaskLinkObsId=null;
+  wkTaskStartPre=null;
+  document.getElementById("wkTaskModal").classList.remove("open");
+}
 // Quick / Library / Spray chooser. Spray isn't really a task type — it hands straight off to the
 // spray planner (a scheduled spray is a Planned Spray Application, not a Planting Task).
 function wkSetTaskType(type){
@@ -8420,9 +9305,20 @@ async function wkTaskSave(){
       if(taskId) fields[F.pt_task]=[taskId];
       if(plantingId) fields[F.pt_planting]=[plantingId];
       if(bedId) fields[F.pt_bed]=[bedId];
-      const [rec]=await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [fields]);
-      data.plantingTasks.push({id:rec.id, plantingId:plantingId||null, taskId:taskId||null, label, anchor:"", offset:null,
-        due, done:false, start:null, repeat:null, until:"", duration, assignee, ttId:"", gcalId:"", bedId:bedId||null});
+      // Right-clicked onto a specific time in the day-grid — pin the new block there instead of
+      // leaving it to wkPackDay's default (greedy, top-of-day) placement.
+      if(wkTaskStartPre!=null) fields[F.pt_start]=wkTaskStartPre;
+      // Raised from a field walk: go through that tab's offline queue instead of a live create, so
+      // a job spotted at the blocks with no signal is saved rather than lost. The queue hands back
+      // a tmp id immediately and swaps in the real one on flush (fwReconcile), which is why the
+      // in-memory row and the note's link below can both be written straight away.
+      const viaQueue = !!fwTaskLinkObsId;
+      const newId = viaQueue
+        ? fwEnqueue("create","plantingTasks",fields)
+        : (await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [fields]))[0].id;
+      data.plantingTasks.push({id:newId, plantingId:plantingId||null, taskId:taskId||null, label, anchor:"", offset:null,
+        due, done:false, start:wkTaskStartPre, repeat:null, until:"", duration, assignee, ttId:"", gcalId:"", bedId:bedId||null});
+      if(viaQueue) fwLinkTaskToObs(fwTaskLinkObsId, newId);
     }
     wkTaskClose(); buildWeekPlanner();
   }catch(e){ alert("Couldn't save that task: "+e.message); }
@@ -8973,6 +9869,17 @@ function wkSetOdCollapsed(val){
     if(block && block.dataset.grp){
       e.preventDefault();
       wkShowCtxMenu(e, {kind:"block", grp:block.dataset.grp, day:block.dataset.day});
+      return;
+    }
+    // Empty grid space (no block under the cursor): right-click opens Add task pre-filled with the
+    // day and clock time clicked, snapped the same way a drag-drop lands (WK_SNAP).
+    const col=e.target.closest(".wk-cal-col");
+    if(col){
+      e.preventDefault();
+      const r=col.getBoundingClientRect();
+      let start=WK_T0+Math.round(((e.clientY-r.top)/WK_PXMIN)/WK_SNAP)*WK_SNAP;
+      start=Math.max(WK_T0, Math.min(start, WK_T1));
+      wkTaskOpen(null, {due:col.dataset.day, startMin:start});
     }
   });
   const odToggle=document.getElementById("wkOdToggle");
@@ -9000,6 +9907,7 @@ function saveUiState(){
       cropMap: { year:cmYear, mode:cmViewMode, colorMode:cmColorMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock, unassignedCollapsed:cmUnCollapsed },
       timeline: { year:tlYear, mode:tlGroupMode },
       week: { mode:wkMode, odCollapsed:wkOdCollapsed },
+      fieldWalk: { pane:fwPane, date:fwDateISO },
     };
     localStorage.setItem(UI_KEY, JSON.stringify(state));
   }catch(_){}
@@ -9042,6 +9950,11 @@ function restoreUiState(){
     document.querySelectorAll("#wkModeToggle button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
   }
   if(saved.week && saved.week.odCollapsed) wkSetOdCollapsed(true);
+
+  // Only the pane is restored, never the date — a phone that backgrounded mid-walk should come
+  // back to the same half of the page, but always to today's walk. Reopening on last Monday's
+  // walk and typing into it is a much worse failure than losing the pane.
+  if(saved.fieldWalk && saved.fieldWalk.pane==="lists") fwPane="lists";
 
   const tab=saved.tab||"map";
   if(tab!=="map"){
@@ -9708,6 +10621,7 @@ function sprayScheduledCard(a){
     <div class="sp-sched-actions">
       <button class="btn-primary" data-sched-log="${a.id}">Log now</button>
       <button class="btn-ghost" data-sched-edit="${a.id}">Edit</button>
+      <button class="btn-ghost" data-del-app="${a.id}">Delete</button>
     </div>
   </div>`;
 }
@@ -9744,6 +10658,9 @@ function sprayRecCard(a){
       ${method}${whpTag}
     </div>
     ${prods}${metaBits}${photos}${note}
+    <div class="sp-sched-actions">
+      <button class="btn-ghost" data-del-app="${a.id}">Delete</button>
+    </div>
   </div>`;
 }
 
@@ -9884,7 +10801,23 @@ function sprayOpenLogFromPlan(id){
   $s("sprayDate").value = sprayToday();   // the actual application happens today
   sprayFinishOpen(false);
 }
-function sprayClose(){ $s("sprayModal").classList.remove("open"); spray=null; }
+function sprayClose(){ $s("sprayModal").classList.remove("open"); spray=null; fwSprayFromWalk=false; }
+
+// Deletes a spray/fert application record (scheduled or logged) and its product-item rows — there's
+// no FK cascade on spray_application_items, so both deletes are explicit here.
+async function sprayDeleteRecord(id){
+  const a=(data.sprayApplications||[]).find(x=>x.id===id);
+  if(!a) return;
+  const label=`${a.status==="Planned"?"scheduled":"logged"} spray${a.date?" from "+fmt(a.date):""}`;
+  if(!confirm(`Delete this ${label}? This can't be undone.`)) return;
+  try{
+    const itemIds=(a.items||[]).map(it=>it.id);
+    if(itemIds.length) await atDelete(CFG.farmBase, CFG.tables.sprayApplicationItems, itemIds);
+    await atDelete(CFG.farmBase, CFG.tables.sprayApplications, id);
+    await loadAll();
+    buildSprayRecords();
+  }catch(e){ alert("Couldn't delete: "+e.message); }
+}
 
 function populateSprayMixSelect(){
   const mixes=(data.sprayMixes||[]).filter(m=>m.active)
@@ -10090,6 +11023,7 @@ async function sprayCreateFollowups(mainAppId){
   }
 }
 function sprayAfterSaveView(){
+  if(fwSprayFromWalk){ fwSprayFromWalk=false; showView("fieldwalk"); return; }
   const active=document.querySelector(".view.active");
   if(active && active.id==="view-week") buildWeekPlanner();
   else showView("sprayrec");
@@ -10621,6 +11555,7 @@ function sprayPickSearchSuggest(q){
   document.getElementById("sprayMixNewBtn")?.addEventListener("click", ()=>{ if(typeof sprayMixOpen==="function") sprayMixOpen(null); });
   // Records "Scheduled" section actions (delegated): Log the scheduled spray, or edit the plan.
   document.getElementById("sprayRecBody")?.addEventListener("click", (e)=>{
+    const del=e.target.closest("[data-del-app]"); if(del){ sprayDeleteRecord(del.dataset.delApp); return; }
     const log=e.target.closest("[data-sched-log]"); if(log){ sprayOpenLogFromPlan(log.dataset.schedLog); return; }
     const edit=e.target.closest("[data-sched-edit]"); if(edit){ sprayOpenPlan(edit.dataset.schedEdit); return; }
     const card=e.target.closest(".spray-card[data-app]"); if(card && card.dataset.planned==="1") sprayOpenPlan(card.dataset.app);
@@ -10635,6 +11570,1096 @@ function sprayPickSearchSuggest(q){
     else if(t.dataset.mixDup!=null) sprayMixAction("dup", t.dataset.mixDup);
     else if(t.dataset.mixDel!=null) sprayMixAction("del", t.dataset.mixDel);
   });
+})();
+
+/* ---------- Field walk ----------
+   The weekly prep walk, built for a phone in a paddock. Two things make this page different from
+   every other tab in the app and explain most of what follows:
+
+   1. EVERY WRITE IS QUEUED. There is no online branch. fwEnqueue() appends to a localStorage queue,
+      returns a temporary id synchronously, and kicks a flush in the background; the UI never awaits
+      a network call. The rest of the app uses the opposite convention (optimistic write, await,
+      roll back on failure — see saveBed) and that is right for a desk. It is wrong here: at the
+      blocks the failure is "no signal", and there is nothing to roll back *to* — rolling back would
+      simply delete the note the grower just took. Because there's only one path, the offline case
+      is exercised on every single save rather than only in a dead spot.
+   2. NOTES KEEP BOTH THE PROSE AND THE LINKS. "@AB7 aphids on outer rows" is stored verbatim in
+      Note, and the resolved bed id goes in Bed. The text has to outlive a renamed bed or a deleted
+      planting; the ids are what the map badges and any later query actually read.                */
+
+const FW_Q_KEY = "roseberry_fw_queue";
+const FW_WALKERS_KEY = "roseberry_fw_walkers";
+// Two tiers. The parent says what KIND of thing you're looking at; ticking one reveals a second
+// row of sub-pills naming the response. Sub names are deliberately spelled to match rows in the
+// Tasks library ("Foliar feed", "Weeding", "Lay tarp"…) — fwSubTask() resolves them by name at
+// render time, so a sub that matches a real library task is marked as connected and preselects it
+// in the ＋ Task dialog. Subs with no matching library row still work; they just become the label
+// of a quick task. That way this list never has to be kept in sync with the library by hand: add
+// "Fertigation" to the Tasks library and the existing pill starts resolving to it.
+const FW_TAGS = [
+  {name:"Pest",       subs:["Row cover on","Scout","Spray","Trap"]},
+  {name:"Nutrition",  subs:["Foliar feed","Fertigation","Side-dress","Soil amendment"]},
+  {name:"Disease",    subs:["Spray","Remove affected","Row cover on"]},
+  {name:"Prep",       subs:["Tarp","Lay tarp","Pull tarp","Compost"]},
+  {name:"Weeds",      subs:["Weeding","Thinning","Tarp","Flame"]},
+  {name:"Irrigation", subs:["Fix line","Check emitters","Adjust timer"]},
+  {name:"Other",      subs:[]},
+];
+// Frozen copy of the hardcoded subs, taken once at load — fwApplyCustomTags rebuilds FW_TAGS' live
+// .subs arrays from this plus data.fieldWalkTags on every loadAll, so re-running it (e.g. after
+// adding/deleting a custom tag) never double-appends.
+const FW_TAGS_BUILTIN = FW_TAGS.map(t=>({name:t.name, subs:t.subs.slice()}));
+// Layers data.fieldWalkTags (Supabase-backed, user-added via the Task library) onto FW_TAGS' .subs
+// arrays in place — every consumer (fwAllSubTags, fwAvailableSubs, the sub-pill row) reads FW_TAGS
+// directly and so picks up custom tags with no further wiring. A custom tag naming an unknown
+// parent is dropped rather than silently creating a new top-level pill — FW_TAGS's parents are the
+// fixed set of buttons drawn in the tag row's markup, not data-driven.
+function fwApplyCustomTags(){
+  const byParent={};
+  (data.fieldWalkTags||[]).forEach(t=>{ (byParent[t.parent] ||= []).push(t.name); });
+  FW_TAGS.forEach((t,i)=>{
+    const custom=(byParent[t.name]||[]).filter(n=>!FW_TAGS_BUILTIN[i].subs.includes(n));
+    t.subs = [...FW_TAGS_BUILTIN[i].subs, ...custom];
+  });
+}
+// Task library's "Field walk tag" <select> — every sub-pill plus two commands. "Delete" only shows
+// once there's at least one custom tag to remove; the built-in set is hardcoded in FW_TAGS and
+// isn't offered for deletion here (that would need a code change, not a data change).
+function fwTagOptionsHTML(val){
+  const subs=fwAllSubTags();
+  return `<option value=""></option>`
+    + subs.map(s=>`<option${s===val?" selected":""}>${esc(s)}</option>`).join("")
+    + `<option value="__add_fwtag__">+ Add new tag…</option>`
+    + ((data.fieldWalkTags||[]).length ? `<option value="__del_fwtag__">− Delete a tag…</option>` : "");
+}
+// Adds a user-defined sub-pill (Supabase-backed, syncs to every device on next load) under an
+// existing parent category — asked via a second prompt rather than a picker, matching every other
+// "+ Add new…" escape hatch in this app. Returns the new tag's name on success, or null if
+// cancelled/invalid, so the caller can select it in the dropdown and save it onto the row that
+// triggered the add.
+async function fwAddCustomTagFlow(){
+  const name=(prompt('New field walk tag (e.g. "Bed Prep"):')||"").trim();
+  if(!name) return null;
+  if(fwAllSubTags().some(s=>s.toLowerCase()===name.toLowerCase())){ alert(`"${name}" already exists.`); return null; }
+  const parents=FW_TAGS.filter(t=>t.name!=="Other").map(t=>t.name);
+  const choice=(prompt(`Which category does "${name}" belong under?\n`+parents.map((p,i)=>`${i+1}. ${p}`).join("\n"), "1")||"").trim();
+  const parent=parents[parseInt(choice,10)-1];
+  if(!parent){ alert("Cancelled — no category chosen."); return null; }
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.fieldWalkTags, [{[CFG.f.fwt_name]:name, [CFG.f.fwt_parent]:parent}]);
+    data.fieldWalkTags.push({id:rec.id, name, parent});
+    fwApplyCustomTags();
+    return name;
+  }catch(e){ alert("Couldn't add tag: "+e.message); return null; }
+}
+// Removes a custom tag and unlinks any task currently pointing at it (their Field walk tag goes
+// blank rather than dangling on a name that no longer resolves to anything).
+async function fwDeleteCustomTagFlow(){
+  const custom=data.fieldWalkTags||[];
+  if(!custom.length){ alert("No custom field walk tags to delete."); return null; }
+  const listTxt=custom.map((t,i)=>`${i+1}. ${t.name} (${t.parent})`).join("\n");
+  const choice=(prompt(`Delete which tag?\n${listTxt}`, "1")||"").trim();
+  const tag=custom[parseInt(choice,10)-1];
+  if(!tag) return null;
+  if(!confirm(`Delete the "${tag.name}" field walk tag? Any tasks currently pointing at it will be unlinked.`)) return null;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.fieldWalkTags, [tag.id]);
+    data.fieldWalkTags=data.fieldWalkTags.filter(x=>x.id!==tag.id);
+    const affected=(data.tasks||[]).filter(x=>x.fwTag===tag.name);
+    for(const x of affected){
+      await atPatch(CFG.farmBase, CFG.tables.tasks, x.id, {[CFG.f.tk_fwtag]:null});
+      x.fwTag="";
+    }
+    fwApplyCustomTags();
+    return tag.name;
+  }catch(e){ alert("Couldn't delete tag: "+e.message); return null; }
+}
+// Every distinct sub-pill name across all parents, in FW_TAGS' own order — the option list for the
+// Task library's "Field walk tag" dropdown, so that list can never drift out of sync with the
+// pills actually shown on the walk.
+function fwAllSubTags(){
+  const out=[];
+  FW_TAGS.forEach(t=>t.subs.forEach(s=>{ if(!out.includes(s)) out.push(s); }));
+  return out;
+}
+// Which library task a sub-pill opens ＋ Task straight to — an explicit, user-set link (the Task
+// library's "Field walk tag" column), not a guess from the task's Name. That's deliberate: two
+// tasks can share a name-alike job ("Foliar feed" vs "Fertigation" are both feeding, but different
+// jobs), and a grower should be able to point a pill at whichever one they actually mean without
+// renaming anything. Returns null for a sub nothing is tagged with — the caller falls back to
+// treating the sub name as a plain quick-task label.
+function fwSubTask(sub){
+  const key=String(sub||"").toLowerCase();
+  return (data.tasks||[]).find(t=>String(t.fwTag||"").toLowerCase()===key) || null;
+}
+// Sub-pills that mean "a product went on/in" — for these, ＋ Task should open the spray/feed log
+// instead of a This-week task, since that's the record that actually matters (WHP, rate, product)
+// and Method can be set straight from which pill was ticked.
+const FW_SPRAY_SUBS = {
+  "Foliar feed":    "Backpack",
+  "Fertigation":    "Fertigation",
+  "Side-dress":     "Granular",
+  "Soil amendment": "Granular",
+  "Spray":          "Backpack",
+};
+function fwSprayTrigger(obs){
+  return (obs && obs.tags || []).find(t=>FW_SPRAY_SUBS.hasOwnProperty(t)) || null;
+}
+// Sub-pills currently on offer: the union across every ticked parent, de-duplicated (both Pest and
+// Disease offer "Spray"; both Prep and Weeds offer "Tarp") so it appears once, not twice.
+function fwAvailableSubs(){
+  const out=[];
+  FW_TAGS.forEach(t=>{
+    if(!fwQuickTags.has(t.name)) return;
+    t.subs.forEach(s=>{ if(!out.includes(s)) out.push(s); });
+  });
+  return out;
+}
+
+let fwPane = "walk";                 // "walk" | "lists" — which pane shows on mobile
+let fwDateISO = "";                  // the walk being viewed; set to today on first build
+let fwIndex = [];                    // @-token search index over beds + blocks
+let fwQuickTags = new Set();         // parent tags armed for the note currently being typed
+let fwQuickSubs = new Set();         // sub-tags armed alongside them (second pill row)
+let fwFlushing = null;               // in-flight flush promise, so two triggers can't double-POST
+let fwDoneOpen = {};                 // listId -> show its ticked-off items
+let fwActiveWalk = null;             // the walk row fwRender resolved for fwDateISO + the current walker
+let fwWalkersBeforeEdit = "";        // #fwWalkers' value at focus-time, so a change event can tell a
+                                      // typo-fix (same walk) from a handoff to someone else (new walk)
+let fwTaskLinkObsId = null;          // observation awaiting the task the wkTask dialog is about to
+                                      // create; also the flag that routes that create through the
+                                      // offline queue instead of a live atCreate
+
+/* ---- Offline queue ---- */
+
+function fwTmpId(){ return `tmp:${Date.now()}:${Math.random().toString(36).slice(2,8)}`; }
+const fwIsTmp = v => typeof v==="string" && v.startsWith("tmp:");
+
+function fwLoadQueue(){
+  try{
+    const q=JSON.parse(localStorage.getItem(FW_Q_KEY)||"null");
+    if(q && Array.isArray(q.entries)) return q;
+  }catch(_){}
+  return {v:1, entries:[]};
+}
+// Quota failures must not silently eat a walk's notes, so the caller keeps its in-memory copy and
+// we shout instead of swallowing. Phase 1 stores text only, so hitting 5MB here would take tens of
+// thousands of notes — the real risk arrives with photos, which is why those are going to
+// IndexedDB rather than in here.
+function fwSaveQueue(q){
+  try{ localStorage.setItem(FW_Q_KEY, JSON.stringify(q)); return true; }
+  catch(e){ console.error("field walk queue save failed:", e); return false; }
+}
+
+// The single write path. `tableKey` is the logical CFG.tables key (not the id) so a queue written
+// under one backend still means something under the other.
+function fwEnqueue(op, tableKey, fields, opts={}){
+  const q=fwLoadQueue();
+  // Deleting something that has never reached the server: drop its pending create (and any patches
+  // aimed at it) instead of queueing a create-then-delete pair. Typo-and-fix while offline should
+  // cost the server nothing, and a delete whose target id doesn't exist yet would fail anyway.
+  if(op==="delete" && fwIsTmp(opts.recId)){
+    q.entries = q.entries.filter(e => e.id!==opts.recId && e.recId!==opts.recId);
+    fwSaveQueue(q); fwRenderBadge(); return opts.recId;
+  }
+  const entry={ id: opts.id || fwTmpId(), op, table:tableKey, recId:opts.recId||null,
+                fields:fields||{}, photoIds:opts.photoIds||[], at:Date.now(), tries:0, lastErr:"" };
+  q.entries.push(entry);
+  fwSaveQueue(q);
+  fwRenderBadge();
+  fwFlush();                       // fire-and-forget — deliberately not awaited by any caller
+  return entry.id;
+}
+
+// Rewrite any tmp: reference to the real id it turned into. This is what makes "create the walk
+// offline, then add six observations to it offline" work: the walk flushes first (FIFO), its real
+// id lands in idMap, and the observations' Walk values are rewritten before they POST.
+function fwResolveRefs(entry, idMap){
+  if(fwIsTmp(entry.recId) && idMap[entry.recId]) entry.recId=idMap[entry.recId];
+  Object.keys(entry.fields).forEach(k=>{
+    const v=entry.fields[k];
+    if(Array.isArray(v)){
+      const mapped=v.map(x=>fwIsTmp(x)?(idMap[x]||x):x);
+      // A tmp: id that survived the map has no real row behind it — write the field without it
+      // rather than poisoning the column with a dangling link nothing can later repair.
+      const clean=mapped.filter(x=>!fwIsTmp(x));
+      if(clean.length!==mapped.length) console.warn("field walk: dropped unresolved link in", k);
+      entry.fields[k]=clean;
+    }else if(fwIsTmp(v)){
+      if(idMap[v]) entry.fields[k]=idMap[v];
+      else { console.warn("field walk: dropped unresolved link in", k); delete entry.fields[k]; }
+    }
+  });
+}
+
+// Swap a temporary id for the real one across everything in memory that could be pointing at it.
+// Only the four field-walk collections can hold these ids, which is why this stays small.
+function fwReconcile(tableKey, tmpId, realId){
+  const fix = (arr, keys) => (arr||[]).forEach(r=>{
+    if(r.id===tmpId) r.id=realId;
+    keys.forEach(k=>{ if(r[k]===tmpId) r[k]=realId; });
+  });
+  fix(data.fieldWalks, []);
+  fix(data.walkObservations, ["walkId","taskId"]);
+  fix(data.walkLists, []);
+  fix(data.walkListItems, ["listId","walkId","obsId","convertedTaskId"]);
+  // Tasks raised on a walk are queued too, so their tmp ids need the same treatment — otherwise
+  // This week would keep rendering a task whose id no longer matches the row in Postgres, and the
+  // note's Task link (patched above) would point at nothing.
+  fix(data.plantingTasks, []);
+  if(document.getElementById("view-fieldwalk")?.classList.contains("active")) fwRender();
+}
+
+async function fwFlush(){
+  if(fwFlushing) return fwFlushing;
+  if(!navigator.onLine) { fwRenderBadge(); return; }
+  if(!connected()) return;                       // no credentials yet — nothing to flush into
+  fwFlushing = (async ()=>{
+    const idMap={};
+    for(;;){
+      const q=fwLoadQueue();
+      const e=q.entries[0]; if(!e) break;
+      fwResolveRefs(e, idMap);
+      try{
+        if(e.op==="create"){
+          const [rec]=await atCreate(CFG.farmBase, CFG.tables[e.table], [e.fields]);
+          idMap[e.id]=rec.id;
+          fwReconcile(e.table, e.id, rec.id);
+        }else if(e.op==="patch"){
+          await atPatch(CFG.farmBase, CFG.tables[e.table], e.recId, e.fields);
+        }else{
+          await atDelete(CFG.farmBase, CFG.tables[e.table], [e.recId]);
+        }
+      }catch(err){
+        // Stop on the first failure: ordering and the tmp:-reference rewriting above both depend
+        // on entries landing in sequence, so skipping ahead would create dangling links.
+        e.tries++; e.lastErr=err.message;
+        const cur=fwLoadQueue();
+        cur.entries[0]=e; fwSaveQueue(cur);
+        fwRenderBadge();
+        return;
+      }
+      const after=fwLoadQueue(); after.entries.shift(); fwSaveQueue(after);
+      fwRenderBadge();
+    }
+  })().finally(()=>{ fwFlushing=null; });
+  return fwFlushing;
+}
+
+function fwRenderBadge(){
+  const q=fwLoadQueue(), n=q.entries.length;
+  const worst=q.entries.reduce((m,e)=>Math.max(m,e.tries||0),0);
+  const badge=document.getElementById("fwSyncBadge");
+  const fab=document.getElementById("navFab");
+  if(fab){ if(n) fab.setAttribute("data-fw-pending","1"); else fab.removeAttribute("data-fw-pending"); }
+  if(!badge) return;
+  badge.className = !n ? "fw-sync-ok"
+    : !navigator.onLine ? "fw-sync-offline"
+    : worst>2 ? "fw-sync-err" : "fw-sync-pending";
+  badge.textContent = !n ? "✓ saved"
+    : !navigator.onLine ? `⚑ ${n} saved on phone`
+    : worst>2 ? `⚠ ${n} unsynced — tap to retry` : `⟳ ${n} unsynced`;
+  const err=q.entries.find(e=>e.lastErr);
+  badge.title = err ? `Last error: ${err.lastErr}` : "Sync status — tap to retry";
+}
+
+/* ---- @-token index and autocomplete ---- */
+
+// One flat searchable index over beds and blocks. `beds` is what an entry resolves TO, so a block
+// token expands to every bed it covers — "@AB thrips everywhere" files the note against the whole
+// block without tapping each bed. Crops and plantings join this in Phase 2.
+// What's currently growing in a bed, or "" if it's empty. The one place every @bed-reference
+// surface (autocomplete dropdown, feed chips, list-item chips) gets this from, so a bare bed name
+// is never orphaned from the reason it was worth typing — mirrors the app's existing
+// crop!=="—" empty-bed convention rather than inventing a new one here.
+function fwBedCrop(bed){
+  return bed && bed.planting && bed.planting.crop && bed.planting.crop!=="—" ? bed.planting.crop : "";
+}
+
+function fwBuildIndex(){
+  fwIndex=[];
+  (data.beds||[]).forEach(b=>{
+    const crop = fwBedCrop(b);
+    fwIndex.push({
+      kind:"bed", label:b.name,
+      // Crop leads — it's the thing worth seeing WHILE typing "@AB7", block is secondary context.
+      sub:[crop, b.block&&"Block "+b.block].filter(Boolean).join(" · "),
+      search:`${b.name} ${b.block||""}`.toLowerCase(),
+      beds:[b.id],
+      plantings:b.planting?[b.planting.id]:[],
+      crops:b.planting&&b.planting.cropId?[b.planting.cropId]:[],
+    });
+  });
+  Object.entries(bedGroups()).forEach(([blk,beds])=>{
+    if(blk==="—") return;
+    fwIndex.push({ kind:"block", label:blk, sub:`${beds.length} beds`, search:blk.toLowerCase(),
+      beds:beds.map(b=>b.id), plantings:[], crops:[] });
+  });
+}
+
+// The active @token is whatever sits between the last "@" and the caret with no whitespace in it.
+// Recomputed on caret movement as well as typing — moving out of a token has to dismiss the popup
+// just as much as finishing one does.
+function fwActiveToken(el){
+  const upto=el.value.slice(0, el.selectionStart);
+  const m=/@([A-Za-z0-9_\-]*)$/.exec(upto);
+  if(!m) return null;
+  return { q:m[1], start:el.selectionStart-m[0].length, end:el.selectionStart };
+}
+
+function fwSearchIndex(q){
+  q=(q||"").trim().toLowerCase();
+  const rank=e=> e.label.toLowerCase()===q ? 0 : e.label.toLowerCase().startsWith(q) ? 1 : 2;
+  const kindRank=e=> e.kind==="bed" ? 0 : 1;
+  return fwIndex
+    .filter(e=> !q || e.search.includes(q))
+    .sort((a,b)=> rank(a)-rank(b) || kindRank(a)-kindRank(b) || a.label.localeCompare(b.label,undefined,{numeric:true}))
+    .slice(0,8);
+}
+
+// Wires @-autocomplete onto one input/textarea. The popup is pinned under the field rather than at
+// the caret: on a phone the caret is under the on-screen keyboard half the time, and a
+// caret-anchored list ends up off-screen exactly when it's needed.
+function fwAttachAutocomplete(el, sug, onEnter){
+  if(!el || !sug || el.dataset.fwAc) return;
+  el.dataset.fwAc="1";
+  let sel=0, matches=[];
+  const close=()=>{ sug.hidden=true; sug.innerHTML=""; matches=[]; };
+  const render=()=>{
+    const tok=fwActiveToken(el);
+    if(!tok){ close(); return; }
+    matches=fwSearchIndex(tok.q);
+    if(!matches.length){ close(); return; }
+    sel=Math.min(sel, matches.length-1);
+    sug.innerHTML=matches.map((m,i)=>
+      `<button type="button" data-fwpick="${i}" aria-selected="${i===sel}">${esc(m.label)}`+
+      `<span class="kind">${esc(m.kind)}</span>`+
+      (m.sub?` <span class="muted">· ${esc(m.sub)}</span>`:"")+`</button>`).join("");
+    sug.hidden=false;
+  };
+  const accept=i=>{
+    const m=matches[i]; const tok=fwActiveToken(el);
+    if(!m||!tok) return;
+    const before=el.value.slice(0,tok.start), after=el.value.slice(tok.end);
+    el.value=`${before}@${m.label} ${after}`;
+    const caret=before.length+m.label.length+2;
+    el.setSelectionRange(caret,caret);
+    close(); el.focus();
+  };
+  el.addEventListener("input", ()=>{ sel=0; render(); });
+  ["keyup","click","select"].forEach(ev=>el.addEventListener(ev, e=>{
+    if(e.type==="keyup" && ["ArrowDown","ArrowUp","Enter","Tab","Escape"].includes(e.key)) return;
+    render();
+  }));
+  el.addEventListener("keydown", e=>{
+    if(!sug.hidden && matches.length){
+      if(e.key==="ArrowDown"){ e.preventDefault(); sel=(sel+1)%matches.length; render(); return; }
+      if(e.key==="ArrowUp"){ e.preventDefault(); sel=(sel-1+matches.length)%matches.length; render(); return; }
+      if(e.key==="Enter"||e.key==="Tab"){ e.preventDefault(); accept(sel); return; }
+      if(e.key==="Escape"){ e.preventDefault(); close(); return; }
+    }
+    // With no popup open, Enter commits — so the keyboard's return key does the obvious thing.
+    // Shift+Enter still inserts a newline for the rare multi-line note.
+    if(e.key==="Enter" && !e.shiftKey && onEnter){ e.preventDefault(); onEnter(); }
+  });
+  el.addEventListener("blur", ()=>setTimeout(close,150));   // let a tap on the list land first
+  sug.addEventListener("mousedown", e=>{
+    const b=e.target.closest("[data-fwpick]"); if(!b) return;
+    e.preventDefault(); accept(+b.dataset.fwpick);
+  });
+}
+
+// Re-scan committed text for @tokens the user typed by hand without opening the picker, so typing
+// "@AB7" blind resolves exactly as tapping it does.
+function fwResolveTokens(text){
+  const out={beds:new Set(), plantings:new Set(), crops:new Set()};
+  String(text||"").match(/@[A-Za-z0-9_\-]+/g)?.forEach(tok=>{
+    const label=tok.slice(1).toLowerCase();
+    const hit=fwIndex.find(e=>e.label.toLowerCase()===label);
+    if(!hit) return;
+    hit.beds.forEach(x=>out.beds.add(x));
+    hit.plantings.forEach(x=>out.plantings.add(x));
+    hit.crops.forEach(x=>out.crops.add(x));
+  });
+  return { beds:[...out.beds], plantings:[...out.plantings], crops:[...out.crops] };
+}
+
+// Chip the tokens that actually resolved; leave the rest as literal text. An unmatched "@foo"
+// renders as "@foo" and is never swallowed — the grower meant something by it even if we can't
+// tell what.
+function fwRenderNote(obs){
+  // Map lowercase label -> the bed it names, or null for a block token (which spans many beds and
+  // so has no single planting to show next to it).
+  const known=new Map();
+  (obs.bedIds||[]).forEach(id=>{
+    const b=(data.beds||[]).find(x=>x.id===id);
+    if(b) known.set(b.name.toLowerCase(), b);
+  });
+  fwIndex.filter(e=>e.kind==="block").forEach(e=>{
+    const key=e.label.toLowerCase();
+    if(!known.has(key) && (e.beds||[]).some(id=>(obs.bedIds||[]).includes(id))) known.set(key, null);
+  });
+  return String(obs.note||"").split(/(@[A-Za-z0-9_\-]+)/g).map(seg=>{
+    if(seg[0]!=="@") return esc(seg);
+    const lbl=seg.slice(1), key=lbl.toLowerCase();
+    if(!known.has(key)) return esc(seg);
+    const crop=fwBedCrop(known.get(key));
+    return `<span class="fw-chip">${esc(lbl)}</span>`+
+      (crop?`<span class="fw-chip-crop"> · ${esc(crop)}</span>`:"");
+  }).join("");
+}
+
+/* ---- Notes → tasks ----
+   A walk mostly produces two kinds of output: things worth remembering, and things worth doing.
+   The note is the record; the task is the job. They're linked (walk_observations."Task") rather
+   than merged, so ticking the job off never erases the observation that caused it. */
+
+// Every @token stripped out, leaving the words. Used for the task label: the bed/planting link
+// already carries "where", so the label should carry "what" and nothing else.
+function fwStripTokens(text){
+  return String(text||"")
+    .replace(/@[A-Za-z0-9_\-]+/g, m => fwIndex.some(e=>e.label.toLowerCase()===m.slice(1).toLowerCase()) ? "" : m)
+    .replace(/\s+/g," ").trim();
+}
+
+// Open, dated planting_tasks already sitting against any of these beds — matched both by a direct
+// Bed link (manual tasks) and via the planting occupying the bed (crop tasks), because the grower
+// doesn't care which of the two shapes it is; a job on that bed is a job on that bed.
+function fwOpenTasksForBeds(bedIds){
+  const want=new Set(bedIds||[]); if(!want.size) return [];
+  return (data.plantingTasks||[]).filter(t=>{
+    if(t.done) return false;
+    if(t.bedId && want.has(t.bedId)) return true;
+    if(t.plantingId){
+      const p=(data.plantings||[]).find(x=>x.id===t.plantingId);
+      if(p && (p.bedIds||[]).some(b=>want.has(b))) return true;
+    }
+    return false;
+  }).sort((a,b)=>String(a.due||"9999").localeCompare(String(b.due||"9999")));
+}
+
+function fwTaskName(t){
+  const lib=t.taskId ? (data.tasks||[]).find(x=>x.id===t.taskId) : null;
+  return (lib && lib.name) || t.label || "Task";
+}
+
+// Live advisory under the quick-add box. Deliberately reads the text being typed rather than
+// waiting for a commit — the useful moment for "that's already on the list" is before you add it.
+function fwRenderTaskHint(){
+  const hint=document.getElementById("fwTaskHint"); if(!hint) return;
+  const text=document.getElementById("fwQuickText")?.value || "";
+  const beds=fwResolveTokens(text).beds;
+  const open=fwOpenTasksForBeds(beds);
+  if(!open.length){ hint.hidden=true; hint.innerHTML=""; return; }
+  const shown=open.slice(0,3).map(t=>{
+    const bed=(data.beds||[]).find(b=>b.id===t.bedId) ||
+              (data.beds||[]).find(b=>((data.plantings||[]).find(p=>p.id===t.plantingId)||{bedIds:[]}).bedIds.includes(b.id));
+    return `<span class="fw-hint-bed">${esc(bed?bed.name:"—")}</span> ${esc(fwTaskName(t))}`+
+           (t.due?` <span class="fw-hint-due">· ${esc(fmt(t.due))}</span>`:"");
+  }).join("<br>");
+  const more=open.length>3 ? `<br>+ ${open.length-3} more` : "";
+  hint.innerHTML=`<b>Already on the list</b><br>${shown}${more}`;
+  hint.hidden=false;
+}
+
+// Hands off to the weekly planner's Add-task dialog with what we know prefilled. Prefers linking
+// to the planting over the bed when the bed has one — a planting carries the crop, which is what
+// makes the task read sensibly in This week.
+// Fills the spray/feed log from a walk note tagged with a product-application sub-pill (Foliar
+// feed, Fertigation, Side-dress, Soil amendment, Spray) — beds, crop, notes and Method, so the
+// only thing left is the product and rate. Opens as a SCHEDULED spray (Planned), not a logged one
+// — a note taken on a walk is a job still to do, and only a Planned spray shows up in This week's
+// calendar. `fwSprayFromWalk` routes the post-save redirect back to the Field walk tab instead of
+// the Spray log's Records list, mirroring how `fwTaskLinkObsId` routes ＋ Task's save.
+let fwSprayFromWalk = false;
+function fwOpenSprayForObs(obs, sub){
+  if(!obs || typeof sprayOpenPlan!=="function") return;
+  fwSprayFromWalk = true;
+  sprayOpenPlan(null);
+  const method=FW_SPRAY_SUBS[sub];
+  if(method) setSprayMethod(method);
+  const plantingBeds=(obs.plantingIds||[]).map(pid=>(data.plantings||[]).find(p=>p.id===pid))
+    .filter(Boolean).flatMap(p=>p.bedIds||[]);
+  [...new Set([...(obs.bedIds||[]), ...plantingBeds])].forEach(sprayAddBed);
+  const notes=document.getElementById("sprayNotes");
+  if(notes) notes.value=fwStripTokens(obs.note);
+  // Same "end of this working week, clamped forward" default ＋ Task uses.
+  const friday=wkISO(wkAddDays(wkMonday(new Date()),4));
+  const today=wkISO(new Date());
+  const dateEl=document.getElementById("sprayDate");
+  if(dateEl) dateEl.value = friday<today ? today : friday;
+}
+
+function fwOpenTaskForObs(obs){
+  if(!obs) return;
+  const spraySub=fwSprayTrigger(obs);
+  if(spraySub){ fwOpenSprayForObs(obs, spraySub); return; }
+  fwTaskLinkObsId=obs.id;
+  wkTaskOpen(null);
+  const label=fwStripTokens(obs.note);
+  document.getElementById("wkTaskLabel").value=label;
+  // A sub-tag that names a real library task is the whole point of the second pill row: tagging
+  // "Foliar feed" on the walk means the ＋ Task dialog opens already set to that library task,
+  // which brings its category, default duration and anchor with it. First match wins — a note
+  // tagged with two of them is ambiguous, and guessing further would be worse than picking one.
+  const subLib=(obs.tags||[]).map(fwSubTask).find(Boolean);
+  if(subLib){
+    wkSetTaskType("library");
+    wkFillTaskLibrary(subLib.id);
+  }
+  const plantingId=(obs.plantingIds||[])[0]||null;
+  const bedId=(obs.bedIds||[])[0]||null;
+  if(plantingId || bedId){
+    wkTaskLinkPre={plantingId, bedId};
+    document.getElementById("wkTaskLinkType").value = plantingId ? "planting" : "bed";
+    wkFillTaskLink();
+  }
+  // Default to the end of the current working week — a job spotted on Monday's walk is a job for
+  // this week unless someone says otherwise. Clamped forward so it's never already in the past.
+  const friday=wkISO(wkAddDays(wkMonday(new Date()),4));
+  const today=wkISO(new Date());
+  document.getElementById("wkTaskDue").value = friday<today ? today : friday;
+  // Focus the label so a bare "@E7" note (which strips to nothing) prompts for what the job IS.
+  const lab=document.getElementById("wkTaskLabel");
+  lab.focus(); lab.setSelectionRange(lab.value.length, lab.value.length);
+}
+
+// Copy a walk note onto the thing it's about, so someone opening that planting later finds it
+// without knowing a walk ever happened. Prefers the planting (the crop is what people look up);
+// falls back to the bed when the bed is empty — "the gate latch is broken" belongs to the bed, not
+// to whatever happens to be growing in it.
+function fwObsNoteTarget(obs){
+  const plantingId=(obs.plantingIds||[])[0];
+  if(plantingId){
+    const p=(data.plantings||[]).find(x=>x.id===plantingId);
+    if(p) return {kind:"planting", row:p, table:"plantings", field:CFG.f.pl_notes,
+                  label:`${p.crop}${p.variety?" · "+p.variety:""}`};
+  }
+  const bedId=(obs.bedIds||[])[0];
+  if(bedId){
+    const b=(data.beds||[]).find(x=>x.id===bedId);
+    if(b) return {kind:"bed", row:b, table:"beds", field:CFG.f.bed_notes, label:b.name};
+  }
+  return null;
+}
+
+function fwObsToNote(obsId){
+  const obs=(data.walkObservations||[]).find(o=>o.id===obsId); if(!obs) return;
+  if(obs.notedAt) return;                       // already copied — the card shows that instead
+  const target=fwObsNoteTarget(obs);
+  if(!target){ alert("Tag a bed or planting with @ first — there's nothing to attach this note to."); return; }
+  // Dated, token-stripped, appended rather than replacing: these Notes fields are shared with the
+  // Add-planting dialog and the bed editor, and silently overwriting what someone typed there
+  // would be a far worse failure than a slightly long note.
+  const line=`${fwDateISO}: ${fwStripTokens(obs.note)}`;
+  const existing=String(target.row.notes||"").trim();
+  const merged=existing ? `${existing}\n${line}` : line;
+  target.row.notes=merged;
+  fwEnqueue("patch", target.table, {[target.field]:merged}, {recId:target.row.id});
+  const now=new Date().toISOString();
+  obs.notedAt=now;
+  fwEnqueue("patch","walkObservations",{[CFG.f.ob_noted]:now},{recId:obsId});
+  fwRenderFeed(); fwRenderBadge();
+}
+
+// Write the created task's id back onto the note. Goes through the same queue as everything else
+// on this tab, so raising a job in a dead spot works exactly like taking a note there.
+function fwLinkTaskToObs(obsId, taskId){
+  const obs=(data.walkObservations||[]).find(o=>o.id===obsId); if(!obs) return;
+  obs.taskId=taskId;
+  fwEnqueue("patch","walkObservations",{[CFG.f.ob_task]:[taskId]},{recId:obsId});
+  fwRenderFeed(); fwRenderBadge();
+}
+
+/* ---- Walk session ----
+   More than one person can walk the block on the same date — separate phones, separate sessions.
+   The schema always allowed multiple field_walks rows per date (no unique constraint on Date); the
+   walk lookup below is what used to assume just one, silently handing whoever opened the tab
+   second the first person's walk (and, worse, overwriting their Walkers field on the next render).
+   Each device's #fwWalkers value is that device's identity, persisted in localStorage so it
+   survives a reload without anyone re-typing it. */
+
+const fwTodayISO = () => PlannerShared.wkISO(new Date());
+
+function fwCurrentWalkerKey(){
+  const el=document.getElementById("fwWalkers");
+  return (el && el.value.trim()) || localStorage.getItem(FW_WALKERS_KEY) || "";
+}
+
+function fwWalkHasContent(walkId){
+  if(!walkId) return false;
+  return (data.walkObservations||[]).some(o=>o.walkId===walkId) ||
+         (data.walkListItems||[]).some(it=>it.walkId===walkId);
+}
+
+// Matches by (date, walkers): an exact, case-insensitive match wins — same freeform-text
+// convention as knownAssignees(), so "Tim" and "tim" are the same walker but a typo forks a
+// second walk rather than silently merging into someone else's.
+//
+// The empty-key fallback (rows[0]) applies ONLY when the identity is genuinely unknown — nobody
+// has typed a name in yet. It must NOT apply when a name IS known but nothing matches it: Jess
+// opening the tab and typing "Jess" while Tim's walk already exists for today has a known,
+// non-empty key that legitimately matches nothing — that has to return null so the caller creates
+// a walk of her own, not silently hand her Tim's. Falling back to rows[0] in that case is exactly
+// the bug this whole thing exists to fix.
+function fwWalkFor(iso, walkers){
+  const rows=(data.fieldWalks||[]).filter(w=>w.date===iso);
+  if(!rows.length) return null;
+  const key=(walkers||"").trim().toLowerCase();
+  if(!key) return rows[0];   // no identity established yet — legacy single-walker behaviour
+  return rows.find(w=>(w.walkers||"").trim().toLowerCase()===key) || null;
+}
+
+// Walks are created lazily, on the first thing written to one, rather than on opening the tab —
+// otherwise glancing at the page on a quiet day litters the table with empty walk rows. From the
+// grower's side the behaviour is identical: nothing is ever explicitly "started".
+function fwEnsureWalk(){
+  if(fwActiveWalk) return fwActiveWalk.id;
+  const walkers=fwCurrentWalkerKey();
+  const created=new Date().toISOString();
+  // The Name embeds the walker so two rows on the same date read apart in the raw Supabase table
+  // view, not just "Walk · 2026-07-28" twice — the schema's own stated design principle.
+  const name=walkers ? `Walk · ${fwDateISO} · ${walkers}` : `Walk · ${fwDateISO}`;
+  const id=fwEnqueue("create","fieldWalks",{
+    [CFG.f.fw_name]:name,
+    [CFG.f.fw_date]:fwDateISO,
+    [CFG.f.fw_walkers]:walkers,
+    [CFG.f.fw_created]:created,
+  });
+  const row={id, date:fwDateISO, walkers, notes:"", weather:"", created};
+  data.fieldWalks.unshift(row);
+  fwActiveWalk=row;
+  return id;
+}
+
+// Dates worth stepping through with the arrows: every walk that exists, plus today. Stepping day
+// by day would mean tapping past empty days to reach last week's notes.
+function fwWalkDates(){
+  const set=new Set((data.fieldWalks||[]).map(w=>w.date).filter(Boolean));
+  set.add(fwTodayISO()); set.add(fwDateISO);
+  return [...set].filter(Boolean).sort();
+}
+function fwStep(dir){
+  const dates=fwWalkDates(), i=dates.indexOf(fwDateISO);
+  const next=dates[i+dir];
+  if(next){ fwDateISO=next; fwRender(); }
+}
+
+/* ---- Render ---- */
+
+function buildFieldWalk(){
+  if(!fwDateISO) fwDateISO=fwTodayISO();
+  fwFlush();                                  // opening the tab is a good moment to catch up
+  const warn=document.getElementById("fwBackendWarn");
+  if(warn){
+    // The field-walk tables live only in Supabase. Say so plainly rather than letting every save
+    // fail with a raw 404 from a table id that was never real.
+    const off = BACKEND!=="supabase";
+    warn.hidden=!off;
+    if(off) warn.textContent="Field walk needs the Supabase backend — switch it in ⚙ Settings. Notes taken here won't save.";
+  }
+  const walkersEl=document.getElementById("fwWalkers");
+  if(walkersEl && !walkersEl.dataset.fwBound){
+    walkersEl.dataset.fwBound="1";
+    fwWalkersBeforeEdit=walkersEl.value;
+    // Capture what the box said BEFORE this edit — fwSaveWalkers needs that to tell "fixing a
+    // typo in my own name" from "handing the phone to someone else", and by the time `change`
+    // fires the value is already the new one.
+    walkersEl.addEventListener("focus", ()=>{ fwWalkersBeforeEdit=walkersEl.value; });
+    walkersEl.addEventListener("change", fwSaveWalkers);
+  }
+  fwRender();
+}
+
+function fwRender(){
+  const myWalkers=fwCurrentWalkerKey();
+  fwActiveWalk=fwWalkFor(fwDateISO, myWalkers);
+  const walk=fwActiveWalk;
+  const label=document.getElementById("fwDateLabel");
+  if(label){
+    const isToday=fwDateISO===fwTodayISO();
+    label.textContent=(isToday?"Today · ":"")+fmt(fwDateISO);
+  }
+  const walkersEl=document.getElementById("fwWalkers");
+  if(walkersEl && document.activeElement!==walkersEl){
+    walkersEl.value = walk ? walk.walkers : myWalkers;
+  }
+  const dl=document.getElementById("fwWalkerNames");
+  if(dl) dl.innerHTML=knownAssignees().map(n=>`<option value="${esc(n)}">`).join("");
+
+  // Panes: both show on desktop, one at a time on mobile via #fwSeg.
+  const mobile=cmIsMobile();
+  const wp=document.getElementById("fwWalkPane"), lp=document.getElementById("fwListsPane");
+  if(wp) wp.hidden = mobile && fwPane!=="walk";
+  if(lp) lp.hidden = mobile && fwPane!=="lists";
+  document.querySelectorAll("#fwSeg button").forEach(b=>
+    b.setAttribute("aria-pressed", b.dataset.fwpane===fwPane?"true":"false"));
+
+  fwRenderTagRow();
+  fwRenderFeed();
+  fwRenderLists();
+  fwRenderBadge();
+  fwRenderTaskHint();
+}
+
+function fwRenderTagRow(){
+  const row=document.getElementById("fwTagRow"); if(!row) return;
+  row.innerHTML=FW_TAGS.map(t=>
+    `<button type="button" class="fw-tag${fwQuickTags.has(t.name)?" on":""}" data-fwtag="${esc(t.name)}">${esc(t.name)}</button>`).join("");
+  fwRenderSubRow();
+}
+
+// Second pill row — only present once a parent is ticked, so the composer stays uncluttered for
+// the common case of a plain note with no follow-up.
+function fwRenderSubRow(){
+  const row=document.getElementById("fwSubRow"); if(!row) return;
+  const subs=fwAvailableSubs();
+  if(!subs.length){ row.hidden=true; row.innerHTML=""; return; }
+  row.innerHTML=subs.map(s=>{
+    const lib=fwSubTask(s);
+    return `<button type="button" class="fw-tag fw-sub${fwQuickSubs.has(s)?" on":""}${lib?" fw-sub-lib":""}"`+
+      ` data-fwsub="${esc(s)}" title="${lib?"Library task · "+esc(lib.category||"")||"Library task":"No library task — becomes a quick task"}">${esc(s)}</button>`;
+  }).join("");
+  row.hidden=false;
+}
+
+function fwRenderFeed(){
+  const feed=document.getElementById("fwFeed"); if(!feed) return;
+  const walk=fwActiveWalk;   // set by fwRender — kept identical rather than re-resolved, so a feed
+                              // repaint can never show a different walk than the header does
+  const rows=walk ? (data.walkObservations||[]).filter(o=>o.walkId===walk.id) : [];
+  if(!rows.length){
+    feed.innerHTML=`<div class="fw-obs-empty">No notes yet for this walk.<br>Type what you're seeing above — <code>@</code> tags a bed or block.</div>`;
+    return;
+  }
+  feed.innerHTML=rows.slice().reverse().map(o=>{   // newest first
+    const t=o.created ? new Date(o.created) : null;
+    const time=t&&!isNaN(t) ? String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0") : "";
+    const tags=(o.tags||[]).map(x=>`<span class="fw-obs-tag">${esc(x)}</span>`).join("");
+    // A note that became a job shows what it became and when it's due; one that didn't offers to
+    // become one, so a note taken earlier in the walk can be promoted without retyping it.
+    const linked=o.taskId ? (data.plantingTasks||[]).find(t=>t.id===o.taskId) : null;
+    const taskBit=linked
+      ? `<button type="button" class="fw-obs-task" data-obs-opentask="${esc(o.taskId)}" title="Open this task">→ ${esc(fwTaskName(linked))}${linked.due?" · "+esc(fmt(linked.due)):""}</button>`
+      : "";
+    const target=fwObsNoteTarget(o);
+    const notedBit=o.notedAt
+      ? `<span class="fw-obs-noted" title="Copied to its own notes">✓ noted${target?" on "+esc(target.label):""}</span>` : "";
+    return `<div class="fw-obs-card${fwIsTmp(o.id)?" fw-unsynced":""}" data-obs="${esc(o.id)}">
+      <div class="fw-obs-text">${fwRenderNote(o)}</div>
+      <div class="fw-obs-meta">${tags}${taskBit}${notedBit}${time?`<span>${time}</span>`:""}
+        <span class="fw-obs-actions">
+          ${linked?"":`<button type="button" data-obs-task="${esc(o.id)}">${fwSprayTrigger(o)?"＋ Spray":"＋ Task"}</button>`}
+          ${o.notedAt||!target?"":`<button type="button" data-obs-note="${esc(o.id)}" title="Copy onto ${esc(target.label)}'s notes">＋ Note</button>`}
+          <button type="button" data-obs-edit="${esc(o.id)}">Edit</button>
+          <button type="button" data-obs-del="${esc(o.id)}">Delete</button>
+        </span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ---- Observations ---- */
+
+// Commits whatever's in the quick-add box as an observation and returns it (or null if empty).
+// Split out from the button handler because "＋ Task" needs the very same note written first —
+// a note that became a job is still a note, and the walk has to keep the record of what was seen.
+function fwCommitNote(){
+  const el=document.getElementById("fwQuickText"); if(!el) return null;
+  const text=el.value.trim(); if(!text) return null;
+  const walkId=fwEnsureWalk();
+  const links=fwResolveTokens(text);
+  const created=new Date().toISOString();
+  // Parents and subs go into the one Tags array — they're both just tags on the note, and keeping
+  // them in a single column means no schema change and no second thing to keep in step. The
+  // parent/sub relationship is a property of FW_TAGS, recoverable at render time.
+  const tags=[...fwQuickTags, ...fwQuickSubs];
+  const F=CFG.f;
+  const id=fwEnqueue("create","walkObservations",{
+    [F.ob_name]:text.slice(0,80),
+    [F.ob_walk]:[walkId],
+    [F.ob_bed]:links.beds, [F.ob_planting]:links.plantings, [F.ob_crop]:links.crops,
+    [F.ob_note]:text, [F.ob_tags]:tags, [F.ob_created]:created,
+  });
+  const obs={
+    id, walkId, bedIds:links.beds, plantingIds:links.plantings, cropIds:links.crops,
+    note:text, tags, severity:"", photos:[], created, resolved:false, issueId:null,
+    taskId:null, notedAt:"",
+  };
+  data.walkObservations.push(obs);
+  el.value=""; fwQuickTags.clear(); fwQuickSubs.clear();
+  fwRenderTagRow(); fwRenderFeed(); fwRenderBadge(); fwRenderTaskHint();
+  return obs;
+}
+
+// The composer has exactly one action: everything you type on a walk enters as a walk note first.
+// Turning it into a job, or copying it onto the planting, happens afterwards from the note's own
+// card — so nothing is ever lost by picking the "wrong" button while walking, and a note that
+// becomes neither is still a complete record of what was seen.
+function fwQuickAdd(){
+  const obs=fwCommitNote();
+  if(obs) document.getElementById("fwQuickText")?.focus();
+}
+
+function fwObsDelete(id){
+  const i=(data.walkObservations||[]).findIndex(o=>o.id===id); if(i<0) return;
+  if(!confirm("Delete this note?")) return;
+  data.walkObservations.splice(i,1);
+  fwEnqueue("delete","walkObservations",null,{recId:id});
+  fwRenderFeed(); fwRenderBadge();
+}
+
+// Inline edit in place — swapping the card for a textarea rather than opening a modal, because the
+// most common edit is fixing a typo one-handed and a modal is three extra taps.
+function fwObsEdit(id){
+  const o=(data.walkObservations||[]).find(x=>x.id===id); if(!o) return;
+  const card=document.querySelector(`.fw-obs-card[data-obs="${CSS.escape(id)}"]`); if(!card) return;
+  card.innerHTML=`<textarea class="fw-obs-edit" rows="3">${esc(o.note)}</textarea>
+    <div class="fw-obs-meta"><span class="fw-obs-actions">
+      <button type="button" data-obs-save="${esc(id)}">Save</button>
+      <button type="button" data-obs-cancel="1">Cancel</button>
+    </span></div>`;
+  const ta=card.querySelector("textarea"); ta.focus(); ta.setSelectionRange(ta.value.length,ta.value.length);
+}
+
+function fwObsSave(id){
+  const o=(data.walkObservations||[]).find(x=>x.id===id); if(!o) return;
+  const card=document.querySelector(`.fw-obs-card[data-obs="${CSS.escape(id)}"]`);
+  const text=(card?.querySelector("textarea")?.value||"").trim();
+  if(!text){ fwRenderFeed(); return; }
+  const links=fwResolveTokens(text);
+  o.note=text; o.bedIds=links.beds; o.plantingIds=links.plantings; o.cropIds=links.crops;
+  const F=CFG.f;
+  fwEnqueue("patch","walkObservations",{
+    [F.ob_note]:text, [F.ob_name]:text.slice(0,80),
+    [F.ob_bed]:links.beds, [F.ob_planting]:links.plantings, [F.ob_crop]:links.crops,
+  },{recId:id});
+  fwRenderFeed(); fwRenderBadge();
+}
+
+function fwSaveWalkers(){
+  const el=document.getElementById("fwWalkers"); if(!el) return;
+  const v=el.value.trim();
+  localStorage.setItem(FW_WALKERS_KEY, v);
+  // The walk that was showing before this edit — found by the OLD box value, since fwWalkFor
+  // matches on walkers and el.value is already the new one by the time `change` fires.
+  const prior=fwWalkFor(fwDateISO, fwWalkersBeforeEdit);
+  if(prior && !fwWalkHasContent(prior.id)){
+    // Nothing recorded under it yet, so this edit is "typing my name in" or "fixing a typo" —
+    // safe to relabel that same walk in place.
+    prior.walkers=v;
+    fwEnqueue("patch","fieldWalks",{[CFG.f.fw_walkers]:v},{recId:prior.id});
+  }
+  // If the prior walk already has notes on it, leave it — and whoever's name is on it — alone.
+  // This is the handoff case (Tim finishes, hands the phone to Jess, clears the box): renaming
+  // Tim's walk to "Jess" would misattribute his notes to her. fwRender below resolves (or lazily
+  // creates, on the next note) a separate walk under the new name instead.
+  //
+  // Known, accepted cost: there's no way to tell "Tim" -> "Timothy" (the same person elaborating
+  // their own name) apart from "Tim" -> "Jess" (a handoff) from the text alone — both are edits to
+  // an already-populated walk. This guard treats both as a handoff and forks a second walk, so
+  // self-editing after your first note produces a small, cosmetically-fragmented extra walk rather
+  // than ever risking one person's notes reading as another's. Misattribution is the failure that
+  // matters here; a stray half-empty walk row is not.
+  fwRender();
+}
+
+/* ---- Standing lists ---- */
+
+// A list row shows its bed as a chip, so leaving the "@AB8" that produced that chip in the text
+// beside it reads as a stutter ("AB8  @AB8 broadfork"). Strip only the token that the chip is
+// already showing — an unresolved or unrelated @token stays put, because it still carries meaning
+// the app can't see. The stored Note keeps the original text either way; this is display only.
+function fwItemText(it){
+  let s=String(it.note||"");
+  const bed=it.bedId ? (data.beds||[]).find(b=>b.id===it.bedId) : null;
+  if(bed){
+    const names=[bed.name];
+    fwIndex.filter(e=>e.kind==="block" && (e.beds||[]).includes(bed.id)).forEach(e=>names.push(e.label));
+    names.forEach(n=>{
+      s=s.replace(new RegExp(`@${n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}\\b\\s*`,"ig"), "");
+    });
+    // A bare "@E4" strips to nothing, and that's the correct result — the chip already says E4,
+    // so putting the token back would restore the very stutter this function exists to remove.
+    // The row still renders: the chip is its content.
+    return s.trim();
+  }
+  return s.trim() || String(it.note||"");   // no chip to carry it — keep whatever was typed
+}
+
+function fwRenderLists(){
+  const wrap=document.getElementById("fwLists"); if(!wrap) return;
+  const lists=(data.walkLists||[]).filter(l=>l.active);
+  if(!lists.length){
+    wrap.innerHTML=`<div class="fw-obs-empty">No lists yet.<br>Make one for the jobs you spot as you walk — “Bed prep”, “Spray”, “Fix irrigation”.</div>`;
+    return;
+  }
+  wrap.innerHTML=lists.map(l=>{
+    const items=(data.walkListItems||[]).filter(it=>it.listId===l.id)
+      .sort((a,b)=>(a.done-b.done)||String(a.added).localeCompare(String(b.added)));
+    const open=items.filter(it=>!it.done), done=items.filter(it=>it.done);
+    const showDone=!!fwDoneOpen[l.id];
+    const row=it=>{
+      const bed=it.bedId ? (data.beds||[]).find(b=>b.id===it.bedId) : null;
+      const crop=fwBedCrop(bed);
+      const bedChip=bed
+        ? `<span class="fw-item-bed">${esc(bed.name)}</span>`+
+          (crop?`<span class="fw-item-crop"> · ${esc(crop)}</span>`:"")+" "
+        : "";
+      return `<label class="fw-item${it.done?" fw-item-done":""}">
+        <input type="checkbox" data-fwitem="${esc(it.id)}"${it.done?" checked":""}>
+        <span class="fw-item-body">${bedChip}${esc(fwItemText(it))}</span>
+        <button type="button" class="x" data-fwitem-del="${esc(it.id)}" title="Remove">✕</button>
+      </label>`;
+    };
+    return `<div class="fw-list-card">
+      <div class="fw-list-head">
+        <span class="fw-list-name">${esc(l.name)}</span>
+        <span class="fw-list-count">${open.length} open${done.length?` · ${done.length} done`:""}</span>
+        <button type="button" class="fw-list-x" data-fwlist-del="${esc(l.id)}">Delete list</button>
+      </div>
+      ${open.length?open.map(row).join(""):`<div class="fw-list-empty">Nothing on this list.</div>`}
+      ${done.length?`<button type="button" class="fw-done-toggle" data-fwdone="${esc(l.id)}">Done (${done.length}) ${showDone?"▾":"▸"}</button>`:""}
+      ${done.length&&showDone?done.map(row).join(""):""}
+      <div class="fw-item-add">
+        <input type="text" placeholder="Add — @AB7 broadfork" data-fwadd="${esc(l.id)}" autocomplete="off">
+        <div class="sp-pick-suggest" data-fwaddsug="${esc(l.id)}" hidden></div>
+        <button type="button" class="btn-ghost" data-fwadd-go="${esc(l.id)}">Add</button>
+      </div>
+    </div>`;
+  }).join("");
+  // Same @-autocomplete as the quick-add bar, so putting a bed on the prep list is the same
+  // gesture as tagging it in a note.
+  wrap.querySelectorAll("[data-fwadd]").forEach(inp=>{
+    const sug=wrap.querySelector(`[data-fwaddsug="${CSS.escape(inp.dataset.fwadd)}"]`);
+    fwAttachAutocomplete(inp, sug, ()=>fwAddItem(inp.dataset.fwadd));
+  });
+}
+
+function fwNewList(){
+  const name=(prompt("List name — e.g. Bed prep, Spray, Fix irrigation")||"").trim();
+  if(!name) return;
+  const order=(data.walkLists||[]).length;
+  const id=fwEnqueue("create","walkLists",{
+    [CFG.f.wl_name]:name, [CFG.f.wl_kind]:"General", [CFG.f.wl_order]:order, [CFG.f.wl_active]:true,
+  });
+  data.walkLists.push({id, name, kind:"General", taskId:null, order, active:true, items:[]});
+  fwRenderLists(); fwRenderBadge();
+}
+
+function fwDeleteList(id){
+  const l=(data.walkLists||[]).find(x=>x.id===id); if(!l) return;
+  const items=(data.walkListItems||[]).filter(it=>it.listId===id);
+  if(!confirm(`Delete "${l.name}"${items.length?` and its ${items.length} item${items.length===1?"":"s"}`:""}?`)) return;
+  items.forEach(it=>fwEnqueue("delete","walkListItems",null,{recId:it.id}));
+  data.walkListItems=(data.walkListItems||[]).filter(it=>it.listId!==id);
+  data.walkLists=(data.walkLists||[]).filter(x=>x.id!==id);
+  fwEnqueue("delete","walkLists",null,{recId:id});
+  fwRenderLists(); fwRenderBadge();
+}
+
+function fwAddItem(listId){
+  const inp=document.querySelector(`[data-fwadd="${CSS.escape(listId)}"]`); if(!inp) return;
+  const text=inp.value.trim(); if(!text) return;
+  const links=fwResolveTokens(text);
+  // A list row points at one bed, so a block token (which expands to many) contributes only its
+  // first bed here rather than silently fanning out into a dozen rows.
+  const bedId=links.beds[0]||null;
+  const added=new Date().toISOString();
+  const walk=fwActiveWalk;   // back-link only — a list item doesn't force a walk into existence
+  const F=CFG.f;
+  const id=fwEnqueue("create","walkListItems",{
+    [F.wli_name]:text.slice(0,80), [F.wli_list]:[listId],
+    [F.wli_bed]:bedId?[bedId]:[], [F.wli_note]:text,
+    [F.wli_walk]:walk?[walk.id]:[], [F.wli_added]:added, [F.wli_done]:false,
+  });
+  data.walkListItems.push({
+    id, listId, bedId, plantingId:null, note:text, walkId:walk?walk.id:null, added,
+    obsId:null, done:false, doneAt:"", convertedTaskId:null, convertedAt:"", order:null,
+  });
+  inp.value="";
+  fwRenderLists(); fwRenderBadge();
+  document.querySelector(`[data-fwadd="${CSS.escape(listId)}"]`)?.focus();
+}
+
+function fwToggleItem(id, done){
+  const it=(data.walkListItems||[]).find(x=>x.id===id); if(!it) return;
+  it.done=done; it.doneAt=done?new Date().toISOString():"";
+  fwEnqueue("patch","walkListItems",{[CFG.f.wli_done]:done, [CFG.f.wli_doneAt]:it.doneAt},{recId:id});
+  fwRenderLists(); fwRenderBadge();
+}
+
+function fwDeleteItem(id){
+  const i=(data.walkListItems||[]).findIndex(x=>x.id===id); if(i<0) return;
+  data.walkListItems.splice(i,1);
+  fwEnqueue("delete","walkListItems",null,{recId:id});
+  fwRenderLists(); fwRenderBadge();
+}
+
+/* ---- Wiring ---- */
+(function wireFieldWalk(){
+  const quick=document.getElementById("fwQuickText");
+  fwAttachAutocomplete(quick, document.getElementById("fwSuggest"), fwQuickAdd);
+  document.getElementById("fwQuickAdd")?.addEventListener("click", fwQuickAdd);
+  // The "already on the list" check re-runs as the text changes, since it keys off the @beds in it.
+  quick?.addEventListener("input", fwRenderTaskHint);
+  document.getElementById("fwPrev")?.addEventListener("click", ()=>fwStep(-1));
+  document.getElementById("fwNext")?.addEventListener("click", ()=>fwStep(1));
+  document.getElementById("fwToday")?.addEventListener("click", ()=>{ fwDateISO=fwTodayISO(); fwRender(); });
+  document.getElementById("fwSyncBadge")?.addEventListener("click", ()=>{
+    const q=fwLoadQueue(), err=q.entries.find(e=>e.lastErr);
+    if(err && err.tries>2) alert("Couldn't sync yet:\n"+err.lastErr);
+    fwFlush();
+  });
+  document.getElementById("fwNewListBtn")?.addEventListener("click", fwNewList);
+  document.getElementById("fwSeg")?.addEventListener("click", e=>{
+    const b=e.target.closest("[data-fwpane]"); if(!b) return;
+    fwPane=b.dataset.fwpane; fwRender(); saveUiState();
+  });
+  document.getElementById("fwTagRow")?.addEventListener("click", e=>{
+    const b=e.target.closest("[data-fwtag]"); if(!b) return;
+    const t=b.dataset.fwtag;
+    if(fwQuickTags.has(t)) fwQuickTags.delete(t); else fwQuickTags.add(t);
+    // Unticking a parent retires its sub-pills, so a sub can't stay armed with its row gone.
+    // Checked against what's still on offer rather than the removed parent's own list, since
+    // another ticked parent may legitimately still offer the same sub (Spray, Tarp).
+    const still=new Set(fwAvailableSubs());
+    [...fwQuickSubs].forEach(s=>{ if(!still.has(s)) fwQuickSubs.delete(s); });
+    fwRenderTagRow();
+  });
+  document.getElementById("fwSubRow")?.addEventListener("click", e=>{
+    const b=e.target.closest("[data-fwsub]"); if(!b) return;
+    const s=b.dataset.fwsub;
+    if(fwQuickSubs.has(s)) fwQuickSubs.delete(s); else fwQuickSubs.add(s);
+    fwRenderSubRow();
+  });
+  document.getElementById("fwFeed")?.addEventListener("click", e=>{
+    const ed=e.target.closest("[data-obs-edit]"); if(ed){ fwObsEdit(ed.dataset.obsEdit); return; }
+    const sv=e.target.closest("[data-obs-save]"); if(sv){ fwObsSave(sv.dataset.obsSave); return; }
+    if(e.target.closest("[data-obs-cancel]")){ fwRenderFeed(); return; }
+    const dl=e.target.closest("[data-obs-del]"); if(dl){ fwObsDelete(dl.dataset.obsDel); return; }
+    const mk=e.target.closest("[data-obs-task]");
+    if(mk){ fwOpenTaskForObs((data.walkObservations||[]).find(o=>o.id===mk.dataset.obsTask)); return; }
+    const nt=e.target.closest("[data-obs-note]"); if(nt){ fwObsToNote(nt.dataset.obsNote); return; }
+    const op=e.target.closest("[data-obs-opentask]"); if(op){ wkTaskOpen(op.dataset.obsOpentask); return; }
+  });
+  const lists=document.getElementById("fwLists");
+  lists?.addEventListener("click", e=>{
+    const go=e.target.closest("[data-fwadd-go]"); if(go){ fwAddItem(go.dataset.fwaddGo); return; }
+    const del=e.target.closest("[data-fwitem-del]"); if(del){ e.preventDefault(); fwDeleteItem(del.dataset.fwitemDel); return; }
+    const ld=e.target.closest("[data-fwlist-del]"); if(ld){ fwDeleteList(ld.dataset.fwlistDel); return; }
+    const dt=e.target.closest("[data-fwdone]"); if(dt){ fwDoneOpen[dt.dataset.fwdone]=!fwDoneOpen[dt.dataset.fwdone]; fwRenderLists(); return; }
+  });
+  lists?.addEventListener("change", e=>{
+    const cb=e.target.closest("[data-fwitem]"); if(!cb) return;
+    fwToggleItem(cb.dataset.fwitem, cb.checked);
+  });
+  // Coming back into range is the moment that matters most — a walk's worth of notes should land
+  // without anyone having to think about it.
+  window.addEventListener("online", ()=>{ fwRenderBadge(); fwFlush(); });
+  window.addEventListener("offline", fwRenderBadge);
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") fwFlush(); });
+  fwRenderBadge();
 })();
 
 /* ---------- boot ---------- */

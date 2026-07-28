@@ -45,6 +45,15 @@
       sprayMixItems:     "tblodwnFCwjbYatej", // "Spray Mix Items"
       sprayApplications: "tblRjipt1eRDu1sZ9", // "Spray Applications"
       sprayApplicationItems: "tblHq9TVFc5zQDwnc", // "Spray Application Items"
+      // Field walk — Supabase-only; these tables have no Airtable origin. The ids below are
+      // placeholders that exist purely so AT_ID_TO_PG can zip CFG.tables against PG_TABLES (an
+      // entry missing from either side silently maps to undefined). The Airtable branch of
+      // atFetch/atCreate would 404 on them, which loadAll deliberately tolerates.
+      fieldWalks:       "tblFWfieldWalks",   // "Field Walks" — one dated walk session
+      walkObservations: "tblFWobservations",  // "Walk Observations" — a note taken on a walk, optionally bed/planting-linked
+      walkLists:        "tblFWlists",         // "Walk Lists" — standing rolling lists (Bed prep, Spray, …)
+      walkListItems:    "tblFWlistItems",     // "Walk List Items" — a bed / planting / free-text line on one of those lists
+      fieldWalkTags:    "tblFWtags",          // "Field Walk Tags" — user-added sub-pills layered onto FW_TAGS
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -59,7 +68,7 @@
       tt_name:"Name", tt_cells:"Cell count",
       tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
       tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
-      tk_duration:"Minutes per 15m bed",
+      tk_duration:"Minutes per 15m bed", tk_fwtag:"Field walk tag",
       ct_label:"Label", ct_task:"Task", ct_crop:"Crop", ct_variety:"Variety",
       ct_anchor:"Anchor", ct_offset:"Offset days", ct_repeat:"Repeat every (days)", ct_until:"Repeat until",
       ct_duration:"Minutes per 15m bed",
@@ -142,6 +151,22 @@
       sap_status:"Status", sap_followUp:"Follow-up of",
       sai_name:"Name", sai_app:"Application", sai_product:"Product", sai_rate:"Rate",
       sai_unit:"Unit", sai_amountUsed:"Amount used", sai_order:"Order",
+      // Field walk. `ob_note` keeps the prose exactly as typed (@tokens included) while
+      // ob_bed/ob_planting/ob_crop hold the resolved ids — the text outlives a renamed bed, the
+      // ids are what every query and badge actually reads. `wli_convTask` is the convert-once
+      // guard: an item with it set has already produced a Planting Task and can only be undone.
+      fw_name:"Name", fw_date:"Date", fw_walkers:"Walkers", fw_notes:"Notes",
+      fw_weather:"Weather", fw_created:"Created at",
+      ob_name:"Name", ob_walk:"Walk", ob_bed:"Bed", ob_planting:"Planting", ob_crop:"Crop",
+      ob_note:"Note", ob_tags:"Tags", ob_severity:"Severity", ob_photos:"Photos",
+      ob_created:"Created at", ob_resolved:"Resolved", ob_issue:"Bed issue",
+      ob_task:"Task", ob_noted:"Noted at",
+      wl_name:"Name", wl_kind:"Kind", wl_task:"Task", wl_order:"Order", wl_active:"Active",
+      wli_name:"Name", wli_list:"List", wli_bed:"Bed", wli_planting:"Planting", wli_note:"Note",
+      wli_walk:"Added on walk", wli_added:"Added at", wli_obs:"Observation",
+      wli_done:"Done", wli_doneAt:"Done at", wli_convTask:"Converted task",
+      wli_convAt:"Converted at", wli_order:"Order",
+      fwt_name:"Name", fwt_parent:"Parent",
     }
   };
 
@@ -156,6 +181,8 @@
     bedIssues:"bed_issues", sprayProducts:"spray_products", sprayMixes:"spray_mixes",
     sprayMixItems:"spray_mix_items", sprayApplications:"spray_applications",
     sprayApplicationItems:"spray_application_items",
+    fieldWalks:"field_walks", walkObservations:"walk_observations",
+    walkLists:"walk_lists", walkListItems:"walk_list_items", fieldWalkTags:"field_walk_tags",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -233,13 +260,14 @@
       }else{
         p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
       }
-      // A manual task that references a library Task (a library task placed on a bed, not a planting)
-      // shows that task's name/category rather than the bare label.
+      // A task that references a library Task (whether placed on a bed/no-link, or on a planting)
+      // shows that task's name/category rather than the bare label. One with neither a library link
+      // nor a planting-derived name (a free-typed "quick" task, whether or not it's tied to a
+      // planting — e.g. one raised from a Field walk note) falls back to its own Label; "(task)" is
+      // reserved for the genuinely unnamed case, which shouldn't happen but must render as *something*.
       const libTask = t.taskId ? ctTaskById(data,t.taskId) : null;
-      const task=manual
-        ? (libTask ? {name:libTask.name, category:libTask.category, duration:t.duration}
-                   : {name:t.label||"Task", category:"Other", duration:t.duration})
-        : (ctTaskById(data,t.taskId)||{name:"(task)",category:""});
+      const task = libTask ? {name:libTask.name, category:libTask.category, duration:t.duration}
+        : {name:t.label||"(task)", category:"Other", duration:t.duration};
       const due=wkParse(t.due), overdue=isCurrent && !t.done && due<start, inWeek=due>=start && due<end;
       if(!overdue && !inWeek) return;
       const dur=t.duration||task.duration||0;
@@ -457,6 +485,90 @@
     });
   }
 
+  // ---- Field walk -----------------------------------------------------------------------
+  // A walk is just a dated session — no status, no lifecycle. `created` is a client-stamped ISO
+  // string rather than a server default because these rows are written through an offline queue
+  // and may not reach Postgres for hours (see supabase-schema.sql).
+
+  function parseFieldWalks(recs){
+    const F=CFG.f;
+    return recs.map(r=>({
+      id:r.id, date:r.fields[F.fw_date]||"", walkers:r.fields[F.fw_walkers]||"",
+      notes:r.fields[F.fw_notes]||"", weather:r.fields[F.fw_weather]||"",
+      created:r.fields[F.fw_created]||"",
+    })).sort((a,b)=>String(b.date).localeCompare(String(a.date)));   // newest walk first
+  }
+
+  // `note` is the prose as typed; bedIds/plantingIds/cropIds are the resolved @tokens. Both are
+  // kept: the text has to survive a bed being renamed or a planting deleted, and the ids are what
+  // the bed panel, map badges and any future "all pest sightings" query actually read.
+  function parseWalkObservations(recs){
+    const F=CFG.f;
+    return recs.map(r=>({
+      id:r.id,
+      walkId:(r.fields[F.ob_walk]||[])[0] || null,
+      bedIds:(r.fields[F.ob_bed]||[]).slice(),
+      plantingIds:(r.fields[F.ob_planting]||[]).slice(),
+      cropIds:(r.fields[F.ob_crop]||[]).slice(),
+      note:r.fields[F.ob_note]||"",
+      tags:(r.fields[F.ob_tags]||[]).slice(),
+      severity:r.fields[F.ob_severity]||"",
+      photos:(r.fields[F.ob_photos]||[]).slice(),
+      created:r.fields[F.ob_created]||"",
+      resolved:!!r.fields[F.ob_resolved],
+      issueId:(r.fields[F.ob_issue]||[])[0] || null,
+      taskId:(r.fields[F.ob_task]||[])[0] || null,
+      notedAt:r.fields[F.ob_noted]||"",
+    })).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
+  }
+
+  function parseWalkLists(recs){
+    const F=CFG.f;
+    return recs.map(r=>({
+      id:r.id, name:r.fields[F.wl_name]||"", kind:r.fields[F.wl_kind]||"General",
+      taskId:(r.fields[F.wl_task]||[])[0] || null,
+      order:num(r.fields[F.wl_order]),
+      active:r.fields[F.wl_active]!==false,        // default-on, same as spray products
+    })).sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+  }
+
+  function parseWalkListItems(recs){
+    const F=CFG.f;
+    return recs.map(r=>({
+      id:r.id,
+      listId:(r.fields[F.wli_list]||[])[0] || null,
+      bedId:(r.fields[F.wli_bed]||[])[0] || null,
+      plantingId:(r.fields[F.wli_planting]||[])[0] || null,
+      note:r.fields[F.wli_note]||"",
+      walkId:(r.fields[F.wli_walk]||[])[0] || null,
+      added:r.fields[F.wli_added]||"",
+      obsId:(r.fields[F.wli_obs]||[])[0] || null,
+      done:!!r.fields[F.wli_done], doneAt:r.fields[F.wli_doneAt]||"",
+      convertedTaskId:(r.fields[F.wli_convTask]||[])[0] || null,
+      convertedAt:r.fields[F.wli_convAt]||"",
+      order:num(r.fields[F.wli_order]),
+    }));
+  }
+
+  // Nest items onto their list — same shape as attachSprayItems. Done items sort last so a long
+  // list still opens on the things that haven't been dealt with.
+  function attachWalkItems(lists, items){
+    const byList={};
+    (items||[]).forEach(it=>{ if(it.listId) (byList[it.listId] ||= []).push(it); });
+    lists.forEach(l=>{
+      l.items=(byList[l.id]||[]).slice().sort((a,b)=>
+        (a.done-b.done) || ((a.order??1e9)-(b.order??1e9)) || String(a.added).localeCompare(String(b.added)));
+    });
+    return lists;
+  }
+
+  function parseFieldWalkTags(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id, name:r.fields[F.fwt_name]||"", parent:r.fields[F.fwt_parent]||"",
+    })).filter(t=>t.name && t.parent);
+  }
+
   function parseTasks(taskRecords){
     const F=CFG.f;
     return taskRecords.map(t => ({
@@ -469,6 +581,7 @@
       repeat:num(t.fields[F.tk_repeat]),
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
+      fwTag:t.fields[F.tk_fwtag] || "",
     })).sort((a,b)=>a.name.localeCompare(b.name));
   }
 
@@ -695,7 +808,9 @@
   // it keeps a succession group together, and whether the block prefers this crop's type.
   // Deliberately advisory only — same contract as bedConflicts/bedTarpedIn: a bed is only ever
   // excluded from the list for a hard physical reason (too small, already full), never a soft one.
-  const SUGGEST_WEIGHTS = { fit:0.40, rotation:0.30, succession:0.15, blockPref:0.15 };
+  // Tunable starting point, not a farm-confirmed balance — adjustable live via the Crop Map's
+  // "Auto-place" priorities panel (roseberry-planner.html), persisted to localStorage there.
+  const SUGGEST_WEIGHTS = { fit:0.35, rotation:0.25, succession:0.10, weekCluster:0.15, blockPref:0.15 };
 
   // Ground-occupancy window for a planting — start = Sow date, matching planWindow()'s existing
   // convention, so this engine never disagrees with the app's own drag-fit / Bed Issue checks
@@ -736,7 +851,7 @@
     return { bed, hardExclude:true, geometryKnown, score:0, factors:{}, reasons:[reason] };
   }
 
-  function scoreBedCandidate(bed, input, byBed, data){
+  function scoreBedCandidate(bed, input, byBed, data, weights = SUGGEST_WEIGHTS){
     const groundStart = input.sow || null;
     const groundEnd = input.h2 || input.h1 || groundStart;
     const occupants = byBed[bed.id] || [];
@@ -804,6 +919,34 @@
       succession = { score:best, applicable:true, reason };
     }
 
+    // ---- week clustering: pull same-week sowings toward each other spatially ----
+    let weekCluster;
+    const inputWeekKey = groundStart ? wkISO(wkMonday(wkParse(groundStart))) : null;
+    if(!inputWeekKey){
+      weekCluster = { score:1, applicable:false, reason:"" };
+    } else {
+      const sameWeek = (data.plantings||[]).filter(p=>
+        p.id!==input.excludePlantingId && p.bedIds[0] && p.sow &&
+        wkISO(wkMonday(wkParse(p.sow)))===inputWeekKey
+      );
+      if(!sameWeek.length){
+        weekCluster = { score:1, applicable:false, reason:"" };
+      } else {
+        let best=0.2, reason="Different block from this week's other sowings.";
+        sameWeek.forEach(sib=>{
+          const sibBed=(data.beds||[]).find(b=>b.id===sib.bedIds[0]); if(!sibBed) return;
+          if(sibBed.id===bed.id){ if(best<1){ best=1; reason="Same bed as another sowing this week."; } }
+          else if(sibBed.block===bed.block){
+            let s,r;
+            if(sibBed.order!=null && bed.order!=null){ s=Math.max(0.3, 0.85-0.1*Math.abs(sibBed.order-bed.order)); r="Close to this week's other sowings."; }
+            else { s=0.6; r="Same block as this week's other sowings."; }
+            if(s>best){ best=s; reason=r; }
+          }
+        });
+        weekCluster = { score:best, applicable:true, reason };
+      }
+    }
+
     // ---- block-type preference ----
     let blockPref;
     const block=(data.blocks||[]).find(b=>String(b.name).trim()===bed.block);
@@ -814,9 +957,9 @@
       blockPref = { score: match?1:0.4, applicable:true, reason: match ? `Block prefers ${cropType}.` : `Block doesn't list ${cropType} as preferred.` };
     }
 
-    const factors = { fit, rotation, succession, blockPref };
+    const factors = { fit, rotation, succession, weekCluster, blockPref };
     let wSum=0, sSum=0;
-    Object.keys(factors).forEach(k=>{ const f=factors[k]; if(f.applicable){ wSum+=SUGGEST_WEIGHTS[k]; sSum+=SUGGEST_WEIGHTS[k]*f.score; } });
+    Object.keys(factors).forEach(k=>{ const f=factors[k]; if(f.applicable){ wSum+=weights[k]; sSum+=weights[k]*f.score; } });
     const score = Math.round(100*(wSum>0 ? sSum/wSum : fit.score));
 
     const reasons = Object.keys(factors)
@@ -831,11 +974,41 @@
 
   // input: { cropId, bm, sow, h1, h2, group, excludePlantingId }
   function suggestBedsForPlanting(data, input, opts={}){
+    const weights = opts.weights || SUGGEST_WEIGHTS;
     const byBed = indexPlantingsByBed(data, input.excludePlantingId);
-    const scored = (data.beds||[]).map(bed => scoreBedCandidate(bed, input, byBed, data));
+    const scored = (data.beds||[]).map(bed => scoreBedCandidate(bed, input, byBed, data, weights));
     const candidates = scored.filter(r=>!r.hardExclude)
       .sort((a,b)=> (b.geometryKnown - a.geometryKnown) || (b.score - a.score));
     return { candidates: candidates.slice(0, opts.limit ?? 8), excluded: scored.filter(r=>r.hardExclude), total: candidates.length };
+  }
+
+  // Batch draft/simulate for the Crop Map's Unassigned sidebar: proposes a bed for every
+  // unassigned planting in one pass, earliest-sow-first, staging each pick onto a shallow clone
+  // of data.plantings so later plantings' scoring (fit/capacity, weekCluster) sees earlier picks
+  // from THIS run — without ever touching the live `data` object or writing to the backend.
+  // The caller (roseberry-planner.html's bulk-apply flow) does the real writes.
+  function suggestBedsForUnassigned(data, opts={}){
+    const weights = opts.weights || SUGGEST_WEIGHTS;
+    const perLimit = opts.limit ?? 6;
+    const working = { ...data, plantings: (data.plantings||[]).map(p=>({...p, bedIds:p.bedIds.slice()})) };
+    const targets = working.plantings
+      .filter(p=>!p.bedIds.length)
+      .sort((a,b)=> String(a.sow||"9999-99-99").localeCompare(String(b.sow||"9999-99-99")));
+
+    const proposals=[], skipped=[];
+    targets.forEach(p=>{
+      const input = { cropId:p.cropId, bm:p.bm, sow:p.sow, h1:p.h1, h2:p.h2, group:p.group, excludePlantingId:p.id };
+      const { candidates, excluded } = suggestBedsForPlanting(working, input, { limit:perLimit, weights });
+      if(!candidates.length){
+        skipped.push({ planting:p, reason: excluded[0] ? excluded[0].reasons[0] : "No beds available." });
+        return;
+      }
+      const top = candidates[0];
+      working.plantings.find(x=>x.id===p.id).bedIds = [top.bed.id];   // stage on the clone only
+      proposals.push({ planting:p, bed:top.bed, score:top.score, reasons:top.reasons,
+                        geometryKnown:top.geometryKnown, candidates });
+    });
+    return { proposals, skipped };
   }
 
   // Generic Airtable REST wrapper for Node-side use (the browser app keeps its own copy closed
@@ -905,7 +1078,10 @@
     parseBedIssues, rangesOverlap, bedConflicts,
     parseSprayProducts, parseSprayMixes, parseSprayMixItems, parseSprayApplications,
     parseSprayApplicationItems, attachSprayItems, mixWhp, safeAfterISO, bedWhpActive,
-    SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate, suggestBedsForPlanting,
+    parseFieldWalks, parseWalkObservations, parseWalkLists, parseWalkListItems, attachWalkItems,
+    parseFieldWalkTags,
+    SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate,
+    suggestBedsForPlanting, suggestBedsForUnassigned,
     createAirtableClient,
   };
 });
