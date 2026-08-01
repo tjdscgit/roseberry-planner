@@ -57,6 +57,11 @@
       // Farm info — reference material (SOPs, soil reports, certification, supplier contacts).
       // Supabase-only, same placeholder-id convention as the field walk tables above.
       farmInfo:         "tblFIfarmInfo",      // "Farm Info"
+      // Fertiliser programs — the NTS amendment/fertigation recommendations, drilled
+      // Program -> Block -> Round in the shed view. Supabase-only, placeholder ids as above.
+      fertPrograms:     "tblFPprograms",      // "Fert Programs"
+      fertRounds:       "tblFProunds",        // "Fert Rounds"
+      fertItems:        "tblFPitems",         // "Fert Items"
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -173,6 +178,12 @@
       fi_name:"Name", fi_cat:"Category", fi_tags:"Tags", fi_body:"Body",
       fi_files:"Files", fi_links:"Links", fi_bed:"Bed", fi_crop:"Crop",
       fi_pinned:"Pinned", fi_created:"Created at", fi_updated:"Updated at", fi_archived:"Archived",
+      fp_name:"Name", fp_kind:"Kind", fp_notes:"Notes", fp_area:"Area m2", fp_order:"Order",
+      fp_archived:"Archived", fp_created:"Created at", fp_updated:"Updated at",
+      fr_program:"Program", fr_name:"Name", fr_notes:"Notes", fr_order:"Order",
+      fx_program:"Program", fx_round:"Round", fx_block:"Block", fx_blockLabel:"Block label",
+      fx_product:"Product", fx_rate:"Rate", fx_unit:"Rate unit", fx_lPerBed:"L per bed",
+      fx_notes:"Notes", fx_order:"Order",
     }
   };
 
@@ -190,6 +201,7 @@
     fieldWalks:"field_walks", walkObservations:"walk_observations",
     walkLists:"walk_lists", walkListItems:"walk_list_items", fieldWalkTags:"field_walk_tags",
     farmInfo:"farm_info",
+    fertPrograms:"fert_programs", fertRounds:"fert_rounds", fertItems:"fert_items",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -609,6 +621,55 @@
     if(a.pinned!==b.pinned) return a.pinned ? -1 : 1;
     const at=a.updated||a.created||"", bt=b.updated||b.created||"";
     return String(bt).localeCompare(String(at)) || a.name.localeCompare(b.name);
+  }
+
+  // Fertiliser programs. Three tables because the three levels have genuinely different lifetimes:
+  // a program is edited once a season, a round maybe twice, and items constantly. Flattening them
+  // would mean rewriting every item row to rename a round.
+  const FERT_UNITS = ["kg","g","L","ml"];
+
+  function parseFertPrograms(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id, name:r.fields[F.fp_name]||"", kind:r.fields[F.fp_kind]||"Amendment",
+      notes:r.fields[F.fp_notes]||"", area:num(r.fields[F.fp_area]),
+      order:num(r.fields[F.fp_order]), archived:!!r.fields[F.fp_archived],
+      created:r.fields[F.fp_created]||"", updated:r.fields[F.fp_updated]||"",
+    })).filter(p=>!p.archived)
+      .sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+  }
+
+  function parseFertRounds(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id, programId:(r.fields[F.fr_program]||[])[0]||null,
+      name:r.fields[F.fr_name]||"", notes:r.fields[F.fr_notes]||"", order:num(r.fields[F.fr_order]),
+    })).sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+  }
+
+  function parseFertItems(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id,
+      programId:(r.fields[F.fx_program]||[])[0]||null,
+      roundId:(r.fields[F.fx_round]||[])[0]||null,
+      blockId:(r.fields[F.fx_block]||[])[0]||null,
+      blockLabel:r.fields[F.fx_blockLabel]||"",
+      product:r.fields[F.fx_product]||"",
+      rate:num(r.fields[F.fx_rate]),
+      unit:r.fields[F.fx_unit]||"kg",
+      lPerBed:num(r.fields[F.fx_lPerBed]),
+      notes:r.fields[F.fx_notes]||"",
+      order:num(r.fields[F.fx_order]),
+    })).sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.product.localeCompare(b.product));
+  }
+
+  // kg/15m bed from a per-100m² rate. A 15 m x 0.75 m bed is 11.25 m², so the factor is 0.1125.
+  // Verified against the old base's own formula column on all 45 round-1 rows. This is a WEIGHT —
+  // it is deliberately not used to guess "L per bed", which the grower measures by volume.
+  const FERT_BED_M2 = 11.25;
+  function fertKgPerBed(ratePer100m2){
+    return (ratePer100m2==null||ratePer100m2==="") ? null : (+ratePer100m2)*(FERT_BED_M2/100);
   }
 
   function parseTasks(taskRecords){
@@ -1123,6 +1184,8 @@
     parseFieldWalks, parseWalkObservations, parseWalkLists, parseWalkListItems, attachWalkItems,
     parseFieldWalkTags,
     FARM_INFO_CATS, parseFarmInfo, farmInfoSort,
+    FERT_UNITS, FERT_BED_M2, fertKgPerBed,
+    parseFertPrograms, parseFertRounds, parseFertItems,
     SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate,
     suggestBedsForPlanting, suggestBedsForUnassigned,
     createAirtableClient,

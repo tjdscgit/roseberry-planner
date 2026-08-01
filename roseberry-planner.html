@@ -155,7 +155,7 @@
   #view-crops.active,#view-beds.active,#view-seedbook.active,#view-outlets.active,
   #view-whiteboard.active,
   #view-misc.active,#view-tasklib.active,#view-croptasks.active,
-  #view-farminfo.active{display:flex;flex-direction:column}
+  #view-farminfo.active,#view-fertprog.active{display:flex;flex-direction:column}
   /* min-height:0 is load-bearing: without it a flex child's default min-height:auto lets .cr-wrap
      size to its content instead of shrinking to the space main{overflow:hidden} actually gives it
      — the scrollbar never appears and the tail of a long list (many seed-book/whiteboard cards)
@@ -1397,6 +1397,101 @@
     .fi-back{display:inline-block}
   }
 
+  /* ---------- Fertiliser programs ----------
+     Designed for a phone propped on a shelf at arm's length while both hands are busy mixing.
+     That drives every choice here: three shallow pages instead of one dense table, tap targets
+     big enough for a gloved thumb, and the litres figure set large enough to read across a shed.
+     Desktop gets the same three levels as side-by-side columns — the drill-down IS the structure,
+     not a mobile compromise, so it shouldn't turn into a different page on a big screen. */
+  .fp-main{flex:1 1 auto;display:flex;min-height:0;position:relative}
+  .fp-col{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line-2);
+    background:var(--paper)}
+  .fp-col-progs{flex:0 0 15rem}
+  .fp-col-blocks{flex:0 0 13rem}
+  .fp-col-rates{flex:1 1 auto;border-right:none}
+  .fp-col-head{flex:0 0 auto;display:flex;align-items:center;gap:.4rem;padding:.5rem .7rem;
+    border-bottom:1px solid var(--line);font-family:var(--mono);font-size:.66rem;
+    text-transform:uppercase;letter-spacing:.09em;color:var(--ink-2)}
+  .fp-col-head .spacer{flex:1}
+  .fp-scroll{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain}
+  .fp-pick{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    color:var(--ink);font-family:inherit;padding:.7rem .8rem;border-bottom:1px solid var(--line)}
+  .fp-pick:hover{background:var(--paper-2)}
+  .fp-pick[aria-selected="true"]{background:color-mix(in srgb,var(--steel) 14%,transparent)}
+  .fp-pick-name{display:block;font-weight:650;font-size:1rem;line-height:1.25}
+  .fp-pick-sub{display:block;font-family:var(--mono);font-size:.68rem;color:var(--ink-2);margin-top:.18rem}
+  .fp-pick-warn{color:var(--clay)}
+
+  /* Round selector — a horizontal strip of big pills. Deliberately not a <select>: a dropdown
+     needs two taps and a steady hand, and the round is the thing you change most often. */
+  .fp-rounds{flex:0 0 auto;display:flex;gap:.35rem;padding:.5rem .7rem;overflow-x:auto;
+    border-bottom:1px solid var(--line-2);-webkit-overflow-scrolling:touch}
+  .fp-round{flex:0 0 auto;border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink-2);
+    border-radius:999px;padding:.45rem .95rem;font-family:inherit;font-size:.9rem;cursor:pointer;
+    white-space:nowrap}
+  .fp-round[aria-selected="true"]{background:var(--steel);color:#fff;border-color:var(--steel);font-weight:650}
+  .fp-round-empty{opacity:.5}
+
+  /* The rate card. One product per card; the litres figure is the hero because that's what gets
+     measured into the bucket. kg sits underneath as the cross-check, and the per-100m² source rate
+     is smallest — it's provenance, not an instruction. */
+  .fp-rates{padding:.6rem .7rem 4rem;display:flex;flex-direction:column;gap:.55rem}
+  .fp-rate{display:flex;align-items:center;gap:.9rem;padding:.75rem .9rem;
+    border:1px solid var(--line-2);border-radius:12px;background:var(--paper-2)}
+  .fp-rate-main{flex:1;min-width:0}
+  .fp-rate-prod{font-size:1.12rem;font-weight:700;line-height:1.2}
+  .fp-rate-sub{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);margin-top:.2rem}
+  .fp-rate-note{font-size:.8rem;color:var(--ink-2);margin-top:.25rem}
+  .fp-rate-fig{flex:0 0 auto;text-align:right;line-height:1}
+  .fp-rate-l{font-family:var(--mono);font-size:2.1rem;font-weight:700;color:var(--ink)}
+  .fp-rate-l-unit{font-family:var(--mono);font-size:.68rem;color:var(--ink-2);
+    text-transform:uppercase;letter-spacing:.09em;margin-top:.25rem}
+  .fp-rate-kg{font-family:var(--mono);font-size:.86rem;color:var(--ink-2);margin-top:.3rem}
+  /* Missing litres is a call to action, not a blank. The grower fills these in from the shed as
+     they weigh them — see the note in the import script about why we never compute this. */
+  .fp-rate-unset{flex:0 0 auto;border:1px dashed var(--clay);color:var(--clay);background:none;
+    border-radius:10px;padding:.5rem .7rem;font-family:inherit;font-size:.78rem;cursor:pointer;
+    text-align:center;line-height:1.25;max-width:8.5rem}
+  .fp-edit-btn{flex:0 0 auto;border:1px solid var(--line-2);background:var(--paper);
+    color:var(--ink-2);border-radius:9px;width:2.2rem;height:2.2rem;cursor:pointer;font-size:.95rem}
+  .fp-edit-btn:hover{border-color:var(--steel);color:var(--steel)}
+
+  /* Inline editor — replaces the card in place rather than opening a modal, so you can see the
+     rows either side of the one you're changing. */
+  .fp-form{border:1px solid var(--steel);border-radius:12px;padding:.75rem .9rem;background:var(--paper-2)}
+  .fp-form label{display:block;font-family:var(--mono);font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--ink-2);margin:.55rem 0 .2rem}
+  .fp-form input,.fp-form select{width:100%;padding:.55rem .6rem;font-family:var(--sans);
+    font-size:1rem;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);color:var(--ink)}
+  .fp-form-row{display:flex;gap:.5rem}
+  .fp-form-row > div{flex:1;min-width:0}
+  .fp-form-actions{display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap}
+  .fp-form-actions .spacer{flex:1}
+  .fp-empty{padding:1.6rem .9rem;color:var(--ink-2);font-size:.95rem;text-align:center}
+  .fp-back{display:none}
+  .fp-addbar{padding:.2rem .7rem 1rem}
+  .fp-addbar button{width:100%;padding:.7rem;border:1px dashed var(--line-2);background:none;
+    color:var(--ink-2);border-radius:11px;cursor:pointer;font-family:inherit;font-size:.9rem}
+  .fp-addbar button:hover{border-color:var(--steel);color:var(--steel)}
+
+  @media(max-width:860px){
+    /* One level at a time. Columns stack into the same slot and the active one wins, so the back
+       button walks Rates -> Blocks -> Programs. */
+    /* The crumb stays visible here, unlike the Farm info strapline: it's the only thing telling
+       you which block and round you're looking at once the columns collapse. */
+    #view-fertprog .cm-top > .sub{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .fp-col{position:absolute;inset:0;border-right:none;flex:1 1 auto}
+    .fp-col:not(.fp-active){display:none}
+    .fp-back{display:inline-block;margin-right:.1rem}
+    /* Bigger still on a phone — this is the shelf-at-arm's-length case the page exists for. */
+    .fp-rate-l{font-size:2.6rem}
+    .fp-rate-prod{font-size:1.2rem}
+    .fp-pick{padding:.95rem .9rem}
+    .fp-pick-name{font-size:1.08rem}
+    .fp-round{padding:.55rem 1.1rem;font-size:.98rem}
+  }
+
   /* ---------- Field walk ---------- */
   .fw-top{flex-wrap:wrap;row-gap:.5rem}
   #fwWalkers{width:11rem;flex:0 1 auto}
@@ -1536,7 +1631,7 @@
     <button class="tab" role="tab" aria-selected="false" id="miscTab" aria-haspopup="true">Misc ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="sprayTab" aria-haspopup="true">Spray log ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="fieldwalk">Field walk</button>
-    <button class="tab" role="tab" aria-selected="false" data-view="farminfo">Farm info</button>
+    <button class="tab" role="tab" aria-selected="false" id="infoTab" aria-haspopup="true">Farm info ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
   </nav>
   <div class="tab-dd" id="harvestDropdown" hidden>
@@ -1551,6 +1646,10 @@
     <button type="button" data-view="misc">Tray types</button>
     <button type="button" data-view="tasklib">Task library</button>
     <button type="button" data-view="croptasks">Crop tasks</button>
+  </div>
+  <div class="tab-dd" id="infoDropdown" hidden>
+    <button type="button" data-view="farminfo">Reference library</button>
+    <button type="button" data-view="fertprog">Fertiliser programs</button>
   </div>
   <div class="tab-dd" id="sprayDropdown" hidden>
     <button type="button" data-view="sprayrec">Records</button>
@@ -1583,7 +1682,8 @@
     <button class="nav-drawer-item" data-view="crops">Crops</button>
     <button class="nav-drawer-item" data-view="sprayrec">Spray log</button>
     <button class="nav-drawer-item" data-view="spraymix">Saved mixes</button>
-    <button class="nav-drawer-item" data-view="farminfo">Farm info</button>
+    <button class="nav-drawer-item" data-view="fertprog">Fertiliser programs</button>
+    <button class="nav-drawer-item" data-view="farminfo">Reference library</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
     <div class="nav-drawer-sep">Harvest</div>
     <button class="nav-drawer-item" data-view="harvest">Harvest planner</button>
@@ -2164,6 +2264,42 @@
           <div class="fi-rows" id="fiRows"></div>
         </div>
         <div class="fi-detail" id="fiDetail"></div>
+      </div>
+    </section>
+
+    <!-- FERTILISER PROGRAMS — the shed page. Program > Block > Round > rates, three shallow levels
+         instead of one wide table, because the reading conditions are a phone on a shelf and two
+         hands full of fertiliser. The litres-per-bed figure is the hero: the grower measures by
+         volume into a bucket, so kg is the cross-check, not the instruction. -->
+    <section class="view" id="view-fertprog">
+      <div class="cm-top">
+        <button class="btn-ghost fp-back" type="button" id="fpBack">←</button>
+        <span class="sub" id="fpCrumb">Fertiliser programs</span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn-ghost" id="fpEditToggle" type="button" aria-pressed="false">Edit</button>
+      </div>
+      <div class="fp-main" id="fpMain">
+        <div class="fp-col fp-col-progs fp-active" id="fpColProgs">
+          <div class="fp-col-head"><span>Programs</span></div>
+          <div class="fp-scroll" id="fpProgs"></div>
+          <div class="fp-addbar fp-editonly" id="fpAddProgBar" hidden>
+            <button type="button" id="fpAddProg">＋ New program</button>
+          </div>
+        </div>
+        <div class="fp-col fp-col-blocks" id="fpColBlocks">
+          <div class="fp-col-head"><span id="fpBlocksHead">Blocks</span></div>
+          <div class="fp-scroll" id="fpBlocks"></div>
+        </div>
+        <div class="fp-col fp-col-rates" id="fpColRates">
+          <div class="fp-col-head"><span id="fpRatesHead">Rates</span></div>
+          <div class="fp-rounds" id="fpRounds"></div>
+          <div class="fp-scroll">
+            <div class="fp-rates" id="fpRates"></div>
+            <div class="fp-addbar fp-editonly" id="fpAddItemBar" hidden>
+              <button type="button" id="fpAddItem">＋ Add product</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -2896,7 +3032,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -2921,6 +3057,9 @@ async function loadAll(){
       fwFetch(CFG.tables.walkListItems),
       fwFetch(CFG.tables.fieldWalkTags),
       fwFetch(CFG.tables.farmInfo),   // same guard: Farm info degrades to an empty tab, not a dead app
+      fwFetch(CFG.tables.fertPrograms),
+      fwFetch(CFG.tables.fertRounds),
+      fwFetch(CFG.tables.fertItems),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -3056,6 +3195,11 @@ async function loadAll(){
     // Farm info: the reference library. Archived rows are dropped here rather than filtered in the
     // view, so nothing downstream has to remember they exist.
     data.farmInfo = PlannerShared.parseFarmInfo(farmInfo).filter(e=>!e.archived);
+
+    // Fertiliser programs — the shed page's three levels.
+    data.fertPrograms = PlannerShared.parseFertPrograms(fertPrograms);
+    data.fertRounds   = PlannerShared.parseFertRounds(fertRounds);
+    data.fertItems    = PlannerShared.parseFertItems(fertItems);
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -3453,6 +3597,7 @@ function showView(view){
   if(view==="spraymix") buildSprayMixes();
   if(view==="fieldwalk") buildFieldWalk();
   if(view==="farminfo") buildFarmInfo();
+  if(view==="fertprog") buildFertProg();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
@@ -3480,6 +3625,7 @@ function wireDropdownTab(tabId, ddId){
 wireDropdownTab("harvestTab","harvestDropdown");
 wireDropdownTab("miscTab","miscDropdown");
 wireDropdownTab("sprayTab","sprayDropdown");
+wireDropdownTab("infoTab","infoDropdown");
 document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").forEach(dd=>dd.hidden=true); });
 
 // Mobile nav drawer — hamburger bubble + slide-in list of all 9 destinations (see markup near
@@ -3487,10 +3633,12 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
 (function(){
   const fab=document.getElementById("navFab"), drawer=document.getElementById("navDrawer"),
         backdrop=document.getElementById("navDrawerBackdrop"), closeBtn=document.getElementById("navDrawerClose"),
-        miscTab=document.getElementById("miscTab"), harvestTab=document.getElementById("harvestTab");
+        miscTab=document.getElementById("miscTab"), harvestTab=document.getElementById("harvestTab"),
+        infoTab=document.getElementById("infoTab");
   // sub-views that live under a dropdown tab rather than their own top-level tab
   const DROPDOWN_PARENT={ beds:miscTab, seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
-                          harvest:harvestTab, whiteboard:harvestTab, outlets:harvestTab, season:harvestTab };
+                          harvest:harvestTab, whiteboard:harvestTab, outlets:harvestTab, season:harvestTab,
+                          farminfo:infoTab, fertprog:infoTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
   function close(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); fab.setAttribute("aria-expanded","false"); }
@@ -10081,6 +10229,9 @@ function saveUiState(){
       week: { mode:wkMode, odCollapsed:wkOdCollapsed },
       fieldWalk: { pane:fwPane, date:fwDateISO },
       farmInfo: { q:fiQuery, cat:fiCat, tag:fiTag },
+      // Where you were in the drill-down, so a phone that slept mid-mix comes back to the same
+      // block and round rather than the program list.
+      fertProg: { prog:fpProgId, block:fpBlockKey, round:fpRoundId },
     };
     localStorage.setItem(UI_KEY, JSON.stringify(state));
   }catch(_){}
@@ -10135,11 +10286,16 @@ function restoreUiState(){
     fiQuery=saved.farmInfo.q||""; fiCat=saved.farmInfo.cat||""; fiTag=saved.farmInfo.tag||"";
     const box=document.getElementById("fiSearch"); if(box) box.value=fiQuery;
   }
+  // buildFertProg re-validates all three against the loaded data, so a stale id here is harmless.
+  if(saved.fertProg){
+    fpProgId=saved.fertProg.prog||null; fpBlockKey=saved.fertProg.block||null;
+    fpRoundId=saved.fertProg.round||null;
+  }
 
   const tab=saved.tab||"map";
   if(tab!=="map"){
     // normal tabs plus the Harvest/Misc dropdowns' sub-pages
-    const btn=document.querySelector(`.tab[data-view="${tab}"], #harvestDropdown button[data-view="${tab}"], #miscDropdown button[data-view="${tab}"], #sprayDropdown button[data-view="${tab}"]`);
+    const btn=document.querySelector(`.tab[data-view="${tab}"], #harvestDropdown button[data-view="${tab}"], #miscDropdown button[data-view="${tab}"], #sprayDropdown button[data-view="${tab}"], #infoDropdown button[data-view="${tab}"]`);
     if(btn) btn.click(); // reuses the normal tab-switch handler (builds the crop map with the restored year)
   }
   if(tab==="cropmap" && saved.cropMap && saved.cropMap.mode==="map"){
@@ -12281,6 +12437,388 @@ function fiCloseFile(){
   $fi("fiViewModal").addEventListener("mousedown",(ev)=>{ if(ev.target===$fi("fiViewModal")) fiCloseFile(); });
   document.addEventListener("keydown",(ev)=>{
     if(ev.key==="Escape" && $fi("fiViewModal").classList.contains("open")) fiCloseFile();
+  });
+})();
+
+/* ---------- Fertiliser programs ----------
+   The shed page. Program -> Block -> Round -> rates.
+
+   The reading conditions drove every decision here and are worth stating, because they are not the
+   conditions the rest of the app is designed for. The grower is mixing fertiliser with both hands
+   busy and the phone propped on a shelf an arm's length away. So: three shallow levels rather than
+   one dense table, a round strip of big pills rather than a dropdown, and the litres-per-bed figure
+   set large enough to read across a shed.
+
+   LITRES IS THE HERO AND IS NEVER COMPUTED. The grower measures by volume into a bucket, so litres
+   is the instruction and kg is the cross-check. Most of the imported rows have no litres figure —
+   they show as a dashed "L not set" button that opens the editor rather than a derived number.
+   We could estimate litres from a bulk density per product; we deliberately don't, because a
+   computed rate that looks authoritative while being a guess is exactly the kind of error that is
+   expensive to make with fertiliser. Blanks get filled in from the shed as they're weighed.        */
+
+const $fp = id => document.getElementById(id);
+
+let fpProgId=null, fpBlockKey=null, fpRoundId=null;   // blockKey: block id, or "label:<name>"
+let fpEditing=false;
+let fpFormFor=null;    // item id being edited, or "new", or null
+
+/* ---- selectors over the loaded data ---- */
+function fpProgram(id){ return (data.fertPrograms||[]).find(p=>p.id===id)||null; }
+function fpRoundsOf(progId){ return (data.fertRounds||[]).filter(r=>r.programId===progId); }
+function fpItemsOf(progId){ return (data.fertItems||[]).filter(i=>i.programId===progId); }
+function fpBlockName(id){ const b=(data.blocks||[]).find(x=>x.id===id); return b?b.name:null; }
+
+// Every distinct block a program touches, in farm-map order, each with the count of rounds it has
+// anything in. Blocks the program doesn't mention at all are omitted — this is a reference page,
+// not a farm inventory.
+function fpBlocksOf(progId){
+  const items=fpItemsOf(progId);
+  const seen=new Map();
+  for(const it of items){
+    const key = it.blockId ? it.blockId : (it.blockLabel ? "label:"+it.blockLabel : null);
+    if(!key) continue;
+    if(!seen.has(key)){
+      seen.set(key, { key, blockId:it.blockId||null, name: it.blockId ? (fpBlockName(it.blockId)||"—") : it.blockLabel,
+                      orphan: !it.blockId, rounds:new Set(), n:0 });
+    }
+    const e=seen.get(key); e.n++; if(it.roundId) e.rounds.add(it.roundId);
+  }
+  // Sorted by block name, numeric-aware so GH2 lands before GH10. data.blocks' own order is the
+  // order rows came back from the backend, which is arbitrary — using it put GH2 above AB.
+  return [...seen.values()].sort((a,b)=>{
+    if(a.orphan!==b.orphan) return a.orphan?1:-1;   // unmatched legacy blocks sink to the bottom
+    return a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:"base"});
+  });
+}
+
+function fpVisibleItems(){
+  const prog=fpProgram(fpProgId); if(!prog) return [];
+  return fpItemsOf(fpProgId).filter(i=>{
+    if(fpRoundId && i.roundId!==fpRoundId) return false;
+    if(prog.kind==="Fertigation") return true;      // not per-block
+    const key = i.blockId ? i.blockId : (i.blockLabel ? "label:"+i.blockLabel : null);
+    return key===fpBlockKey;
+  });
+}
+
+const fpNum = v => (v==null||v==="") ? null : (Math.round(v*10000)/10000);
+const fpFmt = v => v==null ? "—" : String(fpNum(v));
+
+// The kg cross-check, in a unit a person can act on. "0.0338 kg" is arithmetic; "34 g" is a
+// scoop. Anything under a kilo switches to grams and drops to whole numbers, because the extra
+// decimals are noise you can't measure out anyway.
+function fpKgLabel(kg){
+  if(kg==null) return null;
+  if(kg<1) return `${Math.round(kg*1000)} g`;
+  return `${(Math.round(kg*100)/100)} kg`;
+}
+
+/* ---- level management ---- */
+// Which column is "active" on a phone. Desktop shows all three, so this only matters below 860px,
+// but the crumb and back button read from it at every width.
+function fpLevel(){
+  const prog=fpProgram(fpProgId);
+  if(!prog) return 0;
+  if(prog.kind==="Fertigation") return 2;   // no block step
+  return fpBlockKey ? 2 : 1;
+}
+function fpApplyLevel(){
+  const lvl=fpLevel();
+  $fp("fpColProgs").classList.toggle("fp-active", lvl===0);
+  $fp("fpColBlocks").classList.toggle("fp-active", lvl===1);
+  $fp("fpColRates").classList.toggle("fp-active", lvl===2);
+  // Fertigation programs have no block level at any width.
+  const prog=fpProgram(fpProgId);
+  $fp("fpColBlocks").hidden = !!(prog && prog.kind==="Fertigation");
+  $fp("fpBack").style.visibility = lvl===0 ? "hidden" : "";
+
+  const parts=["Fertiliser programs"];
+  if(prog) parts.push(prog.name);
+  if(lvl===2 && prog && prog.kind!=="Fertigation"){
+    const b=fpBlocksOf(fpProgId).find(x=>x.key===fpBlockKey);
+    if(b) parts.push(b.name);
+  }
+  $fp("fpCrumb").textContent = parts.join(" · ");
+}
+function fpGoBack(){
+  const lvl=fpLevel();
+  if(lvl===2){
+    const prog=fpProgram(fpProgId);
+    if(prog && prog.kind==="Fertigation"){ fpProgId=null; fpRoundId=null; }
+    else fpBlockKey=null;
+  } else if(lvl===1){ fpProgId=null; }
+  fpFormFor=null;
+  buildFertProg();
+}
+
+/* ---- render ---- */
+function buildFertProg(){
+  if(!$fp("fpProgs")) return;
+  const progs=data.fertPrograms||[];
+  // Drop a stale selection rather than rendering an empty page against a deleted program.
+  if(fpProgId && !fpProgram(fpProgId)){ fpProgId=null; fpBlockKey=null; fpRoundId=null; }
+  if(fpProgId){
+    const rs=fpRoundsOf(fpProgId);
+    if(!fpRoundId || !rs.some(r=>r.id===fpRoundId)) fpRoundId = rs.length ? rs[0].id : null;
+  }
+  document.querySelectorAll(".fp-editonly").forEach(el=>el.hidden=!fpEditing);
+  $fp("fpEditToggle").setAttribute("aria-pressed", fpEditing?"true":"false");
+  $fp("fpEditToggle").textContent = fpEditing ? "Done" : "Edit";
+
+  $fp("fpProgs").innerHTML = progs.length ? progs.map(p=>{
+    const items=fpItemsOf(p.id).length, rounds=fpRoundsOf(p.id).length;
+    const sub = p.kind==="Fertigation"
+      ? `Fertigation · ${items} product${items===1?"":"s"}${p.area?` · ${p.area} m²`:""}`
+      : `${fpBlocksOf(p.id).length} blocks · ${rounds} round${rounds===1?"":"s"}`;
+    return `<button class="fp-pick" type="button" data-fp-prog="${p.id}" aria-selected="${p.id===fpProgId?"true":"false"}">
+      <span class="fp-pick-name">${esc(p.name||"Untitled")}</span>
+      <span class="fp-pick-sub">${esc(sub)}</span></button>`;
+  }).join("") : `<div class="fp-empty">No programs yet.${fpEditing?"":" Tap Edit to add one."}</div>`;
+
+  fpRenderBlocks();
+  fpRenderRounds();
+  fpRenderRates();
+  fpApplyLevel();
+}
+
+function fpRenderBlocks(){
+  const prog=fpProgram(fpProgId);
+  if(!prog || prog.kind==="Fertigation"){ $fp("fpBlocks").innerHTML=""; return; }
+  const list=fpBlocksOf(fpProgId);
+  const totalRounds=fpRoundsOf(fpProgId).length;
+  $fp("fpBlocksHead").textContent = `Blocks · ${prog.name}`;
+  $fp("fpBlocks").innerHTML = list.length ? list.map(b=>{
+    const n=b.rounds.size;
+    const sub = b.orphan
+      ? "No matching block in the planner"
+      : `${n} of ${totalRounds} round${totalRounds===1?"":"s"}`;
+    return `<button class="fp-pick" type="button" data-fp-block="${esc(b.key)}" aria-selected="${b.key===fpBlockKey?"true":"false"}">
+      <span class="fp-pick-name">${esc(b.name)}</span>
+      <span class="fp-pick-sub${b.orphan?" fp-pick-warn":""}">${esc(sub)}</span></button>`;
+  }).join("") : `<div class="fp-empty">This program has no blocks yet.</div>`;
+}
+
+function fpRenderRounds(){
+  const prog=fpProgram(fpProgId);
+  const wrap=$fp("fpRounds");
+  if(!prog){ wrap.innerHTML=""; return; }
+  const rs=fpRoundsOf(fpProgId);
+  const items=fpItemsOf(fpProgId);
+  wrap.innerHTML = rs.map(r=>{
+    // A round with nothing in it for THIS block is dimmed but still tappable — seeing that round 3
+    // is empty for G Block is information, and hiding it would just look like the app lost it.
+    const n=items.filter(i=>{
+      if(i.roundId!==r.id) return false;
+      if(prog.kind==="Fertigation") return true;
+      const key=i.blockId?i.blockId:(i.blockLabel?"label:"+i.blockLabel:null);
+      return key===fpBlockKey;
+    }).length;
+    return `<button class="fp-round${n?"":" fp-round-empty"}" type="button" data-fp-round="${r.id}"
+      aria-selected="${r.id===fpRoundId?"true":"false"}">${esc(r.name)}</button>`;
+  }).join("") + (fpEditing ? `<button class="fp-round" type="button" data-fp-addround>＋ Round</button>` : "");
+}
+
+function fpRenderRates(){
+  const prog=fpProgram(fpProgId);
+  const box=$fp("fpRates");
+  if(!prog){ box.innerHTML=`<div class="fp-empty">Pick a program.</div>`; $fp("fpRatesHead").textContent="Rates"; return; }
+  if(prog.kind!=="Fertigation" && !fpBlockKey){ box.innerHTML=`<div class="fp-empty">Pick a block.</div>`; $fp("fpRatesHead").textContent="Rates"; return; }
+
+  const round=fpRoundsOf(fpProgId).find(r=>r.id===fpRoundId);
+  const bname = prog.kind==="Fertigation" ? prog.name
+    : (fpBlocksOf(fpProgId).find(b=>b.key===fpBlockKey)||{}).name || "";
+  $fp("fpRatesHead").textContent = [bname, round?round.name:null].filter(Boolean).join(" · ");
+
+  const items=fpVisibleItems();
+  const rows=[];
+  if(fpFormFor==="new") rows.push(fpFormHtml(null));
+  for(const it of items){
+    rows.push(it.id===fpFormFor ? fpFormHtml(it) : fpRateHtml(it, prog));
+  }
+  box.innerHTML = rows.length ? rows.join("")
+    : `<div class="fp-empty">Nothing in ${round?esc(round.name):"this round"} for ${esc(bname)}.${fpEditing?"":" Tap Edit to add a product."}</div>`;
+}
+
+function fpRateHtml(it, prog){
+  const kgPerBed = it.unit==="kg" ? PlannerShared.fertKgPerBed(it.rate) : null;
+  const per100 = `${fpFmt(it.rate)} ${esc(it.unit)}/100 m²`;
+  let fig;
+  if(prog.kind==="Fertigation"){
+    // Hero is the batch amount — what actually goes in the tank for this area. The /100 m² rate is
+    // the reference it was derived from and sits in the sub-line, so the two aren't repeated.
+    const batch = (prog.area && it.rate!=null) ? it.rate*prog.area/100 : null;
+    fig = batch!=null
+      ? `<div class="fp-rate-fig"><div class="fp-rate-l">${fpFmt(batch)}</div>
+         <div class="fp-rate-l-unit">${esc(it.unit)} for ${fpFmt(prog.area)} m²</div></div>`
+      : `<div class="fp-rate-fig"><div class="fp-rate-l">${fpFmt(it.rate)}</div>
+         <div class="fp-rate-l-unit">${esc(it.unit)} / 100 m²</div></div>`;
+  } else if(it.lPerBed!=null){
+    fig = `<div class="fp-rate-fig"><div class="fp-rate-l">${fpFmt(it.lPerBed)}</div>
+      <div class="fp-rate-l-unit">L / bed</div>
+      ${kgPerBed!=null?`<div class="fp-rate-kg">${esc(fpKgLabel(kgPerBed))}</div>`:""}</div>`;
+  } else {
+    fig = `<button class="fp-rate-unset" type="button" data-fp-setl="${it.id}">L not set${
+      kgPerBed!=null?`<br><b>${esc(fpKgLabel(kgPerBed))}</b>/bed`:""}<br>tap to add</button>`;
+  }
+
+  return `<div class="fp-rate">
+    <div class="fp-rate-main">
+      <div class="fp-rate-prod">${esc(it.product||"—")}</div>
+      <div class="fp-rate-sub">${per100}</div>
+      ${it.notes?`<div class="fp-rate-note">${esc(it.notes)}</div>`:""}
+    </div>
+    ${fig}
+    ${fpEditing?`<button class="fp-edit-btn" type="button" data-fp-edititem="${it.id}" title="Edit">✎</button>`:""}
+  </div>`;
+}
+
+function fpFormHtml(it){
+  const units=PlannerShared.FERT_UNITS;
+  const v=it||{product:"",rate:"",unit:"kg",lPerBed:"",notes:""};
+  return `<div class="fp-form" data-fp-form>
+    <label for="fpFProduct">Product</label>
+    <input id="fpFProduct" type="text" value="${esc(v.product||"")}" placeholder="e.g. Natural Gypsum">
+    <div class="fp-form-row">
+      <div><label for="fpFRate">Rate / 100 m²</label>
+        <input id="fpFRate" type="number" step="any" inputmode="decimal" value="${v.rate??""}"></div>
+      <div><label for="fpFUnit">Unit</label>
+        <select id="fpFUnit">${units.map(u=>`<option value="${u}"${u===(v.unit||"kg")?" selected":""}>${u}</option>`).join("")}</select></div>
+    </div>
+    <label for="fpFL">Litres per 15 m bed <span style="text-transform:none;letter-spacing:0">(what you measure into the bucket — leave blank if not yet known)</span></label>
+    <input id="fpFL" type="number" step="any" inputmode="decimal" value="${v.lPerBed??""}">
+    <label for="fpFNotes">Notes</label>
+    <input id="fpFNotes" type="text" value="${esc(v.notes||"")}">
+    <div class="fp-form-actions">
+      <button class="btn-primary" type="button" data-fp-save="${it?it.id:"new"}">Save</button>
+      <button class="btn-ghost" type="button" data-fp-cancel>Cancel</button>
+      <span class="spacer"></span>
+      ${it?`<button class="btn-ghost" type="button" data-fp-delitem="${it.id}">Delete</button>`:""}
+    </div>
+  </div>`;
+}
+
+/* ---- writes ---- */
+// Optimistic, same idiom as saveTrayType: mutate in memory, await, roll back and alert on failure.
+async function fpSaveItem(id){
+  const prog=fpProgram(fpProgId); if(!prog) return;
+  const g=x=>($fp(x)||{}).value;
+  const product=(g("fpFProduct")||"").trim();
+  if(!product){ alert("Give the product a name."); return; }
+  const rate=g("fpFRate")===""?null:+g("fpFRate");
+  const lPerBed=g("fpFL")===""?null:+g("fpFL");
+  const F=CFG.f;
+  const fields={ [F.fx_product]:product, [F.fx_rate]:rate, [F.fx_unit]:g("fpFUnit")||"kg",
+                 [F.fx_lPerBed]:lPerBed, [F.fx_notes]:(g("fpFNotes")||"").trim()||null };
+  showLoading(true);
+  try{
+    if(id==="new"){
+      const blockId = (prog.kind!=="Fertigation" && fpBlockKey && !fpBlockKey.startsWith("label:")) ? [fpBlockKey] : [];
+      const label = (fpBlockKey||"").startsWith("label:") ? fpBlockKey.slice(6) : null;
+      const n=fpVisibleItems().length;
+      const full={ ...fields, [F.fx_program]:[fpProgId], [F.fx_round]:fpRoundId?[fpRoundId]:[],
+                   [F.fx_block]:blockId, [F.fx_blockLabel]:label, [F.fx_order]:n+1 };
+      const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertItems, [full]);
+      data.fertItems.push(PlannerShared.parseFertItems([{id:rec.id, fields:full}])[0]);
+    }else{
+      const it=data.fertItems.find(x=>x.id===id); if(!it) return;
+      const prev={...it};
+      Object.assign(it,{product, rate, unit:fields[F.fx_unit], lPerBed, notes:fields[F.fx_notes]||""});
+      try{ await atPatch(CFG.farmBase, CFG.tables.fertItems, id, fields); }
+      catch(e){ Object.assign(it, prev); throw e; }
+    }
+    fpFormFor=null;
+    buildFertProg();
+  }catch(e){ alert("Couldn't save:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
+async function fpDeleteItem(id){
+  const it=data.fertItems.find(x=>x.id===id); if(!it) return;
+  if(!confirm(`Remove ${it.product||"this product"} from this round?`)) return;
+  showLoading(true);
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.fertItems, [id]);
+    data.fertItems=data.fertItems.filter(x=>x.id!==id);
+    fpFormFor=null; buildFertProg();
+  }catch(e){ alert("Couldn't delete:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
+async function fpAddRound(){
+  if(!fpProgId) return;
+  const n=fpRoundsOf(fpProgId).length;
+  const name=prompt("Name this round", `Round ${n+1}`); if(!name) return;
+  showLoading(true);
+  try{
+    const F=CFG.f;
+    const fields={ [F.fr_program]:[fpProgId], [F.fr_name]:name.trim(), [F.fr_order]:n+1 };
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertRounds, [fields]);
+    data.fertRounds.push(PlannerShared.parseFertRounds([{id:rec.id, fields}])[0]);
+    fpRoundId=rec.id; buildFertProg();
+  }catch(e){ alert("Couldn't add the round:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
+async function fpAddProgram(){
+  const name=prompt("Name the program"); if(!name) return;
+  const kind=confirm("OK = per-block amendment program.\nCancel = fertigation (mixed per area).")
+    ? "Amendment" : "Fertigation";
+  showLoading(true);
+  try{
+    const F=CFG.f, now=new Date().toISOString();
+    const fields={ [F.fp_name]:name.trim(), [F.fp_kind]:kind, [F.fp_order]:(data.fertPrograms.length||0)+1,
+                   [F.fp_archived]:false, [F.fp_created]:now, [F.fp_updated]:now };
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertPrograms, [fields]);
+    data.fertPrograms.push(PlannerShared.parseFertPrograms([{id:rec.id, fields}])[0]);
+    const rf={ [F.fr_program]:[rec.id], [F.fr_name]:"Round 1", [F.fr_order]:1 };
+    const [rr]=await atCreate(CFG.farmBase, CFG.tables.fertRounds, [rf]);
+    data.fertRounds.push(PlannerShared.parseFertRounds([{id:rr.id, fields:rf}])[0]);
+    fpProgId=rec.id; fpBlockKey=null; fpRoundId=rr.id;
+    buildFertProg();
+  }catch(e){ alert("Couldn't create the program:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
+/* ---- wiring ---- */
+(function wireFertProg(){
+  const main=$fp("fpMain"); if(!main) return;
+
+  $fp("fpBack").onclick=fpGoBack;
+  $fp("fpEditToggle").onclick=()=>{ fpEditing=!fpEditing; fpFormFor=null; buildFertProg(); };
+  $fp("fpAddProg").onclick=fpAddProgram;
+  $fp("fpAddItem").onclick=()=>{ fpFormFor="new"; fpRenderRates(); };
+
+  $fp("fpProgs").addEventListener("click",(ev)=>{
+    const b=ev.target.closest("[data-fp-prog]"); if(!b) return;
+    fpProgId=b.dataset.fpProg; fpBlockKey=null; fpRoundId=null; fpFormFor=null;
+    buildFertProg();
+  });
+  $fp("fpBlocks").addEventListener("click",(ev)=>{
+    const b=ev.target.closest("[data-fp-block]"); if(!b) return;
+    fpBlockKey=b.dataset.fpBlock; fpFormFor=null;
+    buildFertProg();
+  });
+  $fp("fpRounds").addEventListener("click",(ev)=>{
+    if(ev.target.closest("[data-fp-addround]")){ fpAddRound(); return; }
+    const b=ev.target.closest("[data-fp-round]"); if(!b) return;
+    fpRoundId=b.dataset.fpRound; fpFormFor=null;
+    fpRenderRounds(); fpRenderRates();
+  });
+
+  // One delegated handler for the rates column — it re-renders wholesale on every change.
+  $fp("fpRates").addEventListener("click",(ev)=>{
+    const t=ev.target;
+    const setl=t.closest("[data-fp-setl]");
+    // Tapping "L not set" jumps straight into the editor with the litres field focused. This is
+    // the single most common edit — filling in a volume just measured — so it gets a direct route
+    // rather than requiring Edit mode first.
+    if(setl){ fpFormFor=setl.dataset.fpSetl; fpRenderRates();
+      const f=$fp("fpFL"); if(f){ f.focus(); f.scrollIntoView({block:"center"}); } return; }
+    const ed=t.closest("[data-fp-edititem]");
+    if(ed){ fpFormFor=ed.dataset.fpEdititem; fpRenderRates(); return; }
+    const sv=t.closest("[data-fp-save]"); if(sv){ fpSaveItem(sv.dataset.fpSave); return; }
+    if(t.closest("[data-fp-cancel]")){ fpFormFor=null; fpRenderRates(); return; }
+    const del=t.closest("[data-fp-delitem]"); if(del){ fpDeleteItem(del.dataset.fpDelitem); return; }
   });
 })();
 
