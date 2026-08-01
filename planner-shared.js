@@ -54,6 +54,9 @@
       walkLists:        "tblFWlists",         // "Walk Lists" — standing rolling lists (Bed prep, Spray, …)
       walkListItems:    "tblFWlistItems",     // "Walk List Items" — a bed / planting / free-text line on one of those lists
       fieldWalkTags:    "tblFWtags",          // "Field Walk Tags" — user-added sub-pills layered onto FW_TAGS
+      // Farm info — reference material (SOPs, soil reports, certification, supplier contacts).
+      // Supabase-only, same placeholder-id convention as the field walk tables above.
+      farmInfo:         "tblFIfarmInfo",      // "Farm Info"
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -167,6 +170,9 @@
       wli_done:"Done", wli_doneAt:"Done at", wli_convTask:"Converted task",
       wli_convAt:"Converted at", wli_order:"Order",
       fwt_name:"Name", fwt_parent:"Parent",
+      fi_name:"Name", fi_cat:"Category", fi_tags:"Tags", fi_body:"Body",
+      fi_files:"Files", fi_links:"Links", fi_bed:"Bed", fi_crop:"Crop",
+      fi_pinned:"Pinned", fi_created:"Created at", fi_updated:"Updated at", fi_archived:"Archived",
     }
   };
 
@@ -183,6 +189,7 @@
     sprayApplicationItems:"spray_application_items",
     fieldWalks:"field_walks", walkObservations:"walk_observations",
     walkLists:"walk_lists", walkListItems:"walk_list_items", fieldWalkTags:"field_walk_tags",
+    farmInfo:"farm_info",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -567,6 +574,41 @@
     return (recs||[]).map(r=>({
       id:r.id, name:r.fields[F.fwt_name]||"", parent:r.fields[F.fwt_parent]||"",
     })).filter(t=>t.name && t.parent);
+  }
+
+  // Farm info — the reference library. Categories are a fixed taxonomy rather than a table because
+  // they're navigation (the filter chips are the tab's spine), not data anyone needs to edit; free
+  // tags carry everything the seven categories don't. "Files" and "Links" arrive as jsonb arrays,
+  // so unlike every other parse* here they need a guard against a non-array landing in the column.
+  const FARM_INFO_CATS = ["SOP","Soil report","Certification","Supplier","Equipment","Note","Reference"];
+
+  function parseFarmInfo(recs){
+    const F=CFG.f;
+    const arr = v => Array.isArray(v) ? v : [];
+    return (recs||[]).map(r=>({
+      id:r.id,
+      name:r.fields[F.fi_name]||"",
+      category:r.fields[F.fi_cat]||"Note",
+      tags:arr(r.fields[F.fi_tags]).slice(),
+      body:r.fields[F.fi_body]||"",
+      files:arr(r.fields[F.fi_files]).slice(),
+      links:arr(r.fields[F.fi_links]).slice(),
+      bedIds:arr(r.fields[F.fi_bed]).slice(),
+      cropIds:arr(r.fields[F.fi_crop]).slice(),
+      pinned:!!r.fields[F.fi_pinned],
+      created:r.fields[F.fi_created]||"",
+      updated:r.fields[F.fi_updated]||"",
+      archived:!!r.fields[F.fi_archived],
+    })).sort(farmInfoSort);
+  }
+
+  // Pinned first, then most-recently-touched. Falls back to "Created at" for rows that have never
+  // been edited since creation, and finally to the title so the order is stable rather than
+  // whatever PostgREST happened to return.
+  function farmInfoSort(a,b){
+    if(a.pinned!==b.pinned) return a.pinned ? -1 : 1;
+    const at=a.updated||a.created||"", bt=b.updated||b.created||"";
+    return String(bt).localeCompare(String(at)) || a.name.localeCompare(b.name);
   }
 
   function parseTasks(taskRecords){
@@ -1080,6 +1122,7 @@
     parseSprayApplicationItems, attachSprayItems, mixWhp, safeAfterISO, bedWhpActive,
     parseFieldWalks, parseWalkObservations, parseWalkLists, parseWalkListItems, attachWalkItems,
     parseFieldWalkTags,
+    FARM_INFO_CATS, parseFarmInfo, farmInfoSort,
     SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate,
     suggestBedsForPlanting, suggestBedsForUnassigned,
     createAirtableClient,

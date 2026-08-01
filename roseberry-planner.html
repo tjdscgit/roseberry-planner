@@ -154,8 +154,16 @@
      short enough to fit. If you add a view using .cr-wrap, add it here too. */
   #view-crops.active,#view-beds.active,#view-seedbook.active,#view-outlets.active,
   #view-whiteboard.active,
-  #view-misc.active,#view-tasklib.active,#view-croptasks.active{display:flex;flex-direction:column}
-  .cr-wrap{flex:1 1 auto;overflow:auto;padding:.4rem 1.2rem 2rem}
+  #view-misc.active,#view-tasklib.active,#view-croptasks.active,
+  #view-farminfo.active{display:flex;flex-direction:column}
+  /* min-height:0 is load-bearing: without it a flex child's default min-height:auto lets .cr-wrap
+     size to its content instead of shrinking to the space main{overflow:hidden} actually gives it
+     — the scrollbar never appears and the tail of a long list (many seed-book/whiteboard cards)
+     is just gone with no way to reach it. -webkit-overflow-scrolling gives inertial scrolling
+     inside this nested overflow region on iOS Safari, where a plain overflow:auto here can render
+     but not respond to touch drags. */
+  .cr-wrap{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+           overscroll-behavior:contain;padding:.4rem 1.2rem 2rem}
   /* Mobile-only crop -> settings -> variety drill-down (replaces the grid, see buildCrMobileList) */
   .cr-mobile-list{display:none}
   .cr-mobile-title{font-weight:700;font-size:1.05rem;margin:.4rem 0}
@@ -1272,6 +1280,123 @@
   .sp-pick-crops{color:var(--ink-2);font-size:.86rem;flex:1;min-width:0}
   .sp-pick-foot .spacer{flex:0}
 
+  /* ---------- Farm info ---------- */
+  /* Two panes side by side on a desk, one pane that pushes on a phone: below 860px the detail pane
+     is position:absolute over the list and slides in when an entry is opened, so the list keeps its
+     scroll position underneath rather than being re-rendered on every back-tap. */
+  .fi-main{flex:1 1 auto;display:flex;min-height:0;position:relative}
+  .fi-list{flex:0 0 22rem;min-width:0;display:flex;flex-direction:column;
+    border-right:1px solid var(--line-2);background:var(--paper)}
+  .fi-filters{flex:0 0 auto;padding:.5rem .7rem;border-bottom:1px solid var(--line);
+    display:flex;flex-direction:column;gap:.4rem}
+  .fi-filters .fi-chiprow{display:flex;gap:.25rem;flex-wrap:wrap}
+  .fi-search{width:100%;padding:.45rem .6rem;font-family:var(--sans);font-size:.9rem;
+    border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);color:var(--ink)}
+  .fi-rows{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain}
+  .fi-row{display:block;width:100%;text-align:left;background:none;cursor:pointer;color:var(--ink);
+    border:none;border-bottom:1px solid var(--line);padding:.55rem .7rem;font-family:inherit}
+  .fi-row:hover{background:var(--paper-2)}
+  .fi-row[aria-selected="true"]{background:color-mix(in srgb,var(--steel) 12%,transparent)}
+  .fi-row-title{font-weight:650;font-size:.92rem;display:flex;align-items:center;gap:.35rem}
+  .fi-row-meta{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center;margin-top:.2rem}
+  .fi-cat{font-family:var(--mono);font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--ink-2);border:1px solid var(--line-2);border-radius:999px;padding:.08rem .45rem}
+  .fi-tag{font-family:var(--mono);font-size:.62rem;color:var(--steel)}
+  .fi-clip{font-family:var(--mono);font-size:.66rem;color:var(--ink-2)}
+  .fi-detail{flex:1 1 auto;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;padding:1rem 1.3rem 3rem;background:var(--paper)}
+  .fi-back{display:none}
+  .fi-detail-head{display:flex;align-items:flex-start;gap:.6rem;flex-wrap:wrap;margin-bottom:.3rem}
+  .fi-detail-head h2{margin:0;font-size:1.25rem;flex:1;min-width:0}
+  .fi-stamp{font-family:var(--mono);font-size:.68rem;color:var(--ink-2);margin-bottom:.9rem}
+  .fi-form label{display:block;font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--ink-2);margin:.9rem 0 .25rem}
+  .fi-form input[type=text],.fi-form select,.fi-form textarea{width:100%;padding:.5rem .6rem;
+    font-family:var(--sans);font-size:.92rem;border:1px solid var(--line-2);border-radius:8px;
+    background:var(--paper-2);color:var(--ink)}
+  .fi-form textarea{font-family:var(--mono);font-size:.85rem;line-height:1.5;resize:vertical}
+  .fi-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1.2rem}
+  .fi-actions .spacer{flex:1}
+  /* Rendered markdown. Deliberately tight vertical rhythm — an SOP is read standing up, and the
+     default h2/p margins waste most of a phone screen on whitespace. */
+  .fi-md{font-size:.94rem;line-height:1.55}
+  .fi-md h1,.fi-md h2,.fi-md h3{margin:1.1rem 0 .4rem;line-height:1.25}
+  .fi-md h1{font-size:1.15rem} .fi-md h2{font-size:1.05rem} .fi-md h3{font-size:.95rem}
+  .fi-md p{margin:.5rem 0}
+  .fi-md ul,.fi-md ol{margin:.5rem 0;padding-left:1.4rem}
+  .fi-md li{margin:.2rem 0}
+  .fi-md code{font-family:var(--mono);font-size:.85em;background:var(--paper-2);
+    border:1px solid var(--line);border-radius:4px;padding:.05rem .3rem}
+  .fi-md blockquote{margin:.6rem 0;padding:.2rem 0 .2rem .8rem;border-left:3px solid var(--line-2);
+    color:var(--ink-2)}
+  .fi-md hr{border:none;border-top:1px solid var(--line-2);margin:1rem 0}
+  .fi-md a{color:var(--steel)}
+  .fi-tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:.6rem 0;
+    border:1px solid var(--line-2);border-radius:8px}
+  .fi-md table{border-collapse:collapse;width:100%;font-size:.86rem}
+  .fi-md th,.fi-md td{padding:.34rem .6rem;text-align:left;border-bottom:1px solid var(--line);
+    white-space:nowrap}
+  .fi-md th{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--ink-2);background:var(--paper-2);border-bottom:1px solid var(--line-2)}
+  /* Rates are right-aligned and monospaced so magnitudes line up and a 10x error is visible at a
+     glance rather than hiding in ragged text. Tagged per cell by mdToHtml, not by column index. */
+  .fi-md td.num{font-family:var(--mono);text-align:right}
+  .fi-md tbody tr:last-child td{border-bottom:none}
+  .fi-files{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.4rem}
+  .fi-file{display:flex;align-items:center;gap:.45rem;border:1px solid var(--line-2);
+    border-radius:9px;padding:.4rem .6rem;background:var(--paper-2);cursor:pointer;
+    font-family:inherit;color:var(--ink);font-size:.85rem;max-width:16rem}
+  .fi-file:hover{border-color:var(--steel)}
+  .fi-file .fi-file-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fi-file .fi-file-size{font-family:var(--mono);font-size:.66rem;color:var(--ink-2);white-space:nowrap}
+  .fi-file .x{margin-left:.2rem;border:none;background:none;color:var(--ink-2);cursor:pointer;padding:0 .2rem}
+  .fi-links{display:flex;flex-direction:column;gap:.3rem;margin-top:.4rem}
+  .fi-link{display:flex;align-items:center;gap:.4rem;font-size:.88rem}
+  .fi-link a{color:var(--steel);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fi-linkadd{display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem}
+  .fi-linkadd input{flex:1;min-width:8rem}
+  /* Bed/crop multi-select. A plain searchable checkbox list rather than the spray log's map picker:
+     that picker writes straight into the spray entry-form's own state, and generalising it would
+     mean touching the spray log for a secondary convenience here. */
+  .fi-pickwrap{border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);padding:.4rem}
+  .fi-pickchips{display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.35rem}
+  .fi-pickchip{font-family:var(--mono);font-size:.66rem;background:var(--steel);color:#fff;
+    border:none;border-radius:999px;padding:.16rem .5rem;cursor:pointer}
+  .fi-picklist{max-height:9rem;overflow:auto;margin-top:.3rem}
+  .fi-picklist button{display:block;width:100%;text-align:left;background:none;border:none;
+    cursor:pointer;padding:.35rem .5rem;font-size:.86rem;color:var(--ink);font-family:inherit}
+  .fi-picklist button:hover{background:var(--paper)}
+  .fi-picklist .on{color:var(--ok);font-weight:600}
+  /* Inline file viewer. Same overlay idiom as #sprayPickModal. */
+  #fiViewModal{position:fixed;inset:0;z-index:80;display:none;background:rgba(0,0,0,.62)}
+  #fiViewModal.open{display:flex;align-items:center;justify-content:center}
+  .fi-view-card{position:relative;width:min(1100px,100%);height:min(92vh,100%);display:flex;
+    flex-direction:column;background:var(--paper);border:1px solid var(--line-2);
+    border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+  @media(max-width:640px){ .fi-view-card{width:100%;height:100%;border-radius:0} }
+  .fi-view-head{display:flex;align-items:center;gap:.6rem;padding:.55rem .8rem;
+    border-bottom:1px solid var(--line-2);flex:0 0 auto}
+  .fi-view-name{font-weight:650;font-size:.92rem;flex:1;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .fi-view-body{flex:1 1 auto;min-height:0;background:var(--paper-2);display:flex;
+    align-items:center;justify-content:center;overflow:auto}
+  .fi-view-body iframe{width:100%;height:100%;border:none}
+  .fi-view-body img{max-width:100%;max-height:100%;object-fit:contain}
+
+  @media(max-width:860px){
+    /* The strapline wraps to two lines on a phone and squeezes "New entry" into a two-line button.
+       The tab header already says where you are, so it's the strapline that goes. */
+    #view-farminfo .cm-top > .sub{display:none}
+    #view-farminfo .cm-top{gap:.5rem}
+    .fi-list{flex:1 1 auto;border-right:none}
+    .fi-detail{position:absolute;inset:0;z-index:2;transform:translateX(100%);
+      transition:transform .18s ease;padding:.8rem .9rem 3rem}
+    .fi-main.fi-open .fi-detail{transform:translateX(0)}
+    .fi-main:not(.fi-open) .fi-detail{visibility:hidden}
+    .fi-back{display:inline-block}
+  }
+
   /* ---------- Field walk ---------- */
   .fw-top{flex-wrap:wrap;row-gap:.5rem}
   #fwWalkers{width:11rem;flex:0 1 auto}
@@ -1411,6 +1536,7 @@
     <button class="tab" role="tab" aria-selected="false" id="miscTab" aria-haspopup="true">Misc ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="sprayTab" aria-haspopup="true">Spray log ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="fieldwalk">Field walk</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="farminfo">Farm info</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
   </nav>
   <div class="tab-dd" id="harvestDropdown" hidden>
@@ -1457,6 +1583,7 @@
     <button class="nav-drawer-item" data-view="crops">Crops</button>
     <button class="nav-drawer-item" data-view="sprayrec">Spray log</button>
     <button class="nav-drawer-item" data-view="spraymix">Saved mixes</button>
+    <button class="nav-drawer-item" data-view="farminfo">Farm info</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
     <div class="nav-drawer-sep">Harvest</div>
     <button class="nav-drawer-item" data-view="harvest">Harvest planner</button>
@@ -2013,7 +2140,46 @@
         </div>
       </div>
     </section>
+
+    <!-- FARM INFO — the reference library: SOPs, soil reports, certification, supplier contacts.
+         This is the one tab that isn't about the season. Nothing here is dated, scheduled or
+         derived; entries are written once and read many times, which is why the whole page is a
+         filter plus a document and there's no "today" anywhere in it. Attachments live in the
+         farm-docs Supabase bucket; Google Drive appears only as pasted links, because copying
+         Drive into the app would mean owning Drive's problems without owning its features. -->
+    <section class="view" id="view-farminfo">
+      <div class="cm-top">
+        <span class="sub">Farm info · notes, SOPs, reports and documents</span>
+        <span class="spacer" style="flex:1"></span>
+        <span class="fi-clip" id="fiCount"></span>
+        <button class="btn-primary" id="fiNewBtn" type="button">＋ New entry</button>
+      </div>
+      <div class="fi-main" id="fiMain">
+        <div class="fi-list">
+          <div class="fi-filters">
+            <input class="fi-search" id="fiSearch" type="search" placeholder="Search titles, text and tags…" autocomplete="off">
+            <div class="fi-chiprow" id="fiCatChips"></div>
+            <div class="fi-chiprow" id="fiTagChips"></div>
+          </div>
+          <div class="fi-rows" id="fiRows"></div>
+        </div>
+        <div class="fi-detail" id="fiDetail"></div>
+      </div>
+    </section>
   </main>
+
+  <!-- Farm info file viewer — PDFs in an iframe, images as an <img>. Anything else never reaches
+       here (fiOpenFile sends it straight to a new tab), so there's no third branch. -->
+  <div id="fiViewModal">
+    <div class="fi-view-card">
+      <div class="fi-view-head">
+        <span class="fi-view-name" id="fiViewName">—</span>
+        <button class="btn-ghost" id="fiViewNewTab" type="button">Open in new tab ↗</button>
+        <button class="icon-btn" id="fiViewClose" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="fi-view-body" id="fiViewBody"></div>
+    </div>
+  </div>
 
   <!-- WEEKLY PLANNER: grouped-block details (e.g. "Direct sow ×3") -->
   <div id="wkGroupModal">
@@ -2730,7 +2896,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -2754,6 +2920,7 @@ async function loadAll(){
       fwFetch(CFG.tables.walkLists),
       fwFetch(CFG.tables.walkListItems),
       fwFetch(CFG.tables.fieldWalkTags),
+      fwFetch(CFG.tables.farmInfo),   // same guard: Farm info degrades to an empty tab, not a dead app
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -2885,6 +3052,10 @@ async function loadAll(){
       PlannerShared.parseWalkLists(walkLists), data.walkListItems);
     data.fieldWalkTags = PlannerShared.parseFieldWalkTags(fieldWalkTags);
     fwApplyCustomTags();
+
+    // Farm info: the reference library. Archived rows are dropped here rather than filtered in the
+    // view, so nothing downstream has to remember they exist.
+    data.farmInfo = PlannerShared.parseFarmInfo(farmInfo).filter(e=>!e.archived);
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -3281,6 +3452,7 @@ function showView(view){
   if(view==="sprayrec") buildSprayRecords();
   if(view==="spraymix") buildSprayMixes();
   if(view==="fieldwalk") buildFieldWalk();
+  if(view==="farminfo") buildFarmInfo();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
@@ -9908,6 +10080,7 @@ function saveUiState(){
       timeline: { year:tlYear, mode:tlGroupMode },
       week: { mode:wkMode, odCollapsed:wkOdCollapsed },
       fieldWalk: { pane:fwPane, date:fwDateISO },
+      farmInfo: { q:fiQuery, cat:fiCat, tag:fiTag },
     };
     localStorage.setItem(UI_KEY, JSON.stringify(state));
   }catch(_){}
@@ -9955,6 +10128,13 @@ function restoreUiState(){
   // back to the same half of the page, but always to today's walk. Reopening on last Monday's
   // walk and typing into it is a much worse failure than losing the pane.
   if(saved.fieldWalk && saved.fieldWalk.pane==="lists") fwPane="lists";
+
+  // Farm info restores its filters but never the open entry — coming back to the tab should show
+  // the shelf you left it filtered to, not re-open a document you'd finished reading.
+  if(saved.farmInfo){
+    fiQuery=saved.farmInfo.q||""; fiCat=saved.farmInfo.cat||""; fiTag=saved.farmInfo.tag||"";
+    const box=document.getElementById("fiSearch"); if(box) box.value=fiQuery;
+  }
 
   const tab=saved.tab||"map";
   if(tab!=="map"){
@@ -11569,6 +11749,538 @@ function sprayPickSearchSuggest(q){
     else if(t.dataset.mixEdit!=null) sprayMixAction("edit", t.dataset.mixEdit);
     else if(t.dataset.mixDup!=null) sprayMixAction("dup", t.dataset.mixDup);
     else if(t.dataset.mixDel!=null) sprayMixAction("del", t.dataset.mixDel);
+  });
+})();
+
+/* ---------- Farm info ----------
+   The reference library. Three things make this tab different from the rest of the app:
+
+   1. NOTHING HERE IS DATED. Every other tab answers "what happens when"; this one answers "how do
+      we do it" and "what did the lab say". So there is no year, no week, no anchor — the only time
+      that matters is "Updated at", and only because it's the least-bad default sort.
+   2. THE BODY IS MARKDOWN AND IT IS USER TEXT GOING INTO innerHTML. mdToHtml escapes with esc()
+      BEFORE applying any markup and only emits http/https/mailto hrefs. That ordering is the whole
+      safety argument — if you ever move the escape after the markup pass, a note body becomes a
+      script injection.
+   3. ATTACHMENTS ARE THE POINT, not a garnish. A soil report IS the PDF; the note around it is
+      commentary. Hence uploads are first-class, and Google Drive appears only as pasted links —
+      mirroring Drive into the app would mean owning Drive's sync problems without its features. */
+
+const FI_BUCKET = "farm-docs";
+const FI_MAX_BYTES = 20*1024*1024;   // matches the bucket's file_size_limit; rejecting here gives
+                                     // a readable message instead of a 413 halfway through a POST
+const $fi = id => document.getElementById(id);
+
+let fiQuery="", fiCat="", fiTag="";
+let fiSelId=null;      // the entry open in the detail pane
+let fiDraft=null;      // non-null while editing; a working copy, never the live record
+
+/* ---- markdown ---- */
+// A deliberately small subset: headings, lists, bold/italic/code, links, quotes, rules, and pipe
+// tables. No images, no HTML passthrough — every feature past this is another escaping edge case
+// for no gain. Tables earned their place: the fertiliser programs are rate data, and rates read as
+// a grid or they don't read at all.
+function mdToHtml(src){
+  const safeHref = u => /^(https?:\/\/|mailto:)/i.test(u.trim()) ? u.trim() : null;
+  const inline = s => s
+    .replace(/`([^`]+)`/g, (_,c)=>`<code>${c}</code>`)
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m,t,u)=>{
+      const h=safeHref(u); return h ? `<a href="${h}" target="_blank" rel="noopener noreferrer">${t}</a>` : m;
+    })
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+
+  const lines = esc(src||"").replace(/\r\n?/g,"\n").split("\n");
+  const out=[]; let list=null, para=[];
+  const flushPara=()=>{ if(para.length){ out.push(`<p>${inline(para.join(" "))}</p>`); para=[]; } };
+  const flushList=()=>{ if(list){ out.push(`</${list}>`); list=null; } };
+  const close=()=>{ flushPara(); flushList(); };
+  const cells = s => s.replace(/^\||\|$/g,"").split("|").map(c=>c.trim());
+  const isSep = s => /^\|?[\s:-]*-[-\s:|]*\|?$/.test(s) && s.includes("-");
+
+  for(let i=0;i<lines.length;i++){
+    const raw=lines[i];
+    const line=raw.trimEnd();
+    if(!line.trim()){ close(); continue; }
+    let m;
+    // Pipe table: a header row, a --- separator, then body rows until the first non-pipe line.
+    // Checked before every other rule because a table row would otherwise be swallowed as a
+    // paragraph and lose its structure.
+    if(line.includes("|") && i+1<lines.length && isSep(lines[i+1].trim())){
+      close();
+      const head=cells(line.trim());
+      const rows=[];
+      i+=2;
+      while(i<lines.length && lines[i].trim().includes("|")){ rows.push(cells(lines[i].trim())); i++; }
+      i--;
+      // Wrapped in its own overflow-x container: a 6-column rate table is wider than a phone, and
+      // it has to scroll inside itself rather than making the whole page scroll sideways.
+      out.push(`<div class="fi-tablewrap"><table><thead><tr>${head.map(h=>`<th>${inline(h)}</th>`).join("")}</tr></thead>`
+        +`<tbody>${rows.map(r=>`<tr>${r.map(c=>
+            // Numeric cells (and the em-dash that stands in for "not in this round") are tagged so
+            // CSS can right-align them. Aligning by column position instead would right-align a
+            // unit column of "ml"/"g" too, which reads as a mistake.
+            `<td${/^[\d.,+\-—–]+$/.test(c.trim())?' class="num"':''}>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+      continue;
+    }
+    if((m=line.match(/^(#{1,3})\s+(.*)$/))){ close(); const n=m[1].length; out.push(`<h${n}>${inline(m[2])}</h${n}>`); continue; }
+    if(/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())){ close(); out.push("<hr>"); continue; }
+    if((m=line.match(/^\s*&gt;\s?(.*)$/))){ close(); out.push(`<blockquote>${inline(m[1])}</blockquote>`); continue; }
+    if((m=line.match(/^\s*[-*+]\s+(.*)$/))){ flushPara(); if(list!=="ul"){ flushList(); out.push("<ul>"); list="ul"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
+    if((m=line.match(/^\s*\d+[.)]\s+(.*)$/))){ flushPara(); if(list!=="ol"){ flushList(); out.push("<ol>"); list="ol"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
+    flushList(); para.push(line.trim());
+  }
+  close();
+  return out.join("\n");
+}
+
+/* ---- helpers ---- */
+function fiEntry(id){ return (data.farmInfo||[]).find(e=>e.id===id) || null; }
+function fiBedName(id){ const b=(data.beds||[]).find(x=>x.id===id); return b ? (b.block?`${b.name} · ${b.block}`:b.name) : null; }
+function fiCropName(id){ return (data.crops||{})[id] || null; }
+function fiBytes(n){
+  if(!n && n!==0) return "";
+  if(n<1024) return n+" B";
+  if(n<1024*1024) return (n/1024).toFixed(0)+" KB";
+  return (n/1024/1024).toFixed(1)+" MB";
+}
+function fiIsPdf(f){ return /\.pdf$/i.test(f.filename||"") || f.type==="application/pdf"; }
+function fiIsImage(f){ return /^image\//.test(f.type||"") || /\.(jpe?g|png|gif|webp|avif)$/i.test(f.filename||""); }
+function fiIcon(f){ return fiIsPdf(f) ? "📄" : fiIsImage(f) ? "🖼" : "📎"; }
+function fiAllTags(){
+  const set=new Set(); (data.farmInfo||[]).forEach(e=>e.tags.forEach(t=>t&&set.add(t)));
+  return [...set].sort((a,b)=>a.localeCompare(b));
+}
+
+/* ---- list + filters ---- */
+function fiFilter(){
+  const q=fiQuery.trim().toLowerCase();
+  return (data.farmInfo||[]).filter(e=>{
+    if(fiCat && e.category!==fiCat) return false;
+    if(fiTag && !e.tags.includes(fiTag)) return false;
+    if(!q) return true;
+    return `${e.name} ${e.body} ${e.tags.join(" ")} ${e.category}`.toLowerCase().includes(q);
+  });
+}
+
+function buildFarmInfo(){
+  if(!$fi("fiRows")) return;
+  fiRenderChips();
+  fiRenderRows();
+  // Re-entering the tab with a stale selection (the entry was deleted elsewhere) falls back to the
+  // empty state rather than rendering a detail pane for a record that no longer exists.
+  if(fiDraft) fiRenderEditor();
+  else if(fiSelId && fiEntry(fiSelId)) fiRenderDetail(fiEntry(fiSelId));
+  else { fiSelId=null; fiRenderDetail(null); }
+}
+
+function fiRenderChips(){
+  const cats=PlannerShared.FARM_INFO_CATS;
+  $fi("fiCatChips").innerHTML =
+    [`<button class="chip" data-fi-cat="" aria-pressed="${fiCat?"false":"true"}">All</button>`]
+    .concat(cats.map(c=>`<button class="chip" data-fi-cat="${esc(c)}" aria-pressed="${fiCat===c?"true":"false"}">${esc(c)}</button>`))
+    .join("");
+  const tags=fiAllTags();
+  $fi("fiTagChips").innerHTML = tags.length
+    ? tags.map(t=>`<button class="chip" data-fi-tag="${esc(t)}" aria-pressed="${fiTag===t?"true":"false"}">#${esc(t)}</button>`).join("")
+    : "";
+}
+
+function fiRenderRows(){
+  const list=fiFilter().slice().sort(PlannerShared.farmInfoSort);
+  const total=(data.farmInfo||[]).length;
+  $fi("fiCount").textContent = list.length===total ? `${total} entr${total===1?"y":"ies"}`
+                                                  : `${list.length} of ${total}`;
+  $fi("fiRows").innerHTML = list.length ? list.map(e=>{
+    const bits=[];
+    if(e.files.length) bits.push(`<span class="fi-clip">📎 ${e.files.length}</span>`);
+    if(e.links.length) bits.push(`<span class="fi-clip">🔗 ${e.links.length}</span>`);
+    e.tags.slice(0,3).forEach(t=>bits.push(`<span class="fi-tag">#${esc(t)}</span>`));
+    return `<button class="fi-row" type="button" data-fi-open="${e.id}" aria-selected="${e.id===fiSelId?"true":"false"}">
+      <span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>
+      <span class="fi-row-meta"><span class="fi-cat">${esc(e.category||"Note")}</span>${bits.join("")}</span>
+    </button>`;
+  }).join("") : `<div class="cr-empty">${total?"Nothing matches those filters.":"No entries yet — start with an SOP or a soil report."}</div>`;
+}
+
+/* ---- detail pane ---- */
+function fiRenderDetail(e){
+  const pane=$fi("fiDetail");
+  $fi("fiMain").classList.toggle("fi-open", !!e);
+  if(!e){
+    pane.innerHTML = `<div class="placeholder"><span class="big">Farm info</span>
+      <p>Notes, SOPs, soil reports and the paperwork you need to find again. Pick an entry, or add one.</p></div>`;
+    fiRenderRows();
+    return;
+  }
+  const stamp = e.updated ? `Updated ${fmt(e.updated)}` : (e.created ? `Added ${fmt(e.created)}` : "");
+  const beds=e.bedIds.map(fiBedName).filter(Boolean);
+  const crops=e.cropIds.map(fiCropName).filter(Boolean);
+  const meta=[];
+  if(beds.length) meta.push(`<div class="kv"><span class="k">Beds</span><span class="v">${esc(beds.join(", "))}</span></div>`);
+  if(crops.length) meta.push(`<div class="kv"><span class="k">Crops</span><span class="v">${esc(crops.join(", "))}</span></div>`);
+
+  pane.innerHTML = `
+    <button class="btn-ghost fi-back" type="button" data-fi-back>← All entries</button>
+    <div class="fi-detail-head">
+      <h2>${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</h2>
+      <span class="fi-cat">${esc(e.category||"Note")}</span>
+    </div>
+    <div class="fi-stamp">${esc(stamp)}${e.tags.length?" · "+e.tags.map(t=>"#"+esc(t)).join(" "):""}</div>
+    ${e.body ? `<div class="fi-md">${mdToHtml(e.body)}</div>` : `<div class="empty-note">No text on this entry.</div>`}
+    ${e.files.length ? `<div class="sect-h">Attachments</div><div class="fi-files">${e.files.map((f,i)=>
+      `<button class="fi-file" type="button" data-fi-file="${i}"><span>${fiIcon(f)}</span>
+        <span class="fi-file-name">${esc(f.filename||"file")}</span>
+        <span class="fi-file-size">${esc(fiBytes(f.size))}</span></button>`).join("")}</div>` : ""}
+    ${e.links.length ? `<div class="sect-h">Links</div><div class="fi-links">${e.links.map(l=>
+      `<div class="fi-link">🔗 <a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label||l.url)}</a></div>`).join("")}</div>` : ""}
+    ${meta.length ? `<div class="sect-h">Linked to</div>${meta.join("")}` : ""}
+    <div class="fi-actions">
+      <button class="btn-primary" type="button" data-fi-edit>Edit</button>
+      <button class="btn-ghost" type="button" data-fi-pin>${e.pinned?"Unpin":"Pin"}</button>
+      <span class="spacer"></span>
+      <button class="btn-ghost" type="button" data-fi-del>Delete</button>
+    </div>`;
+  fiRenderRows();
+}
+
+/* ---- editor ---- */
+function fiOpenNew(){
+  fiDraft={ id:null, name:"", category:"Note", tags:[], body:"", files:[], links:[],
+            bedIds:[], cropIds:[], pinned:false, pending:[] };
+  fiSelId=null;
+  fiRenderEditor();
+}
+function fiOpenEdit(e){
+  // A working copy — arrays are cloned so cancelling genuinely discards, rather than leaving the
+  // live record half-mutated the way an in-place edit would.
+  fiDraft={ id:e.id, name:e.name, category:e.category, tags:e.tags.slice(), body:e.body,
+            files:e.files.slice(), links:e.links.slice(), bedIds:e.bedIds.slice(),
+            cropIds:e.cropIds.slice(), pinned:e.pinned, pending:[] };
+  fiRenderEditor();
+}
+function fiCancelEdit(){
+  const id=fiDraft && fiDraft.id;
+  fiDraft=null;
+  if(id && fiEntry(id)){ fiSelId=id; fiRenderDetail(fiEntry(id)); }
+  else { fiSelId=null; fiRenderDetail(null); }
+}
+
+function fiRenderEditor(){
+  const d=fiDraft; if(!d) return;
+  $fi("fiMain").classList.add("fi-open");
+  const cats=PlannerShared.FARM_INFO_CATS;
+  $fi("fiDetail").innerHTML = `
+    <button class="btn-ghost fi-back" type="button" data-fi-cancel>← Cancel</button>
+    <div class="fi-form">
+      <label for="fiFName">Title</label>
+      <input id="fiFName" type="text" value="${esc(d.name)}" placeholder="e.g. Garlic curing SOP">
+
+      <label for="fiFCat">Category</label>
+      <select id="fiFCat">${cats.map(c=>`<option value="${esc(c)}"${c===d.category?" selected":""}>${esc(c)}</option>`).join("")}</select>
+
+      <label for="fiFTags">Tags <span style="text-transform:none;letter-spacing:0">(comma separated)</span></label>
+      <input id="fiFTags" type="text" value="${esc(d.tags.join(", "))}" placeholder="irrigation, certification">
+
+      <label for="fiFBody">Notes <span style="text-transform:none;letter-spacing:0">(markdown: # heading, - list, **bold**, [link](url))</span></label>
+      <textarea id="fiFBody" rows="14" placeholder="Write it the way you'd explain it to someone doing the job for the first time.">${esc(d.body)}</textarea>
+
+      <label>Attachments</label>
+      <div class="fi-files" id="fiFFiles"></div>
+      <div class="fi-linkadd">
+        <input id="fiFUpload" type="file" multiple style="flex:1">
+      </div>
+
+      <label>Links <span style="text-transform:none;letter-spacing:0">(paste a Google Drive or web URL)</span></label>
+      <div class="fi-links" id="fiFLinks"></div>
+      <div class="fi-linkadd">
+        <input id="fiFLinkUrl" type="text" placeholder="https://drive.google.com/…">
+        <input id="fiFLinkLabel" type="text" placeholder="Label (optional)">
+        <button class="btn-ghost" type="button" data-fi-linkadd>Add link</button>
+      </div>
+
+      <label>Beds <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+      <div class="fi-pickwrap">
+        <div class="fi-pickchips" id="fiFBedChips"></div>
+        <input class="fi-search" id="fiFBedSearch" type="text" placeholder="Search beds…" autocomplete="off">
+        <div class="fi-picklist" id="fiFBedList"></div>
+      </div>
+
+      <label>Crops <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+      <div class="fi-pickwrap">
+        <div class="fi-pickchips" id="fiFCropChips"></div>
+        <input class="fi-search" id="fiFCropSearch" type="text" placeholder="Search crops…" autocomplete="off">
+        <div class="fi-picklist" id="fiFCropList"></div>
+      </div>
+
+      <label style="display:flex;align-items:center;gap:.4rem;text-transform:none;letter-spacing:0;font-size:.9rem">
+        <input id="fiFPinned" type="checkbox"${d.pinned?" checked":""} style="width:auto"> Pin to the top of the list
+      </label>
+
+      <div class="fi-actions">
+        <button class="btn-primary" type="button" data-fi-save>Save</button>
+        <button class="btn-ghost" type="button" data-fi-cancel>Cancel</button>
+      </div>
+    </div>`;
+  fiRenderDraftFiles(); fiRenderDraftLinks(); fiRenderPickers();
+  fiRenderRows();
+}
+
+function fiRenderDraftFiles(){
+  const d=fiDraft, el=$fi("fiFFiles"); if(!el) return;
+  const saved=d.files.map((f,i)=>
+    `<span class="fi-file"><span>${fiIcon(f)}</span>
+      <span class="fi-file-name" data-fi-file="${i}" style="cursor:pointer">${esc(f.filename||"file")}</span>
+      <span class="fi-file-size">${esc(fiBytes(f.size))}</span>
+      <button class="x" type="button" data-fi-filedel="${i}" title="Remove">✕</button></span>`);
+  // Pending files haven't been uploaded yet — they get a distinct label so it's obvious the save
+  // is what actually commits them, not the file chooser.
+  const pend=d.pending.map((f,i)=>
+    `<span class="fi-file"><span>⏳</span><span class="fi-file-name">${esc(f.name)}</span>
+      <span class="fi-file-size">${esc(fiBytes(f.size))} · on save</span>
+      <button class="x" type="button" data-fi-penddel="${i}" title="Remove">✕</button></span>`);
+  el.innerHTML = (saved.concat(pend).join("")) || `<span class="empty-note">Nothing attached.</span>`;
+}
+
+function fiRenderDraftLinks(){
+  const d=fiDraft, el=$fi("fiFLinks"); if(!el) return;
+  el.innerHTML = d.links.length ? d.links.map((l,i)=>
+    `<div class="fi-link">🔗 <a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label||l.url)}</a>
+      <button type="button" data-fi-linkdel="${i}" title="Remove" style="border:none;background:none;cursor:pointer;color:var(--ink-2)">✕</button></div>`
+  ).join("") : `<span class="empty-note">No links.</span>`;
+}
+
+function fiRenderPickers(){
+  const d=fiDraft;
+  const bq=($fi("fiFBedSearch")||{}).value||"", cq=($fi("fiFCropSearch")||{}).value||"";
+  $fi("fiFBedChips").innerHTML = d.bedIds.map(id=>
+    `<button class="fi-pickchip" type="button" data-fi-bedoff="${id}">${esc(fiBedName(id)||id)} ✕</button>`).join("");
+  $fi("fiFCropChips").innerHTML = d.cropIds.map(id=>
+    `<button class="fi-pickchip" type="button" data-fi-cropoff="${id}">${esc(fiCropName(id)||id)} ✕</button>`).join("");
+  const bl=bq.trim().toLowerCase();
+  $fi("fiFBedList").innerHTML = (data.beds||[])
+    .filter(b=>!bl || `${b.block||""} ${b.name}`.toLowerCase().includes(bl)).slice(0,40)
+    .map(b=>`<button type="button" data-fi-bedon="${b.id}">${d.bedIds.includes(b.id)?'<span class="on">✓ </span>':""}${esc(b.name)}${b.block?` <span class="fi-tag">· ${esc(b.block)}</span>`:""}</button>`).join("");
+  const cl=cq.trim().toLowerCase();
+  $fi("fiFCropList").innerHTML = Object.entries(data.crops||{})
+    .filter(([,n])=>!cl || String(n).toLowerCase().includes(cl))
+    .sort((a,b)=>String(a[1]).localeCompare(String(b[1]))).slice(0,40)
+    .map(([id,n])=>`<button type="button" data-fi-cropon="${id}">${d.cropIds.includes(id)?'<span class="on">✓ </span>':""}${esc(n)}</button>`).join("");
+}
+
+// Pull the free-text inputs into the draft before any re-render, so typing a title then ticking a
+// bed doesn't silently throw the title away.
+function fiSyncDraftFromForm(){
+  const d=fiDraft; if(!d) return;
+  const g=id=>($fi(id)||{}).value;
+  d.name=g("fiFName")||""; d.category=g("fiFCat")||"Note"; d.body=g("fiFBody")||"";
+  d.tags=(g("fiFTags")||"").split(",").map(s=>s.trim()).filter(Boolean);
+  d.pinned=!!($fi("fiFPinned")||{}).checked;
+}
+
+/* ---- persistence ---- */
+async function fiSave(){
+  fiSyncDraftFromForm();
+  const d=fiDraft;
+  if(!d.name.trim()){ alert("Give the entry a title so it can be found again."); return; }
+  const now=new Date().toISOString();
+  const F=CFG.f;
+  const existing=d.id?fiEntry(d.id):null;
+  const fields={
+    [F.fi_name]:d.name.trim(), [F.fi_cat]:d.category, [F.fi_tags]:d.tags, [F.fi_body]:d.body,
+    [F.fi_links]:d.links, [F.fi_bed]:d.bedIds, [F.fi_crop]:d.cropIds,
+    [F.fi_pinned]:d.pinned, [F.fi_updated]:now,
+    [F.fi_created]: (existing && existing.created) || now,
+    [F.fi_files]:d.files,
+  };
+  showLoading(true);
+  try{
+    let id=d.id;
+    if(!id){
+      const [rec]=await atCreate(CFG.farmBase, CFG.tables.farmInfo, [fields]);
+      id=rec.id;
+    }else{
+      await atPatch(CFG.farmBase, CFG.tables.farmInfo, id, fields);
+    }
+    // Uploads happen after the record exists so the storage path can be keyed by record id —
+    // same ordering, and the same non-fatal failure handling, as sprayUploadPhotos.
+    if(d.pending.length){
+      const merged=await fiUploadFiles(id, d.pending, d.files);
+      if(merged && merged.length!==d.files.length){
+        d.files=merged;
+        await atPatch(CFG.farmBase, CFG.tables.farmInfo, id, {[F.fi_files]:merged});
+      }
+    }
+    const parsed=PlannerShared.parseFarmInfo([{id, fields:{...fields, [F.fi_files]:d.files}}])[0];
+    data.farmInfo=(data.farmInfo||[]).filter(x=>x.id!==id).concat([parsed]).sort(PlannerShared.farmInfoSort);
+    fiDraft=null; fiSelId=id;
+    fiRenderDetail(fiEntry(id)); fiRenderChips();
+  }catch(e){
+    alert("Couldn't save this entry:\n"+e.message);
+  }finally{ showLoading(false); }
+}
+
+// Returns the full file list (existing + newly uploaded), or null if the backend can't take files.
+async function fiUploadFiles(recordId, pending, existing){
+  if(BACKEND!=="supabase"){ alert("File attachments need the Supabase backend."); return null; }
+  const out=existing.slice(), errs=[];
+  for(const file of pending){
+    try{
+      let blob=file, name=file.name||"file", type=file.type||"application/octet-stream";
+      // Phone photos are several MB of camera JPEG for what is usually a record shot. Documents are
+      // NOT touched — recompressing a PDF through a canvas would destroy it.
+      if(/^image\//.test(type) && type!=="image/gif"){
+        const c=await sprayCompressImage(file);
+        blob=await (await fetch(c.dataUrl)).blob(); name=c.filename; type="image/jpeg";
+      }
+      if(blob.size>FI_MAX_BYTES){ errs.push(`${name}: too big (${fiBytes(blob.size)}, limit ${fiBytes(FI_MAX_BYTES)})`); continue; }
+      const path=`${recordId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${name.replace(/[^\w.\-]+/g,"_")}`;
+      const r=await fetch(`${SB_URL}/storage/v1/object/${FI_BUCKET}/${path}`,{
+        method:"POST",
+        headers:{ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":type },
+        body: blob,
+      });
+      if(!r.ok){ const t=await r.text().catch(()=>""); errs.push(`${name}: ${r.status} ${t.slice(0,90)}`); continue; }
+      out.push({ url:`${SB_URL}/storage/v1/object/public/${FI_BUCKET}/${path}`, filename:name, size:blob.size, type });
+    }catch(e){ errs.push(`${file.name||"file"}: ${e.message}`); }
+  }
+  if(errs.length) alert("Entry saved, but some files didn't upload:\n"+errs.join("\n"));
+  return out;
+}
+
+async function fiTogglePin(e){
+  const prev=e.pinned;
+  e.pinned=!prev;                                     // optimistic, same idiom as saveTrayType
+  data.farmInfo.sort(PlannerShared.farmInfoSort);
+  fiRenderDetail(e);
+  try{ await atPatch(CFG.farmBase, CFG.tables.farmInfo, e.id, {[CFG.f.fi_pinned]:e.pinned}); }
+  catch(err){
+    e.pinned=prev; data.farmInfo.sort(PlannerShared.farmInfoSort); fiRenderDetail(e);
+    alert("Couldn't change the pin:\n"+err.message);
+  }
+}
+
+async function fiDelete(e){
+  if(!confirm(`Delete "${e.name||"this entry"}"? Its ${e.files.length} attachment${e.files.length===1?"":"s"} will go too.`)) return;
+  showLoading(true);
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.farmInfo, [e.id]);
+    // Best-effort bucket cleanup. The row is already gone, so a failure here leaves an orphaned
+    // object, not a broken entry — worth a console warning, not an alert.
+    for(const f of e.files){
+      const path=(f.url||"").split(`/object/public/${FI_BUCKET}/`)[1];
+      if(!path) continue;
+      try{
+        await fetch(`${SB_URL}/storage/v1/object/${FI_BUCKET}/${path}`,{
+          method:"DELETE", headers:{ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}` } });
+      }catch(err){ console.warn("farm-docs cleanup:", err.message); }
+    }
+    data.farmInfo=data.farmInfo.filter(x=>x.id!==e.id);
+    fiSelId=null; fiDraft=null;
+    fiRenderDetail(null); fiRenderChips();
+  }catch(err){
+    alert("Couldn't delete this entry:\n"+err.message);
+  }finally{ showLoading(false); }
+}
+
+/* ---- file viewer ---- */
+function fiOpenFile(f){
+  if(!f || !f.url) return;
+  if(!fiIsPdf(f) && !fiIsImage(f)){ window.open(f.url,"_blank","noopener"); return; }
+  $fi("fiViewName").textContent=f.filename||"file";
+  $fi("fiViewNewTab").onclick=()=>window.open(f.url,"_blank","noopener");
+  $fi("fiViewBody").innerHTML = fiIsPdf(f)
+    ? `<iframe src="${esc(f.url)}#toolbar=1" title="${esc(f.filename||"PDF")}"></iframe>`
+    : `<img src="${esc(f.url)}" alt="${esc(f.filename||"")}">`;
+  $fi("fiViewModal").classList.add("open");
+}
+function fiCloseFile(){
+  $fi("fiViewModal").classList.remove("open");
+  $fi("fiViewBody").innerHTML="";   // drop the iframe so a PDF isn't left rendering behind the app
+}
+
+/* ---- wiring ---- */
+(function wireFarmInfo(){
+  const main=$fi("fiMain"); if(!main) return;
+
+  $fi("fiNewBtn").onclick=fiOpenNew;
+
+  const search=$fi("fiSearch");
+  search.addEventListener("input",()=>{ fiQuery=search.value; fiRenderRows(); });
+
+  $fi("fiCatChips").addEventListener("click",(ev)=>{
+    const b=ev.target.closest("[data-fi-cat]"); if(!b) return;
+    fiCat=b.dataset.fiCat; fiRenderChips(); fiRenderRows();
+  });
+  $fi("fiTagChips").addEventListener("click",(ev)=>{
+    const b=ev.target.closest("[data-fi-tag]"); if(!b) return;
+    fiTag = fiTag===b.dataset.fiTag ? "" : b.dataset.fiTag;   // second tap clears
+    fiRenderChips(); fiRenderRows();
+  });
+  $fi("fiRows").addEventListener("click",(ev)=>{
+    const b=ev.target.closest("[data-fi-open]"); if(!b) return;
+    const e=fiEntry(b.dataset.fiOpen); if(!e) return;
+    fiDraft=null; fiSelId=e.id; fiRenderDetail(e);
+  });
+
+  // One delegated handler for the whole detail pane — it's re-rendered wholesale on every state
+  // change, so per-element onclicks would have to be re-bound each time.
+  $fi("fiDetail").addEventListener("click",(ev)=>{
+    const t=ev.target;
+    if(t.closest("[data-fi-back]")){ fiSelId=null; fiDraft=null; fiRenderDetail(null); return; }
+    if(t.closest("[data-fi-cancel]")){ fiCancelEdit(); return; }
+    if(t.closest("[data-fi-save]")){ fiSave(); return; }
+    if(t.closest("[data-fi-edit]")){ const e=fiEntry(fiSelId); if(e) fiOpenEdit(e); return; }
+    if(t.closest("[data-fi-pin]")){ const e=fiEntry(fiSelId); if(e) fiTogglePin(e); return; }
+    if(t.closest("[data-fi-del]")){ const e=fiEntry(fiSelId); if(e) fiDelete(e); return; }
+
+    const fdel=t.closest("[data-fi-filedel]");
+    if(fdel){ fiSyncDraftFromForm(); fiDraft.files.splice(+fdel.dataset.fiFiledel,1); fiRenderDraftFiles(); return; }
+    const pdel=t.closest("[data-fi-penddel]");
+    if(pdel){ fiSyncDraftFromForm(); fiDraft.pending.splice(+pdel.dataset.fiPenddel,1); fiRenderDraftFiles(); return; }
+    const file=t.closest("[data-fi-file]");
+    if(file){ const src=fiDraft?fiDraft.files:(fiEntry(fiSelId)||{files:[]}).files; fiOpenFile(src[+file.dataset.fiFile]); return; }
+
+    if(t.closest("[data-fi-linkadd]")){
+      const url=($fi("fiFLinkUrl").value||"").trim(), label=($fi("fiFLinkLabel").value||"").trim();
+      if(!/^https?:\/\//i.test(url)){ alert("Paste a full URL starting with http:// or https://"); return; }
+      fiSyncDraftFromForm(); fiDraft.links.push({url,label});
+      $fi("fiFLinkUrl").value=""; $fi("fiFLinkLabel").value="";
+      fiRenderDraftLinks(); return;
+    }
+    const ldel=t.closest("[data-fi-linkdel]");
+    if(ldel){ fiSyncDraftFromForm(); fiDraft.links.splice(+ldel.dataset.fiLinkdel,1); fiRenderDraftLinks(); return; }
+
+    const bon=t.closest("[data-fi-bedon]");
+    if(bon){ fiSyncDraftFromForm(); const id=bon.dataset.fiBedon;
+      const i=fiDraft.bedIds.indexOf(id); if(i<0) fiDraft.bedIds.push(id); else fiDraft.bedIds.splice(i,1);
+      fiRenderPickers(); return; }
+    const boff=t.closest("[data-fi-bedoff]");
+    if(boff){ fiSyncDraftFromForm(); fiDraft.bedIds=fiDraft.bedIds.filter(x=>x!==boff.dataset.fiBedoff); fiRenderPickers(); return; }
+    const con=t.closest("[data-fi-cropon]");
+    if(con){ fiSyncDraftFromForm(); const id=con.dataset.fiCropon;
+      const i=fiDraft.cropIds.indexOf(id); if(i<0) fiDraft.cropIds.push(id); else fiDraft.cropIds.splice(i,1);
+      fiRenderPickers(); return; }
+    const coff=t.closest("[data-fi-cropoff]");
+    if(coff){ fiSyncDraftFromForm(); fiDraft.cropIds=fiDraft.cropIds.filter(x=>x!==coff.dataset.fiCropoff); fiRenderPickers(); return; }
+  });
+
+  $fi("fiDetail").addEventListener("input",(ev)=>{
+    if(!fiDraft) return;
+    if(ev.target.id==="fiFBedSearch" || ev.target.id==="fiFCropSearch") fiRenderPickers();
+  });
+  $fi("fiDetail").addEventListener("change",(ev)=>{
+    if(!fiDraft || ev.target.id!=="fiFUpload") return;
+    fiSyncDraftFromForm();
+    fiDraft.pending.push(...Array.from(ev.target.files||[]));
+    ev.target.value="";
+    fiRenderDraftFiles();
+  });
+
+  $fi("fiViewClose").onclick=fiCloseFile;
+  $fi("fiViewModal").addEventListener("mousedown",(ev)=>{ if(ev.target===$fi("fiViewModal")) fiCloseFile(); });
+  document.addEventListener("keydown",(ev)=>{
+    if(ev.key==="Escape" && $fi("fiViewModal").classList.contains("open")) fiCloseFile();
   });
 })();
 
