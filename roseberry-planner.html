@@ -1518,6 +1518,13 @@
   .fpl-foot{flex:0 0 auto;display:flex;gap:.6rem;align-items:center;padding:.7rem .85rem;
     border-top:1px solid var(--line-2);flex-wrap:wrap}
   .fpl-foot .spacer{flex:1}
+  /* Program vs Manual — either/or, not both. A two-segment toggle rather than tabs so it reads as
+     "pick one of these two kinds of entry" at a glance, right where the form itself changes shape. */
+  .fpl-mode{display:flex;gap:0;border:1px solid var(--line-2);border-radius:9px;overflow:hidden;margin-bottom:.2rem}
+  .fpl-mode button{flex:1;padding:.55rem .5rem;border:none;background:var(--paper-2);color:var(--ink-2);
+    font-family:inherit;font-size:.86rem;cursor:pointer}
+  .fpl-mode button[aria-pressed="true"]{background:var(--steel);color:#fff;font-weight:650}
+  .fpl-mode button:first-child{border-right:1px solid var(--line-2)}
   .fpl-body label{display:block;font-family:var(--mono);font-size:.64rem;text-transform:uppercase;
     letter-spacing:.08em;color:var(--ink-2);margin:.9rem 0 .25rem}
   .fpl-body input,.fpl-body select,.fpl-body textarea{width:100%;padding:.55rem .6rem;
@@ -12938,21 +12945,58 @@ function fpRenderProgress(){
   $fp("fpProgTxt").textContent = `${n}/${beds.length} beds`;
 }
 
-/* ---- the log modal ---- */
-let fplState=null;   // { progId, roundId, blockId, beds:Set, lines:[{product,rate,unit,on}] }
+/* ---- the log modal ----
+   Either/or, not both: a "Program" entry is a snapshot of that round's own rates, ticked on/off;
+   a "Manual" entry has no program or round at all and is built entirely from typed-in lines. Mixing
+   the two in one form was confusing to read back later — a record with three rate-derived products
+   and one hand-typed one doesn't say which regime it belongs to. Switching the toggle discards
+   whichever set of lines belonged to the mode you're leaving, on purpose. */
+let fplState=null;   // { mode:'program'|'manual', progId, roundId, blockId, beds:Set, lines:[...] }
+
+// Every block in the farm, independent of any program — what "Manual" mode's block picker draws
+// from, since a manual entry isn't scoped to a program's own block list.
+function fpAllBlocksSorted(){
+  return (data.blocks||[]).slice()
+    .sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:"base"}));
+}
 
 function fplOpen(opts){
-  const progId = opts.progId || fpProgId;
-  const prog = fpProgram(progId);
-  if(!prog){ alert("Pick a program first."); return; }
-  const roundId = opts.roundId || fpRoundId || (fpRoundsOf(progId)[0]||{}).id || null;
-  const blockId = opts.blockId || null;
-  fplState={ progId, roundId, blockId, beds:new Set(), lines:[] };
-  fplBuildLines();
+  const mode = opts.mode || "program";
+  if(mode==="program"){
+    const progId = opts.progId || fpProgId;
+    const prog = fpProgram(progId);
+    if(!prog){ alert("Pick a program first, or switch to Manual entry once the log is open."); return; }
+    // fpRoundId is only a valid fallback if it actually belongs to this program — it's a global
+    // left over from whatever the rates page was last showing, which may be a different program
+    // entirely when this is opened from Fert records rather than the rates page itself.
+    const progRoundIds = new Set(fpRoundsOf(progId).map(r=>r.id));
+    const roundId = opts.roundId || (progRoundIds.has(fpRoundId) ? fpRoundId : null)
+      || (fpRoundsOf(progId)[0]||{}).id || null;
+    fplState={ mode, progId, roundId, blockId:opts.blockId||null, beds:new Set(), lines:[] };
+    fplBuildLines();
+  }else{
+    fplState={ mode:"manual", progId:null, roundId:null, blockId:opts.blockId||null, beds:new Set(), lines:[] };
+  }
   fplRender();
   $fp("fpLogModal").classList.add("open");
 }
 function fplClose(){ $fp("fpLogModal").classList.remove("open"); fplState=null; }
+
+// Switching modes clears the block/beds selection along with the lines — the two modes draw their
+// block list from different sources (a program's own blocks vs every block on the farm), and
+// carrying a selection across would risk carrying beds that aren't even valid in the new mode.
+function fplSetMode(mode){
+  const s=fplState; if(!s || s.mode===mode) return;
+  s.mode=mode; s.blockId=null; s.beds.clear();
+  if(mode==="program"){
+    if(!s.progId) s.progId=(data.fertPrograms||[])[0] && data.fertPrograms[0].id;
+    if(s.progId && !s.roundId) s.roundId=(fpRoundsOf(s.progId)[0]||{}).id||null;
+    fplBuildLines();
+  }else{
+    s.lines=[];
+  }
+  fplRender();
+}
 
 // Products come from the round's own rates. Rate per bed prefers the measured litres figure and
 // falls back to the derived kg — the same precedence the rates page shows, so what you log matches
@@ -12974,26 +13018,40 @@ function fplBuildLines(){
 
 function fplRender(){
   const s=fplState; if(!s) return;
-  const prog=fpProgram(s.progId), round=fpRoundsOf(s.progId).find(r=>r.id===s.roundId);
+  const isProgram = s.mode==="program";
+  const prog=isProgram ? fpProgram(s.progId) : null;
+  const round=isProgram ? fpRoundsOf(s.progId).find(r=>r.id===s.roundId) : null;
   const progs=(data.fertPrograms||[]);
-  const blocks=fpBlocksOf(s.progId).filter(b=>!b.orphan);
+  // Block/beds is shown whenever there's somewhere for it to draw from: a program's own blocks in
+  // Program mode (skipped for Fertigation, which isn't applied bed by bed), or every farm block in
+  // Manual mode.
+  const showBlocks = isProgram ? (prog && prog.kind!=="Fertigation") : true;
+  const blocks = isProgram ? fpBlocksOf(s.progId).filter(b=>!b.orphan)
+    : fpAllBlocksSorted().map(b=>({blockId:b.id, name:b.name}));
   const beds=s.blockId?fpBedsInBlock(s.blockId):[];
-  const done=PlannerShared.fertBedsDone(data.fertApps||[], s.progId, s.roundId);
+  const done = isProgram ? PlannerShared.fertBedsDone(data.fertApps||[], s.progId, s.roundId) : new Set();
   const n=s.beds.size;
 
-  $fp("fplTitle").textContent = `Log ${prog?prog.name:"fertiliser"}${round?" · "+round.name:""}`;
+  $fp("fplTitle").textContent = isProgram
+    ? `Log ${prog?prog.name:"fertiliser"}${round?" · "+round.name:""}`
+    : "Log fertiliser · manual entry";
   $fp("fplBody").innerHTML = `
+    <div class="fpl-mode" role="tablist">
+      <button type="button" data-fpl-mode="program" aria-pressed="${isProgram?"true":"false"}">Program &amp; round</button>
+      <button type="button" data-fpl-mode="manual" aria-pressed="${isProgram?"false":"true"}">Manual entry</button>
+    </div>
     <div class="fpl-row">
       <div><label for="fplDate">Date</label><input id="fplDate" type="date" value="${esc(s.date||new Date().toISOString().slice(0,10))}"></div>
       <div><label for="fplBy">Applied by</label><input id="fplBy" type="text" value="${esc(s.by||localStorage.getItem(SPRAY_BY_KEY)||"")}" placeholder="Name"></div>
     </div>
+    ${isProgram ? `
     <div class="fpl-row">
       <div><label for="fplProg">Program</label>
         <select id="fplProg">${progs.map(p=>`<option value="${p.id}"${p.id===s.progId?" selected":""}>${esc(p.name)}</option>`).join("")}</select></div>
       <div><label for="fplRound">Round</label>
         <select id="fplRound">${fpRoundsOf(s.progId).map(r=>`<option value="${r.id}"${r.id===s.roundId?" selected":""}>${esc(r.name)}</option>`).join("")}</select></div>
-    </div>
-    ${prog&&prog.kind!=="Fertigation" ? `
+    </div>` : ""}
+    ${showBlocks ? `
       <label for="fplBlock">Block</label>
       <select id="fplBlock"><option value="">— pick a block —</option>${blocks.map(b=>
         `<option value="${b.blockId}"${b.blockId===s.blockId?" selected":""}>${esc(b.name)}</option>`).join("")}</select>
@@ -13004,17 +13062,22 @@ function fplRender(){
            ${done.has(b.id)?`<span class="fpl-bed-done">done</span>`:""}</button>`).join("")}</div>`
         : `<div class="empty-note">${s.blockId?"No beds in this block.":"Pick a block to choose beds."}</div>`}
     ` : ""}
-    <label>Products <span style="text-transform:none;letter-spacing:0">(from this round's rates — untick anything you skipped)</span></label>
-    ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n)).join("")}</div>`
-      : `<div class="empty-note">Nothing from this round for that block yet — add a product below if you're applying something off-program.</div>`}
-    <div class="fp-addbar" style="padding:.4rem 0 0"><button type="button" id="fplAddLine">＋ Add product</button></div>
+    ${isProgram ? `
+      <label>Products <span style="text-transform:none;letter-spacing:0">(from this round's rates — untick anything you skipped)</span></label>
+      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n)).join("")}</div>`
+        : `<div class="empty-note">Nothing from this round for that block.</div>`}
+    ` : `
+      <label>Products</label>
+      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n)).join("")}</div>` : ""}
+      <div class="fp-addbar" style="padding:.4rem 0 0"><button type="button" id="fplAddLine">＋ Add product</button></div>
+    `}
     <label for="fplMethod">Method</label>
     <select id="fplMethod">${PlannerShared.FERT_METHODS.map(m=>
       `<option value="${m}"${m===(s.method||"Spread")?" selected":""}>${m}</option>`).join("")}</select>
     <label for="fplNotes">Notes</label>
     <textarea id="fplNotes" rows="2">${esc(s.notes||"")}</textarea>
-    <div class="fpl-warn" id="fplWarn" hidden>Some selected beds are already logged for this round.
-      Saving adds a second application rather than replacing the first.</div>`;
+    ${isProgram ? `<div class="fpl-warn" id="fplWarn" hidden>Some selected beds are already logged for this round.
+      Saving adds a second application rather than replacing the first.</div>` : ""}`;
 
   fplRefreshTotals();
 }
@@ -13083,7 +13146,8 @@ function fplSync(){
 async function fplSave(){
   fplSync();
   const s=fplState; if(!s) return;
-  const prog=fpProgram(s.progId);
+  const isProgram = s.mode==="program";
+  const prog=isProgram ? fpProgram(s.progId) : null;
   // A manual row with nothing typed into it yet is a draft, not a product — drop it silently
   // rather than making the grower delete their own empty row before they can save.
   if(s.lines.some(l=>l.manual && !l.product.trim() && l.rate==null)){
@@ -13092,16 +13156,24 @@ async function fplSave(){
   const blankManual=s.lines.find(l=>l.manual && l.on && !l.product.trim());
   if(blankManual){ alert("One of the added products needs a name."); return; }
   const lines=s.lines.filter(l=>l.on);
-  if(prog && prog.kind!=="Fertigation" && !s.beds.size){ alert("Pick at least one bed."); return; }
+  // Fertigation-kind programs are mixed for the whole area, not applied bed by bed, so they're the
+  // one case with no block/beds section to require. Manual entries always have one, so they always
+  // need at least a bed picked.
+  const requiresBeds = isProgram ? (prog && prog.kind!=="Fertigation") : true;
+  if(requiresBeds && !s.beds.size){ alert("Pick at least one bed."); return; }
   if(!lines.length){ alert("Add or tick at least one product."); return; }
   const n=s.beds.size||1;
   showLoading(true);
   try{
     const F=CFG.f, now=new Date().toISOString();
     const bedIds=[...s.beds];
+    // s.progId/s.roundId are deliberately kept in state through a mode switch (so toggling back to
+    // Program mode restores your place) — which is exactly why they must NOT be written here unless
+    // we're actually in Program mode. A Manual entry must save with no program/round tie at all.
     const appFields={
       [F.fa_date]:s.date||now.slice(0,10), [F.fa_by]:(s.by||"").trim(),
-      [F.fa_program]:[s.progId], [F.fa_round]:s.roundId?[s.roundId]:[],
+      [F.fa_program]:(isProgram && s.progId)?[s.progId]:[],
+      [F.fa_round]:(isProgram && s.roundId)?[s.roundId]:[],
       [F.fa_block]:s.blockId?[s.blockId]:[], [F.fa_beds]:bedIds,
       [F.fa_method]:s.method||"Spread", [F.fa_notes]:(s.notes||"").trim(), [F.fa_created]:now,
     };
@@ -13175,6 +13247,8 @@ async function frDelete(id){
 
   $fp("fplBody").addEventListener("click",(ev)=>{
     const s=fplState; if(!s) return;
+    const modeBtn=ev.target.closest("[data-fpl-mode]");
+    if(modeBtn){ fplSetMode(modeBtn.dataset.fplMode); return; }
     // Bed and product taps update in place rather than re-rendering the body. You tick six beds in
     // a row with one thumb; a full re-render on each tap loses scroll position and drops whatever
     // you'd half-typed into Notes.
@@ -13221,10 +13295,11 @@ async function frDelete(id){
       fplRefreshTotals();
     }
   });
-  // Changing program/round/block rebuilds the product list, since the rates are what they select.
-  // Manual lines are intentionally NOT carried across a program/round/block switch — they were
-  // added for the block you were just on, and silently reattaching them to a different one is
-  // exactly the kind of mistake this whole feature exists to prevent.
+  // Changing program/round rebuilds the product list from the new rates — those only exist in
+  // Program mode. Changing block just re-scopes the bed picker: in Program mode that also means a
+  // new set of round-derived products (a different block can have different rates), but in Manual
+  // mode the block is just where the beds come from and the hand-typed lines must survive it —
+  // that's the whole point of the mode existing.
   $fp("fplBody").addEventListener("change",(ev)=>{
     const s=fplState; if(!s) return;
     if(ev.target.id==="fplProg"){ fplSync(); s.progId=ev.target.value;
@@ -13233,7 +13308,8 @@ async function frDelete(id){
     if(ev.target.id==="fplRound"){ fplSync(); s.roundId=ev.target.value; s.beds.clear();
       fplBuildLines(); fplRender(); return; }
     if(ev.target.id==="fplBlock"){ fplSync(); s.blockId=ev.target.value||null; s.beds.clear();
-      fplBuildLines(); fplRender(); return; }
+      if(s.mode==="program") fplBuildLines();
+      fplRender(); return; }
     if(ev.target.classList.contains("fpl-manual-unit")){
       const i=+ev.target.dataset.fplI; if(s.lines[i]){ s.lines[i].unit=ev.target.value; fplRefreshTotals(); }
       return;
