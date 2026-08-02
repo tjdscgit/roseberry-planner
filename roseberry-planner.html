@@ -1397,6 +1397,75 @@
     .fi-back{display:inline-block}
   }
 
+  /* ---------- Fertigation calculator ----------
+     A read-only instrument: type two numbers from the pump, read the injector back. No save, no
+     record, nothing that can be got wrong by leaving the page. Laid out as one scrolling column
+     of cards rather than the two-pane idiom used elsewhere, because there is no list to browse —
+     and because this gets read on a phone standing at the pump shed. */
+  #view-fertcalc{overflow:auto;-webkit-overflow-scrolling:touch}
+  .fc-wrap{max-width:52rem;width:100%;margin:0 auto;padding:1rem 1.1rem 4rem;
+    display:flex;flex-direction:column;gap:1rem}
+  .fc-card{border:1px solid var(--line-2);border-radius:12px;background:var(--paper);
+    padding:.9rem 1rem}
+  .fc-card > h3{margin:0 0 .1rem;font-size:.95rem}
+  .fc-hint{font-size:.8rem;color:var(--ink-2);line-height:1.45;margin:.25rem 0 0}
+  .fc-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.8rem;
+    margin-top:.7rem}
+  .fc-field label{display:block;font-family:var(--mono);font-size:.64rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--ink-2);margin-bottom:.25rem}
+  .fc-inrow{display:flex;gap:.35rem}
+  .fc-inrow input{flex:1;min-width:0;padding:.5rem .6rem;font-family:var(--mono);font-size:1rem;
+    border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);color:var(--ink)}
+  .fc-inrow-unit{flex:0 0 auto;display:flex;align-items:center;padding:0 .55rem;
+    font-family:var(--mono);font-size:.75rem;color:var(--ink-2);border:1px solid var(--line);
+    border-radius:8px;background:var(--paper-2)}
+  .fc-inrow select{flex:0 0 auto;padding:.5rem .35rem;font-family:var(--mono);font-size:.75rem;
+    border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);color:var(--ink)}
+  /* The answer. Big monospaced figures because the point of the page is to be read at arm's
+     length, and because a misplaced decimal in a fertigation rate is expensive. */
+  .fc-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.55rem;
+    margin-top:.7rem}
+  .fc-stat{border:1px solid var(--line);border-radius:10px;background:var(--paper-2);
+    padding:.55rem .7rem}
+  .fc-stat .k{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--ink-2);display:block}
+  .fc-stat .v{font-family:var(--mono);font-size:1.25rem;font-weight:650;line-height:1.25;
+    display:block;margin-top:.15rem}
+  .fc-stat .u{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-left:.2rem;
+    font-weight:400}
+  .fc-stat .n{font-size:.72rem;color:var(--ink-2);display:block;margin-top:.1rem;line-height:1.3}
+  .fc-stat.hero{border-color:var(--steel);background:color-mix(in srgb,var(--steel) 8%,transparent)}
+  .fc-stat.dead .v{color:var(--clay)}
+  .fc-note{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-top:.55rem}
+  /* Warnings are the reason this page exists rather than a printed sheet on the shed wall: the
+     table won't tell you your pump is too small, or that you're sitting on the Zero Suction Point. */
+  .fc-warn{display:flex;gap:.5rem;align-items:flex-start;border:1px solid var(--clay);
+    border-radius:10px;background:color-mix(in srgb,var(--clay) 8%,transparent);
+    padding:.5rem .7rem;font-size:.84rem;line-height:1.45;margin-top:.55rem}
+  .fc-warn .fc-warn-mark{color:var(--clay);font-weight:700;flex:0 0 auto}
+  .fc-tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:.6rem}
+  .fc-table{border-collapse:collapse;width:100%;font-size:.86rem}
+  .fc-table th,.fc-table td{padding:.34rem .55rem;border-bottom:1px solid var(--line);
+    white-space:nowrap;text-align:right;font-family:var(--mono)}
+  .fc-table th{font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);
+    background:var(--paper-2);border-bottom:1px solid var(--line-2)}
+  .fc-table tbody tr:last-child td{border-bottom:none}
+  .fc-table tr.here td{background:color-mix(in srgb,var(--steel) 12%,transparent);font-weight:650}
+  .fc-table tr.zero td{color:var(--ink-2)}
+  .fc-chart{width:100%;height:auto;margin-top:.6rem;overflow:visible}
+  .fc-chart .ax{stroke:var(--line-2);stroke-width:1}
+  .fc-chart .grid{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3}
+  .fc-chart .curve{fill:none;stroke:var(--steel);stroke-width:2.5;stroke-linejoin:round}
+  .fc-chart .zsp{stroke:var(--clay);stroke-width:1.5;stroke-dasharray:4 3}
+  .fc-chart .lbl{font-family:var(--mono);font-size:9px;fill:var(--ink-2)}
+  .fc-chart .dot{fill:var(--steel)}
+  @media(max-width:760px){
+    #view-fertcalc .cm-top > .sub{display:none}
+    .fc-wrap{padding:.7rem .75rem 4rem;gap:.75rem}
+    .fc-inputs{grid-template-columns:1fr}
+    .fc-out{grid-template-columns:1fr 1fr}
+  }
+
   /* ---------- Fertiliser programs ----------
      Designed for a phone propped on a shelf at arm's length while both hands are busy mixing.
      That drives every choice here: three shallow pages instead of one dense table, tap targets
@@ -1732,6 +1801,7 @@
   <div class="tab-dd" id="infoDropdown" hidden>
     <button type="button" data-view="farminfo">Reference library</button>
     <button type="button" data-view="fertprog">Fertiliser programs</button>
+    <button type="button" data-view="fertcalc">Fertigation calculator</button>
   </div>
   <div class="tab-dd" id="sprayDropdown" hidden>
     <button type="button" data-view="sprayrec">Records</button>
@@ -1767,6 +1837,7 @@
     <button class="nav-drawer-item" data-view="spraymix">Saved mixes</button>
     <button class="nav-drawer-item" data-view="fertrec">Fert records</button>
     <button class="nav-drawer-item" data-view="fertprog">Fertiliser programs</button>
+    <button class="nav-drawer-item" data-view="fertcalc">Fertigation calculator</button>
     <button class="nav-drawer-item" data-view="farminfo">Reference library</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
     <div class="nav-drawer-sep">Harvest</div>
@@ -2403,6 +2474,58 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- FERTIGATION CALCULATOR — the Mazzei 878-03 performance table, made answerable.
+         The printed table is indexed by inlet AND outlet pressure, which is the wrong way round
+         for the shed: what's known standing at the pump is the pressure and flow it's making, and
+         what's wanted is "will it draw, how much, and what's left for the field". So the inputs
+         are the pump's two numbers and everything else is derived. Nothing here is stored — the
+         injector's behaviour is a property of the hardware, not of the season. -->
+    <section class="view" id="view-fertcalc">
+      <div class="cm-top">
+        <span class="sub">Fertigation · Mazzei 878-03 venturi injector</span>
+      </div>
+      <div class="fc-wrap">
+        <div class="fc-card">
+          <h3>What the pump is doing</h3>
+          <p class="fc-hint">Pressure and flow measured upstream of the injector, with the system
+            running. Downstream pressure is what the injector has to push against — the drippers,
+            plus whatever the filters and mainline take.</p>
+          <div class="fc-inputs">
+            <div class="fc-field">
+              <label for="fcInPress">Pump pressure (inlet)</label>
+              <div class="fc-inrow">
+                <input id="fcInPress" type="number" inputmode="decimal" step="any" min="0" placeholder="e.g. 275">
+                <select id="fcPressUnit">
+                  <option value="kpa">kPa</option>
+                  <option value="bar">bar</option>
+                  <option value="psi">PSI</option>
+                </select>
+              </div>
+            </div>
+            <div class="fc-field">
+              <label for="fcInFlow">Pump flow (total)</label>
+              <div class="fc-inrow">
+                <input id="fcInFlow" type="number" inputmode="decimal" step="any" min="0" placeholder="e.g. 120">
+                <select id="fcFlowUnit">
+                  <option value="lpm">L/min</option>
+                  <option value="lph">L/hr</option>
+                  <option value="gpm">GPM</option>
+                </select>
+              </div>
+            </div>
+            <div class="fc-field">
+              <label for="fcOutPress">Downstream pressure (outlet)</label>
+              <div class="fc-inrow">
+                <input id="fcOutPress" type="number" inputmode="decimal" step="any" min="0" placeholder="optional">
+                <span class="fc-inrow-unit"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="fcResults"></div>
       </div>
     </section>
   </main>
@@ -3726,6 +3849,7 @@ function showView(view){
   if(view==="farminfo") buildFarmInfo();
   if(view==="fertprog") buildFertProg();
   if(view==="fertrec") buildFertRecords();
+  if(view==="fertcalc") buildFertCalc();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
@@ -3766,7 +3890,7 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
   // sub-views that live under a dropdown tab rather than their own top-level tab
   const DROPDOWN_PARENT={ beds:miscTab, seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
                           harvest:harvestTab, whiteboard:harvestTab, outlets:harvestTab, season:harvestTab,
-                          farminfo:infoTab, fertprog:infoTab };
+                          farminfo:infoTab, fertprog:infoTab, fertcalc:infoTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
   function close(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); fab.setAttribute("aria-expanded","false"); }
@@ -12568,6 +12692,210 @@ function fiCloseFile(){
   });
 })();
 
+/* ---------- Fertigation calculator ----------
+   Thin UI over PlannerShared.injCalc, which owns the Mazzei 878-03 performance table and the
+   interpolation. Nothing on this page touches the backend: the injector's curve is a property of
+   a piece of brass in the pump shed, so there is nothing to load, nothing to save, and no way to
+   corrupt anything by fiddling. The only persisted state is the chosen units and the last numbers
+   typed, so that walking back to the page mid-job doesn't mean re-measuring the pump.
+
+   Everything is converted to the table's own units (PSI / GPM / GPH) on the way in and back out
+   again for display, so no figure is ever rounded twice. */
+const FC_KEY="rbFertCalc";
+const FC_PRESS_LABEL={kpa:"kPa", bar:"bar", psi:"PSI"};
+const FC_FLOW_LABEL={lpm:"L/min", lph:"L/hr", gpm:"GPM"};
+let fcState={ press:"", flow:"", outlet:"", pressUnit:"kpa", flowUnit:"lpm" };
+
+function fcLoadState(){
+  try{ const s=JSON.parse(localStorage.getItem(FC_KEY)||"null"); if(s) fcState={...fcState,...s}; }
+  catch(e){}
+}
+function fcSaveState(){ try{ localStorage.setItem(FC_KEY, JSON.stringify(fcState)); }catch(e){} }
+
+const fcNum=(v,d=1)=> (v==null||!isFinite(v)) ? "—" : (+v).toFixed(d).replace(/\.0+$/,"");
+// Suction and motive flow are shown in whatever the grower picked for pump flow, except that a
+// suction rate in L/min is a silly unit for something that runs for an hour — L/hr always wins
+// for suction unless GPM was chosen, in which case the printed table's GPH is the honest match.
+function fcSuctionUnit(){ return fcState.flowUnit==="gpm" ? "GPH" : "L/hr"; }
+function fcSuction(gph){ return fcState.flowUnit==="gpm" ? gph : gph*PlannerShared.INJ_LPH_PER_GPH; }
+function fcFlowUnit(){ return FC_FLOW_LABEL[fcState.flowUnit]; }
+function fcFlow(gpm){
+  if(fcState.flowUnit==="gpm") return gpm;
+  const lpm=gpm*PlannerShared.INJ_LPM_PER_GPM;
+  return fcState.flowUnit==="lph" ? lpm*60 : lpm;
+}
+function fcPress(psi){ return PlannerShared.injFromPsi(psi, fcState.pressUnit); }
+function fcPressLabel(){ return FC_PRESS_LABEL[fcState.pressUnit]; }
+function fcPressDp(){ return fcState.pressUnit==="bar" ? 2 : 0; }
+
+function buildFertCalc(){
+  fcLoadState();
+  const $=id=>document.getElementById(id);
+  $("fcInPress").value=fcState.press;
+  $("fcInFlow").value=fcState.flow;
+  $("fcOutPress").value=fcState.outlet;
+  $("fcPressUnit").value=fcState.pressUnit;
+  $("fcFlowUnit").value=fcState.flowUnit;
+  fcRender();
+}
+
+function fcRender(){
+  const box=document.getElementById("fcResults");
+  const unitSpan=document.querySelector("#view-fertcalc .fc-inrow-unit");
+  if(unitSpan) unitSpan.textContent=fcPressLabel();
+  if(!box) return;
+
+  const inletPsi=PlannerShared.injToPsi(fcState.press, fcState.pressUnit);
+  const pumpGpm=PlannerShared.injToGpm(fcState.flow, fcState.flowUnit);
+  const outletPsi=PlannerShared.injToPsi(fcState.outlet, fcState.pressUnit);
+
+  if(inletPsi==null || inletPsi<=0){
+    box.innerHTML=`<div class="fc-card"><h3>Enter the pump pressure</h3>
+      <p class="fc-hint">The injector runs on the pressure difference across it, so upstream
+      pressure is the one number this can't work without. Flow is optional but tells you whether
+      the pump can actually feed the injector and the field at the same time.</p></div>`;
+    return;
+  }
+
+  const r=PlannerShared.injCalc({inletPsi, pumpGpm, outletPsi});
+  const su=fcSuctionUnit(), fu=fcFlowUnit(), pu=fcPressLabel(), pdp=fcPressDp();
+  const stat=(k,v,u,note,cls="")=>`<div class="fc-stat ${cls}"><span class="k">${esc(k)}</span>
+    <span class="v">${esc(v)}<span class="u">${esc(u||"")}</span></span>
+    ${note?`<span class="n">${esc(note)}</span>`:""}</div>`;
+
+  /* Card 1 — the operating point. Motive flow first: it is the number that decides whether the
+     injector can be plumbed inline or needs a bypass, and it's the one growers most often
+     discover too late. */
+  let html=`<div class="fc-card">
+    <h3>Injector at ${esc(fcNum(fcPress(inletPsi),pdp))} ${esc(pu)} inlet</h3>
+    <p class="fc-hint">Mazzei 878-03, 25&nbsp;mm threads.
+      ${r.exact ? "Read straight off the manufacturer's table."
+                : `Interpolated between the ${esc(fcNum(fcPress(r.between[0]),pdp))} and ${esc(fcNum(fcPress(r.between[1]),pdp))} ${esc(pu)} rows.`}</p>
+    <div class="fc-out">
+      ${stat("Motive flow", fcNum(fcFlow(r.motiveGpm),1), fu, "through the injector")}
+      ${stat("Zero suction at", fcNum(fcPress(r.zspPsi),pdp), pu, "downstream — above this it draws nothing")}
+      ${stat("Max suction", fcNum(fcSuction(r.maxSuctionGph),0), su, "free outlet, no back-pressure")}
+      ${r.bypassGpm!=null ? stat("Left for the field", fcNum(fcFlow(r.bypassGpm),1), fu,
+          r.bypassGpm>=0 ? `${fcNum(r.bypassPct,0)}% of the pump bypasses the injector`
+                         : "pump can't supply this", r.bypassGpm<0?"dead":"") : ""}
+    </div>`;
+
+  // Card 1b — the answer for the outlet pressure actually asked about.
+  if(r.point){
+    const p=r.point;
+    html+=`<div class="fc-out" style="margin-top:.55rem">
+      ${stat("Suction at "+fcNum(fcPress(p.outletPsi),pdp)+" "+pu,
+             p.stopped ? "0" : fcNum(fcSuction(p.suctionGph),0), su,
+             p.stopped ? "at or past the zero suction point" : "of liquid drawn from the drum",
+             p.stopped ? "dead" : "hero")}
+      ${stat("Pressure drop", fcNum(fcPress(p.dropPsi),pdp), pu, fcNum(p.dropPct,0)+"% of inlet")}
+      ${!p.stopped && p.suctionGph>0
+        ? stat("100 L takes", fcNum(100/(p.suctionGph*PlannerShared.INJ_LPH_PER_GPH)*60,0), "min",
+               "to draw a 100 L drum dry")
+        : ""}
+    </div>`;
+  }
+  r.warnings.forEach(w=>{ html+=`<div class="fc-warn"><span class="fc-warn-mark">!</span><span>${esc(w)}</span></div>`; });
+  html+=`</div>`;
+
+  // Card 2 — the curve, as a chart and as the numbers behind it.
+  html+=`<div class="fc-card">
+    <h3>Suction against downstream pressure</h3>
+    <p class="fc-hint">Suction holds almost flat while there's plenty of pressure difference, then
+      falls off a cliff near the zero suction point. Aim to sit on the flat part: a rate set on the
+      steep section changes every time the filters load up.</p>
+    ${fcChart(r)}
+    <div class="fc-tablewrap"><table class="fc-table">
+      <thead><tr><th>Downstream ${esc(pu)}</th><th>Drop ${esc(pu)}</th><th>Suction ${esc(su)}</th><th>L per hour</th></tr></thead>
+      <tbody>${fcRows(r, outletPsi)}</tbody>
+    </table></div>
+    <p class="fc-note">Manufacturer's table REV 09.2014, at sea level and 21&nbsp;°C, drawing water.
+      A thicker or warmer liquid draws less; see Mazzei Technical Bulletin No. 1 for corrections.</p>
+  </div>`;
+
+  box.innerHTML=html;
+}
+
+// Curve rows: every printed/interpolated point, plus the zero suction point itself as the last
+// row, because "where does it stop" is the question the table is usually opened to answer.
+function fcRows(r, outletPsi){
+  const pdp=fcPressDp();
+  const pts=r.curve.concat([[r.zspPsi,0]]);
+  return pts.map(([o,s])=>{
+    const here = outletPsi!=null && Math.abs(o-outletPsi)<0.51;
+    const lph=s*PlannerShared.INJ_LPH_PER_GPH;
+    return `<tr class="${here?"here":""} ${s<=0?"zero":""}">
+      <td>${esc(fcNum(fcPress(o),pdp))}</td>
+      <td>${esc(fcNum(fcPress(r.inletPsi-o),pdp))}</td>
+      <td>${esc(fcNum(fcSuction(s),s<10?1:0))}</td>
+      <td>${esc(fcNum(lph,0))}</td></tr>`;
+  }).join("");
+}
+
+// Small inline SVG. No library, no axes library, no tooltips — the table underneath carries the
+// exact figures, so the chart only has to show the shape and where the cliff is.
+function fcChart(r){
+  const W=560,H=180,L=40,Rr=12,T=10,B=26;
+  const pts=r.curve.concat([[r.zspPsi,0]]);
+  const maxX=r.zspPsi*1.06 || 1;
+  const maxY=Math.max(...pts.map(p=>p[1]),1);
+  const x=v=>L+(v/maxX)*(W-L-Rr);
+  const y=v=>T+(1-v/maxY)*(H-T-B);
+  const d=pts.map((p,i)=>(i?"L":"M")+x(p[0]).toFixed(1)+" "+y(p[1]).toFixed(1)).join(" ");
+  const su=fcSuctionUnit(), pu=fcPressLabel(), pdp=fcPressDp();
+  const ticks=[0,.25,.5,.75,1].map(f=>{
+    const v=f*maxX;
+    return `<line class="grid" x1="${x(v)}" y1="${T}" x2="${x(v)}" y2="${H-B}"/>
+      <text class="lbl" x="${x(v)}" y="${H-B+13}" text-anchor="middle">${esc(fcNum(fcPress(v),pdp))}</text>`;
+  }).join("");
+  const here = r.point && !r.point.stopped
+    ? `<circle class="dot" cx="${x(r.point.outletPsi)}" cy="${y(r.point.suctionGph)}" r="4"/>` : "";
+  return `<svg class="fc-chart" viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Suction falls as downstream pressure rises, reaching zero at the zero suction point">
+    ${ticks}
+    <line class="ax" x1="${L}" y1="${T}" x2="${L}" y2="${H-B}"/>
+    <line class="ax" x1="${L}" y1="${H-B}" x2="${W-Rr}" y2="${H-B}"/>
+    <line class="zsp" x1="${x(r.zspPsi)}" y1="${T}" x2="${x(r.zspPsi)}" y2="${H-B}"/>
+    <path class="curve" d="${d}"/>
+    ${here}
+    <text class="lbl" x="${L}" y="${T-1}" text-anchor="start">${esc(fcNum(fcSuction(maxY),0))} ${esc(su)}</text>
+    <text class="lbl" x="${W-Rr}" y="${H-2}" text-anchor="end">downstream ${esc(pu)}</text>
+  </svg>`;
+}
+
+(function wireFertCalc(){
+  const $=id=>document.getElementById(id);
+  const readNumbers=()=>{
+    fcState.press=$("fcInPress").value.trim();
+    fcState.flow=$("fcInFlow").value.trim();
+    fcState.outlet=$("fcOutPress").value.trim();
+    fcSaveState(); fcRender();
+  };
+  // Switching units converts what's already typed rather than reinterpreting it. 275 kPa flipped
+  // to bar is 2.75 bar, not 275 bar — the latter is a number nobody meant and the calculator
+  // would answer it perfectly seriously.
+  $("fcPressUnit").addEventListener("change",()=>{
+    const from=fcState.pressUnit, to=$("fcPressUnit").value;
+    ["fcInPress","fcOutPress"].forEach(id=>{
+      const psi=PlannerShared.injToPsi($(id).value.trim(), from);
+      if(psi!=null) $(id).value=+PlannerShared.injFromPsi(psi,to).toFixed(to==="bar"?2:1);
+    });
+    fcState.pressUnit=to; readNumbers();
+  });
+  $("fcFlowUnit").addEventListener("change",()=>{
+    const from=fcState.flowUnit, to=$("fcFlowUnit").value;
+    const gpm=PlannerShared.injToGpm($("fcInFlow").value.trim(), from);
+    if(gpm!=null){
+      const lpm=gpm*PlannerShared.INJ_LPM_PER_GPM;
+      $("fcInFlow").value=+(to==="gpm"?gpm : to==="lph"?lpm*60 : lpm).toFixed(1);
+    }
+    fcState.flowUnit=to; readNumbers();
+  });
+  ["fcInPress","fcInFlow","fcOutPress"].forEach(id=>{
+    const el=$(id); if(el) el.addEventListener("input", readNumbers);
+  });
+})();
+
 /* ---------- Fertiliser programs ----------
    The shed page. Program -> Block -> Round -> rates.
 
@@ -12595,6 +12923,16 @@ function fpProgram(id){ return (data.fertPrograms||[]).find(p=>p.id===id)||null;
 function fpRoundsOf(progId){ return (data.fertRounds||[]).filter(r=>r.programId===progId); }
 function fpItemsOf(progId){ return (data.fertItems||[]).filter(i=>i.programId===progId); }
 function fpBlockName(id){ const b=(data.blocks||[]).find(x=>x.id===id); return b?b.name:null; }
+
+// Resolves an fpBlockKey (a real block id, or "label:<name>" for a legacy block with no matching
+// planner block) to a display name, without going through fpBlocksOf — which only knows about
+// blocks that already have a rate on this program, and so returns nothing for a block picked on a
+// brand-new program that hasn't had its first product added yet.
+function fpBlockKeyName(key){
+  if(!key) return "";
+  if(key.startsWith("label:")) return key.slice(6);
+  return fpBlockName(key) || "";
+}
 
 // Every distinct block a program touches, in farm-map order, each with the count of rounds it has
 // anything in. Blocks the program doesn't mention at all are omitted — this is a reference page,
@@ -12662,9 +13000,8 @@ function fpApplyLevel(){
 
   const parts=["Fertiliser programs"];
   if(prog) parts.push(prog.name);
-  if(lvl===2 && prog && prog.kind!=="Fertigation"){
-    const b=fpBlocksOf(fpProgId).find(x=>x.key===fpBlockKey);
-    if(b) parts.push(b.name);
+  if(lvl===2 && prog && prog.kind!=="Fertigation" && fpBlockKey){
+    parts.push(fpBlockKeyName(fpBlockKey));
   }
   $fp("fpCrumb").textContent = parts.join(" · ");
 }
@@ -12716,9 +13053,24 @@ function buildFertProg(){
 function fpRenderBlocks(){
   const prog=fpProgram(fpProgId);
   if(!prog || prog.kind==="Fertigation"){ $fp("fpBlocks").innerHTML=""; return; }
-  const list=fpBlocksOf(fpProgId);
+  const withItems=fpBlocksOf(fpProgId);
   const totalRounds=fpRoundsOf(fpProgId).length;
   $fp("fpBlocksHead").textContent = `Blocks · ${prog.name}`;
+
+  // Read mode only lists blocks that already have a rate — a clean summary of the program's actual
+  // footprint. Edit mode needs every farm block pickable, not just those with something in them
+  // already: a brand new (or freshly Archive & start new'd) program has NO items yet, so scoping to
+  // "blocks with items" here was a dead end — nothing to click, and "Pick a block" with no block to
+  // pick. Legacy label-only rows (a block the planner no longer has, e.g. zBack Block) have no real
+  // block id to appear via the farm block list, so they're appended from the existing set either way.
+  const list = fpEditing
+    ? (()=>{
+        const byBlockId=new Map(withItems.filter(b=>b.blockId).map(b=>[b.blockId,b]));
+        return fpAllBlocksSorted()
+          .map(b=>byBlockId.get(b.id) || { key:b.id, blockId:b.id, name:b.name, orphan:false, rounds:new Set(), n:0 })
+          .concat(withItems.filter(b=>b.orphan));
+      })()
+    : withItems;
   $fp("fpBlocks").innerHTML = list.length ? list.map(b=>{
     const n=b.rounds.size;
     // Progress is per round, so the block list shows how many of its beds are done in the round
@@ -12769,8 +13121,7 @@ function fpRenderRates(){
   if(prog.kind!=="Fertigation" && !fpBlockKey){ box.innerHTML=`<div class="fp-empty">Pick a block.</div>`; $fp("fpRatesHead").textContent="Rates"; return; }
 
   const round=fpRoundsOf(fpProgId).find(r=>r.id===fpRoundId);
-  const bname = prog.kind==="Fertigation" ? prog.name
-    : (fpBlocksOf(fpProgId).find(b=>b.key===fpBlockKey)||{}).name || "";
+  const bname = prog.kind==="Fertigation" ? prog.name : fpBlockKeyName(fpBlockKey);
   $fp("fpRatesHead").textContent = [bname, round?round.name:null].filter(Boolean).join(" · ");
 
   const items=fpVisibleItems();

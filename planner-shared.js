@@ -680,6 +680,153 @@
     return (ratePer100m2==null||ratePer100m2==="") ? null : (+ratePer100m2)*(FERT_BED_M2/100);
   }
 
+  /* ---------- Mazzei 878-03 venturi injector ----------
+     Transcribed from the manufacturer's "Model 878-03 Injector Performance Table" (REV 09.2014),
+     water-suction page, US units. The US page is the source of truth rather than the metric page
+     on the same sheet: it has the same rows but avoids a second rounding, so every metric figure
+     the calculator shows is converted once from the printed PSIG/GPM/GPH numbers.
+
+     Shape of the data, which is also the shape of the physics:
+       - Each entry is one INLET pressure (upstream of the injector).
+       - `motive` is the flow that passes through the injector at that inlet pressure. The table
+         prints a single motive flow per inlet block, not one per outlet pressure — backpressure
+         barely moves it until suction collapses, so treat it as constant across the block.
+       - `zsp` is the Zero Suction Point: the outlet (downstream) pressure at which suction stops.
+         Above it the injector draws nothing at all, which is the failure mode growers actually
+         hit — it is never interpolated away, it's carried through as a hard ceiling.
+       - `curve` is [outlet PSIG, water suction GPH] pairs, descending in suction as backpressure
+         rises. The last printed point is well short of `zsp`; suction falls to zero at `zsp`. */
+  const MAZZEI_878 = [
+    { inlet:  5,  motive:  3.6, zsp:   4.1, curve: [[0,62.8],[1,36.1],[2,23.8],[3,7.3],[4,1.6]] },
+    { inlet: 10,  motive:  5.2, zsp:   8.7, curve: [[0,93.7],[2,61.9],[5,36.4],[7,15.8],[8,3.7]] },
+    { inlet: 15,  motive:  6.3, zsp:  12.5, curve: [[0,87.3],[5,62.1],[7,45.4],[10,23.6],[12,7.2]] },
+    { inlet: 20,  motive:  7.3, zsp:  16.5, curve: [[0,82.8],[5,80.4],[10,48.6],[12,33.6],[15,21.0]] },
+    { inlet: 25,  motive:  8.2, zsp:  21.0, curve: [[0,82.3],[5,81.3],[10,73.2],[15,45.3],[20,20.1]] },
+    { inlet: 30,  motive:  8.9, zsp:  26.1, curve: [[0,79.9],[5,79.1],[10,76.9],[15,65.3],[20,35.3],[25,9.0]] },
+    { inlet: 35,  motive:  9.7, zsp:  30.1, curve: [[0,79.3],[5,79.3],[10,77.5],[15,74.5],[20,52.3],[25,30.2]] },
+    { inlet: 40,  motive: 10.3, zsp:  34.4, curve: [[0,77.4],[5,77.4],[10,77.4],[15,77.4],[20,73.6],[25,50.6],[30,28.2]] },
+    { inlet: 45,  motive: 11.0, zsp:  38.4, curve: [[0,79.6],[5,79.6],[10,79.6],[15,79.6],[20,78.8],[25,67.0],[30,44.1],[35,22.0]] },
+    { inlet: 50,  motive: 11.5, zsp:  42.3, curve: [[0,74.7],[5,74.7],[10,74.7],[15,74.7],[20,74.7],[25,68.3],[30,56.1],[35,36.6],[40,9.5]] },
+    { inlet: 60,  motive: 12.6, zsp:  51.2, curve: [[0,72.4],[5,72.4],[10,72.4],[15,72.4],[20,72.4],[30,71.2],[35,63.3],[40,41.4],[45,16.3]] },
+    { inlet: 70,  motive: 13.7, zsp:  58.3, curve: [[0,73.6],[5,73.6],[10,73.6],[15,73.6],[20,73.6],[30,73.6],[40,67.5],[45,46.9],[50,30.7],[55,12.9]] },
+    { inlet: 80,  motive: 14.6, zsp:  67.5, curve: [[0,74.2],[5,74.2],[10,74.2],[15,74.2],[20,74.2],[30,74.2],[40,73.7],[50,56.9],[60,25.8],[65,7.9]] },
+    { inlet: 90,  motive: 15.5, zsp:  75.6, curve: [[0,74.2],[5,74.2],[10,74.2],[20,74.2],[30,74.2],[40,74.2],[50,70.0],[60,47.8],[70,18.1],[75,0.84]] },
+    { inlet:100,  motive: 16.3, zsp:  84.5, curve: [[0,76.3],[5,76.3],[10,76.3],[20,76.3],[30,76.3],[40,76.3],[50,74.5],[60,67.7],[70,44.6],[80,13.0]] },
+    { inlet:120,  motive: 17.9, zsp: 101.0, curve: [[0,75.3],[5,75.3],[10,75.3],[20,75.3],[30,75.3],[40,75.3],[50,75.3],[60,74.9],[70,70.2],[80,61.2],[90,34.5],[100,8.5]] },
+  ];
+
+  // Unit conversions. Pressure is held internally in PSI and flow in the table's own units
+  // (GPM motive, GPH suction) so that nothing is converted twice.
+  const INJ_KPA_PER_PSI = 6.894757;
+  const INJ_LPM_PER_GPM = 3.785412;      // US gallons
+  const INJ_LPH_PER_GPH = 3.785412;
+
+  function injToPsi(v, unit){
+    if(v==null||v==="") return null;
+    const n=+v; if(!isFinite(n)) return null;
+    if(unit==="psi")  return n;
+    if(unit==="bar")  return n*100/INJ_KPA_PER_PSI;
+    return n/INJ_KPA_PER_PSI;             // kPa
+  }
+  function injFromPsi(psi, unit){
+    if(psi==null) return null;
+    if(unit==="psi") return psi;
+    if(unit==="bar") return psi*INJ_KPA_PER_PSI/100;
+    return psi*INJ_KPA_PER_PSI;
+  }
+  function injToGpm(v, unit){
+    if(v==null||v==="") return null;
+    const n=+v; if(!isFinite(n)) return null;
+    if(unit==="gpm")  return n;
+    if(unit==="lpm")  return n/INJ_LPM_PER_GPM;
+    return n/60/INJ_LPM_PER_GPM;          // L/hr
+  }
+
+  // Suction at one outlet pressure, within a single inlet block. Linear between printed points,
+  // then linear from the last printed point down to zero at the Zero Suction Point. Anything at
+  // or above the ZSP is 0 — not "a bit of suction", zero.
+  function injSuctionAt(row, outletPsi){
+    if(outletPsi>=row.zsp) return 0;
+    const c=row.curve;
+    if(outletPsi<=c[0][0]) return c[0][1];
+    for(let i=0;i<c.length-1;i++){
+      const [x0,y0]=c[i], [x1,y1]=c[i+1];
+      if(outletPsi<=x1){ const t=(outletPsi-x0)/(x1-x0); return y0+(y1-y0)*t; }
+    }
+    const [xl,yl]=c[c.length-1];
+    const t=(outletPsi-xl)/(row.zsp-xl);
+    return yl*(1-t);
+  }
+
+  /* Interpolate a whole synthetic inlet block for a pressure between two printed ones.
+     Blending on raw outlet pressure would be wrong near the top of the curve — at 45 PSI inlet
+     the 40 PSI block is already past its own ZSP while the 50 PSI block is still pulling, so a
+     straight average invents suction that doesn't exist. Instead each block is sampled at the
+     SAME FRACTION of its own ZSP, and the two samples are blended. The shape of the curve is
+     preserved and the ceiling lands where it should. */
+  function injBlock(inletPsi){
+    const rows=MAZZEI_878;
+    if(inletPsi<=rows[0].inlet) return {...rows[0], exact:true, inlet:rows[0].inlet};
+    const last=rows[rows.length-1];
+    if(inletPsi>=last.inlet) return {...last, exact:true, inlet:last.inlet};
+    let lo=rows[0], hi=rows[1];
+    for(let i=0;i<rows.length-1;i++){
+      if(inletPsi>=rows[i].inlet && inletPsi<=rows[i+1].inlet){ lo=rows[i]; hi=rows[i+1]; break; }
+    }
+    if(inletPsi===lo.inlet) return {...lo, exact:true};
+    if(inletPsi===hi.inlet) return {...hi, exact:true};
+    const t=(inletPsi-lo.inlet)/(hi.inlet-lo.inlet);
+    const zsp=lo.zsp+(hi.zsp-lo.zsp)*t;
+    const motive=lo.motive+(hi.motive-lo.motive)*t;
+    // Sample the blend on the union of both neighbours' fractional outlet positions.
+    const fracs=new Set([0]);
+    lo.curve.forEach(p=>fracs.add(p[0]/lo.zsp));
+    hi.curve.forEach(p=>fracs.add(p[0]/hi.zsp));
+    const curve=[...fracs].filter(f=>f<1).sort((a,b)=>a-b).map(f=>{
+      const y=injSuctionAt(lo,f*lo.zsp)*(1-t)+injSuctionAt(hi,f*hi.zsp)*t;
+      return [+(f*zsp).toFixed(2), +y.toFixed(1)];
+    });
+    return { inlet:inletPsi, motive, zsp, curve, exact:false, between:[lo.inlet,hi.inlet] };
+  }
+
+  /* The whole calculator in one call. Everything in and out is PSI / GPM / GPH; the UI converts.
+       inletPsi   pressure available upstream of the injector (the pump's working pressure)
+       pumpGpm    total flow the pump delivers, or null if unknown
+       outletPsi  intended downstream pressure, or null to just report the block
+     Returns the operating point plus the full curve, and `warnings` — the things that actually go
+     wrong in the field, named rather than left for the grower to infer from a number. */
+  function injCalc({inletPsi, pumpGpm=null, outletPsi=null}){
+    if(inletPsi==null||!isFinite(inletPsi)||inletPsi<=0) return null;
+    const b=injBlock(inletPsi);
+    const warn=[];
+    if(inletPsi<MAZZEI_878[0].inlet) warn.push(`Below the table — the printed data starts at ${MAZZEI_878[0].inlet} PSI, so these figures are the ${MAZZEI_878[0].inlet} PSI row, not a reading for your pressure.`);
+    if(inletPsi>MAZZEI_878[MAZZEI_878.length-1].inlet) warn.push(`Above the table — the printed data stops at ${MAZZEI_878[MAZZEI_878.length-1].inlet} PSI, so these figures are the top row.`);
+    if(pumpGpm!=null && pumpGpm>0 && pumpGpm<b.motive)
+      warn.push("The pump delivers less than the injector needs to pass. Inlet pressure will fall below what you've entered and suction will be worse than shown — either accept a lower working pressure or fit a smaller injector.");
+    let point=null;
+    if(outletPsi!=null && isFinite(outletPsi)){
+      const suction=injSuctionAt(b, outletPsi);
+      point={
+        outletPsi, suctionGph:suction,
+        dropPsi: inletPsi-outletPsi,
+        dropPct: inletPsi>0 ? (inletPsi-outletPsi)/inletPsi*100 : null,
+        stopped: outletPsi>=b.zsp,
+      };
+      if(outletPsi>=b.zsp) warn.push(`No suction at that downstream pressure: it's at or above the Zero Suction Point (${b.zsp.toFixed(1)} PSI) for a ${Math.round(inletPsi)} PSI inlet.`);
+      else if(outletPsi>b.zsp*0.9) warn.push("Very close to the Zero Suction Point — suction here is steep and unreliable. Drop the downstream pressure for a stable rate.");
+      if(outletPsi>=inletPsi) warn.push("Downstream pressure must be lower than upstream pressure — the injector runs on the difference.");
+    }
+    const bypassGpm = (pumpGpm!=null && pumpGpm>0) ? pumpGpm-b.motive : null;
+    return {
+      model:"878-03", inletPsi, exact:b.exact, between:b.between||null,
+      motiveGpm:b.motive, zspPsi:b.zsp, curve:b.curve,
+      maxSuctionGph:b.curve.length?b.curve[0][1]:0,
+      pumpGpm, bypassGpm,
+      bypassPct: (bypassGpm!=null && pumpGpm>0) ? bypassGpm/pumpGpm*100 : null,
+      point, warnings:warn,
+    };
+  }
+
   const FERT_METHODS = ["Spread","Incorporated","Banded","Fertigated"];
 
   function parseFertApplications(recs){
@@ -1242,6 +1389,8 @@
     parseFieldWalkTags,
     FARM_INFO_CATS, parseFarmInfo, farmInfoSort,
     FERT_UNITS, FERT_BED_M2, fertKgPerBed,
+    MAZZEI_878, INJ_KPA_PER_PSI, INJ_LPM_PER_GPM, INJ_LPH_PER_GPH,
+    injToPsi, injFromPsi, injToGpm, injSuctionAt, injBlock, injCalc,
     parseFertPrograms, parseFertRounds, parseFertItems,
     FERT_METHODS, parseFertApplications, parseFertApplicationItems, attachFertItems, fertBedsDone,
     SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate,
