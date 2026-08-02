@@ -1552,6 +1552,20 @@
     letter-spacing:.06em}
   .fpl-warn{margin-top:.6rem;padding:.5rem .7rem;border:1px solid var(--clay);border-radius:9px;
     background:color-mix(in srgb,var(--clay) 7%,transparent);color:var(--clay);font-size:.84rem}
+  /* Manual product row — off-program items like a one-off compost application. Dashed border
+     distinguishes it from the round's own read-only rates at a glance. */
+  .fpl-prod-manual{border-style:dashed;align-items:flex-start}
+  .fpl-manual-name{width:100%;padding:.4rem .5rem;font-family:inherit;font-size:.92rem;
+    border:1px solid var(--line-2);border-radius:7px;background:var(--paper);color:var(--ink);margin-bottom:.35rem}
+  .fpl-manual-rate{display:flex;align-items:center;gap:.35rem}
+  .fpl-manual-rate-n{width:5.5rem;padding:.35rem .5rem;font-family:inherit;font-size:.86rem;
+    border:1px solid var(--line-2);border-radius:7px;background:var(--paper);color:var(--ink)}
+  .fpl-manual-unit{padding:.35rem .4rem;font-family:inherit;font-size:.86rem;
+    border:1px solid var(--line-2);border-radius:7px;background:var(--paper);color:var(--ink)}
+  .fpl-manual-per{font-family:var(--mono);font-size:.7rem;color:var(--ink-2)}
+  .fpl-manual-del{flex:0 0 auto;border:none;background:none;color:var(--ink-2);cursor:pointer;
+    font-size:.95rem;padding:.2rem .3rem}
+  .fpl-manual-del:hover{color:var(--clay)}
 
   /* ---------- Field walk ---------- */
   .fw-top{flex-wrap:wrap;row-gap:.5rem}
@@ -1690,7 +1704,7 @@
     <button class="tab" role="tab" aria-selected="false" data-view="crops">Crops</button>
     <button class="tab" role="tab" aria-selected="false" id="harvestTab" aria-haspopup="true">Harvest ▾</button>
     <button class="tab" role="tab" aria-selected="false" id="miscTab" aria-haspopup="true">Misc ▾</button>
-    <button class="tab" role="tab" aria-selected="false" id="sprayTab" aria-haspopup="true">Spray log ▾</button>
+    <button class="tab" role="tab" aria-selected="false" id="sprayTab" aria-haspopup="true">Logs ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="fieldwalk">Field walk</button>
     <button class="tab" role="tab" aria-selected="false" id="infoTab" aria-haspopup="true">Farm info ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
@@ -1742,7 +1756,7 @@
     <button class="nav-drawer-item" data-view="cropmap">Crop map</button>
     <button class="nav-drawer-item" data-view="timeline">Timeline</button>
     <button class="nav-drawer-item" data-view="crops">Crops</button>
-    <button class="nav-drawer-item" data-view="sprayrec">Spray log</button>
+    <button class="nav-drawer-item" data-view="sprayrec">Spray records</button>
     <button class="nav-drawer-item" data-view="spraymix">Saved mixes</button>
     <button class="nav-drawer-item" data-view="fertrec">Fert records</button>
     <button class="nav-drawer-item" data-view="fertprog">Fertiliser programs</button>
@@ -12991,17 +13005,9 @@ function fplRender(){
         : `<div class="empty-note">${s.blockId?"No beds in this block.":"Pick a block to choose beds."}</div>`}
     ` : ""}
     <label>Products <span style="text-transform:none;letter-spacing:0">(from this round's rates — untick anything you skipped)</span></label>
-    ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>{
-      const total = (l.rate!=null && n) ? Math.round(l.rate*n*1000)/1000 : null;
-      return `<div class="fpl-prod" aria-disabled="${l.on?"false":"true"}">
-        <button class="fpl-prod-tick" type="button" data-fpl-tick="${i}">${l.on?"✓":""}</button>
-        <div class="fpl-prod-main">
-          <div class="fpl-prod-name">${esc(l.product)}</div>
-          <div class="fpl-prod-rate">${l.rate!=null?`${l.rate} ${esc(l.unit)}/bed`:"rate not set"}</div>
-        </div>
-        <div class="fpl-prod-total">${total!=null?`<b>${total}</b><span>${esc(l.unit)} total</span>`:`<span>—</span>`}</div>
-      </div>`;}).join("")}</div>`
-      : `<div class="empty-note">This round has no products for that block.</div>`}
+    ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n)).join("")}</div>`
+      : `<div class="empty-note">Nothing from this round for that block yet — add a product below if you're applying something off-program.</div>`}
+    <div class="fp-addbar" style="padding:.4rem 0 0"><button type="button" id="fplAddLine">＋ Add product</button></div>
     <label for="fplMethod">Method</label>
     <select id="fplMethod">${PlannerShared.FERT_METHODS.map(m=>
       `<option value="${m}"${m===(s.method||"Spread")?" selected":""}>${m}</option>`).join("")}</select>
@@ -13011,6 +13017,38 @@ function fplRender(){
       Saving adds a second application rather than replacing the first.</div>`;
 
   fplRefreshTotals();
+}
+
+// One product row. Round-derived lines are tap-to-toggle, read-only otherwise — they're a
+// snapshot of the program's own rates and editing one in place would be confusing next to the
+// rates page showing the original. Manual lines (added via "+ Add product", for anything off the
+// program like a one-off compost application) get inline inputs and a delete instead of a tick,
+// since there's no rate to fall back to if you clear the field.
+function fplLineHtml(l, i, n){
+  const total = (l.rate!=null && n) ? Math.round(l.rate*n*1000)/1000 : null;
+  if(l.manual){
+    return `<div class="fpl-prod fpl-prod-manual">
+      <div class="fpl-prod-main">
+        <input type="text" class="fpl-manual-name" data-fpl-i="${i}" placeholder="Product — e.g. Deep compost" value="${esc(l.product)}">
+        <div class="fpl-manual-rate">
+          <input type="number" step="any" inputmode="decimal" class="fpl-manual-rate-n" data-fpl-i="${i}" placeholder="Rate" value="${l.rate??""}">
+          <select class="fpl-manual-unit" data-fpl-i="${i}">${PlannerShared.FERT_UNITS.map(u=>
+            `<option value="${u}"${u===l.unit?" selected":""}>${u}</option>`).join("")}</select>
+          <span class="fpl-manual-per">/ bed</span>
+        </div>
+      </div>
+      <div class="fpl-prod-total">${total!=null?`<b>${total}</b><span>${esc(l.unit)} total</span>`:`<span>—</span>`}</div>
+      <button class="fpl-manual-del" type="button" data-fpl-dellin="${i}" title="Remove">✕</button>
+    </div>`;
+  }
+  return `<div class="fpl-prod" aria-disabled="${l.on?"false":"true"}">
+    <button class="fpl-prod-tick" type="button" data-fpl-tick="${i}">${l.on?"✓":""}</button>
+    <div class="fpl-prod-main">
+      <div class="fpl-prod-name">${esc(l.product)}</div>
+      <div class="fpl-prod-rate">${l.rate!=null?`${l.rate} ${esc(l.unit)}/bed`:"rate not set"}</div>
+    </div>
+    <div class="fpl-prod-total">${total!=null?`<b>${total}</b><span>${esc(l.unit)} total</span>`:`<span>—</span>`}</div>
+  </div>`;
 }
 
 // Recompute just the per-product totals and the footer count. Called on every bed/product tap so
@@ -13046,9 +13084,16 @@ async function fplSave(){
   fplSync();
   const s=fplState; if(!s) return;
   const prog=fpProgram(s.progId);
+  // A manual row with nothing typed into it yet is a draft, not a product — drop it silently
+  // rather than making the grower delete their own empty row before they can save.
+  if(s.lines.some(l=>l.manual && !l.product.trim() && l.rate==null)){
+    s.lines=s.lines.filter(l=>!(l.manual && !l.product.trim() && l.rate==null));
+  }
+  const blankManual=s.lines.find(l=>l.manual && l.on && !l.product.trim());
+  if(blankManual){ alert("One of the added products needs a name."); return; }
   const lines=s.lines.filter(l=>l.on);
   if(prog && prog.kind!=="Fertigation" && !s.beds.size){ alert("Pick at least one bed."); return; }
-  if(!lines.length){ alert("Tick at least one product."); return; }
+  if(!lines.length){ alert("Add or tick at least one product."); return; }
   const n=s.beds.size||1;
   showLoading(true);
   try{
@@ -13150,8 +13195,36 @@ async function frDelete(id){
       tick.textContent = s.lines[i].on ? "✓" : "";
       tick.closest(".fpl-prod").setAttribute("aria-disabled", s.lines[i].on?"false":"true");
       fplRefreshTotals(); return; }
+    // "+ Add product" — for anything off-program, deep compost being the case that prompted it.
+    // Appended rather than inserted at the top so the round's own products stay in the order the
+    // rates page shows them, with manual additions visibly tacked on the end.
+    if(ev.target.closest("#fplAddLine")){
+      fplSync();
+      s.lines.push({ product:"", rate:null, unit:"L", on:true, manual:true });
+      fplRender();
+      const last=$fp("fplBody").querySelector(".fpl-manual-name:last-of-type");
+      if(last) last.focus();
+      return;
+    }
+    const dellin=ev.target.closest("[data-fpl-dellin]");
+    if(dellin){ fplSync(); s.lines.splice(+dellin.dataset.fplDellin,1); fplRender(); return; }
+  });
+  // Typing into a manual product's name/rate updates state as you go, same as every other form in
+  // the app — no separate save step per field.
+  $fp("fplBody").addEventListener("input",(ev)=>{
+    const s=fplState; if(!s) return;
+    const i=ev.target.dataset.fplI; if(i==null) return;
+    const l=s.lines[+i]; if(!l) return;
+    if(ev.target.classList.contains("fpl-manual-name")) l.product=ev.target.value;
+    else if(ev.target.classList.contains("fpl-manual-rate-n")){
+      l.rate=ev.target.value===""?null:+ev.target.value;
+      fplRefreshTotals();
+    }
   });
   // Changing program/round/block rebuilds the product list, since the rates are what they select.
+  // Manual lines are intentionally NOT carried across a program/round/block switch — they were
+  // added for the block you were just on, and silently reattaching them to a different one is
+  // exactly the kind of mistake this whole feature exists to prevent.
   $fp("fplBody").addEventListener("change",(ev)=>{
     const s=fplState; if(!s) return;
     if(ev.target.id==="fplProg"){ fplSync(); s.progId=ev.target.value;
@@ -13161,6 +13234,10 @@ async function frDelete(id){
       fplBuildLines(); fplRender(); return; }
     if(ev.target.id==="fplBlock"){ fplSync(); s.blockId=ev.target.value||null; s.beds.clear();
       fplBuildLines(); fplRender(); return; }
+    if(ev.target.classList.contains("fpl-manual-unit")){
+      const i=+ev.target.dataset.fplI; if(s.lines[i]){ s.lines[i].unit=ev.target.value; fplRefreshTotals(); }
+      return;
+    }
   });
 
   const logBtn=$fp("fpLogBtn");
