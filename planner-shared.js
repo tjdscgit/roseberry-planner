@@ -62,6 +62,8 @@
       fertPrograms:     "tblFPprograms",      // "Fert Programs"
       fertRounds:       "tblFProunds",        // "Fert Rounds"
       fertItems:        "tblFPitems",         // "Fert Items"
+      fertApplications: "tblFAapps",          // "Fert Applications" — the log; also the beds-done record
+      fertApplicationItems: "tblFAitems",     // "Fert Application Items"
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -184,6 +186,11 @@
       fx_program:"Program", fx_round:"Round", fx_block:"Block", fx_blockLabel:"Block label",
       fx_product:"Product", fx_rate:"Rate", fx_unit:"Rate unit", fx_lPerBed:"L per bed",
       fx_notes:"Notes", fx_order:"Order",
+      fa_name:"Name", fa_date:"Date", fa_by:"Applied by", fa_program:"Program", fa_round:"Round",
+      fa_block:"Block", fa_beds:"Beds", fa_method:"Method", fa_notes:"Notes", fa_photos:"Photos",
+      fa_created:"Created at",
+      fai_app:"Application", fai_product:"Product", fai_rate:"Rate per bed", fai_unit:"Unit",
+      fai_total:"Total", fai_order:"Order",
     }
   };
 
@@ -202,6 +209,7 @@
     walkLists:"walk_lists", walkListItems:"walk_list_items", fieldWalkTags:"field_walk_tags",
     farmInfo:"farm_info",
     fertPrograms:"fert_programs", fertRounds:"fert_rounds", fertItems:"fert_items",
+    fertApplications:"fert_applications", fertApplicationItems:"fert_application_items",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -670,6 +678,55 @@
   const FERT_BED_M2 = 11.25;
   function fertKgPerBed(ratePer100m2){
     return (ratePer100m2==null||ratePer100m2==="") ? null : (+ratePer100m2)*(FERT_BED_M2/100);
+  }
+
+  const FERT_METHODS = ["Spread","Incorporated","Banded","Fertigated"];
+
+  function parseFertApplications(recs){
+    const F=CFG.f;
+    const arr = v => Array.isArray(v) ? v : [];
+    return (recs||[]).map(r=>({
+      id:r.id,
+      date:r.fields[F.fa_date]||"",
+      by:r.fields[F.fa_by]||"",
+      programId:(r.fields[F.fa_program]||[])[0]||null,
+      roundId:(r.fields[F.fa_round]||[])[0]||null,
+      blockId:(r.fields[F.fa_block]||[])[0]||null,
+      bedIds:arr(r.fields[F.fa_beds]).slice(),
+      method:r.fields[F.fa_method]||"Spread",
+      notes:r.fields[F.fa_notes]||"",
+      photos:arr(r.fields[F.fa_photos]).slice(),
+      created:r.fields[F.fa_created]||"",
+      items:[],
+    })).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.id).localeCompare(String(a.id)));
+  }
+
+  function parseFertApplicationItems(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id, appId:(r.fields[F.fai_app]||[])[0]||null,
+      product:r.fields[F.fai_product]||"", rate:num(r.fields[F.fai_rate]),
+      unit:r.fields[F.fai_unit]||"", total:num(r.fields[F.fai_total]), order:num(r.fields[F.fai_order]),
+    })).sort((a,b)=>((a.order??1e9)-(b.order??1e9)));
+  }
+
+  // Nest items onto their application, same shape as attachSprayItems.
+  function attachFertItems(apps, items){
+    const by={}; (items||[]).forEach(i=>{ if(i.appId) (by[i.appId] ||= []).push(i); });
+    apps.forEach(a=>{ a.items = by[a.id] || []; });
+    return apps;
+  }
+
+  // Which beds are done for a program+round. The applications ARE the record — a bed is done
+  // because something was logged against it, never because a flag was ticked somewhere else.
+  // Returns a Set of bed ids.
+  function fertBedsDone(apps, programId, roundId){
+    const out=new Set();
+    (apps||[]).forEach(a=>{
+      if(a.programId!==programId || a.roundId!==roundId) return;
+      a.bedIds.forEach(b=>out.add(b));
+    });
+    return out;
   }
 
   function parseTasks(taskRecords){
@@ -1186,6 +1243,7 @@
     FARM_INFO_CATS, parseFarmInfo, farmInfoSort,
     FERT_UNITS, FERT_BED_M2, fertKgPerBed,
     parseFertPrograms, parseFertRounds, parseFertItems,
+    FERT_METHODS, parseFertApplications, parseFertApplicationItems, attachFertItems, fertBedsDone,
     SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate,
     suggestBedsForPlanting, suggestBedsForUnassigned,
     createAirtableClient,
