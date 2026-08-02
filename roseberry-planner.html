@@ -2373,6 +2373,7 @@
         <button class="btn-ghost fp-back" type="button" id="fpBack">←</button>
         <span class="sub" id="fpCrumb">Fertiliser programs</span>
         <span class="spacer" style="flex:1"></span>
+        <button class="btn-ghost" id="fpArchiveBtn" type="button" hidden>Archive &amp; start new</button>
         <button class="btn-ghost" id="fpEditToggle" type="button" aria-pressed="false">Edit</button>
       </div>
       <div class="fp-main" id="fpMain">
@@ -12691,6 +12692,9 @@ function buildFertProg(){
   document.querySelectorAll(".fp-editonly").forEach(el=>el.hidden=!fpEditing);
   $fp("fpEditToggle").setAttribute("aria-pressed", fpEditing?"true":"false");
   $fp("fpEditToggle").textContent = fpEditing ? "Done" : "Edit";
+  // Archiving only makes sense once a program is actually selected — it's a stronger extension of
+  // .fp-editonly, not a separate rule, so it starts from that same toggle and narrows further.
+  $fp("fpArchiveBtn").hidden = !fpEditing || !fpProgId;
 
   $fp("fpProgs").innerHTML = progs.length ? progs.map(p=>{
     const items=fpItemsOf(p.id).length, rounds=fpRoundsOf(p.id).length;
@@ -12899,6 +12903,19 @@ async function fpAddRound(){
   finally{ showLoading(false); }
 }
 
+// Shared by "New program" and "Archive & start new" — creates the program row plus a default
+// "Round 1" so there's somewhere for the first product to go, and points the rates page at it.
+async function fpCreateProgram(fields){
+  const F=CFG.f;
+  const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertPrograms, [fields]);
+  data.fertPrograms.push(PlannerShared.parseFertPrograms([{id:rec.id, fields}])[0]);
+  const rf={ [F.fr_program]:[rec.id], [F.fr_name]:"Round 1", [F.fr_order]:1 };
+  const [rr]=await atCreate(CFG.farmBase, CFG.tables.fertRounds, [rf]);
+  data.fertRounds.push(PlannerShared.parseFertRounds([{id:rr.id, fields:rf}])[0]);
+  fpProgId=rec.id; fpBlockKey=null; fpRoundId=rr.id;
+  return rec.id;
+}
+
 async function fpAddProgram(){
   const name=prompt("Name the program"); if(!name) return;
   const kind=confirm("OK = per-block amendment program.\nCancel = fertigation (mixed per area).")
@@ -12906,16 +12923,39 @@ async function fpAddProgram(){
   showLoading(true);
   try{
     const F=CFG.f, now=new Date().toISOString();
-    const fields={ [F.fp_name]:name.trim(), [F.fp_kind]:kind, [F.fp_order]:(data.fertPrograms.length||0)+1,
-                   [F.fp_archived]:false, [F.fp_created]:now, [F.fp_updated]:now };
-    const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertPrograms, [fields]);
-    data.fertPrograms.push(PlannerShared.parseFertPrograms([{id:rec.id, fields}])[0]);
-    const rf={ [F.fr_program]:[rec.id], [F.fr_name]:"Round 1", [F.fr_order]:1 };
-    const [rr]=await atCreate(CFG.farmBase, CFG.tables.fertRounds, [rf]);
-    data.fertRounds.push(PlannerShared.parseFertRounds([{id:rr.id, fields:rf}])[0]);
-    fpProgId=rec.id; fpBlockKey=null; fpRoundId=rr.id;
+    await fpCreateProgram({ [F.fp_name]:name.trim(), [F.fp_kind]:kind,
+      [F.fp_order]:(data.fertPrograms.length||0)+1, [F.fp_archived]:false,
+      [F.fp_created]:now, [F.fp_updated]:now });
     buildFertProg();
   }catch(e){ alert("Couldn't create the program:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
+// Archives the current program (its rounds and items stay in the database, just hidden from this
+// list — see parseFertPrograms' filter) and opens a brand new one with the same name and kind, one
+// empty "Round 1", ready to build out. For when a season's recommendation changes enough that
+// editing the old rates in place would blur what actually happened last time with what's planned
+// now — the old numbers stay real history instead of being overwritten.
+async function fpArchiveAndNew(){
+  const prog=fpProgram(fpProgId); if(!prog) return;
+  if(!confirm(`Archive "${prog.name}" and start a fresh version?\n\nIts rounds, rates and every logged application against it stay in the records — they'll just drop off this list. A new empty program (same name) opens ready for the new rates.`)) return;
+  showLoading(true);
+  try{
+    const F=CFG.f, now=new Date().toISOString();
+    await atPatch(CFG.farmBase, CFG.tables.fertPrograms, prog.id, {[F.fp_archived]:true, [F.fp_updated]:now});
+    data.fertPrograms=data.fertPrograms.filter(p=>p.id!==prog.id);
+
+    const stamp=`Continues the program archived ${fmt(now.slice(0,10))}.`;
+    await fpCreateProgram({
+      [F.fp_name]:prog.name, [F.fp_kind]:prog.kind,
+      [F.fp_notes]: prog.notes ? `${prog.notes}\n\n${stamp}` : stamp,
+      [F.fp_area]:prog.area, [F.fp_order]:prog.order ?? ((data.fertPrograms.length||0)+1),
+      [F.fp_archived]:false, [F.fp_created]:now, [F.fp_updated]:now,
+    });
+    // Stays in Edit mode deliberately — the new program is empty, and the next thing you're going
+    // to do is add its first product.
+    buildFertProg();
+  }catch(e){ alert("Couldn't archive this program:\n"+e.message); }
   finally{ showLoading(false); }
 }
 
@@ -12928,6 +12968,17 @@ function fpBedsInBlock(blockId){
     .sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name,undefined,{numeric:true}));
 }
 function fpDoneSet(){ return PlannerShared.fertBedsDone(data.fertApps||[], fpProgId, fpRoundId); }
+
+// Every product name in use anywhere — every program's rates plus every past application — so the
+// Manual entry dropdown offers what's actually been used on this farm rather than an empty list.
+// There's no separate product catalog table for fertiliser (unlike Spray Products); this derives
+// one from usage instead of adding a table just to hold names.
+function fpKnownProducts(){
+  const set=new Set();
+  (data.fertItems||[]).forEach(i=>{ if(i.product) set.add(i.product); });
+  (data.fertApps||[]).forEach(a=>(a.items||[]).forEach(i=>{ if(i.product) set.add(i.product); }));
+  return [...set].sort((a,b)=>a.localeCompare(b));
+}
 
 function fpRenderProgress(){
   const el=$fp("fpProgress"); if(!el) return;
@@ -12951,7 +13002,7 @@ function fpRenderProgress(){
    the two in one form was confusing to read back later — a record with three rate-derived products
    and one hand-typed one doesn't say which regime it belongs to. Switching the toggle discards
    whichever set of lines belonged to the mode you're leaving, on purpose. */
-let fplState=null;   // { mode:'program'|'manual', progId, roundId, blockId, beds:Set, lines:[...] }
+let fplState=null;   // { mode:'program'|'manual', progId, roundId, blockId, beds:Set, lines:[...], knownProducts:[...] }
 
 // Every block in the farm, independent of any program — what "Manual" mode's block picker draws
 // from, since a manual entry isn't scoped to a program's own block list.
@@ -12972,10 +13023,12 @@ function fplOpen(opts){
     const progRoundIds = new Set(fpRoundsOf(progId).map(r=>r.id));
     const roundId = opts.roundId || (progRoundIds.has(fpRoundId) ? fpRoundId : null)
       || (fpRoundsOf(progId)[0]||{}).id || null;
-    fplState={ mode, progId, roundId, blockId:opts.blockId||null, beds:new Set(), lines:[] };
+    fplState={ mode, progId, roundId, blockId:opts.blockId||null, beds:new Set(), lines:[],
+               knownProducts:fpKnownProducts() };
     fplBuildLines();
   }else{
-    fplState={ mode:"manual", progId:null, roundId:null, blockId:opts.blockId||null, beds:new Set(), lines:[] };
+    fplState={ mode:"manual", progId:null, roundId:null, blockId:opts.blockId||null, beds:new Set(),
+               lines:[], knownProducts:fpKnownProducts() };
   }
   fplRender();
   $fp("fpLogModal").classList.add("open");
@@ -13064,11 +13117,11 @@ function fplRender(){
     ` : ""}
     ${isProgram ? `
       <label>Products <span style="text-transform:none;letter-spacing:0">(from this round's rates — untick anything you skipped)</span></label>
-      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n)).join("")}</div>`
+      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n,s.knownProducts)).join("")}</div>`
         : `<div class="empty-note">Nothing from this round for that block.</div>`}
     ` : `
       <label>Products</label>
-      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n)).join("")}</div>` : ""}
+      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n,s.knownProducts)).join("")}</div>` : ""}
       <div class="fp-addbar" style="padding:.4rem 0 0"><button type="button" id="fplAddLine">＋ Add product</button></div>
     `}
     <label for="fplMethod">Method</label>
@@ -13087,12 +13140,24 @@ function fplRender(){
 // rates page showing the original. Manual lines (added via "+ Add product", for anything off the
 // program like a one-off compost application) get inline inputs and a delete instead of a tick,
 // since there's no rate to fall back to if you clear the field.
-function fplLineHtml(l, i, n){
+function fplLineHtml(l, i, n, known){
   const total = (l.rate!=null && n) ? Math.round(l.rate*n*1000)/1000 : null;
   if(l.manual){
+    // A dropdown of everything this farm has ever used a fertiliser product name for, so retyping
+    // "Natural Gypsum" every time isn't necessary — plus "+ Add product…" at the bottom for a name
+    // that's genuinely new. l.product might not be in `known` yet (freshly typed this session, or
+    // this line just hasn't had a product picked) — both are handled by the placeholder/injected-
+    // option branches below rather than silently losing what's already there.
+    const list=known||[];
+    const opts = [`<option value=""${l.product?"":" selected"}>— product —</option>`]
+      .concat(!l.product || list.includes(l.product) ? [] :
+        [`<option value="${esc(l.product)}" selected>${esc(l.product)}</option>`])
+      .concat(list.map(p=>`<option value="${esc(p)}"${p===l.product?" selected":""}>${esc(p)}</option>`))
+      .concat([`<option value="__add__">+ Add product…</option>`])
+      .join("");
     return `<div class="fpl-prod fpl-prod-manual">
       <div class="fpl-prod-main">
-        <input type="text" class="fpl-manual-name" data-fpl-i="${i}" placeholder="Product — e.g. Deep compost" value="${esc(l.product)}">
+        <select class="fpl-manual-name" data-fpl-i="${i}">${opts}</select>
         <div class="fpl-manual-rate">
           <input type="number" step="any" inputmode="decimal" class="fpl-manual-rate-n" data-fpl-i="${i}" placeholder="Rate" value="${l.rate??""}">
           <select class="fpl-manual-unit" data-fpl-i="${i}">${PlannerShared.FERT_UNITS.map(u=>
@@ -13283,14 +13348,13 @@ async function frDelete(id){
     const dellin=ev.target.closest("[data-fpl-dellin]");
     if(dellin){ fplSync(); s.lines.splice(+dellin.dataset.fplDellin,1); fplRender(); return; }
   });
-  // Typing into a manual product's name/rate updates state as you go, same as every other form in
-  // the app — no separate save step per field.
+  // Only the rate field updates live as you type — the product name is now a select (see the
+  // change listener below), so there's nothing here for it to do.
   $fp("fplBody").addEventListener("input",(ev)=>{
     const s=fplState; if(!s) return;
     const i=ev.target.dataset.fplI; if(i==null) return;
     const l=s.lines[+i]; if(!l) return;
-    if(ev.target.classList.contains("fpl-manual-name")) l.product=ev.target.value;
-    else if(ev.target.classList.contains("fpl-manual-rate-n")){
+    if(ev.target.classList.contains("fpl-manual-rate-n")){
       l.rate=ev.target.value===""?null:+ev.target.value;
       fplRefreshTotals();
     }
@@ -13314,6 +13378,23 @@ async function frDelete(id){
       const i=+ev.target.dataset.fplI; if(s.lines[i]){ s.lines[i].unit=ev.target.value; fplRefreshTotals(); }
       return;
     }
+    // The manual product select. "+ Add product…" is a real prompt rather than an inline text
+    // field, matching the same pattern the spray log already uses for its own product picker
+    // (sprayCreateProductInline) — one familiar gesture for "this isn't in the list yet" everywhere
+    // it comes up in the app.
+    if(ev.target.classList.contains("fpl-manual-name")){
+      const i=+ev.target.dataset.fplI, l=s.lines[i]; if(!l) return;
+      if(ev.target.value==="__add__"){
+        const name=(prompt("New product name:")||"").trim();
+        if(!name){ ev.target.value=l.product; return; }   // cancelled — put the select back
+        if(!s.knownProducts.includes(name)){ s.knownProducts.push(name); s.knownProducts.sort((a,b)=>a.localeCompare(b)); }
+        l.product=name;
+        fplRender();
+        return;
+      }
+      l.product=ev.target.value;
+      return;
+    }
   });
 
   const logBtn=$fp("fpLogBtn");
@@ -13335,6 +13416,7 @@ async function frDelete(id){
   $fp("fpEditToggle").onclick=()=>{ fpEditing=!fpEditing; fpFormFor=null; buildFertProg(); };
   $fp("fpAddProg").onclick=fpAddProgram;
   $fp("fpAddItem").onclick=()=>{ fpFormFor="new"; fpRenderRates(); };
+  $fp("fpArchiveBtn").onclick=fpArchiveAndNew;
 
   $fp("fpProgs").addEventListener("click",(ev)=>{
     const b=ev.target.closest("[data-fp-prog]"); if(!b) return;
