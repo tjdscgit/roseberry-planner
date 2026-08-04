@@ -794,15 +794,17 @@
        pumpGpm    total flow the pump delivers, or null if unknown
        outletPsi  intended downstream pressure, or null to just report the block
      Returns the operating point plus the full curve, and `warnings` — the things that actually go
-     wrong in the field, named rather than left for the grower to infer from a number. */
+     wrong in the field, named rather than left for the grower to infer from a number. Warnings are
+     structured `{code, ...}` with any pressures in PSI, not prose: the wording and the units both
+     belong to whatever is displaying them, and this module has no idea whether the reader thinks
+     in kPa, bar or PSI. */
   function injCalc({inletPsi, pumpGpm=null, outletPsi=null}){
     if(inletPsi==null||!isFinite(inletPsi)||inletPsi<=0) return null;
     const b=injBlock(inletPsi);
     const warn=[];
-    if(inletPsi<MAZZEI_878[0].inlet) warn.push(`Below the table — the printed data starts at ${MAZZEI_878[0].inlet} PSI, so these figures are the ${MAZZEI_878[0].inlet} PSI row, not a reading for your pressure.`);
-    if(inletPsi>MAZZEI_878[MAZZEI_878.length-1].inlet) warn.push(`Above the table — the printed data stops at ${MAZZEI_878[MAZZEI_878.length-1].inlet} PSI, so these figures are the top row.`);
-    if(pumpGpm!=null && pumpGpm>0 && pumpGpm<b.motive)
-      warn.push("The pump delivers less than the injector needs to pass. Inlet pressure will fall below what you've entered and suction will be worse than shown — either accept a lower working pressure or fit a smaller injector.");
+    if(inletPsi<MAZZEI_878[0].inlet) warn.push({code:"below_table", limitPsi:MAZZEI_878[0].inlet});
+    if(inletPsi>MAZZEI_878[MAZZEI_878.length-1].inlet) warn.push({code:"above_table", limitPsi:MAZZEI_878[MAZZEI_878.length-1].inlet});
+    if(pumpGpm!=null && pumpGpm>0 && pumpGpm<b.motive) warn.push({code:"pump_short"});
     let point=null;
     if(outletPsi!=null && isFinite(outletPsi)){
       const suction=injSuctionAt(b, outletPsi);
@@ -812,9 +814,9 @@
         dropPct: inletPsi>0 ? (inletPsi-outletPsi)/inletPsi*100 : null,
         stopped: outletPsi>=b.zsp,
       };
-      if(outletPsi>=b.zsp) warn.push(`No suction at that downstream pressure: it's at or above the Zero Suction Point (${b.zsp.toFixed(1)} PSI) for a ${Math.round(inletPsi)} PSI inlet.`);
-      else if(outletPsi>b.zsp*0.9) warn.push("Very close to the Zero Suction Point — suction here is steep and unreliable. Drop the downstream pressure for a stable rate.");
-      if(outletPsi>=inletPsi) warn.push("Downstream pressure must be lower than upstream pressure — the injector runs on the difference.");
+      if(outletPsi>=b.zsp) warn.push({code:"no_suction", zspPsi:b.zsp, inletPsi});
+      else if(outletPsi>b.zsp*0.9) warn.push({code:"near_zsp", zspPsi:b.zsp});
+      if(outletPsi>=inletPsi) warn.push({code:"outlet_ge_inlet"});
     }
     const bypassGpm = (pumpGpm!=null && pumpGpm>0) ? pumpGpm-b.motive : null;
     return {

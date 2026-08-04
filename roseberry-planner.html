@@ -12795,7 +12795,7 @@ function fcRender(){
         : ""}
     </div>`;
   }
-  r.warnings.forEach(w=>{ html+=`<div class="fc-warn"><span class="fc-warn-mark">!</span><span>${esc(w)}</span></div>`; });
+  r.warnings.forEach(w=>{ html+=`<div class="fc-warn"><span class="fc-warn-mark">!</span><span>${esc(fcWarnText(w))}</span></div>`; });
   html+=`</div>`;
 
   // Card 2 — the curve, as a chart and as the numbers behind it.
@@ -12806,7 +12806,7 @@ function fcRender(){
       steep section changes every time the filters load up.</p>
     ${fcChart(r)}
     <div class="fc-tablewrap"><table class="fc-table">
-      <thead><tr><th>Downstream ${esc(pu)}</th><th>Drop ${esc(pu)}</th><th>Suction ${esc(su)}</th><th>L per hour</th></tr></thead>
+      <thead><tr><th>Downstream ${esc(pu)}</th><th>Drop ${esc(pu)}</th><th>Suction ${esc(su)}</th>${su==="GPH"?"<th>L per hour</th>":""}</tr></thead>
       <tbody>${fcRows(r, outletPsi)}</tbody>
     </table></div>
     <p class="fc-note">Manufacturer's table REV 09.2014, at sea level and 21&nbsp;°C, drawing water.
@@ -12814,6 +12814,28 @@ function fcRender(){
   </div>`;
 
   box.innerHTML=html;
+}
+
+// injCalc hands back warning codes with pressures in PSI; the wording and the units are this
+// layer's job, so a grower reading in kPa never sees a stray PSI figure mid-sentence.
+function fcWarnText(w){
+  const pu=fcPressLabel(), dp=fcPressDp();
+  const P=psi=>`${fcNum(fcPress(psi),dp)} ${pu}`;
+  switch(w.code){
+    case "below_table":
+      return `Below the table — the manufacturer's data starts at ${P(w.limitPsi)}, so these figures are that bottom row, not a reading for your pressure.`;
+    case "above_table":
+      return `Above the table — the manufacturer's data stops at ${P(w.limitPsi)}, so these figures are that top row, not a reading for your pressure.`;
+    case "pump_short":
+      return "The pump delivers less than the injector needs to pass. Inlet pressure will fall below what you've entered and suction will be worse than shown — either accept a lower working pressure or fit a smaller injector.";
+    case "no_suction":
+      return `No suction at that downstream pressure: it's at or above the zero suction point (${P(w.zspPsi)}) for a ${P(w.inletPsi)} inlet.`;
+    case "near_zsp":
+      return `Very close to the zero suction point (${P(w.zspPsi)}) — suction is steep and unreliable here, and will wander as the filters load up. Drop the downstream pressure for a rate you can trust.`;
+    case "outlet_ge_inlet":
+      return "Downstream pressure must be lower than upstream pressure — the injector runs on the difference between them.";
+    default: return String(w.code||"");
+  }
 }
 
 // Curve rows: every printed/interpolated point, plus the zero suction point itself as the last
@@ -12828,7 +12850,7 @@ function fcRows(r, outletPsi){
       <td>${esc(fcNum(fcPress(o),pdp))}</td>
       <td>${esc(fcNum(fcPress(r.inletPsi-o),pdp))}</td>
       <td>${esc(fcNum(fcSuction(s),s<10?1:0))}</td>
-      <td>${esc(fcNum(lph,0))}</td></tr>`;
+      ${fcSuctionUnit()==="GPH"?`<td>${esc(fcNum(lph,0))}</td>`:""}</tr>`;
   }).join("");
 }
 
