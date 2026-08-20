@@ -234,6 +234,40 @@
   .bd-chips .cm-type-chip:hover{border-color:var(--steel)}
   .bd-chips .bd-cropchip{border-left-color:var(--clay)}
   .cr-wrap .bd-chips select.bd-addcrop{width:auto;min-width:11rem;font-size:.8rem;padding:.3rem .5rem}
+  /* ---- Bed prep history (last subsection of the Beds tab) ----
+     Cards rather than a table: the grid is BP_OPS-wide and would never fit a phone, and cards let
+     the same markup serve desktop and the mobile drill-down without a second renderer. */
+  .bp-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.9rem;margin-bottom:.7rem}
+  .bp-showall{display:flex;align-items:center;gap:.35rem;font-family:var(--mono);
+    font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);cursor:pointer}
+  .bp-targets{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);
+    padding:.7rem .8rem;margin-bottom:.8rem;max-width:900px}
+  .bp-targets-grid{display:flex;flex-wrap:wrap;gap:.6rem}
+  .bp-target{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);
+    font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+  .cr-wrap .bp-target input{width:7.5rem}
+  .bp-list{display:flex;flex-direction:column;gap:.5rem;max-width:900px}
+  .bp-row{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);overflow:hidden}
+  .bp-row-flag{border-color:var(--clay)}
+  .bp-head{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;cursor:pointer;
+    padding:.55rem .75rem;background:none;border:none;color:var(--ink);font-family:var(--sans);font-size:.92rem}
+  .bp-head:hover{background:var(--paper)}
+  .bp-head-name{font-weight:600;flex:0 0 auto}
+  .bp-head-sum{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
+  .bp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.3rem .9rem;
+    padding:.2rem .75rem .7rem;background:var(--paper)}
+  .bp-cell{display:flex;justify-content:space-between;gap:.6rem;font-family:var(--mono);
+    font-size:.74rem;color:var(--ink-2);padding:.2rem 0;border-bottom:1px solid var(--line-2)}
+  .bp-cell-op{color:var(--ink)}
+  .bp-cell-never{opacity:.6}
+  .bp-overdue .bp-cell-when{color:var(--clay);font-weight:600}
+  .bp-mob-actions{display:flex;flex-wrap:wrap;gap:.9rem;align-items:center;margin-top:.4rem}
+  /* the log-prep modal reuses .wk-group-card / .wk-task-form wholesale — see #wkTaskModal below */
+  #bpModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.45);padding:1rem}
+  #bpModal.open{display:flex}
+  #bpModal .wk-task-form input{width:100%}
   .bd-conflicts{display:flex;flex-direction:column;gap:.5rem;max-width:900px}
   .bd-conflict{display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;
     padding:.6rem .75rem;border-radius:10px;background:var(--paper-2);color:var(--ink);
@@ -542,9 +576,9 @@
   .wk-group-row-crop{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .wk-group-row-meta{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-top:.1rem}
   /* ---- add/edit manual task modal (reuses .wk-group-card + .ap-trow-f/.ap-actions) ---- */
-  #wkTaskModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  #wkTaskModal,#qaModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #wkTaskModal.open{display:flex}
+  #wkTaskModal.open,#qaModal.open{display:flex}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
   .wk-task-form-row{display:flex;gap:.9rem}
   .wk-task-typeseg{align-self:stretch}
@@ -679,6 +713,19 @@
     padding:1px 2px;border-radius:2px;pointer-events:none;z-index:2;
     color:#8a6d1f;background:rgba(255,255,255,.82)}
   .cm-issue-badge.cm-issue-avoid{color:var(--clay)}
+  /* Bed zone — the coarse layer. Drawn behind the bars (z-index 0, same as a tarp) and inset a
+     little further, so a zone reads as the intent the bars are filling in rather than as another
+     occupant. Dashed edges carry the "this isn't committed yet" meaning that the solid bars don't. */
+  .cm-zone{position:absolute;left:0;right:0;border-radius:3px;z-index:0;
+    border:1px dashed transparent;pointer-events:none;overflow:hidden}
+  .cm-zone-l{position:absolute;right:1px;bottom:2px;font-family:var(--mono);font-size:.48rem;
+    line-height:1;white-space:nowrap;writing-mode:vertical-rl;text-orientation:mixed;
+    opacity:.75;color:var(--ink)}
+  /* "this bed is zoned for a different crop type" badge — same advisory contract as the tarp and
+     bed-issue badges: the bed stays a valid drop target, you just get told before you let go */
+  .cm-zone-badge{position:absolute;right:1px;top:11px;font-size:.55rem;line-height:1;
+    padding:1px 2px;border-radius:2px;pointer-events:none;z-index:2;
+    color:var(--steel);background:rgba(255,255,255,.82)}
   .cm-bar{position:absolute;left:2px;right:2px;border-radius:3px;cursor:grab;color:#fff;
     padding:2px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);z-index:1}
   .cm-bar:active{cursor:grabbing}
@@ -843,9 +890,13 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open{display:flex}
+  #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
+  .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
+    padding:.45rem .1rem;border-bottom:1px solid var(--line)}
+  .zn-parked-row:last-child{border-bottom:none}
   #sprayMixModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
   #sprayMixModal.open{display:flex}
@@ -1561,6 +1612,64 @@
     .fp-round{padding:.55rem 1.1rem;font-size:.98rem}
   }
 
+  /* ---------- Fertiliser costs ----------
+     Desk page, not a shed page: this is read sitting down with an invoice, so unlike the programs
+     view it's a normal density table layout with numbers right-aligned and tabular-figured so
+     columns of dollars line up down the page. */
+  .fk-wrap{padding:1rem;max-width:1100px;margin:0 auto;width:100%;overflow-y:auto}
+  .fk-tabs{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+  .fk-tabs button{padding:.5rem 1rem;border:1px solid var(--line-2);background:var(--paper);
+    color:var(--ink-2);border-radius:999px;cursor:pointer;font-family:inherit;font-size:.92rem}
+  .fk-tabs button[aria-selected="true"]{background:var(--steel);color:#fff;border-color:var(--steel)}
+  /* Wide tables scroll inside their own card rather than pushing the page sideways — the by-block
+     drill-down is six columns and will not fit a phone. */
+  .fk-card{border:1px solid var(--line);border-radius:12px;background:var(--paper);
+    padding:1rem;margin-bottom:1rem;overflow-x:auto}
+  .fk-detail td{overflow-x:auto}
+  .fk-card h3{margin:0 0 .8rem;font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-2)}
+  .fk-total{font-size:2.2rem;font-variant-numeric:tabular-nums;line-height:1.1}
+  .fk-total-sub{color:var(--ink-2);font-size:.88rem;margin-top:.2rem}
+  .fk-table{width:100%;border-collapse:collapse;font-size:.92rem}
+  .fk-table th{text-align:left;font-weight:600;color:var(--ink-2);font-size:.78rem;
+    text-transform:uppercase;letter-spacing:.05em;padding:.4rem .5rem;border-bottom:1px solid var(--line)}
+  .fk-table td{padding:.45rem .5rem;border-bottom:1px solid var(--line)}
+  .fk-table tr:last-child td{border-bottom:none}
+  .fk-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .fk-table input{width:100%;padding:.35rem .45rem;font-family:inherit;font-size:.92rem;
+    border:1px solid var(--line-2);border-radius:7px;background:var(--paper);color:var(--ink)}
+  .fk-table input[type=number]{text-align:right}
+  .fk-derived{color:var(--ink-2);font-variant-numeric:tabular-nums}
+  /* The missing-price warning. Amber, never red: an unpriced product is an incomplete total, not
+     an error — the usage figures beside it are still correct and still worth reading. */
+  .fk-warn{border:1px solid #d9a441;background:rgba(217,164,65,.1);border-radius:10px;
+    padding:.7rem .9rem;margin-bottom:1rem;font-size:.9rem}
+  .fk-warn b{display:block;margin-bottom:.3rem}
+  .fk-chip{display:inline-block;padding:.15rem .5rem;margin:.15rem .2rem .15rem 0;border-radius:999px;
+    background:var(--paper-2,rgba(127,127,127,.12));font-size:.84rem;cursor:pointer;border:1px solid var(--line-2)}
+  .fk-chip:hover{border-color:var(--steel);color:var(--steel)}
+  .fk-empty{padding:1.6rem .9rem;color:var(--ink-2);font-size:.95rem;text-align:center}
+  .fk-muted{color:var(--ink-2)}
+  .fk-sub{color:var(--ink-2);font-size:.85rem}
+  .fk-bar{height:6px;border-radius:3px;background:var(--steel);min-width:2px;display:block}
+  .fk-grp{cursor:pointer}
+  .fk-grp:hover{background:rgba(127,127,127,.06)}
+  .fk-detail td{background:rgba(127,127,127,.05);font-size:.87rem}
+  .fk-actions{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+  .fk-actions input[type=date]{padding:.4rem .5rem;font-family:inherit;border:1px solid var(--line-2);
+    border-radius:8px;background:var(--paper);color:var(--ink)}
+  /* Week-planner cost badge. Deliberately quieter than the category pill beside it — the cost is
+     context for the job, not the job itself. */
+  .wk-cost{display:inline-block;margin-left:.35rem;padding:.05rem .4rem;border-radius:999px;
+    border:1px solid var(--line-2);color:var(--ink-2);font-size:.74rem;white-space:nowrap;
+    font-variant-numeric:tabular-nums}
+  .wk-cost.wk-cost-partial{border-style:dashed}
+  @media(max-width:760px){
+    .fk-wrap{padding:.7rem}
+    .fk-table{font-size:.86rem}
+    .fk-table th,.fk-table td{padding:.35rem .3rem}
+  }
+
   /* ---------- Fertiliser: beds-done progress + log modal ---------- */
   /* Sits between the round pills and the rates. Answers "how far through this round am I" without
      leaving the page you're already reading the rates on. */
@@ -1642,6 +1751,47 @@
   .fpl-manual-del{flex:0 0 auto;border:none;background:none;color:var(--ink-2);cursor:pointer;
     font-size:.95rem;padding:.2rem .3rem}
   .fpl-manual-del:hover{color:var(--clay)}
+
+  /* ---------- Fert records: by-bed view ----------
+     The question this answers is asked standing at the bed, so the page is one scroll: pick a
+     block, pick a bed, read its history underneath. No columns to lose your place in. */
+  .fr-mode{display:flex;border:1px solid var(--line-2);border-radius:9px;overflow:hidden;flex:0 0 auto}
+  .fr-mode button{padding:.4rem .8rem;border:none;background:var(--paper-2);color:var(--ink-2);
+    font-family:inherit;font-size:.85rem;cursor:pointer}
+  .fr-mode button[aria-pressed="true"]{background:var(--steel);color:#fff;font-weight:650}
+  .fr-mode button:first-child{border-right:1px solid var(--line-2)}
+
+  .frb-wrap{display:flex;flex-direction:column;gap:.7rem;padding:.6rem 0 3rem}
+  .frb-label{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;
+    color:var(--ink-2)}
+  .frb-blocks{display:flex;gap:.35rem;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:.2rem}
+  .frb-block{flex:0 0 auto;border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink-2);
+    border-radius:999px;padding:.45rem .95rem;font-family:inherit;font-size:.9rem;cursor:pointer;
+    white-space:nowrap}
+  .frb-block[aria-selected="true"]{background:var(--steel);color:#fff;border-color:var(--steel);font-weight:650}
+  .frb-beds{display:grid;grid-template-columns:repeat(auto-fill,minmax(5.2rem,1fr));gap:.4rem}
+  .frb-bed{border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink);
+    border-radius:10px;padding:.6rem .3rem;font-family:inherit;font-size:.92rem;cursor:pointer;
+    text-align:center;line-height:1.2}
+  /* The count is the whole point of showing every bed rather than only the fed ones: a bed with
+     nothing on it is an answer, and it has to be visibly zero rather than absent. */
+  .frb-bed .frb-bed-n{display:block;font-family:var(--mono);font-size:.58rem;
+    text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-top:.15rem}
+  .frb-bed[aria-selected="true"]{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:650}
+  .frb-bed-none{opacity:.55}
+  .frb-detail{display:flex;flex-direction:column;gap:.6rem}
+  .frb-head{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;
+    border-top:1px solid var(--line-2);padding-top:.7rem}
+  .frb-head-name{font-size:1.15rem;font-weight:700}
+  .frb-head-sub{font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
+  /* Running totals per product, for this bed only. Rates are stored per bed, so these add up
+     honestly across applications no matter how many beds each one covered. */
+  .frb-totals{display:flex;flex-direction:column;gap:.35rem;border:1px solid var(--line-2);
+    border-radius:12px;background:var(--paper-2);padding:.6rem .8rem}
+  .frb-total{display:flex;align-items:baseline;gap:.6rem}
+  .frb-total-name{flex:1;min-width:0;font-weight:650;font-size:.95rem}
+  .frb-total-fig{font-family:var(--mono);font-size:1rem;white-space:nowrap}
+  .frb-total-n{font-family:var(--mono);font-size:.66rem;color:var(--ink-2);white-space:nowrap}
 
   /* ---------- Field walk ---------- */
   .fw-top{flex-wrap:wrap;row-gap:.5rem}
@@ -1801,6 +1951,7 @@
   <div class="tab-dd" id="infoDropdown" hidden>
     <button type="button" data-view="farminfo">Reference library</button>
     <button type="button" data-view="fertprog">Fertiliser programs</button>
+    <button type="button" data-view="fertcost">Fertiliser costs</button>
     <button type="button" data-view="fertcalc">Fertigation calculator</button>
   </div>
   <div class="tab-dd" id="sprayDropdown" hidden>
@@ -1837,6 +1988,7 @@
     <button class="nav-drawer-item" data-view="spraymix">Saved mixes</button>
     <button class="nav-drawer-item" data-view="fertrec">Fert records</button>
     <button class="nav-drawer-item" data-view="fertprog">Fertiliser programs</button>
+    <button class="nav-drawer-item" data-view="fertcost">Fertiliser costs</button>
     <button class="nav-drawer-item" data-view="fertcalc">Fertigation calculator</button>
     <button class="nav-drawer-item" data-view="farminfo">Reference library</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
@@ -1915,6 +2067,8 @@
           aria-pressed="false" style="margin-left:.4rem">🔓 Unlocked</button>
         <button class="icon-btn" id="cmTarpBtn" title="Draw a tarp: drag down a bed column to cover it for that stretch"
           aria-pressed="false" style="margin-left:.4rem">▨ Tarp</button>
+        <button class="icon-btn" id="cmZoneBtn" title="Wind back a run of plantings into a single bed zone — for when the detailed plan has stopped being true"
+          style="margin-left:.4rem">◆ Wind back</button>
         <span class="sub" id="cmDragHint" style="margin-left:.5rem">drag to assign or move · Map pans/zooms the whole farm</span>
       </div>
       <div class="cm-block-picker" id="cmBlockPicker"></div>
@@ -2101,6 +2255,20 @@
           Plantings already sitting on a bed with an issue against that crop. Click one to open it.
         </p>
         <div id="bdConflicts"></div>
+
+        <div class="ap-sect">Bed prep history</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+          What cultivation has been done to each bed, and when. Set a target interval per operation
+          under Targets and any bed past it is flagged here. Advisory only — nothing on this list
+          blocks a planting.
+        </p>
+        <div class="bp-controls">
+          <button class="btn" id="bpLogBtn">+ Log prep…</button>
+          <button type="button" class="cr-add-variety" id="bpTargetsBtn">Targets…</button>
+          <label class="bp-showall"><input type="checkbox" id="bpShowAll"> Show all beds</label>
+        </div>
+        <div id="bpTargets" hidden></div>
+        <div id="bpBody"></div>
       </div>
     </section>
 
@@ -2166,6 +2334,7 @@
               <th title="Which lifecycle stage stops the repeat (e.g. keeps recurring until First harvest)">Repeat&nbsp;until</th>
               <th title="Minutes of work this task takes per 15m of bed — scales with a planting's actual bed length to estimate workload in This week">Min&nbsp;/&nbsp;15m</th>
               <th title="Which field-walk note pill opens ＋ Task straight to this task. Pick '+ Add new tag…' to create one under an existing category.">Field&nbsp;walk&nbsp;tag</th>
+              <th title="Which fertiliser program this task carries out. Set it and the task shows the program, round and cost on This week — the round comes from where the planting sits in its bed (1st planting = round 1).">Fert&nbsp;program</th>
               <th>Description</th>
               <th></th>
             </tr>
@@ -2249,6 +2418,7 @@
         <span class="wk-tt-status" id="wkGcalStatus"></span>
         <button class="icon-btn" id="wkGcalSyncBtn" title="Push this week's schedule to Google Calendar">📅 Google Calendar</button>
         <div class="wk-add-group">
+          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat">✨ From Claude chat</button>
           <button class="btn-ghost" id="wkAddTaskBtn">+ Add task</button>
           <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
         </div>
@@ -2428,11 +2598,18 @@
     <section class="view" id="view-fertrec">
       <div class="cm-top">
         <span class="sub">Fertiliser records</span>
+        <!-- Two ways into the same log: chronological (what did we do lately) and by bed (what has
+             this bed had). The second is the one asked at the bed, standing in front of it. -->
+        <div class="fr-mode" id="frMode">
+          <button type="button" data-fr-mode="date" aria-pressed="true">By date</button>
+          <button type="button" data-fr-mode="bed" aria-pressed="false">By bed</button>
+        </div>
         <span class="spacer" style="flex:1"></span>
         <span class="fp-prog-txt" id="frCount"></span>
         <button class="btn-primary" id="frNewBtn" type="button">＋ Log fertiliser</button>
       </div>
       <div class="cr-wrap" id="frBody"></div>
+      <div class="cr-wrap" id="frBedBody" hidden></div>
     </section>
 
     <!-- FERTILISER PROGRAMS — the shed page. Program > Block > Round > rates, three shallow levels
@@ -2474,6 +2651,27 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- FERTILISER COSTS — the money side of the programs page. Three tabs because there are three
+         genuinely different questions: what does this stuff cost (a catalogue, edited when an
+         invoice arrives), what have we used (the log, priced), and what will the season cost (the
+         programs, projected over the plantings). Everything but the catalogue is derived — nothing
+         here is a number anyone types twice. -->
+    <section class="view" id="view-fertcost">
+      <div class="cm-top">
+        <span class="sub" id="fkCrumb">Fertiliser costs</span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn-ghost" id="fkAddProduct" type="button">＋ Add product</button>
+      </div>
+      <div class="fk-wrap">
+        <div class="fk-tabs" id="fkTabs" role="tablist">
+          <button type="button" role="tab" data-fk-tab="prices" aria-selected="true">Products &amp; prices</button>
+          <button type="button" role="tab" data-fk-tab="used" aria-selected="false">Used to date</button>
+          <button type="button" role="tab" data-fk-tab="forecast" aria-selected="false">Season forecast</button>
+        </div>
+        <div id="fkBody"></div>
       </div>
     </section>
 
@@ -2613,6 +2811,57 @@
     </div>
   </div>
 
+  <!-- WEEKLY PLANNER: paste a suggestion copied from a separate Claude chat. Claude structures it,
+       then it only ever pre-fills the Task or Spray-plan form below (see the "QUICK ADD" JS
+       section) — nothing is saved here directly. -->
+  <div id="qaModal">
+    <div class="wk-group-card">
+      <button class="ap-x" id="qaClose" title="Close">✕</button>
+      <div class="wk-group-title">Paste a suggestion</div>
+      <p class="sub" style="max-width:52ch">Paste the suggestion text from your Claude chat. It'll be turned into a task or spray record for you to check — nothing is saved until you hit Save on that form.</p>
+      <div id="qaNoKey" style="display:none">
+        <p class="sub" style="max-width:52ch">An Anthropic API key is needed. Add one under settings (⚙, top right).</p>
+      </div>
+      <div id="qaBody">
+        <textarea id="qaText" rows="8" maxlength="4000" placeholder="Paste the suggestion here…" style="width:100%"></textarea>
+        <div class="sp-err" id="qaErr" hidden></div>
+      </div>
+      <div class="ap-actions">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="qaCancel">Cancel</button>
+        <button class="btn-primary" id="qaSubmit">Parse</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BEDS: log a bed prep event. Opened from the Beds tab's "+ Log prep…", from the mobile bed
+       drill-down, and from ticking a Bed prep task in the weekly planner (see bpOpenLog). -->
+  <div id="bpModal">
+    <div class="wk-group-card">
+      <button class="ap-x" id="bpClose" title="Close">✕</button>
+      <div class="wk-group-title" id="bpTitle">Log bed prep</div>
+      <div class="wk-task-form">
+        <label class="ap-trow-f"><span>Date</span><input type="date" id="bpDate"></label>
+        <div>
+          <div class="bd-excl-label">What was done</div>
+          <div class="bd-chips" id="bpOpChips"></div>
+        </div>
+        <div>
+          <div class="bd-excl-label">Beds</div>
+          <div class="bd-chips" id="bpBedChips"></div>
+          <input type="text" id="bpBedSearch" placeholder="Add a bed by name…" style="margin-top:.4rem">
+          <div class="sp-suggest" id="bpBedSuggest" hidden></div>
+        </div>
+        <label class="ap-trow-f"><span>Notes</span><input type="text" id="bpNotes" placeholder="Optional" maxlength="200"></label>
+      </div>
+      <div class="ap-actions">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="bpCancel">Cancel</button>
+        <button class="btn-primary" id="bpSave">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div id="loading">reading the base…</div>
 
   <!-- GATE / SETTINGS -->
@@ -2640,6 +2889,20 @@
 
       <label class="fld" for="akInput">Anthropic API key <span style="opacity:.6;font-weight:400">— optional, for Seed book</span></label>
       <input type="password" id="akInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <div class="wk-task-form-row">
+        <label class="ap-trow-f"><span>Photo reading model <span style="opacity:.6;font-weight:400">(Seed book, Harvest whiteboard)</span></span>
+          <select id="modelOcrInput">
+            <option value="claude-opus-4-8">Opus 4.8 (most capable — default)</option>
+            <option value="claude-sonnet-4-6">Sonnet 4.6 (faster, cheaper)</option>
+            <option value="claude-haiku-4-5">Haiku 4.5 (fastest, cheapest)</option>
+          </select></label>
+        <label class="ap-trow-f"><span>Quick add model <span style="opacity:.6;font-weight:400">(paste a suggestion)</span></span>
+          <select id="modelQaInput">
+            <option value="claude-opus-4-8">Opus 4.8 (most capable)</option>
+            <option value="claude-sonnet-4-6" selected>Sonnet 4.6 (faster, cheaper — default)</option>
+            <option value="claude-haiku-4-5">Haiku 4.5 (fastest, cheapest)</option>
+          </select></label>
+      </div>
       <button class="btn" id="connectBtn">Connect</button>
       <button class="btn ghost" id="clearBtn" style="display:none">Disconnect &amp; forget tokens</button>
       <div class="status" id="gateStatus"></div>
@@ -3148,6 +3411,43 @@
   </div>
 </div>
 
+<!-- Wind back: collapse a run of plantings into one bed zone, and restore what's already parked.
+     Both halves live in one dialog because they're the same decision seen from either end. -->
+<div id="znModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(620px,100%)" role="dialog" aria-modal="true" aria-labelledby="znHead">
+    <button class="ap-x" id="znClose" title="Close">✕</button>
+    <div class="ap-head" id="znHead">Wind back to a zone</div>
+    <div class="ap-sub">Replace a run of plantings with a single statement of intent — the crop type,
+      the stretch of time and the metres. Nothing is deleted: the plantings are parked, and you can
+      restore them exactly as they were.</div>
+
+    <label class="ap-field" style="margin-top:1.05rem"><span>What to wind back</span>
+      <select id="znTarget"></select>
+    </label>
+    <p class="sub" id="znPreview" style="margin:.7rem 0 0"></p>
+
+    <label class="ap-field" style="margin-top:1.05rem"><span>The beds</span>
+      <select id="znHold">
+        <option value="hold">Hold them — keep the ground reserved, one zone per bed</option>
+        <option value="release">Release them — free the ground, leave one unplaced demand row</option>
+      </select>
+    </label>
+
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="znCollapse">Wind back</button>
+      <button class="btn-ghost" id="znCancel">Cancel</button>
+    </div>
+
+    <div id="znParkedWrap" style="margin-top:1.6rem;display:none">
+      <div class="ap-head" style="font-size:.95rem">Zones</div>
+      <div class="ap-sub"><strong>Restore</strong> brings the parked plantings back exactly as they
+        were, tasks and harvest records intact. <strong>Expand fresh</strong> leaves them parked and
+        generates a new run from today's dates instead — the intent kept, the timing redone.</div>
+      <div id="znParkedList" style="margin-top:.7rem"></div>
+    </div>
+  </div>
+</div>
+
 <script src="planner-shared.js"></script>
 <script>
 "use strict";
@@ -3182,6 +3482,12 @@ const UI_KEY = "roseberry_ui";
 const AK_KEY = "roseberry_anthropic_key";
 let PAT = localStorage.getItem(LS_KEY) || "";
 let AKEY = localStorage.getItem(AK_KEY) || "";
+// Per-feature model choice: OCR (Seed book / Harvest whiteboard, reading handwriting off a photo)
+// is the harder task and defaults to Opus; Quick add (structuring a few lines of already-typed
+// text) is easy enough to run cheaper. Both fall back to SB_MODEL (defined below) when unset.
+const MODEL_OCR_KEY = "roseberry_model_ocr", MODEL_QA_KEY = "roseberry_model_quickadd";
+let MODEL_OCR = localStorage.getItem(MODEL_OCR_KEY) || "";
+let MODEL_QA = localStorage.getItem(MODEL_QA_KEY) || "";
 // ---- Supabase migration (Phase 3) ----
 // BACKEND selects which of the two data stores atFetch/atPatch/atCreate/atDelete actually hit.
 // Defaults to "airtable" so nothing changes for normal use until the real data has been migrated
@@ -3198,7 +3504,7 @@ let SB_KEY = localStorage.getItem(SB_KEY_KEY) || "";
 function normalizeSbUrl(v){
   return v.trim().replace(/\/+$/,"").replace(/\/rest\/v1$/,"");
 }
-let data = { blocks:[], beds:[], plantings:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -3277,7 +3583,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedZones, fertProducts] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -3307,6 +3613,10 @@ async function loadAll(){
       fwFetch(CFG.tables.fertItems),
       fwFetch(CFG.tables.fertApplications),
       fwFetch(CFG.tables.fertApplicationItems),
+      fwFetch(CFG.tables.bedPrepEvents),   // same guard: an un-run migration empties the Bed prep
+      fwFetch(CFG.tables.bedPrepTargets),  // history subsection rather than killing the Beds tab
+      fwFetch(CFG.tables.bedZones),        // likewise: no bed_zones table ⇒ no zones, planner unchanged
+      fwFetch(CFG.tables.fertProducts),    // and again: no prices ⇒ costs page shows usage, no dollars
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -3340,6 +3650,7 @@ async function loadAll(){
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
       fwTag:t.fields[F.tk_fwtag] || "",
+      fertProgramId:(t.fields[F.tk_fertProgram]||[])[0] || null,
     })).sort((a,b)=>a.name.localeCompare(b.name));
 
     // crop→task assignments (renders in the Misc → Crop tasks tree)
@@ -3376,6 +3687,8 @@ async function loadAll(){
     }));
 
     data.bedIssues = PlannerShared.parseBedIssues(bedIssues);
+    data.bedPrepEvents  = PlannerShared.parseBedPrepEvents(bedPrepEvents);
+    data.bedPrepTargets = PlannerShared.parseBedPrepTargets(bedPrepTargets);
 
     // parse every planting and keep the full list — the Crop Map needs unassigned
     // plantings and multiple (succession) plantings per bed, not just one headline.
@@ -3395,8 +3708,18 @@ async function loadAll(){
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
+      parked:!!p.fields[F.pl_parked],
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
+
+    // Parked plantings have been wound back into a bed zone. data.plantings stays complete so ids
+    // still resolve for planting_tasks / harvest_records and the Parked list can show them, but
+    // every VIEW reads plantingsActive instead — one filter here rather than a `!p.parked` guard
+    // scattered through the map, timeline, occupancy maths, task generation and suggestion engine.
+    rebuildActivePlantings();
+
+    // Bed zones — the coarse layer. Parsed via planner-shared so a Node consumer agrees.
+    data.bedZones = PlannerShared.parseBedZones(bedZones);
 
     // where produce is sold (Harvest → Sales outlets); active-first, then manual Order, then name
     data.salesOutlets = salesOutlets.map(o => ({
@@ -3450,6 +3773,7 @@ async function loadAll(){
     data.fertApps     = PlannerShared.attachFertItems(
       PlannerShared.parseFertApplications(fertApps),
       PlannerShared.parseFertApplicationItems(fertAppItems));
+    data.fertProducts = PlannerShared.parseFertProducts(fertProducts);
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -3850,6 +4174,7 @@ function showView(view){
   if(view==="fertprog") buildFertProg();
   if(view==="fertrec") buildFertRecords();
   if(view==="fertcalc") buildFertCalc();
+  if(view==="fertcost") buildFertCost();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
@@ -3890,7 +4215,7 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
   // sub-views that live under a dropdown tab rather than their own top-level tab
   const DROPDOWN_PARENT={ beds:miscTab, seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
                           harvest:harvestTab, whiteboard:harvestTab, outlets:harvestTab, season:harvestTab,
-                          farminfo:infoTab, fertprog:infoTab, fertcalc:infoTab };
+                          farminfo:infoTab, fertprog:infoTab, fertcost:infoTab, fertcalc:infoTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
   function close(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); fab.setAttribute("aria-expanded","false"); }
@@ -3951,6 +4276,8 @@ document.getElementById("connectBtn").onclick=async()=>{
   const ak=document.getElementById("akInput").value.trim();
   AKEY=ak;
   if(ak) localStorage.setItem(AK_KEY,ak); else localStorage.removeItem(AK_KEY);
+  MODEL_OCR=document.getElementById("modelOcrInput").value; localStorage.setItem(MODEL_OCR_KEY,MODEL_OCR);
+  MODEL_QA=document.getElementById("modelQaInput").value; localStorage.setItem(MODEL_QA_KEY,MODEL_QA);
   document.getElementById("gateStatus").className="status";
   document.getElementById("gateStatus").textContent="Connecting…";
   await loadAll();
@@ -3960,11 +4287,15 @@ document.getElementById("clearBtn").onclick=()=>{
   localStorage.removeItem(AK_KEY);AKEY="";
   localStorage.removeItem(SB_URL_KEY);SB_URL="";
   localStorage.removeItem(SB_KEY_KEY);SB_KEY="";
+  localStorage.removeItem(MODEL_OCR_KEY);MODEL_OCR="";
+  localStorage.removeItem(MODEL_QA_KEY);MODEL_QA="";
   localStorage.setItem(BACKEND_KEY,"airtable");BACKEND="airtable";
   document.getElementById("patInput").value="";
   document.getElementById("akInput").value="";
   document.getElementById("sbUrlInput").value="";
   document.getElementById("sbKeyInput").value="";
+  document.getElementById("modelOcrInput").value="claude-opus-4-8";
+  document.getElementById("modelQaInput").value="claude-sonnet-4-6";
   document.getElementById("backendSelect").value="airtable";
   applyBackendFieldVisibility();
   gate(true,null,"Tokens forgotten.");
@@ -3975,6 +4306,8 @@ document.getElementById("gearBtn").onclick=()=>{
   document.getElementById("sbUrlInput").value=SB_URL;
   document.getElementById("sbKeyInput").value=SB_KEY;
   document.getElementById("akInput").value=AKEY;
+  document.getElementById("modelOcrInput").value=MODEL_OCR||"claude-opus-4-8";
+  document.getElementById("modelQaInput").value=MODEL_QA||"claude-sonnet-4-6";
   applyBackendFieldVisibility();
   gate(true,null,"");
 };
@@ -4025,10 +4358,19 @@ function cmIsMobile(){ return window.matchMedia("(max-width:760px)").matches; }
 // Recency is judged by ground-occupancy start (Transplant date, falling back to Sow date for
 // direct-seeded crops) rather than Sow date alone — a nursery-stage succession shouldn't bump a
 // still-finishing planting out of the headline slot before it's actually in the bed.
+// Plantings that have been collapsed into a bed zone are "parked": still in data.plantings (so
+// their ids keep resolving for tasks, harvest records and the Parked list) but absent from every
+// view and from the occupancy maths. Deriving the filtered list once, here, is what keeps that
+// from becoming a `!p.parked` check repeated across a dozen call sites.
+function rebuildActivePlantings(){
+  data.plantingsActive = (data.plantings||[]).filter(p=>!p.parked);
+}
+
 function rebuildDerived(){
+  rebuildActivePlantings();          // parked plantings must not win a bed's headline slot
   const groundStart=r=>r.tp||r.sow||"";
   const byBed={};
-  (data.plantings||[]).forEach(rec=>{
+  (data.plantingsActive||[]).forEach(rec=>{
     const bid=rec.bedIds[0]; if(!bid) return;
     const cur=byBed[bid];
     if(!cur){byBed[bid]=rec;return;}
@@ -4140,6 +4482,259 @@ function tarpRefreshViews(){
   else if(id==="view-map") layoutAndDraw();
   else if(id==="view-misc") trpRenderList();
   else if(id==="view-week") buildWeekPlanner();
+}
+
+/* ---------- Bed zone writes + the Collapse / Expand pair ----------
+   Collapse is the point of the whole zone layer: it takes a set of plantings that have stopped
+   being true and winds them back into a single statement of intent, so the plan gets quieter
+   without anything being thrown away. Expand goes the other way — either restoring the exact
+   plantings that were parked, or generating fresh ones from today's dates.
+
+   Nothing here deletes a planting. Parking keeps the id, which is what makes Restore free: the
+   planting_tasks and harvest_records hanging off that id never went anywhere. */
+
+function zoneFields(z){
+  const F=CFG.f, o={};
+  if(z.bedId!==undefined)    o[F.zn_beds]   = z.bedId?[z.bedId]:[];
+  if(z.type!==undefined)     o[F.zn_type]   = z.type||"";
+  if(z.cropId!==undefined)   o[F.zn_crop]   = z.cropId?[z.cropId]:[];
+  if(z.start!==undefined)    o[F.zn_start]  = z.start||null;
+  if(z.end!==undefined)      o[F.zn_end]    = z.end||null;
+  if(z.m!==undefined)        o[F.zn_m]      = z.m;
+  if(z.parkedIds!==undefined)o[F.zn_parked] = (z.parkedIds||[]).slice();
+  if(z.notes!==undefined)    o[F.zn_notes]  = z.notes||"";
+  if(z.name!==undefined)     o[F.zn_name]   = z.name||"";
+  return o;
+}
+function zoneName(z){
+  const bed=(data.beds||[]).find(b=>b.id===z.bedId);
+  const what=z.cropId?(data.crops[z.cropId]||z.type):z.type;
+  return [bed?bed.name:"Unplaced", what||"Zone", z.start||""].filter(Boolean).join(" — ");
+}
+async function zoneSave(z, id){
+  const payload = zoneFields({...z, name:z.name!==undefined?z.name:zoneName({...z, id})});
+  if(id){
+    await atPatch(CFG.farmBase, CFG.tables.bedZones, id, payload);
+    const cur=(data.bedZones||[]).find(x=>x.id===id);
+    if(cur) Object.assign(cur, z);
+    return cur;
+  }
+  const [rec] = await atCreate(CFG.farmBase, CFG.tables.bedZones, [payload]);
+  const parsed = PlannerShared.parseBedZones([rec])[0];
+  (data.bedZones ||= []).push(parsed);
+  return parsed;
+}
+async function zoneDelete(id){
+  await atDelete(CFG.farmBase, CFG.tables.bedZones, [id]);
+  data.bedZones = (data.bedZones||[]).filter(z=>z.id!==id);
+}
+
+// Park / unpark. The bed link is deliberately left alone: `Parked` already removes the planting
+// from every view and from the occupancy maths, so keeping the link means Restore is a one-field
+// flip rather than a reconstruction.
+async function setParked(plantingId, parked){
+  await atPatch(CFG.farmBase, CFG.tables.plantings, plantingId, {[CFG.f.pl_parked]: parked||null});
+  const p=(data.plantings||[]).find(x=>x.id===plantingId);
+  if(p) p.parked=!!parked;
+}
+
+// The zone a set of plantings collapses into. Dates span the whole run (earliest sow → latest
+// finish) because that's the stretch of ground-time the intent covers. The crop is only carried
+// through when every member agrees — a mixed set collapses to its type, which is the point.
+function collapseSpec(members, opts){
+  const bms=members.map(p=>p.bm).filter(v=>v!=null);
+  const starts=members.map(p=>p.sow).filter(Boolean).sort();
+  const ends=members.map(p=>p.h2||p.h1||p.sow).filter(Boolean).sort();
+  const cropIds=[...new Set(members.map(p=>p.cropId).filter(Boolean))];
+  const types=[...new Set(members.map(p=>cropTypeOfPlanting(p)).filter(Boolean))];
+  return {
+    type: types.length===1 ? types[0] : "",
+    cropId: cropIds.length===1 ? cropIds[0] : null,
+    start: starts[0]||"", end: ends[ends.length-1]||"",
+    m: bms.length ? Math.round(bms.reduce((a,b)=>a+b,0)*10)/10 : null,
+    bedId: (opts&&opts.bedId)||null,
+    parkedIds: members.map(p=>p.id),
+    notes: "",
+  };
+}
+
+// Collapse `members` into zone(s) and park them.
+//   holdBeds  → one zone per bed the members occupied, each keeping that bed's share of the metres
+//   release   → a single bed-less demand row, freeing the ground and letting auto-place re-solve it
+async function collapsePlantings(members, holdBeds){
+  if(!members.length) return [];
+  const created=[];
+  if(holdBeds){
+    const byBed={};
+    members.forEach(p=>{ const b=p.bedIds[0]||null; (byBed[b||"__none__"] ||= []).push(p); });
+    for(const key of Object.keys(byBed)){
+      const bedId = key==="__none__" ? null : key;
+      created.push(await zoneSave(collapseSpec(byBed[key], {bedId})));
+    }
+  }else{
+    created.push(await zoneSave(collapseSpec(members, {bedId:null})));
+  }
+  for(const p of members) await setParked(p.id, true);
+  rebuildActivePlantings();
+  return created;
+}
+
+// Exact undo: unpark this zone's members and drop the zone. Their tasks and harvest records come
+// back with them, because the ids never changed.
+async function zoneRestore(zoneId){
+  const z=(data.bedZones||[]).find(x=>x.id===zoneId); if(!z) return 0;
+  for(const pid of (z.parkedIds||[])) await setParked(pid, false);
+  const n=(z.parkedIds||[]).length;
+  await zoneDelete(zoneId);
+  rebuildActivePlantings();
+  return n;
+}
+
+/* ---- Wind-back dialog ----
+   Offers the collapsible sets that actually mean something to a grower: a succession group (the
+   common case — "the lettuce run has fallen over"), or every remaining planting of one crop in one
+   block. Finished plantings are never offered; they're history, not a plan that can stop being
+   true. */
+function $zn(id){ return document.getElementById(id); }
+
+function znCandidates(){
+  const live=(data.plantingsActive||[]).filter(p=>p.status!=="Finished");
+  const out=[];
+  const groups={};
+  live.forEach(p=>{ if(p.group) (groups[p.group] ||= []).push(p); });
+  Object.keys(groups).sort().forEach(g=>{
+    out.push({key:"group:"+g, label:`Succession group · ${g}`, members:groups[g]});
+  });
+  const byCropBlock={};
+  live.forEach(p=>{
+    const bed=(data.beds||[]).find(b=>b.id===p.bedIds[0]);
+    const blk=bed?bed.block:"(unplaced)";
+    (byCropBlock[`${p.crop}|${blk}`] ||= []).push(p);
+  });
+  Object.keys(byCropBlock).sort().forEach(k=>{
+    const [crop,blk]=k.split("|"), members=byCropBlock[k];
+    if(members.length<2) return;                       // a single planting isn't worth a zone
+    out.push({key:"cb:"+k, label:`${crop} in ${blk} · ${members.length} plantings`, members});
+  });
+  return out;
+}
+
+function znDescribe(members, holdBeds){
+  if(!members.length) return "Nothing to wind back.";
+  const spec=collapseSpec(members, {});
+  const beds=[...new Set(members.map(p=>{
+    const b=(data.beds||[]).find(x=>x.id===p.bedIds[0]); return b?b.name:null;
+  }).filter(Boolean))];
+  const what=spec.cropId?(data.crops[spec.cropId]||spec.type):(spec.type||"mixed");
+  const where=holdBeds
+    ? (beds.length?`${beds.length} zone${beds.length>1?"s":""} on ${beds.join(", ")}`:"one unplaced zone")
+    : "one unplaced demand row";
+  return `${members.length} planting${members.length>1?"s":""} → ${where}: `
+       + `${what}, ${fmt(spec.start)} – ${fmt(spec.end)}`
+       + (spec.m!=null?`, ${spec.m} m`:"");
+}
+
+function znSyncPreview(){
+  const sel=$zn("znTarget"), cand=znCandidates().find(c=>c.key===sel.value);
+  const hold=$zn("znHold").value==="hold";
+  $zn("znPreview").textContent = cand ? znDescribe(cand.members, hold) : "Nothing to wind back.";
+  $zn("znCollapse").disabled = !cand;
+}
+
+function znRenderParked(){
+  const wrap=$zn("znParkedWrap"), list=$zn("znParkedList");
+  const zones=(data.bedZones||[]);
+  wrap.style.display = zones.length ? "" : "none";
+  if(!zones.length) return;
+  // Every zone can be expanded; only ones holding parked plantings can be restored.
+  list.innerHTML = zones.map(z=>{
+    const bed=(data.beds||[]).find(b=>b.id===z.bedId);
+    const n=(z.parkedIds||[]).length;
+    return `<div class="zn-parked-row">`
+      +`<span><strong>${esc(zoneLabel(z))}</strong> `
+        +`<span class="sub">${esc(bed?bed.name:"unplaced")} · ${esc(fmt(z.start))} – ${esc(fmt(z.end))}`
+        +`${n?` · ${n} parked`:""}</span></span>`
+      +`<span style="display:flex;gap:6px">`
+        +`<button type="button" class="btn-ghost zn-expand" data-zid="${z.id}">Expand fresh</button>`
+        +(n?`<button type="button" class="btn-ghost zn-restore" data-zid="${z.id}">Restore</button>`:"")
+      +`</span>`
+    +`</div>`;
+  }).join("");
+  list.querySelectorAll(".zn-expand").forEach(b=>b.onclick=()=>znExpandFresh(b.dataset.zid));
+  list.querySelectorAll(".zn-restore").forEach(b=>b.onclick=async()=>{
+    b.disabled=true; b.textContent="Restoring…";
+    try{
+      const n=await zoneRestore(b.dataset.zid);
+      znRenderParked(); znSyncTarget(); tarpRefreshViews();
+      $zn("znPreview").textContent=`Restored ${n} planting${n===1?"":"s"} — back on the map with their tasks.`;
+    }catch(e){ b.disabled=false; b.textContent="Restore"; alert("Restore failed: "+e.message); }
+  });
+}
+
+function znSyncTarget(){
+  const sel=$zn("znTarget"), cand=znCandidates();
+  const keep=sel.value;
+  sel.innerHTML = cand.length
+    ? cand.map(c=>`<option value="${esc(c.key)}">${esc(c.label)}</option>`).join("")
+    : `<option value="">Nothing available to wind back</option>`;
+  if(cand.some(c=>c.key===keep)) sel.value=keep;
+  znSyncPreview();
+}
+
+function znOpen(){
+  znSyncTarget();
+  znRenderParked();
+  $zn("znModal").classList.add("open");
+  $zn("znModal").setAttribute("aria-hidden","false");
+}
+function znClose(){
+  $zn("znModal").classList.remove("open");
+  $zn("znModal").setAttribute("aria-hidden","true");
+}
+
+// Expand fresh — the other half of the pair. Rather than restoring stale plantings, this opens the
+// normal Add-planting dialog seeded from the zone (crop, bed, metres) but starting TODAY, and lets
+// the existing count × gap succession machinery generate the run. That's the whole point of winding
+// back: the intent survives, the dates are re-derived from what's actually true now.
+//
+// The zone and its parked members are deliberately left alone. Deciding whether the old plantings
+// are still worth keeping is a separate call from deciding what to plant next, and quietly
+// discarding them here would make Expand destructive in a way its name doesn't advertise.
+function znExpandFresh(zoneId){
+  const z=(data.bedZones||[]).find(x=>x.id===zoneId); if(!z) return;
+  const cropId = z.cropId || Object.keys(data.crops).find(k=>(data.cropDefs[k]||{}).type===z.type);
+  if(!cropId){
+    $zn("znPreview").textContent=`No crop to expand into — this zone is type-level (${z.type||"untyped"}) `
+      + `and no crop of that type exists. Refine the zone to a crop first.`;
+    return;
+  }
+  znClose();
+  apOpen();
+  apSelectCrop(cropId);
+  // seed from the zone, then let the dialog's own cascade recompute every downstream date
+  if(z.bedId) $ap("apBed").value = z.bedId;
+  if(z.m!=null) $ap("apBm").value = z.m;
+  $ap("apSow").value = todayISO();
+  apCascadeFromSow();
+  const gap=(data.cropDefs[cropId]||{}).gap;
+  if(gap!=null){ $ap("apGap").value=gap; }
+  $ap("apMsg").textContent = `Expanding "${zoneLabel(z)}" — dates start from today. `
+    + `Set how many successions and the gap, then Create. The zone stays until you remove it.`;
+}
+
+async function znDoCollapse(){
+  const cand=znCandidates().find(c=>c.key===$zn("znTarget").value);
+  if(!cand) return;
+  const hold=$zn("znHold").value==="hold";
+  const btn=$zn("znCollapse"); btn.disabled=true; btn.textContent="Winding back…";
+  try{
+    const n=cand.members.length;
+    const zones=await collapsePlantings(cand.members, hold);
+    znSyncTarget(); znRenderParked(); tarpRefreshViews();
+    $zn("znPreview").textContent=`Wound ${n} planting${n===1?"":"s"} back into `
+      + `${zones.length} zone${zones.length===1?"":"s"}. Restore below if you need them again.`;
+  }catch(e){ alert("Wind back failed: "+e.message); }
+  finally{ btn.disabled=false; btn.textContent="Wind back"; }
 }
 
 /* ---- Tarp editor dialog + Misc-page list ----
@@ -4366,23 +4961,82 @@ function issueLabel(i){
 function issuesTitle(list){
   return list.map(i=>(i.severity==="Avoid"?"Avoid: ":"")+issueLabel(i)).join("\n");
 }
+/* ---------- Bed zones: the coarse planning layer ----------
+   A zone reserves a crop TYPE on a bed for a window, with a metre budget. Unlike a tarp (which is
+   deliberately invisible to the occupancy maths) a zone DOES consume space — but by net drawdown,
+   so the two layers never double-count. See zoneRemaining in planner-shared.js.
+
+   Crop-type mismatch, though, follows the same advisory contract as tarps and bed issues above: it
+   badges and warns, and never removes a drop target or blocks a save. */
+function cropTypeOfPlanting(p){ return (data.cropDefs[p.cropId]||{}).type || ""; }
+
+// Zones sitting on this bed whose window overlaps `win`. Bed-less zones (demand rows) are excluded
+// by construction — they aren't on any bed yet.
+function zonesForBed(bedId, win){
+  return (data.bedZones||[]).filter(z=>{
+    if(z.bedId!==bedId) return false;
+    if(!win) return true;
+    return windowsOverlap(win, {s:z.start?new Date(z.start):null, e:z.end?new Date(z.end):null});
+  });
+}
+
+// Metres this zone is still holding, after the plantings already inside it have drawn it down.
+function zoneRemainingOnBed(zone, excludeId){
+  const zwin={s:zone.start?new Date(zone.start):null, e:zone.end?new Date(zone.end):null};
+  const occupants=(data.plantingsActive||[]).filter(p=>
+    p.id!==excludeId && p.bedIds[0]===zone.bedId && windowsOverlap(zwin, planWindow(p)));
+  return PlannerShared.zoneRemaining(zone, occupants, cropTypeOfPlanting);
+}
+
+// Zones on this bed+window that the dragged planting does NOT match — the advisory case.
+function zoneMismatches(bedId, cropId, win){
+  const type=(data.cropDefs[cropId]||{}).type || "";
+  return zonesForBed(bedId, win).filter(z=>!PlannerShared.zoneMatchesPlanting(z, {cropId}, type));
+}
+function zoneLabel(z){
+  const what = z.cropId ? (data.crops[z.cropId]||z.type) : (z.type||"Zone");
+  const rem = zoneRemainingOnBed(z, null);
+  const m = rem!=null ? ` · ${Math.round(rem*10)/10} m left` : "";
+  return `${what}${m}`;
+}
+function zoneTitle(z){
+  return `${zoneLabel(z)}\n${fmt(z.start)} – ${fmt(z.end)}${z.notes?"\n"+z.notes:""}`;
+}
+function plantingZoneMismatches(p){
+  const bedId=(p.bedIds||[])[0];
+  return bedId ? zoneMismatches(bedId, p.cropId, planWindow(p)) : [];
+}
+
 // how much room a bed has for the dragged planting during its date window
 function bedFreeInfo(bed,drag,win){
   let used=0, unknownOccupant=false, anyOccupant=false;
-  (data.plantings||[]).forEach(p=>{
+  (data.plantingsActive||[]).forEach(p=>{
     if(p.id===drag.id || p.bedIds[0]!==bed.id) return;
     if(!windowsOverlap(win, planWindow(p))) return;
     anyOccupant=true;
     if(p.bm!=null) used+=p.bm; else unknownOccupant=true;   // occupant with no metres ⇒ assume it fills the bed
   });
+  // Zones hold space on top of the real occupants, but only the part of their budget nothing has
+  // claimed yet. A zone the drag MATCHES is reserving space *for this planting*, so instead of
+  // blocking it, that reservation offsets what the drag needs from the bed's own free metres.
+  let zoneHeld=0, zoneCredit=0;
+  const dragType=(data.cropDefs[drag.cropId]||{}).type || "";
+  zonesForBed(bed.id, win).forEach(z=>{
+    const rem=zoneRemainingOnBed(z, drag.id);
+    if(rem==null) return;                                   // zone with no stated budget holds nothing
+    if(PlannerShared.zoneMatchesPlanting(z, drag, dragType)) zoneCredit+=rem;
+    else zoneHeld+=rem;
+  });
+
   if(bed.len==null){
     // no length data yet ⇒ can only say "is this bed free in that window?"
     return {fits:!anyOccupant, free:null};
   }
   const usedEff = unknownOccupant ? bed.len : used;
   const needM = (drag.bm!=null)?drag.bm:bed.len;            // unknown planting size ⇒ needs a whole free bed
-  const free = bed.len - usedEff;
-  return {fits: free >= needM - 0.001, free};
+  const free = Math.max(0, bed.len - usedEff - zoneHeld);
+  const needEff = Math.max(0, needM - Math.min(needM, zoneCredit));
+  return {fits: free >= needEff - 0.001, free, zoneHeld, zoneCredit};
 }
 function highlightFits(drag){
   clearFits();
@@ -4404,6 +5058,17 @@ function highlightFits(drag){
       t.title="This bed is under tarp during that window — you can still plant here";
       track.appendChild(t);
     }
+    // likewise advisory: the bed is zoned for a different crop type. The zone's metres are already
+    // reflected in `free` above; this badge is only about the type mismatch, and never blocks.
+    const zm = track ? zoneMismatches(bed.id, drag.cropId, win) : [];
+    if(zm.length){
+      const z=document.createElement("div");
+      z.className="cm-zone-badge";
+      z.textContent="◆";
+      z.title="Reserved for "+zm.map(x=>x.cropId?(data.crops[x.cropId]||x.type):x.type).join(", ")
+        +"\n\nYou can still plant here.";
+      track.appendChild(z);
+    }
     // likewise advisory: this bed has a recorded issue with this crop, but it stays droppable
     const issues = track ? bedIssuesForCrop(bed.id, drag.cropId, win) : [];
     if(issues.length){
@@ -4417,7 +5082,7 @@ function highlightFits(drag){
 }
 function clearFits(){
   document.querySelectorAll("#cmBlocks .cm-col.cm-fit").forEach(c=>c.classList.remove("cm-fit"));
-  document.querySelectorAll("#cmBlocks .cm-free, #cmBlocks .cm-tarped-badge, #cmBlocks .cm-issue-badge").forEach(e=>e.remove());
+  document.querySelectorAll("#cmBlocks .cm-free, #cmBlocks .cm-tarped-badge, #cmBlocks .cm-issue-badge, #cmBlocks .cm-zone-badge").forEach(e=>e.remove());
 }
 
 // Bed groups are keyed by the block's NAME (a plain string on Bed, matched against Block
@@ -4441,7 +5106,7 @@ function buildCropMap(){
 
   // all plantings for each bed (successions included)
   const perBed={};
-  (data.plantings||[]).forEach(p=>{const bid=p.bedIds[0]; if(bid)(perBed[bid] ||= []).push(p);});
+  (data.plantingsActive||[]).forEach(p=>{const bid=p.bedIds[0]; if(bid)(perBed[bid] ||= []).push(p);});
 
   // arrange blocks in a roughly square grid (same ceil(sqrt(n)) approach as the Farm Map's
   // auto-layout) so the Crop Map bunches up like the farm, instead of one long vertical list
@@ -4483,6 +5148,24 @@ function buildCropMap(){
       const col=document.createElement("div");col.className="cm-col";col.dataset.bed=bed.id;
       const ch=document.createElement("div");ch.className="cm-col-h";ch.textContent=bed.name;ch.title=bed.name;col.appendChild(ch);
       const track=document.createElement("div");track.className="cm-track";track.style.height=CM_H+"px";
+      // Zone bands go in FIRST so they sit behind the planting bars — a zone is the intent the bars
+      // are filling in, not something that competes with them for the eye. Same cmY date track as
+      // everything else, so a zone visibly spans exactly the window it reserves.
+      zonesForBed(bed.id, null).forEach(z=>{
+        const y0=cmY(z.start), y1=cmY(z.end);
+        if(y0==null||y1==null) return;                       // outside the viewed year
+        const top=Math.min(y0,y1), height=Math.max(4,Math.abs(y1-y0));
+        const el=document.createElement("div");
+        el.className="cm-zone";
+        el.style.top=top+"px"; el.style.height=height+"px";
+        el.style.background=hexToRgba(cropTypeColor(z.type), .18);
+        el.style.borderColor=hexToRgba(cropTypeColor(z.type), .55);
+        el.dataset.zone=z.id;
+        el.title=zoneTitle(z);
+        const l=document.createElement("span"); l.className="cm-zone-l"; l.textContent=zoneLabel(z);
+        el.appendChild(l);
+        track.appendChild(el);
+      });
       (perBed[bed.id]||[]).forEach(p=>{
         // bed occupancy only — a nursery-grown planting doesn't occupy the bed until it's
         // transplanted, so the bar starts at Transplant date (falling back to Sow date for
@@ -4622,7 +5305,7 @@ function buildCropMap(){
 
 function buildUnassigned(){
   const box=document.getElementById("cmUnList"); if(!box) return;
-  const list=(data.plantings||[]).filter(p=>!p.bedIds.length);
+  const list=(data.plantingsActive||[]).filter(p=>!p.bedIds.length);
   document.getElementById("cmUnCount").textContent=list.length;
   box.innerHTML="";
   if(!list.length){box.innerHTML=`<div class="empty-note" style="padding:.4rem 0">Every planting has a bed.</div>`;return;}
@@ -5151,8 +5834,9 @@ async function atDelete(base,table,ids){
    and (after an explicit review step) writes the ref/tray count/actual date back and advances
    the planting's status. Nothing reaches Airtable until "Apply".
 
-   This is the app's only LLM call. It goes browser-direct to api.anthropic.com with the key the
-   user pasted into the gate screen — same trust model as the Airtable PAT, no proxy. */
+   This, the Harvest whiteboard, and Quick add (below the Weekly planner) share one call path
+   (aiStructuredCall) that goes browser-direct to api.anthropic.com with the key the user pasted
+   into the gate screen — same trust model as the Airtable PAT, no proxy. */
 
 const SB_MODEL = "claude-opus-4-8";
 const SB_MAX_EDGE = 2576;   // the model's high-res vision ceiling on the long edge; handwriting needs it
@@ -5230,11 +5914,12 @@ async function sbEncode(file){
   return { b64:dataUrl.slice(dataUrl.indexOf(",")+1), mediaType:"image/jpeg" };
 }
 
-// --- the vision call -------------------------------------------------------
-// Shared by the Seed book and the Harvest whiteboard: one photo in, one structured-outputs JSON
-// object out. `tooLong` is the message shown when the model runs out of tokens mid-read, since
-// what to do about it differs per page (half a page of the book vs half the board).
-async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooLong}){
+// --- the shared call ---------------------------------------------------------
+// One Anthropic request in, one structured-outputs JSON object out. `content` is
+// messages[0].content, so callers decide whether an image block is included. `tooLong` is the
+// message shown when the model runs out of tokens mid-response, since what to do about it differs
+// per caller (half a page of the seed book vs half the whiteboard vs a long pasted suggestion).
+async function aiStructuredCall({content, schema, maxTokens=8000, tooLong, refusalMsg, model}){
   const r=await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
     headers:{
@@ -5245,13 +5930,10 @@ async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooL
       "content-type":"application/json",
     },
     body:JSON.stringify({
-      model:SB_MODEL,
+      model:model||SB_MODEL,
       max_tokens:maxTokens,
       output_config:{ format:{ type:"json_schema", schema } },
-      messages:[{role:"user",content:[
-        {type:"image",source:{type:"base64",media_type:mediaType,data:b64}},
-        {type:"text",text:prompt},
-      ]}],
+      messages:[{role:"user",content}],
     }),
   });
   if(!r.ok){
@@ -5261,12 +5943,30 @@ async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooL
     throw new Error(`Anthropic returned ${r.status}. ${t.slice(0,200)}`);
   }
   const j=await r.json();
-  if(j.stop_reason==="refusal") throw new Error("Claude declined to read that image.");
-  if(j.stop_reason==="max_tokens") throw new Error(tooLong||"There was too much on that image to read in one go. Try photographing half of it at a time.");
+  if(j.stop_reason==="refusal") throw new Error(refusalMsg||"Claude declined to respond to that.");
+  if(j.stop_reason==="max_tokens") throw new Error(tooLong||"There was too much to read in one go.");
   const text=(j.content||[]).find(b=>b.type==="text")?.text;
   if(!text) throw new Error("Claude returned no readable output.");
   try{ return JSON.parse(text); }
   catch{ throw new Error("Couldn't parse Claude's response as JSON."); }
+}
+// Photo in, structured JSON out — Seed book + Harvest whiteboard. Uses the "photo reading" model
+// setting (defaults to Opus — the harder task of the two).
+async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooLong}){
+  return aiStructuredCall({
+    content:[
+      {type:"image",source:{type:"base64",media_type:mediaType,data:b64}},
+      {type:"text",text:prompt},
+    ],
+    schema, maxTokens, tooLong,
+    refusalMsg:"Claude declined to read that image.",
+    model: MODEL_OCR||undefined,
+  });
+}
+// Text in, structured JSON out — Quick add (pasting a suggestion from a Claude chat). Uses the
+// "quick add" model setting (defaults to Sonnet — classifying already-typed text is easier).
+async function aiReadText({prompt, schema, maxTokens=2000, tooLong}){
+  return aiStructuredCall({ content:[{type:"text",text:prompt}], schema, maxTokens, tooLong, model: MODEL_QA||"claude-sonnet-4-6" });
 }
 
 const sbReadPage = (b64, mediaType) => aiReadImage({
@@ -5558,7 +6258,7 @@ function hrFor(pid,oid,week){ return (data.harvestRecords||[]).find(h=>h.plantin
 function activeOutlets(){ return (data.salesOutlets||[]).filter(o=>o.active); }
 function harvestReadyPlantings(){
   const today=todayISO();
-  return (data.plantings||[]).filter(p=>p.h1 && p.h2 && p.h1<=today && today<=p.h2)
+  return (data.plantingsActive||[]).filter(p=>p.h1 && p.h2 && p.h1<=today && today<=p.h2)
     .sort((a,b)=> (a.h1||"").localeCompare(b.h1||"") || String(a.crop).localeCompare(String(b.crop)));
 }
 
@@ -6283,7 +6983,7 @@ function tlAddDate(bar,leftPx,text,align){
 
 function tlGroupsByCrop(){
   const byCrop={};
-  (data.plantings||[]).forEach(p=>{ if(!p.sow) return; (byCrop[p.crop] ||= []).push(p); });
+  (data.plantingsActive||[]).forEach(p=>{ if(!p.sow) return; (byCrop[p.crop] ||= []).push(p); });
   return Object.keys(byCrop).sort((a,b)=>a.localeCompare(b)).map(crop=>({
     key:crop, label:crop,
     rows: byCrop[crop].sort((a,b)=>String(a.sow).localeCompare(String(b.sow)))
@@ -6298,7 +6998,7 @@ function tlGroupsByBed(){
     return String(a.name).localeCompare(String(b.name),undefined,{numeric:true});
   }));
   const perBed={};
-  (data.plantings||[]).forEach(p=>{ if(p.sow&&p.bedIds[0]) (perBed[p.bedIds[0]] ||= []).push(p); });
+  (data.plantingsActive||[]).forEach(p=>{ if(p.sow&&p.bedIds[0]) (perBed[p.bedIds[0]] ||= []).push(p); });
   return Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(block=>({
     key:block, label:"Block "+block,
     // bedId is carried through so the row can also draw that bed's tarped spans (see tlAddTarp) —
@@ -6451,7 +7151,7 @@ let tlMobileCrop = null;
 function buildTlMobileList(){
   const box=document.getElementById("tlMobileList"); if(!box) return;
   document.getElementById("tlYearLabel").textContent=tlYear;
-  const items=(data.plantings||[]).filter(p=>p.sow && new Date(p.sow).getFullYear()===tlYear);
+  const items=(data.plantingsActive||[]).filter(p=>p.sow && new Date(p.sow).getFullYear()===tlYear);
 
   box.innerHTML="";
   if(!tlMobileCrop){
@@ -6810,7 +7510,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
         // post-click value, not the pre-click one; using it directly toggles the wrong way
         const id=cb.dataset.tasktoggle;
         const t=(data.plantingTasks||[]).find(x=>x.id===id);
-        wkToggleDone(id, !(t && t.done)).then(()=>tlRenderPanel(p,panel,closeFn));
+        wkToggleDoneInteractive(id, !(t && t.done)).then(()=>tlRenderPanel(p,panel,closeFn));
       };
     });
     tasksBox.querySelectorAll("select[data-assignee]").forEach(sel=>{
@@ -8149,6 +8849,16 @@ $trp("trpWeeks").addEventListener("input",trpApplyWeeks);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $trp("trpModal").classList.contains("open")) trpCloseEditor(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $ap("apModal").classList.contains("open")) apClose(); });
 
+/* ---- Wind-back (bed zone) wiring ---- */
+document.getElementById("cmZoneBtn").addEventListener("click",znOpen);
+$zn("znClose").addEventListener("click",znClose);
+$zn("znCancel").addEventListener("click",znClose);
+$zn("znCollapse").addEventListener("click",znDoCollapse);
+$zn("znTarget").addEventListener("change",znSyncPreview);
+$zn("znHold").addEventListener("change",znSyncPreview);
+$zn("znModal").addEventListener("mousedown",e=>{ if(e.target.id==="znModal") znClose(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $zn("znModal").classList.contains("open")) znClose(); });
+
 /* ---------- Crops tab: per-crop timing defaults, and per-variety overrides of them,
    stored on Airtable (Crop / Crop Varieties tables) so they sync across devices ---------- */
 const CR_FIELD_KEY=Object.fromEntries(DEFAULT_KEYS.map(k=>[k,"cr_"+k]));
@@ -8567,6 +9277,7 @@ let bdMobileBed=null;       // mobile drill-down: which bed is being viewed
 
 function buildBedsTab(){
   bdRenderConflicts();
+  bpRenderHistory();   // before the mobile early return — the prep cards render on phones too
   const table=document.getElementById("bdTable"), mob=document.getElementById("bdMobile");
   if(!table||!mob) return;
   const mobile=cmIsMobile();
@@ -8601,8 +9312,14 @@ function bdBedRow(bed){
   const chip=issues.length
     ? `<span class="bd-chip${issues.some(i=>i.severity==="Avoid")?" bd-chip-avoid":""}">${issues.length}</span>`
     : `<span class="bd-chip bd-chip-none">–</span>`;
+  // A second marker beside the name when the bed is behind on cultivation — the detail lives in
+  // the Bed prep history section below, this is just so it's visible from the main list.
+  const od=bpOverdueOps(bed.id);
+  const prepChip=od.length
+    ? ` <span class="bd-chip bd-chip-avoid" title="Overdue for: ${esc(od.join(", "))}">⛏ ${od.length}</span>`
+    : "";
   tr.innerHTML=
-    `<td><strong>${esc(bed.name)}</strong></td>`
+    `<td><strong>${esc(bed.name)}</strong>${prepChip}</td>`
    +`<td><select data-k="category">${bdSelectHTML(BD_CATEGORIES,bed.category,"—")}</select></td>`
    +`<td style="text-align:center"><input type="checkbox" data-k="tunnel"${bed.tunnel?" checked":""}></td>`
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="len" value="${bed.len??""}"></td>`
@@ -8763,26 +9480,30 @@ async function bdDeleteIssue(i,bed){
   }
 }
 
-/* ---- Flagged plantings: existing plantings that violate a bed issue ---- */
+/* ---- Flagged plantings: existing plantings that violate a bed issue, or sit inside a bed zone
+   reserved for a different crop. Both are advisory — this card reports, it never rewrites. ---- */
 function bdRenderConflicts(){
   const box=document.getElementById("bdConflicts"); if(!box) return;
   const hits=[];
-  (data.plantings||[]).forEach(p=>{
+  (data.plantingsActive||[]).forEach(p=>{
     const cf=plantingConflicts(p);
-    if(cf.length) hits.push({p,cf});
+    const zm=plantingZoneMismatches(p);
+    if(cf.length||zm.length) hits.push({p,cf,zm});
   });
   if(!hits.length){
     box.innerHTML=`<div class="cr-empty">No plantings are currently flagged.</div>`;
     return;
   }
   hits.sort((a,b)=>String(a.p.sow||"").localeCompare(String(b.p.sow||"")));
-  box.innerHTML=`<div class="bd-conflicts">`+hits.map(({p,cf})=>{
+  box.innerHTML=`<div class="bd-conflicts">`+hits.map(({p,cf,zm})=>{
     const bed=(data.beds||[]).find(b=>b.id===(p.bedIds||[])[0]);
+    const why=cf.map(i=>issueLabel(i))
+      .concat(zm.map(z=>`Zone reserved for ${z.cropId?(data.crops[z.cropId]||z.type):z.type}`));
     return `<button type="button" class="bd-conflict${cf.some(i=>i.severity==="Avoid")?" bd-conflict-avoid":""}" data-pid="${p.id}">`
       +`<span class="bd-conflict-head">⚠ ${esc(p.crop||"Crop")}${p.variety?" · "+esc(p.variety):""} `
         +`<span class="bd-conflict-bed">in ${esc(bed?bed.name:"—")}</span></span>`
       +`<span class="bd-conflict-when">${esc(fmt(p.sow))} → ${esc(fmt(p.h2||p.h1))}</span>`
-      +`<span class="bd-conflict-why">${cf.map(i=>esc(issueLabel(i))).join(" · ")}</span>`
+      +`<span class="bd-conflict-why">${why.map(esc).join(" · ")}</span>`
     +`</button>`;
   }).join("")+`</div>`;
   box.querySelectorAll(".bd-conflict").forEach(b=>b.onclick=()=>{
@@ -8790,6 +9511,274 @@ function bdRenderConflicts(){
     if(p) apOpenEdit(p);
   });
 }
+
+/* ---------- Bed prep history ----------
+   Which cultivation was done to which bed, and when. Two ways in: ticking a Bed prep task in the
+   weekly planner (wkToggleDoneInteractive), or "+ Log prep…" here for work done with no task
+   against it. Both land in the same bed_prep_events rows.
+
+   Nothing is stored per bed-and-operation — an event carries a list of beds and a list of
+   operations, because one pass of the power harrow over four beds is a single job. bpLastDone()
+   pivots that back into the per-bed view the grower actually wants to read. */
+
+// Edit this one line to add or remove a prep operation. Nothing else keys off the strings, and
+// renaming one leaves old events carrying the old name — that reads as "never done" for the new
+// name rather than corrupting anything, so a rename wants a data fix-up if history matters.
+const BP_OPS=["Power Harrowed","Bed Formed","Deep Ripped","Single Tine Ripped","Broadfork",
+              "Rotary Hoed","Compost Spread","Tarped","Flame Weeded","Hand Weeded"];
+let bpShowAll=false;         // false = only show beds with something overdue
+let bpExpanded=new Set();    // bed ids whose full operation grid is open
+let bpSel=null;              // the log modal's working state while it's open
+
+// Target interval per operation, in days. An operation with no target row (or a blank one) is
+// never flagged — that's the default for everything until the grower sets one.
+function bpIntervals(){
+  const out={};
+  (data.bedPrepTargets||[]).forEach(t=>{ if(t.op && t.days!=null) out[t.op]=t.days; });
+  return out;
+}
+
+// {bedId: {operation: latest ISO date}}. ISO dates sort correctly as plain strings, so this needs
+// no date parsing at all.
+function bpLastDone(){
+  const map={};
+  (data.bedPrepEvents||[]).forEach(e=>{
+    if(!e.date) return;
+    e.bedIds.forEach(bid=>{
+      const per=(map[bid] ||= {});
+      e.ops.forEach(op=>{ if(!per[op] || e.date>per[op]) per[op]=e.date; });
+    });
+  });
+  return map;
+}
+
+// Which operations is this bed overdue for? A never-done operation is deliberately NOT overdue:
+// before any history is logged every bed would flag on every operation, which is noise, not a
+// signal. A bed starts flagging once it has a first record and then drifts past the interval.
+function bpOverdueOps(bedId, map, iv){
+  const per=(map||bpLastDone())[bedId]||{};
+  const ivs=iv||bpIntervals();
+  const today=todayISO();
+  return BP_OPS.filter(op=>{
+    const days=ivs[op]; if(days==null) return false;
+    const last=per[op]; if(!last) return false;
+    return isoDiffDays(last, today) > days;
+  });
+}
+
+function bpRenderHistory(){
+  const box=document.getElementById("bpBody"); if(!box) return;
+  const map=bpLastDone(), iv=bpIntervals();
+  const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const rows=[];
+  keys.forEach(blk=>{
+    const beds=groups[blk].filter(b=>bpShowAll || bpOverdueOps(b.id,map,iv).length);
+    if(!beds.length) return;
+    rows.push(`<div class="bd-mob-block">Block ${esc(blk)}</div>`);
+    beds.forEach(b=>rows.push(bpRowHTML(b,map,iv)));
+  });
+  if(!rows.length){
+    box.innerHTML=`<div class="cr-empty">${bpShowAll
+      ? "No beds yet."
+      : "No beds are overdue. Tick “Show all beds” to see the full prep record."}</div>`;
+    return;
+  }
+  box.innerHTML=`<div class="bp-list">${rows.join("")}</div>`;
+  box.querySelectorAll(".bp-head").forEach(btn=>btn.onclick=()=>{
+    const id=btn.dataset.bed;
+    bpExpanded.has(id) ? bpExpanded.delete(id) : bpExpanded.add(id);
+    bpRenderHistory();
+  });
+}
+
+function bpRowHTML(bed,map,iv){
+  const overdue=bpOverdueOps(bed.id,map,iv);
+  const open=bpExpanded.has(bed.id);
+  const per=map[bed.id]||{};
+  const chip=overdue.length
+    ? `<span class="bd-chip bd-chip-avoid">${overdue.length}</span>`
+    : `<span class="bd-chip bd-chip-none">–</span>`;
+  // Collapsed, the row summarises: what it's overdue for if anything, else the most recent work.
+  const summary=overdue.length
+    ? "overdue · "+overdue.join(", ")
+    : (Object.keys(per).length
+        ? Object.entries(per).sort((a,b)=>b[1].localeCompare(a[1])).slice(0,2)
+            .map(([op,d])=>`${op} ${fmt(d)}`).join(" · ")
+        : "nothing logged yet");
+  return `<div class="bp-row${overdue.length?" bp-row-flag":""}">`
+    +`<button type="button" class="bp-head" data-bed="${bed.id}">`
+      +chip
+      +`<span class="bp-head-name">${esc(bed.name)}</span>`
+      +`<span class="bp-head-sum">${esc(summary)}</span>`
+      +`<span class="bd-expand">${open?"Hide":"Details"}</span>`
+    +`</button>`
+    +(open?bpGridHTML(bed,per,iv,overdue):"")
+  +`</div>`;
+}
+
+// The full BP_OPS × last-done grid for one bed. Shared by the desktop row and the mobile drill-down.
+function bpGridHTML(bed,per,iv,overdue){
+  const today=todayISO();
+  const od=new Set(overdue||bpOverdueOps(bed.id,null,iv));
+  return `<div class="bp-grid">`+BP_OPS.map(op=>{
+    const last=per[op];
+    const target=iv[op]!=null ? ` / ${iv[op]}d` : "";
+    const when=last
+      ? `${fmt(last)} · ${isoDiffDays(last,today)}d${target}`
+      : "never";
+    return `<div class="bp-cell${od.has(op)?" bp-overdue":""}${last?"":" bp-cell-never"}">`
+      +`<span class="bp-cell-op">${esc(op)}</span>`
+      +`<span class="bp-cell-when">${esc(when)}</span>`
+    +`</div>`;
+  }).join("")+`</div>`;
+}
+
+/* ---- Targets: how long between passes before a bed reads as overdue ---- */
+function bpRenderTargets(){
+  const box=document.getElementById("bpTargets"); if(!box) return;
+  const iv=bpIntervals();
+  box.className="bp-targets";
+  box.innerHTML=`<div class="bd-excl-label">Flag a bed once this many days have passed since the `
+    +`operation was last done. Blank = never flag.</div>`
+    +`<div class="bp-targets-grid">`+BP_OPS.map(op=>
+      `<label class="bp-target">${esc(op)}`
+      +`<input class="cr-num" type="number" min="1" step="1" data-op="${esc(op)}" `
+      +`value="${iv[op]!=null?iv[op]:""}" placeholder="—"></label>`).join("")
+    +`</div>`;
+  box.querySelectorAll("input[data-op]").forEach(inp=>inp.onchange=()=>
+    bpSaveTarget(inp.dataset.op, inp.value===""?null:(+inp.value)));
+}
+
+async function bpSaveTarget(op,days){
+  const existing=(data.bedPrepTargets||[]).find(t=>t.op===op);
+  const prev=existing?existing.days:undefined;
+  if(existing) existing.days=days;   // optimistic, same shape as saveBed
+  bpRenderHistory();
+  try{
+    if(existing){
+      await atPatch(CFG.farmBase, CFG.tables.bedPrepTargets, existing.id, {[CFG.f.bpt_days]:days});
+    }else{
+      const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepTargets,
+        [{[CFG.f.bpt_op]:op, [CFG.f.bpt_days]:days}]);
+      data.bedPrepTargets.push({id:created[0].id, op, days});
+    }
+  }catch(e){
+    if(existing) existing.days=prev;   // rollback
+    console.error(e);
+    alert("Couldn't save that target:\n"+e.message);
+    bpRenderTargets(); bpRenderHistory();
+  }
+}
+
+/* ---- The log-prep modal ---- */
+// opts: {bedIds, date, ops, taskId, title} — all optional. Called with a bed prefilled from the
+// Beds tab and the mobile drill-down, and with bed + date + task prefilled from a task tick.
+function bpOpenLog(opts){
+  const o=opts||{};
+  bpSel={ date:o.date||todayISO(), ops:new Set(o.ops||[]),
+          beds:new Set(o.bedIds||[]), taskId:o.taskId||null };
+  document.getElementById("bpTitle").textContent=o.title||"Log bed prep";
+  document.getElementById("bpDate").value=bpSel.date;
+  document.getElementById("bpNotes").value="";
+  const search=document.getElementById("bpBedSearch");
+  search.value=""; bpBedSuggest("");
+  bpRenderOpChips(); bpRenderBedChips();
+  // The week planner's group modal sits at the same z-index, so it would stack behind this one.
+  if(wkGroupKey) wkCloseGroupModal();
+  document.getElementById("bpModal").classList.add("open");
+}
+function bpCloseLog(){
+  document.getElementById("bpModal").classList.remove("open");
+  bpSel=null;
+}
+
+function bpRenderOpChips(){
+  const el=document.getElementById("bpOpChips");
+  el.innerHTML=BP_OPS.map(op=>{
+    const on=bpSel.ops.has(op);
+    return `<button type="button" class="cm-type-chip${on?" on":""}" data-op="${esc(op)}">${on?"✓ ":""}${esc(op)}</button>`;
+  }).join("");
+  el.querySelectorAll("[data-op]").forEach(b=>b.onclick=()=>{
+    const op=b.dataset.op;
+    bpSel.ops.has(op) ? bpSel.ops.delete(op) : bpSel.ops.add(op);
+    bpRenderOpChips();
+  });
+}
+
+function bpRenderBedChips(){
+  const el=document.getElementById("bpBedChips");
+  if(!bpSel.beds.size){ el.innerHTML=`<div class="sp-chips-empty">No beds yet — add one by name below.</div>`; return; }
+  el.innerHTML=[...bpSel.beds].map(id=>{
+    const b=(data.beds||[]).find(x=>x.id===id)||{name:"?"};
+    return `<span class="sp-chip">${esc(b.name)}<button class="x" data-rm-bed="${id}" title="Remove">✕</button></span>`;
+  }).join("");
+  el.querySelectorAll("[data-rm-bed]").forEach(b=>b.onclick=()=>{
+    bpSel.beds.delete(b.dataset.rmBed); bpRenderBedChips();
+  });
+}
+
+function bpBedSuggest(q){
+  const el=document.getElementById("bpBedSuggest");
+  q=(q||"").trim().toLowerCase();
+  if(!q){ el.hidden=true; el.innerHTML=""; return; }
+  const matches=(data.beds||[]).filter(b=>!bpSel.beds.has(b.id)
+    && `${b.block||""} ${b.name}`.toLowerCase().includes(q)).slice(0,12);
+  el.hidden=!matches.length;
+  el.innerHTML=matches.map(b=>
+    `<button type="button" data-add-bed="${b.id}">${esc(b.name)}`
+    +`<span class="muted">${b.block?" · "+esc(b.block):""}</span></button>`).join("");
+  el.querySelectorAll("[data-add-bed]").forEach(btn=>btn.onclick=()=>{
+    bpSel.beds.add(btn.dataset.addBed);
+    document.getElementById("bpBedSearch").value="";
+    bpBedSuggest(""); bpRenderBedChips();
+  });
+}
+
+// Create-then-push rather than optimistic-then-rollback: we need the server id, same as bdAddIssue.
+async function bpSaveLog(){
+  if(!bpSel) return;
+  const date=document.getElementById("bpDate").value||todayISO();
+  const notes=document.getElementById("bpNotes").value.trim();
+  if(!bpSel.ops.size){ alert("Pick at least one operation."); return; }
+  if(!bpSel.beds.size){ alert("Pick at least one bed."); return; }
+  const ops=[...bpSel.ops], beds=[...bpSel.beds], taskId=bpSel.taskId;
+  const fields={
+    [CFG.f.bpe_name]:`${date} — ${ops.join(", ")}`,
+    [CFG.f.bpe_date]:date,
+    [CFG.f.bpe_bed]:beds,
+    [CFG.f.bpe_ops]:ops,
+    [CFG.f.bpe_notes]:notes,
+    [CFG.f.bpe_created]:new Date().toISOString(),
+  };
+  if(taskId) fields[CFG.f.bpe_task]=[taskId];
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepEvents, [fields]);
+    data.bedPrepEvents.push({id:created[0].id, date, bedIds:beds, ops, by:"", notes, taskId});
+    bpCloseLog();
+    buildBedsTab();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't save that prep record:\n"+e.message);
+  }
+}
+
+function bpWire(){
+  const modal=document.getElementById("bpModal"); if(!modal) return;
+  document.getElementById("bpLogBtn").onclick=()=>bpOpenLog({});
+  document.getElementById("bpTargetsBtn").onclick=()=>{
+    const t=document.getElementById("bpTargets");
+    t.hidden=!t.hidden;
+    if(!t.hidden) bpRenderTargets();
+  };
+  document.getElementById("bpShowAll").onchange=e=>{ bpShowAll=e.target.checked; bpRenderHistory(); };
+  document.getElementById("bpClose").onclick=bpCloseLog;
+  document.getElementById("bpCancel").onclick=bpCloseLog;
+  document.getElementById("bpSave").onclick=bpSaveLog;
+  document.getElementById("bpDate").onchange=e=>{ if(bpSel) bpSel.date=e.target.value; };
+  document.getElementById("bpBedSearch").oninput=e=>bpBedSuggest(e.target.value);
+  modal.onclick=e=>{ if(e.target===modal) bpCloseLog(); };
+}
+bpWire();
 
 /* ---- Mobile: the eight-column table doesn't fit, so drill down bed by bed ---- */
 function bdBuildMobile(){
@@ -8820,7 +9809,9 @@ function bdBuildMobile(){
       <label>Notes<input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></label>
     </div>
     <div class="ap-sect">Issues</div>
-    <div id="bdMobIssues"></div>`;
+    <div id="bdMobIssues"></div>
+    <div class="ap-sect">Prep</div>
+    <div id="bdMobPrep"></div>`;
   box.querySelector(".bd-mob-back").onclick=()=>{ bdMobileBed=null; bdBuildMobile(); };
   box.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
   box.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
@@ -8836,6 +9827,14 @@ function bdBuildMobile(){
   add.type="button"; add.className="cr-add-variety"; add.textContent="+ Add issue…";
   add.onclick=async()=>{ if(await bdAddIssue(bed)) bdBuildMobile(); };
   wrap.appendChild(add);
+
+  // Same last-done grid as the desktop row, plus a log button prefilled with this bed — logging
+  // prep is exactly the kind of thing done standing in the bed with a phone.
+  const prep=box.querySelector("#bdMobPrep");
+  const iv=bpIntervals();
+  prep.innerHTML=bpGridHTML(bed,(bpLastDone()[bed.id]||{}),iv,bpOverdueOps(bed.id,null,iv))
+    +`<div class="bp-mob-actions"><button type="button" class="cr-add-variety" id="bdMobPrepAdd">+ Log prep…</button></div>`;
+  prep.querySelector("#bdMobPrepAdd").onclick=()=>bpOpenLog({bedIds:[bed.id]});
 }
 
 /* ---------- Misc tab: farm-wide reference data (currently just Tray Types) ---------- */
@@ -8922,7 +9921,12 @@ const TASK_CATEGORIES = ["Cultivation","Fertility","Pest & Disease","Irrigation"
 const TASK_SELECT_KEYS = new Set(["category","anchor","until"]);
 const TASK_FIELD = { name:"tk_name", category:"tk_cat", anchor:"tk_anchor",
   offset:"tk_offset", repeat:"tk_repeat", until:"tk_until", duration:"tk_duration", desc:"tk_desc",
-  fwTag:"tk_fwtag" };
+  fwTag:"tk_fwtag", fertProgramId:"tk_fertProgram" };
+// Programs are a link column (text[]), so this one value is written as an array — see saveTask.
+function tkFertProgOptionsHTML(val){
+  return `<option value="">—</option>`+(data.fertPrograms||[]).map(p=>
+    `<option value="${esc(p.id)}"${p.id===val?" selected":""}>${esc(p.name)}</option>`).join("");
+}
 // <option> list with a leading blank; marks the current value selected.
 function tkOptions(opts,val){
   return `<option value=""></option>`+opts.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
@@ -8937,7 +9941,7 @@ function buildTaskLibrary(query){
   if(q) list=list.filter(t=>(t.name+" "+t.category).toLowerCase().includes(q));
   if(!list.length){
     const r=document.createElement("tr");
-    r.innerHTML=`<td colspan="10"><div class="cr-empty">${q?"No tasks match your search.":"No tasks yet."}</div></td>`;
+    r.innerHTML=`<td colspan="11"><div class="cr-empty">${q?"No tasks match your search.":"No tasks yet."}</div></td>`;
     body.appendChild(r);
   }else{
     list.forEach(t=>body.appendChild(tkRow(t)));
@@ -8955,6 +9959,7 @@ function tkRow(t){
     +`<td><select data-k="until">${tkOptions(TASK_ANCHORS,t.until)}</select></td>`
     +`<td><input class="cr-num" type="number" min="0" step="0.01" data-k="duration" value="${t.duration??""}"></td>`
     +`<td><select data-k="fwTag">${fwTagOptionsHTML(t.fwTag)}</select></td>`
+    +`<td><select data-k="fertProgramId">${tkFertProgOptionsHTML(t.fertProgramId)}</select></td>`
     +`<td><input type="text" data-k="desc" value="${esc(t.desc)}"></td>`
     +`<td><button type="button" class="btn-danger" style="padding:.2rem .6rem;font-size:.8rem">Delete</button></td>`;
   const bind=(k,parse)=>{ const el=tr.querySelector(`[data-k="${k}"]`);
@@ -8966,6 +9971,7 @@ function tkRow(t){
   bind("repeat",v=>v===""?null:(+v));
   bind("until",v=>v||null);
   bind("duration",v=>v===""?null:(+v));
+  bind("fertProgramId",v=>v||null);
   // The "+ Add new tag…"/"− Delete a tag…" options are commands, not values — intercepted here
   // instead of going through the generic bind() so picking one never writes a sentinel string onto
   // the task. A delete can affect other rows too (any task pointing at the removed tag gets
@@ -8992,7 +9998,7 @@ function tkRow(t){
 }
 function tkAddRow(){
   const tr=document.createElement("tr"); tr.className="cr-add-row";
-  tr.innerHTML=`<td colspan="10"><button type="button" class="cr-add-variety">+ Add task…</button></td>`;
+  tr.innerHTML=`<td colspan="11"><button type="button" class="cr-add-variety">+ Add task…</button></td>`;
   tr.querySelector("button").onclick=async()=>{ if(await addTask()) buildTaskLibrary(); };
   return tr;
 }
@@ -9000,9 +10006,13 @@ async function saveTask(id,key,val){
   const t=data.tasks.find(x=>x.id===id); if(!t) return;
   const prop = key==="desc" ? "desc" : key;   // data prop names match the keys 1:1
   const prev=t[prop];
-  t[prop]=(val===null?"":val);   // optimistic (blank-as-"" for the model)
+  // Fert program is a link column: null in the model, but [] / [id] on the wire. Every other key
+  // here is a scalar and writes through unchanged.
+  const isLink = key==="fertProgramId";
+  t[prop]= isLink ? (val||null) : (val===null?"":val);   // optimistic (blank-as-"" for the model)
   try{
-    await atPatch(CFG.farmBase, CFG.tables.tasks, id, {[CFG.f[TASK_FIELD[key]]]:val});
+    await atPatch(CFG.farmBase, CFG.tables.tasks, id,
+      {[CFG.f[TASK_FIELD[key]]]: isLink ? (val?[val]:[]) : val});
     if(key==="name"){ data.tasks.sort((a,b)=>a.name.localeCompare(b.name)); buildTaskLibrary(); }
   }catch(e){
     t[prop]=prev;   // rollback
@@ -9017,7 +10027,7 @@ async function addTask(){
   try{
     const created=await atCreate(CFG.farmBase, CFG.tables.tasks, [{[CFG.f.tk_name]:name}]);
     const rec=created[0];
-    data.tasks.push({id:rec.id, name, category:"", desc:"", anchor:"", offset:null, repeat:null, until:"", duration:null, fwTag:""});
+    data.tasks.push({id:rec.id, name, category:"", desc:"", anchor:"", offset:null, repeat:null, until:"", duration:null, fwTag:"", fertProgramId:null});
     data.tasks.sort((a,b)=>a.name.localeCompare(b.name));
     return true;
   }catch(e){
@@ -9390,6 +10400,179 @@ document.getElementById("ctSearchClear").addEventListener("click",()=>{
   buildCropTasks(""); inp.focus();
 });
 
+/* ==================== QUICK ADD (paste a Claude-chat suggestion) ====================
+   The user chats with Claude separately (phone/web), gets an actionable suggestion — usually
+   "spray X with Y at Z on date D", sometimes a generic job — and pastes the reply text here.
+   One structured-outputs call (aiReadText, up in the Seed book section) classifies + extracts it,
+   client-side matching resolves crop/product/bed names against data already loaded, and the
+   result only ever pre-fills the existing Task or Spray-plan form (wkTaskOpen / sprayOpenPlan) for
+   the user to check and save by hand — same "never reaches Supabase without an explicit human
+   Save" rule as the Seed book and Harvest whiteboard. ===================================== */
+
+const QA_MAX_LEN = 4000;
+const QA_NUM = {anyOf:[{type:"number"},{type:"null"}]};
+const QA_SCHEMA = {
+  type:"object",
+  properties:{
+    actionable:{type:"boolean", description:"True only if the text describes a concrete job worth adding to the farm planner."},
+    kind:{type:"string", enum:["spray","task","none"], description:"'spray' for applying a spray/foliar feed/fertigation product; 'task' for any other concrete job; 'none' when actionable is false."},
+    confidence:{type:"string", enum:["high","medium","low"]},
+    note:{...SB_STR, description:"One short sentence for the user — why classified this way, anything ambiguous, or why it wasn't actionable. Mention it if the text described more than one job (only the first is extracted)."},
+    task:{
+      type:"object",
+      properties:{
+        label:{...SB_STR, description:"Short task name, e.g. 'Fix drip line on Block C'. Null unless kind is 'task'."},
+        crop:{...SB_STR, description:"Crop mentioned, verbatim, or null."},
+        bed_or_block:{...SB_STR, description:"Bed or block name mentioned, verbatim, or null."},
+        due_date:{...SB_STR, description:"ISO YYYY-MM-DD, resolved against today's date. Null if no date implied."},
+        assignee:{...SB_STR, description:"Person named to do it, or null."},
+        duration_minutes:{...SB_INT, description:"Estimated minutes, only if stated or clearly implied. Null otherwise."},
+      },
+      required:["label","crop","bed_or_block","due_date","assignee","duration_minutes"],
+      additionalProperties:false,
+    },
+    spray:{
+      type:"object",
+      properties:{
+        crops:{type:"array", items:{type:"string"}, description:"Crop names mentioned, verbatim. Empty if none."},
+        beds_or_blocks:{type:"array", items:{type:"string"}, description:"Bed/block names mentioned, verbatim. Empty if none."},
+        products:{type:"array", items:{
+          type:"object",
+          properties:{ name:{type:"string"}, rate:QA_NUM, unit:{...SB_STR, description:"Rate unit, e.g. 'mL/L', 'g/L'. Verbatim, or null."} },
+          required:["name","rate","unit"], additionalProperties:false,
+        }},
+        date:{...SB_STR, description:"ISO YYYY-MM-DD, resolved against today's date. Null if no date implied."},
+        method:{type:"string", enum:["Backpack","Boom","Fertigation","Granular","Unspecified"], description:"Application method if stated or clearly implied; 'Unspecified' otherwise."},
+        reason:{...SB_STR, description:"Reason/target — deficiency, pest, disease name, etc. — verbatim, or null."},
+        whp_days:{...SB_INT, description:"Withholding period in days, ONLY if explicitly stated in the text. Never infer it from the product — null otherwise."},
+        location_note:{...SB_STR, description:"Location detail that isn't a clean bed/block name, e.g. 'the tomatoes near the shed'. Null if beds_or_blocks already covers it."},
+      },
+      required:["crops","beds_or_blocks","products","date","method","reason","whp_days","location_note"],
+      additionalProperties:false,
+    },
+  },
+  required:["actionable","kind","confidence","note","task","spray"],
+  additionalProperties:false,
+};
+
+function qaPrompt(text){
+  return `A grower pasted the following suggestion text, copied from a separate chat with Claude about their market garden. Decide whether it describes a concrete, actionable job — most often a spray/fert application, sometimes a generic task — and extract structured fields for it.
+
+Today's date is ${PlannerShared.wkISO(new Date())}. Resolve any relative date ("this week", "Tuesday", "in 3 days") against it.
+
+Rules:
+- Set actionable=false and kind="none" for general chat, questions, explanations, or anything with no concrete job to do. Say why in note.
+- Set kind="spray" only when the text suggests applying a spray, foliar feed, or fertigation product to a crop/bed. Otherwise, if actionable, kind="task".
+- Extract names (crop, product, bed/block) exactly as written — do not normalise, correct, or invent a farm-specific name. Use null rather than guessing when the text doesn't say.
+- Never infer a withholding period from a product's identity — only report whp_days if a number of days is actually stated.
+- If the text describes more than one distinct job, extract only the first/primary one and say so in note.
+- confidence reflects how sure you are of the classification and the extracted fields as a whole.
+
+Text:
+"""
+${text.slice(0,QA_MAX_LEN)}
+"""`;
+}
+const qaParse = text => aiReadText({
+  prompt: qaPrompt(text), schema: QA_SCHEMA, maxTokens: 2000,
+  tooLong: "That's a lot of text to structure in one go — try trimming it to the relevant part.",
+});
+
+// --- matching: resolve names Claude extracted against data already loaded, reusing the same
+// sbSquash rule the Seed book uses to resolve crop names. No match, or more than one, resolves to
+// null — the field is left for the human to fill in rather than guessed.
+function qaMatchCrop(text){
+  const q=sbSquash(text); if(!q) return null;
+  const hits=Object.entries(data.crops||{}).filter(([id,name])=>{ const n=sbSquash(name); return n && (q.includes(n)||n.includes(q)); });
+  return hits.length===1 ? hits[0][0] : null;
+}
+function qaMatchProduct(text){
+  const q=sbSquash(text); if(!q) return null;
+  const hits=(data.sprayProducts||[]).filter(p=>p.active).filter(p=>{ const n=sbSquash(p.name); return n && (q.includes(n)||n.includes(q)); });
+  return hits.length===1 ? hits[0].id : null;
+}
+function qaMatchBed(text){
+  const q=sbSquash(text); if(!q) return null;
+  const hits=(data.beds||[]).filter(b=>{
+    const full=sbSquash(`${b.block||""} ${b.name}`), name=sbSquash(b.name);
+    return (full && (q.includes(full)||full.includes(q))) || (name && (q.includes(name)||name.includes(q)));
+  });
+  return hits.length===1 ? hits[0].id : null;
+}
+
+// --- prefill builders: shape the parsed result to match what the existing forms already expect,
+// so no new write path is needed — sprayPrefillFromApp / wkTaskOpen do the actual filling in, and
+// wkTaskSave / the spray-plan save button do the actual (human-triggered) write.
+function qaBuildSprayPrefill(parsed){
+  const s=parsed.spray||{};
+  const cropIds=[...new Set((s.crops||[]).map(qaMatchCrop).filter(Boolean))];
+  const unmatchedCrops=(s.crops||[]).filter(name=>!qaMatchCrop(name));
+  const bedIds=[...new Set((s.beds_or_blocks||[]).map(qaMatchBed).filter(Boolean))];
+  const unmatchedBeds=(s.beds_or_blocks||[]).filter(name=>!qaMatchBed(name));
+  const items=(s.products||[]).map(p=>{
+    const productId=qaMatchProduct(p.name)||"";
+    const rate = p.rate!=null ? p.rate : (productId ? sprayProduct(productId)?.defaultRate : null);
+    return { productId, rate: rate??null, unit:p.unit||"" };
+  });
+  const unmatchedProducts=(s.products||[]).filter(p=>!qaMatchProduct(p.name));
+  const notes=[];
+  if(unmatchedProducts.length) notes.push(`From Claude chat, not found in product catalog — pick manually: ${unmatchedProducts.map(p=>`"${p.name}"${p.rate!=null?` (${p.rate} ${p.unit||""})`:""}`).join(", ")}.`);
+  if(unmatchedCrops.length) notes.push(`Crop(s) not recognised: ${unmatchedCrops.join(", ")}.`);
+  return {
+    bedIds, cropIds, items: items.length?items:[],
+    locationNote: [s.location_note, unmatchedBeds.join(", ")].filter(Boolean).join(" — "),
+    method: s.method && s.method!=="Unspecified" ? s.method : "Backpack",
+    date: s.date||"", reason: s.reason||"", whp: s.whp_days, notes: notes.join(" "), sprayedBy:"",
+  };
+}
+function qaOpenSprayFromParsed(parsed){ sprayOpenPlan(null, qaBuildSprayPrefill(parsed)); }
+
+function qaBuildTaskPrefill(parsed){
+  const t=parsed.task||{};
+  const bedId = t.bed_or_block ? qaMatchBed(t.bed_or_block) : null;
+  const cropId = t.crop ? qaMatchCrop(t.crop) : null;
+  let label = t.label || "Task";
+  if(cropId && !bedId) label = `${data.crops[cropId]} — ${label}`;
+  return {
+    label, due: t.due_date||"", duration: t.duration_minutes,
+    assignee: t.assignee||"", linkType: bedId?"bed":"", linkId: bedId||"",
+  };
+}
+function qaOpenTaskFromParsed(parsed){ wkTaskOpen(null, qaBuildTaskPrefill(parsed)); }
+
+// --- the paste modal itself
+function qaOpen(){
+  const hasKey=!!AKEY;
+  document.getElementById("qaNoKey").style.display = hasKey?"none":"";
+  document.getElementById("qaBody").style.display = hasKey?"":"none";
+  document.getElementById("qaSubmit").style.display = hasKey?"":"none";
+  document.getElementById("qaText").value=""; document.getElementById("qaErr").hidden=true;
+  document.getElementById("qaModal").classList.add("open");
+  if(hasKey) setTimeout(()=>document.getElementById("qaText").focus(),40);
+}
+function qaClose(){ document.getElementById("qaModal").classList.remove("open"); }
+async function qaSubmit(){
+  const text=document.getElementById("qaText").value.trim();
+  const errEl=document.getElementById("qaErr"); errEl.hidden=true;
+  if(!text){ errEl.textContent="Paste some text first."; errEl.hidden=false; return; }
+  const btn=document.getElementById("qaSubmit"); btn.disabled=true; const orig=btn.textContent; btn.textContent="Reading…";
+  try{
+    const parsed=await qaParse(text);
+    if(!parsed.actionable || parsed.kind==="none"){
+      errEl.textContent = parsed.note || "That doesn't look like an actionable suggestion.";
+      errEl.hidden=false; return;
+    }
+    qaClose();
+    if(parsed.kind==="spray") qaOpenSprayFromParsed(parsed); else qaOpenTaskFromParsed(parsed);
+  }catch(err){ errEl.textContent = err.message||String(err); errEl.hidden=false; }
+  finally{ btn.disabled=false; btn.textContent=orig; }
+}
+document.getElementById("qaClose").onclick=qaClose;
+document.getElementById("qaCancel").onclick=qaClose;
+document.getElementById("qaSubmit").onclick=qaSubmit;
+document.getElementById("qaModal").addEventListener("mousedown",e=>{ if(e.target.id==="qaModal") qaClose(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElementById("qaModal").classList.contains("open")) qaClose(); });
+
 /* ---------- Remember where you were: tab, pan/zoom, filters — saved on close/reload ---------- */
 /* ---------- Weekly planner (This week) ---------- */
 let wkStartISO = null;   // Monday of the shown week (ISO yyyy-mm-dd); null until first build
@@ -9579,6 +10762,24 @@ function wkMsPillHTML(){ return `<span class="ct-cat wk-ms-pill">Planting</span>
 function wkManualPillHTML(){ return `<span class="ct-cat wk-manual-pill">Manual</span>`; }
 function wkTarpPillHTML(){ return `<span class="ct-cat wk-tarp-pill">Tarp</span>`; }
 function wkSprayPillHTML(){ return `<span class="ct-cat wk-spray-pill">Spray</span>`; }
+
+// The cost badge. Says which fertiliser program and round this job actually is, and what it costs —
+// so a "Bed Prep" row in the planner names the program to run on that bed rather than leaving the
+// grower to look it up. Only appears on tasks whose library entry has a Fert program set, and on
+// planned sprays built from a saved mix; everything else renders exactly as it did before.
+//
+// A round with unpriced products shows its dollars dashed and suffixed "+?" rather than a confident
+// figure — same rule as the costs page. Any error here is swallowed: a badge is decoration, and a
+// bad price must never be able to stop the week's work rendering.
+function wkCostBadgeHTML(r){
+  let c=null;
+  try{ c=PlannerShared.fertTaskCost(r, data); }catch(e){ return ""; }
+  if(!c) return "";
+  const money = c.total>0 ? "$"+c.total.toFixed(2) : "";
+  const txt = c.complete ? money : (money?money+" +?":"$?");
+  return `<span class="wk-cost${c.complete?"":" wk-cost-partial"}" title="${esc(c.label)}${
+    c.complete?"":" — some products have no price yet"}">${esc(c.label)}${txt?" · "+txt:""}</span>`;
+}
 function wkTaskRowHTML(r, showCtx, showDue){
   const isMs=r.kind==="milestone";
   const cat=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.kind==="spray"?wkSprayPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
@@ -9600,7 +10801,7 @@ function wkTaskRowHTML(r, showCtx, showDue){
   return `<div class="wk-task${r.t.done?" done":""}${isMs?" wk-ms":""}" data-id="${r.id}" data-plid="${r.p.id}"${isMs?` data-kind="milestone" data-df="${r.msDf}"`:""}>`
     +cb
     +`<div class="wk-task-main" data-pl="${r.p.id}">`
-      +`<span class="wk-task-name">${esc(r.task.name)}</span>${cat}${ctx}${rep}`
+      +`<span class="wk-task-name">${esc(r.task.name)}</span>${cat}${wkCostBadgeHTML(r)}${ctx}${rep}`
     +`</div>${due}</div>`;
 }
 
@@ -9699,7 +10900,9 @@ document.getElementById("wkGroupModal").addEventListener("change",e=>{
     ? wkToggleMilestone(cb.dataset.plid,cb.dataset.df)
     : wkIsTarpRowId(cb.dataset.id)
       ? wkToggleTarp(cb.dataset.id)
-      : wkToggleDone(cb.dataset.id,cb.checked);
+      : wkToggleDoneInteractive(cb.dataset.id,cb.checked);
+  // wkToggleDoneInteractive may have closed the group modal to open the prep dialog over the top —
+  // only reopen it if it's still the thing on screen.
   p.then(()=>{ if(wkGroupKey) wkOpenGroupModal(wkGroupKey,wkGroupDay); });
 });
 document.getElementById("wkGroupList").addEventListener("click",e=>{
@@ -9727,16 +10930,19 @@ function wkTaskOpen(id, opts){
   // editing an existing task, or adding one at a specific day/time picked by right-click, both mean
   // "don't auto-overwrite the due date" once a library task/planting gets picked afterwards
   wkTaskDueManual = !!t || !!opts.due;
-  wkTaskLinkPre = { plantingId: t&&t.plantingId, bedId: t&&t.bedId };
+  // opts.label/assignee/duration/linkType+linkId let a fresh (non-editing) task be pre-filled —
+  // used by Quick add, which never touches an existing task, so these are ignored whenever t is set.
+  wkTaskLinkPre = t ? { plantingId: t.plantingId, bedId: t.bedId }
+    : { plantingId: opts.linkType==="planting" ? opts.linkId : null, bedId: opts.linkType==="bed" ? opts.linkId : null };
   wkTaskStartPre = (!t && opts.startMin!=null) ? opts.startMin : null;
   document.getElementById("wkTaskTitle").textContent = t ? "Edit task" : "Add task";
   document.getElementById("wkTaskTypeSeg").style.display = t ? "none" : "";   // type toggle is for new tasks only
-  document.getElementById("wkTaskLabel").value = t ? (t.label||"") : "";
+  document.getElementById("wkTaskLabel").value = t ? (t.label||"") : (opts.label||"");
   wkFillTaskLibrary(t ? t.taskId : null);
-  document.getElementById("wkTaskLinkType").value = t ? (t.plantingId?"planting":t.bedId?"bed":"") : "";
+  document.getElementById("wkTaskLinkType").value = t ? (t.plantingId?"planting":t.bedId?"bed":"") : (opts.linkType||"");
   document.getElementById("wkTaskDue").value = t ? (t.due||"") : (opts.due || wkSelectedDay || wkStartISO || wkISO(new Date()));
-  document.getElementById("wkTaskDuration").value = (t && t.duration!=null) ? t.duration : "";
-  const curAssignee = t ? (t.assignee||"") : "";
+  document.getElementById("wkTaskDuration").value = (t && t.duration!=null) ? t.duration : (opts.duration!=null ? opts.duration : "");
+  const curAssignee = t ? (t.assignee||"") : (opts.assignee||"");
   const assigneeChoices=knownAssignees();
   if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
   document.getElementById("wkTaskAssignee").innerHTML =
@@ -9797,7 +11003,7 @@ function wkFillTaskLink(){
   else {
     lbl.textContent="Planting"; sel.innerHTML="";
     const byCrop={};
-    (data.plantings||[]).forEach(p=>{ (byCrop[p.crop||"—"] ||= []).push(p); });
+    (data.plantingsActive||[]).forEach(p=>{ (byCrop[p.crop||"—"] ||= []).push(p); });
     Object.keys(byCrop).sort((a,b)=>a.localeCompare(b)).forEach(crop=>{
       const og=document.createElement("optgroup"); og.label=crop;
       byCrop[crop].sort((a,b)=>String(a.sow||"").localeCompare(String(b.sow||""))).forEach(p=>{
@@ -10010,6 +11216,31 @@ async function wkToggleDone(id,val){
   buildWeekPlanner();
   try{ await atPatch(CFG.farmBase, CFG.tables.plantingTasks, id, {[CFG.f.pt_done]:val}); }
   catch(e){ t.done=prev; buildWeekPlanner(); alert("Couldn't save that: "+e.message); }
+}
+
+// Is this a bed prep job? The category lives on the master task library, so a one-off manual task
+// with no library link can't be classified and won't prompt.
+function bpIsPrepTask(t){
+  if(!t || !t.taskId) return false;
+  const lib=(data.tasks||[]).find(x=>x.id===t.taskId);
+  return !!lib && lib.category==="Bed prep";
+}
+// Ticking a Bed prep task offers to record what was actually done to the bed. The tick lands FIRST
+// and stands on its own: cancelling the dialog leaves the task done with no prep record, because a
+// checkbox is a completion control, not a data-entry gate.
+//
+// Deliberately a wrapper rather than a branch inside wkToggleDone — ttPullCompletions calls that in
+// a loop over every synced task, and a modal in there would pop once per task and block the sync on
+// await. Only the three human call sites use this.
+async function wkToggleDoneInteractive(id,val){
+  await wkToggleDone(id,val);
+  if(!val) return;                        // unticking never prompts
+  const t=(data.plantingTasks||[]).find(x=>x.id===id);
+  if(!bpIsPrepTask(t)) return;
+  // Prefill the due date, not today: a task ticked on Friday that was due Tuesday was usually done
+  // Tuesday. The field is editable either way.
+  bpOpenLog({ bedIds:t.bedId?[t.bedId]:[], date:t.due||todayISO(), taskId:t.id,
+              title:`Log prep — ${t.label||"Bed prep"}` });
 }
 // Milestone completion writes the planting's Status. Linear stepper (mirrors the dialog's Progress
 // checklist): ticking advances Status to that stage; unticking the frontier steps back one. A
@@ -10397,7 +11628,7 @@ function wkSetOdCollapsed(val){
     if(ds.kind==="milestone") wkToggleMilestone(ds.plid, ds.df);
     else if(wkIsTarpRowId(ds.id)) wkToggleTarp(ds.id);
     else if(wkIsSprayRowId(ds.id)){ cb.checked=false; wkToggleSpray(ds.id); } // opens the log, doesn't tick inline
-    else if(ds.id) wkToggleDone(ds.id, cb.checked);
+    else if(ds.id) wkToggleDoneInteractive(ds.id, cb.checked);
   });
   wrap.addEventListener("click",e=>{
     if(e.target.closest(".wk-check")) return;          // ticking shouldn't open/close the panel
@@ -10467,6 +11698,7 @@ function wkSetOdCollapsed(val){
   });
   const add=document.getElementById("wkAddBtn"); if(add) add.onclick=apOpen;
   const addTask=document.getElementById("wkAddTaskBtn"); if(addTask) addTask.onclick=()=>wkTaskOpen(null);
+  const quickAdd=document.getElementById("wkQuickAddBtn"); if(quickAdd) quickAdd.onclick=qaOpen;
 })();
 
 function saveUiState(){
@@ -11370,14 +12602,17 @@ function sprayOpen(prefill){
   else spray.items = [{ productId:"", rate:null, unit:"" }];
   sprayFinishOpen(true);
 }
-// Schedule a new spray (id=null) or edit an existing scheduled one.
-function sprayOpenPlan(id){
+// Schedule a new spray (id=null) or edit an existing scheduled one. aiPrefill (Quick add only,
+// id must be null) is a synthetic application-shaped object run through the same
+// sprayPrefillFromApp an existing record would use, so nothing about the fill-in logic is new.
+function sprayOpenPlan(id, aiPrefill){
   sprayResetState("plan");
   const a = id ? (data.sprayApplications||[]).find(x=>x.id===id) : null;
   spray.editId = a ? a.id : null;
   if(a){ sprayPrefillFromApp(a); $s("sprayDate").value = a.date || sprayToday(); }
+  else if(aiPrefill){ sprayPrefillFromApp(aiPrefill); $s("sprayDate").value = aiPrefill.date || sprayToday(); }
   else spray.items = [{ productId:"", rate:null, unit:"" }];
-  sprayFinishOpen(!a);
+  sprayFinishOpen(!a && !(aiPrefill && aiPrefill.bedIds && aiPrefill.bedIds.length));
 }
 // A scheduled spray came due — log what actually happened (flips it to Logged on save).
 function sprayOpenLogFromPlan(id){
@@ -13633,8 +14868,381 @@ async function fplSave(){
   finally{ showLoading(false); }
 }
 
+/* ---------- Fertiliser costs ----------
+   The money side of the programs page, and the one fert page that is read sitting down.
+
+   Every number on it except a pack price is derived — by PlannerShared's costing helpers, not here.
+   This file only lays them out. That split is the point: the same functions cost the week planner's
+   task badges, so a job's cost in the planner and its cost in the forecast cannot disagree.
+
+   The one rule worth restating at the call site: an unpriced product never counts as zero. It shows
+   its usage with a "?" where the dollars would be and adds itself to the amber band at the top, so
+   an incomplete total always announces itself. A quietly-wrong total is the failure mode that would
+   make this page worse than no page.                                                             */
+
+let fkTab="prices", fkFrom="", fkTo="", fkOpenRow=null, fkNewProduct=false;
+
+const $fk = id => document.getElementById(id);
+const fkMoney = v => (v==null||!isFinite(v)) ? "—" : "$"+(+v).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+const fkQty   = (v,u) => (v==null||!isFinite(v)) ? "—" : (+v).toLocaleString(undefined,{maximumFractionDigits:2})+(u?" "+u:"");
+
+function fkData(){ return data; }
+
+function buildFertCost(){
+  const tabs=$fk("fkTabs");
+  if(tabs) tabs.querySelectorAll("[data-fk-tab]").forEach(b=>
+    b.setAttribute("aria-selected", String(b.dataset.fkTab===fkTab)));
+  const add=$fk("fkAddProduct"); if(add) add.hidden = fkTab!=="prices";
+  const crumb=$fk("fkCrumb");
+  if(crumb) crumb.textContent = fkTab==="prices" ? "Fertiliser costs · products & prices"
+    : fkTab==="used" ? "Fertiliser costs · used to date" : "Fertiliser costs · season forecast";
+
+  const box=$fk("fkBody"); if(!box) return;
+  if(fkTab==="prices") box.innerHTML=fkPricesHTML();
+  else if(fkTab==="used") box.innerHTML=fkUsedHTML();
+  else box.innerHTML=fkForecastHTML();
+  fkWire();
+}
+
+/* ---- the amber "these have no price" band, shared by all three tabs ---- */
+/* Two different problems, listed separately because they're fixed in different places: a missing
+   price needs typing in, a unit mismatch needs the unit corrected on one side or the other.
+
+   `runUnpriced`, when given, is the list of products the tab's OWN calculation actually dropped.
+   The banner is filtered to it so the headline count and the "N products not priced" footnote under
+   the total can't disagree. Without it (the prices tab, which computes no total) the banner falls
+   back to the catalogue-wide scan, which is the right list there — it's a to-do list, not a
+   footnote on a number. Getting this wrong in both directions once is why it's spelled out: the
+   first version undercounted by ignoring unit mismatches, the second overcounted by flagging a
+   product whose other rows were costing perfectly well. */
+function fkWarnHTML(runUnpriced){
+  let missing=PlannerShared.fertUnpricedProducts(data);
+  if(Array.isArray(runUnpriced)){
+    const keep=new Set(runUnpriced.map(n=>String(n).trim().toLowerCase()));
+    missing=missing.filter(m=>keep.has(m.name.toLowerCase()));
+    // A product the run dropped for a reason the catalogue scan can't see still gets named.
+    const known=new Set(missing.map(m=>m.name.toLowerCase()));
+    runUnpriced.forEach(n=>{ if(n && !known.has(String(n).trim().toLowerCase()))
+      missing.push({name:String(n).trim(), reason:"no_price", where:[]}); });
+  }
+  if(!missing.length) return "";
+  const noPrice=missing.filter(m=>m.reason==="no_price");
+  const noSize=missing.filter(m=>m.reason==="no_pack_size");
+  const badUnit=missing.filter(m=>m.reason==="unit_mismatch");
+  const chips=list=>`<div style="margin-top:.4rem">${list.map(m=>
+    `<span class="fk-chip" data-fk-price="${esc(m.name)}">${esc(m.name)}${
+      m.reason==="unit_mismatch"?` <span class="fk-sub">${esc(m.pricedUnit||"?")}→${esc(m.rateUnit||"?")}</span>`:""
+    }</span>`).join("")}</div>`;
+  return `<div class="fk-warn">
+    <b>${missing.length} product${missing.length===1?"":"s"} left out of the dollar totals</b>
+    Usage figures below are still correct — only the money is affected. A product can still appear
+    with a cost above if only some of its rows were affected.
+    ${noPrice.length?`<div style="margin-top:.5rem">${noPrice.length} with no price yet.
+      Tap one to add it.</div>${chips(noPrice)}`:""}
+    ${noSize.length?`<div style="margin-top:.5rem">${noSize.length} ${noSize.length===1?"has a price":"have prices"}
+      but no pack size, so there's nothing to divide by. Put in what the pack holds — 25 for a 25 kg
+      bag. If you already know the per-kg price, enter a pack size of 1.</div>${chips(noSize)}`:""}
+    ${badUnit.length?`<div style="margin-top:.5rem">${badUnit.length} priced in a unit the rate can't
+      be converted to — the program asks for one and the price is per the other. Fix the unit on the
+      price list or on the program.</div>${chips(badUnit)}`:""}
+  </div>`;
+}
+
+/* ---- tab 1: products & prices ---- */
+function fkPricesHTML(){
+  const rows=(data.fertProducts||[]);
+  const body = (rows.length||fkNewProduct) ? `
+    <table class="fk-table">
+      <thead><tr>
+        <th style="width:30%">Product</th><th style="width:9%">Unit</th>
+        <th class="fk-num" style="width:13%">Pack size</th>
+        <th class="fk-num" style="width:15%">Pack price</th>
+        <th class="fk-num" style="width:13%">Cost / unit</th>
+        <th style="width:15%">Supplier</th><th style="width:5%"></th>
+      </tr></thead>
+      <tbody>
+        ${fkNewProduct?fkProductRowHTML(null):""}
+        ${rows.map(p=>fkProductRowHTML(p)).join("")}
+      </tbody>
+    </table>` : `<div class="fk-empty">No products priced yet. Tap <b>＋ Add product</b>, or pick one
+      from the list above to price something the programs already use.</div>`;
+  return fkWarnHTML()+`<div class="fk-card">
+    <h3>Products &amp; prices</h3>
+    <div class="fk-sub" style="margin:-.4rem 0 .8rem">Prices are ex-GST. <b>Pack size</b> is what the
+      bag or drum holds (25 for a 25 kg bag) and <b>pack price</b> is what the whole pack costs —
+      cost per unit is worked out from the two. If you already know the per-kg or per-litre price,
+      put 1 as the pack size. Names are matched to the programs by name, so spell them the same way.</div>
+    ${body}
+  </div>`;
+}
+
+function fkProductRowHTML(p){
+  const isNew=!p;
+  const v=p||{id:"new", name:"", unit:"kg", packSize:"", packPrice:"", supplier:""};
+  const cpu=p?PlannerShared.fertCostPerUnit(p):null;
+  // Says which of the two fields is missing rather than a bare "—". A row showing nothing next to a
+  // price the grower just typed reads as broken; this says what it still needs.
+  const need = cpu!=null ? null
+    : (v.packPrice==null && v.packSize==null) ? ""
+    : (v.packPrice==null) ? "needs a price"
+    : "needs pack size";
+  return `<tr data-fk-prod="${esc(v.id)}">
+    <td><input type="text" data-fk-f="name" value="${esc(v.name||"")}" placeholder="e.g. Natural Gypsum"${isNew?" autofocus":""}></td>
+    <td><select data-fk-f="unit" style="width:100%;padding:.35rem;font-family:inherit;border:1px solid var(--line-2);border-radius:7px;background:var(--paper);color:var(--ink)">
+      ${["kg","L"].map(u=>`<option value="${u}"${u===(v.unit||"kg")?" selected":""}>${u}</option>`).join("")}</select></td>
+    <td><input type="number" step="any" inputmode="decimal" data-fk-f="packSize" value="${v.packSize??""}" placeholder="kg or L per pack"></td>
+    <td><input type="number" step="any" inputmode="decimal" data-fk-f="packPrice" value="${v.packPrice??""}" placeholder="whole pack"></td>
+    <td class="fk-num fk-derived">${cpu!=null ? fkMoney(cpu)+" /"+(v.unit||"kg")
+      : (need ? `<span class="fk-sub">${need}</span>` : "—")}</td>
+    <td><input type="text" data-fk-f="supplier" value="${esc(v.supplier||"")}"></td>
+    <td class="fk-num">${isNew
+      ? `<button class="btn-primary" type="button" data-fk-save="new" style="padding:.3rem .6rem">Save</button>`
+      : `<button class="btn-ghost" type="button" data-fk-del="${esc(v.id)}" title="Delete" style="padding:.3rem .5rem">✕</button>`}</td>
+  </tr>`;
+}
+
+/* ---- tab 2: used to date ---- */
+function fkUsedHTML(){
+  const res=PlannerShared.fertActualCost(data, {from:fkFrom||null, to:fkTo||null});
+  const apps=res.rows;
+  const filters=`<div class="fk-actions">
+    <label class="fk-sub" for="fkFrom">From</label><input type="date" id="fkFrom" value="${esc(fkFrom)}">
+    <label class="fk-sub" for="fkTo">To</label><input type="date" id="fkTo" value="${esc(fkTo)}">
+    ${(fkFrom||fkTo)?`<button class="btn-ghost" type="button" id="fkClearDates" style="padding:.35rem .7rem">Clear</button>`:""}
+  </div>`;
+
+  if(!apps.length) return fkWarnHTML(res.unpriced)+filters+`<div class="fk-card"><div class="fk-empty">
+    Nothing logged${(fkFrom||fkTo)?" in this date range":" yet"}. Applications logged on the
+    Fertiliser programs page (Log beds done) appear here, priced.</div></div>`;
+
+  const prods=Object.values(res.byProduct).sort((a,b)=>b.cost-a.cost);
+  return fkWarnHTML(res.unpriced)+filters+`
+    <div class="fk-card">
+      <h3>Spent${(fkFrom||fkTo)?" in range":" to date"}</h3>
+      <div class="fk-total">${fkMoney(res.total)}</div>
+      <div class="fk-total-sub">${apps.length} application${apps.length===1?"":"s"}
+        ${res.unpriced.length?` · ${res.unpriced.length} product${res.unpriced.length===1?"":"s"} not priced, so this is a floor`:""}</div>
+      ${res.fromRates?`<div class="fk-sub" style="margin-top:.6rem">
+        ${res.fromRates} of these ${res.fromRates===1?"was":"were"} costed from the program's rates
+        rather than the log. The log records what you measured into the bucket — litres — and dry
+        products are priced by the kilo, so for those the round's own kg rates are used instead.
+        Marked <b>from rates</b> below.</div>`:""}
+    </div>
+    <div class="fk-card">
+      <h3>By product</h3>
+      <table class="fk-table">
+        <thead><tr><th>Product</th><th class="fk-num">Used</th><th class="fk-num">Cost</th></tr></thead>
+        <tbody>${prods.map(p=>`<tr>
+          <td>${esc(p.product)}${p.priced?"":` <span class="fk-sub">(no price)</span>`}</td>
+          <td class="fk-num">${fkQty(p.amount,p.unit)}</td>
+          <td class="fk-num">${p.priced?fkMoney(p.cost):"?"}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>
+    <div class="fk-card">
+      <h3>Applications</h3>
+      <table class="fk-table">
+        <thead><tr><th>Date</th><th>Program · round</th><th>Block</th>
+          <th class="fk-num">Beds</th><th class="fk-num">Cost</th></tr></thead>
+        <tbody>${apps.map(a=>{
+          const prog=(data.fertPrograms||[]).find(p=>p.id===a.programId);
+          const rd=(data.fertRounds||[]).find(r=>r.id===a.roundId);
+          const blk=(data.blocks||[]).find(b=>b.id===a.blockId);
+          const open=fkOpenRow===a.id;
+          return `<tr class="fk-grp" data-fk-app="${esc(a.id)}">
+            <td>${esc(fmt(a.date))}</td>
+            <td>${esc([prog?prog.name:"—", rd?rd.name:null].filter(Boolean).join(" · "))}</td>
+            <td>${esc(blk?blk.name:"—")}</td>
+            <td class="fk-num">${a.beds}</td>
+            <td class="fk-num">${fkMoney(a.cost)}${a.basis==="rates"?` <span class="fk-sub">from rates</span>`:""}</td></tr>
+            ${open?`<tr class="fk-detail"><td colspan="5">${a.lines.map(l=>
+              `${esc(l.product)} — ${fkQty(l.amount,l.unit)} · ${l.cost==null?"<span class='fk-sub'>no price</span>":fkMoney(l.cost)}`
+              ).join("<br>")||"<span class='fk-sub'>no product lines recorded</span>"}</td></tr>`:""}`;
+        }).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ---- tab 3: season forecast ---- */
+function fkForecastHTML(){
+  const fc=PlannerShared.fertSeasonForecast(data);
+  if(!fc.rows.length) return fkWarnHTML(fc.unpriced)+`<div class="fk-card"><div class="fk-empty">
+    Nothing to forecast. A bed needs a planting on it, and its block needs rates on a fertiliser
+    program, before a cost can be worked out.${fc.orphanBeds.length?`<br><br>
+    <b>${fc.orphanBeds.length} bed${fc.orphanBeds.length===1?"":"s"}</b> couldn't be matched to a
+    block — check the block names on the Beds page.`:""}</div></div>`;
+
+  const actual=PlannerShared.fertActualCost(data);
+  const prods=Object.values(fc.byProduct).sort((a,b)=>b.cost-a.cost);
+  const blocks=Object.entries(fc.byBlock).map(([id,v])=>({
+    id, name:((data.blocks||[]).find(b=>b.id===id)||{}).name||"—", cost:v })).sort((a,b)=>b.cost-a.cost);
+  const maxBlock=blocks.length?blocks[0].cost:0;
+
+  const orphan = fc.orphanBeds.length ? `<div class="fk-warn">
+    <b>${fc.orphanBeds.length} bed${fc.orphanBeds.length===1?"":"s"} left out of this forecast</b>
+    Their Block doesn't match any block on the farm map, so no program could be found for them:
+    ${esc([...new Set(fc.orphanBeds.map(b=>b.block||"(blank)"))].join(", "))}.
+  </div>` : "";
+
+  return fkWarnHTML(fc.unpriced)+orphan+`
+    <div class="fk-card">
+      <h3>Forecast for the season</h3>
+      <div class="fk-total">${fkMoney(fc.total)}</div>
+      <div class="fk-total-sub">${fc.rows.length} fertiliser round${fc.rows.length===1?"":"s"}
+        across ${new Set(fc.rows.map(r=>r.bedId)).size} bed${new Set(fc.rows.map(r=>r.bedId)).size===1?"":"s"}
+        ${fc.unpriced.length?` · ${fc.unpriced.length} product${fc.unpriced.length===1?"":"s"} not priced, so this is a floor`:""}</div>
+      <div class="fk-sub" style="margin-top:.7rem">
+        Logged so far: <b>${fkMoney(actual.total)}</b> ·
+        still to spend: <b>${fkMoney(Math.max(0, fc.total-actual.total))}</b>
+      </div>
+    </div>
+    <div class="fk-card">
+      <h3>What you'll need</h3>
+      <table class="fk-table">
+        <thead><tr><th>Product</th><th class="fk-num">Quantity</th><th class="fk-num">Cost</th></tr></thead>
+        <tbody>${prods.map(p=>`<tr>
+          <td>${esc(p.product)}${p.priced?"":` <span class="fk-sub">(no price)</span>`}</td>
+          <td class="fk-num">${fkQty(p.amount,p.unit)}</td>
+          <td class="fk-num">${p.priced?fkMoney(p.cost):"?"}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>
+    <div class="fk-card">
+      <h3>By block</h3>
+      <table class="fk-table">
+        <thead><tr><th style="width:12%">Block</th><th>&nbsp;</th><th class="fk-num" style="width:18%">Cost</th></tr></thead>
+        <tbody>${blocks.map(b=>`<tr class="fk-grp" data-fk-block="${esc(b.id)}">
+          <td>${esc(b.name)}</td>
+          <td><span class="fk-bar" style="width:${maxBlock?Math.round(b.cost/maxBlock*100):0}%"></span></td>
+          <td class="fk-num">${fkMoney(b.cost)}</td></tr>
+          ${fkOpenRow===b.id?`<tr class="fk-detail"><td colspan="3">${fkBlockDetailHTML(fc, b.id)}</td></tr>`:""}`).join("")}</tbody>
+      </table>
+      <div class="fk-sub" style="margin-top:.6rem">Tap a block to see which planting draws which round.</div>
+    </div>`;
+}
+
+// The drill-down that shows the rule working: each planting on a bed, in sow order, and the round
+// it draws. This is where "the 3rd planting gets round 3" stops being a claim and becomes visible.
+function fkBlockDetailHTML(fc, blockId){
+  const rows=fc.rows.filter(r=>r.blockId===blockId)
+    .sort((a,b)=>a.bedName.localeCompare(b.bedName,undefined,{numeric:true})||a.plantingIndex-b.plantingIndex);
+  if(!rows.length) return `<span class="fk-sub">Nothing forecast for this block.</span>`;
+  return `<table class="fk-table" style="margin:0">
+    <thead><tr><th>Bed</th><th>Planting</th><th>Crop</th><th>Program · round</th>
+      <th class="fk-num">Area</th><th class="fk-num">Cost</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td>${esc(r.bedName)}</td>
+      <td>#${r.plantingIndex+1}${r.sow?` <span class="fk-sub">${esc(fmt(r.sow))}</span>`:""}</td>
+      <td>${esc(r.crop||"—")}</td>
+      <td>${esc(r.programName)} · ${esc(r.roundName)}</td>
+      <td class="fk-num">${r.areaM2.toFixed(1)} m²</td>
+      <td class="fk-num">${r.complete?fkMoney(r.cost):fkMoney(r.cost)+" <span class='fk-sub'>+?</span>"}</td>
+    </tr>`).join("")}</tbody></table>`;
+}
+
+/* ---- wiring. Rebuilt wholesale on every render, same idiom as the other fert pages ---- */
+function fkWire(){
+  document.querySelectorAll("#fkTabs [data-fk-tab]").forEach(b=>b.onclick=()=>{
+    fkTab=b.dataset.fkTab; fkOpenRow=null; fkNewProduct=false; buildFertCost();
+  });
+  const add=$fk("fkAddProduct");
+  if(add) add.onclick=()=>{ fkTab="prices"; fkNewProduct=true; buildFertCost(); };
+
+  document.querySelectorAll("[data-fk-price]").forEach(c=>c.onclick=()=>{
+    fkTab="prices"; fkNewProduct=true; buildFertCost();
+    const row=document.querySelector('[data-fk-prod="new"] [data-fk-f="name"]');
+    if(row){ row.value=c.dataset.fkPrice; row.focus(); }
+  });
+
+  document.querySelectorAll("[data-fk-save]").forEach(b=>b.onclick=()=>fkSaveNew());
+  document.querySelectorAll("[data-fk-del]").forEach(b=>b.onclick=()=>fkDelete(b.dataset.fkDel));
+
+  // Existing rows save on blur — this is a spreadsheet-ish table, and a Save button per row would
+  // be four extra taps per price change.
+  document.querySelectorAll('[data-fk-prod]:not([data-fk-prod="new"]) [data-fk-f]').forEach(inp=>{
+    inp.onchange=()=>fkSaveField(inp.closest("[data-fk-prod]").dataset.fkProd, inp.dataset.fkF, inp.value);
+  });
+
+  document.querySelectorAll("[data-fk-app]").forEach(r=>r.onclick=()=>{
+    fkOpenRow = fkOpenRow===r.dataset.fkApp ? null : r.dataset.fkApp; buildFertCost();
+  });
+  document.querySelectorAll("[data-fk-block]").forEach(r=>r.onclick=()=>{
+    fkOpenRow = fkOpenRow===r.dataset.fkBlock ? null : r.dataset.fkBlock; buildFertCost();
+  });
+
+  const from=$fk("fkFrom"), to=$fk("fkTo"), clear=$fk("fkClearDates");
+  if(from) from.onchange=()=>{ fkFrom=from.value; buildFertCost(); };
+  if(to)   to.onchange  =()=>{ fkTo=to.value;     buildFertCost(); };
+  if(clear) clear.onclick=()=>{ fkFrom=""; fkTo=""; buildFertCost(); };
+}
+
+/* ---- writes. Optimistic, same idiom as fpSaveItem ---- */
+function fkReadNewRow(){
+  const row=document.querySelector('[data-fk-prod="new"]'); if(!row) return null;
+  const g=f=>{ const el=row.querySelector(`[data-fk-f="${f}"]`); return el?el.value:""; };
+  return { name:(g("name")||"").trim(), unit:g("unit")||"kg",
+           packSize:g("packSize")===""?null:+g("packSize"),
+           packPrice:g("packPrice")===""?null:+g("packPrice"),
+           supplier:(g("supplier")||"").trim() };
+}
+
+async function fkSaveNew(){
+  const v=fkReadNewRow(); if(!v) return;
+  if(!v.name){ alert("Give the product a name."); return; }
+  const F=CFG.f;
+  const fields={ [F.fpd_name]:v.name, [F.fpd_unit]:v.unit, [F.fpd_packSize]:v.packSize,
+                 [F.fpd_packPrice]:v.packPrice, [F.fpd_supplier]:v.supplier||null,
+                 [F.fpd_active]:true, [F.fpd_order]:(data.fertProducts||[]).length+1 };
+  showLoading(true);
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertProducts, [fields]);
+    data.fertProducts.push(PlannerShared.parseFertProducts([{id:rec.id, fields}])[0]);
+    data.fertProducts.sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+    fkNewProduct=false;
+    buildFertCost();
+  }catch(e){ alert("Couldn't save this product:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
+async function fkSaveField(id, key, raw){
+  const p=(data.fertProducts||[]).find(x=>x.id===id); if(!p) return;
+  const F=CFG.f;
+  const map={ name:F.fpd_name, unit:F.fpd_unit, packSize:F.fpd_packSize,
+              packPrice:F.fpd_packPrice, supplier:F.fpd_supplier };
+  const field=map[key]; if(!field) return;
+  const isNum = key==="packSize"||key==="packPrice";
+  const val = isNum ? (raw===""?null:+raw) : String(raw).trim();
+  const prev=p[key];
+  p[key]= isNum ? val : val;                       // optimistic, so the derived $/unit updates now
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.fertProducts, id, {[field]: val===""?null:val});
+    buildFertCost();
+  }catch(e){ p[key]=prev; buildFertCost(); alert("Couldn't save that change:\n"+e.message); }
+}
+
+async function fkDelete(id){
+  const p=(data.fertProducts||[]).find(x=>x.id===id); if(!p) return;
+  if(!confirm(`Remove "${p.name}" from the price list?\n\nThe programs and the log keep using the name — it just goes back to having no price.`)) return;
+  showLoading(true);
+  const idx=data.fertProducts.indexOf(p);
+  data.fertProducts.splice(idx,1);
+  try{ await atDelete(CFG.farmBase, CFG.tables.fertProducts, [id]); buildFertCost(); }
+  catch(e){ data.fertProducts.splice(idx,0,p); buildFertCost(); alert("Couldn't delete:\n"+e.message); }
+  finally{ showLoading(false); }
+}
+
 /* ---- Fert records page ---- */
+// Which of the two readings of the log is showing, and where the by-bed one is parked. Kept in
+// memory only: it's a lookup you do once at the bed, not a place you come back to.
+let frMode="date", frBlockName=null, frBedId=null;
+
 function buildFertRecords(){
+  if(frMode==="bed") return buildFertByBed();
+  const dateBox=document.getElementById("frBody"), bedBox=document.getElementById("frBedBody");
+  if(dateBox) dateBox.hidden=false;
+  if(bedBox) bedBox.hidden=true;
+  buildFertByDate();
+}
+
+function buildFertByDate(){
   const box=document.getElementById("frBody"); if(!box) return;
   const apps=data.fertApps||[];
   document.getElementById("frCount").textContent =
@@ -13660,6 +15268,120 @@ function buildFertRecords(){
         <div class="sp-sched-actions"><button class="btn-ghost" type="button" data-fr-del="${a.id}">Delete</button></div>
       </div>`;}).join("") + `</div>`
     : `<div class="cr-empty">No fertiliser applications logged yet. Log one from a program's rates page, or with the button above.</div>`;
+}
+
+// Every application that touched a bed, newest first.
+function frAppsForBed(bedId){
+  return (data.fertApps||[]).filter(a=>(a.bedIds||[]).includes(bedId))
+    .slice().sort((x,y)=>String(y.date||"").localeCompare(String(x.date||"")));
+}
+
+// What one application put on one bed. Rates are stored per bed, so that's the honest figure;
+// fall back to dividing the total when an old row only carried the total.
+function frPerBed(app,item){
+  if(item.rate!=null) return item.rate;
+  const n=(app.bedIds||[]).length;
+  if(item.total!=null && n) return Math.round(item.total/n*1000)/1000;
+  return null;
+}
+
+// Block names in farm-map order, taken from the beds themselves so a block with beds but no
+// fertiliser history still appears — "this bed has had nothing" is a valid answer.
+function frBlockNames(){
+  const order=new Map((data.blocks||[]).map((b,i)=>[b.name,(b.order??i)]));
+  const names=[...new Set((data.beds||[]).map(b=>b.block).filter(Boolean))];
+  return names.sort((a,b)=>((order.get(a)??1e9)-(order.get(b)??1e9))||a.localeCompare(b,undefined,{numeric:true}));
+}
+
+function frBedsOfBlock(name){
+  return (data.beds||[]).filter(b=>b.block===name)
+    .sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name,undefined,{numeric:true}));
+}
+
+function buildFertByBed(){
+  const box=document.getElementById("frBedBody"); if(!box) return;
+  const dateBox=document.getElementById("frBody");
+  if(dateBox) dateBox.hidden=true;
+  box.hidden=false;
+
+  const blocks=frBlockNames();
+  if(!blocks.length){
+    document.getElementById("frCount").textContent="";
+    box.innerHTML=`<div class="cr-empty">No beds set up yet.</div>`;
+    return;
+  }
+  if(!blocks.includes(frBlockName)) frBlockName=blocks[0];
+  const beds=frBedsOfBlock(frBlockName);
+  if(!beds.some(b=>b.id===frBedId)) frBedId=null;
+
+  const counts=new Map();
+  (data.fertApps||[]).forEach(a=>(a.bedIds||[]).forEach(id=>counts.set(id,(counts.get(id)||0)+1)));
+
+  const bed=frBedId?beds.find(b=>b.id===frBedId):null;
+  const apps=bed?frAppsForBed(bed.id):[];
+  document.getElementById("frCount").textContent =
+    bed ? `${apps.length} record${apps.length===1?"":"s"} on ${bed.name}` : `${beds.length} bed${beds.length===1?"":"s"}`;
+
+  box.innerHTML=`<div class="frb-wrap">
+    <div>
+      <div class="frb-label">Block</div>
+      <div class="frb-blocks" id="frbBlocks">${blocks.map(n=>
+        `<button class="frb-block" type="button" data-frb-block="${esc(n)}" aria-selected="${n===frBlockName}">${esc(n)}</button>`).join("")}</div>
+    </div>
+    <div>
+      <div class="frb-label">Bed</div>
+      <div class="frb-beds">${beds.map(b=>{
+        const n=counts.get(b.id)||0;
+        return `<button class="frb-bed${n?"":" frb-bed-none"}" type="button" data-frb-bed="${b.id}" aria-selected="${b.id===frBedId}">${esc(b.name)}<span class="frb-bed-n">${n?`${n} app${n===1?"":"s"}`:"none"}</span></button>`;
+      }).join("")}</div>
+    </div>
+    ${bed?frBedDetail(bed,apps):`<div class="cr-empty">Pick a bed to see what it's had.</div>`}
+  </div>`;
+}
+
+function frBedDetail(bed,apps){
+  // Running total per product, so the answer to "how much gypsum has this bed had" is one line
+  // rather than a mental sum down the card list. Units are kept apart — a product logged in both
+  // kg and L must not be added together.
+  const totals=new Map();
+  apps.forEach(a=>(a.items||[]).forEach(i=>{
+    const v=frPerBed(a,i); if(v==null) return;
+    const key=`${i.product}||${i.unit||""}`;
+    const t=totals.get(key)||{product:i.product,unit:i.unit||"",sum:0,n:0};
+    t.sum+=v; t.n++; totals.set(key,t);
+  }));
+  const last=apps.length?fmt(apps[0].date):null;
+  return `<div class="frb-detail">
+    <div class="frb-head">
+      <span class="frb-head-name">${esc(bed.name)}</span>
+      <span class="frb-head-sub">${esc(bed.block||"")}${last?` · last fed ${esc(last)}`:" · never fed"}</span>
+    </div>
+    ${totals.size?`<div class="frb-totals">${[...totals.values()]
+      .sort((a,b)=>a.product.localeCompare(b.product)).map(t=>`<div class="frb-total">
+        <span class="frb-total-name">${esc(t.product)}</span>
+        <span class="frb-total-n">${t.n}×</span>
+        <span class="frb-total-fig">${Math.round(t.sum*1000)/1000} ${esc(t.unit)}</span>
+      </div>`).join("")}</div>`:""}
+    ${apps.length?apps.map(a=>{
+      const prog=fpProgram(a.programId), round=(data.fertRounds||[]).find(r=>r.id===a.roundId);
+      return `<div class="spray-card">
+        <div class="sc-top">
+          <span class="sc-date">${esc(fmt(a.date))}</span>
+          <span class="sc-title">${esc(prog?prog.name:"Fertiliser")}${round?` · ${esc(round.name)}`:""}</span>
+          <span class="sc-badge">${esc(a.method||"Spread")}</span>
+        </div>
+        ${a.by?`<div class="sc-line"><span class="k">By</span><span class="v">${esc(a.by)}</span></div>`:""}
+        <div class="sc-line"><span class="k">With</span><span class="v">${
+          a.bedIds.length===1?"this bed alone":`${a.bedIds.length} beds together`}</span></div>
+        <div class="sc-prods">${(a.items||[]).map(i=>{
+          const v=frPerBed(a,i);
+          return `<span class="sc-prod">${esc(i.product)}<span class="r">${
+            v!=null?`${v} ${esc(i.unit||"")}`:""}</span></span>`;}).join("")}</div>
+        ${a.notes?`<div class="sc-note">${esc(a.notes)}</div>`:""}
+        <div class="sp-sched-actions"><button class="btn-ghost" type="button" data-fr-del="${a.id}">Delete</button></div>
+      </div>`;}).join("")
+      :`<div class="cr-empty">Nothing logged on this bed yet.</div>`}
+  </div>`;
 }
 
 async function frDelete(id){
@@ -13778,6 +15500,25 @@ async function frDelete(id){
 
   const frBody=document.getElementById("frBody");
   if(frBody) frBody.addEventListener("click",(ev)=>{
+    const d=ev.target.closest("[data-fr-del]"); if(d) frDelete(d.dataset.frDel);
+  });
+
+  const modeBar=document.getElementById("frMode");
+  if(modeBar) modeBar.addEventListener("click",(ev)=>{
+    const b=ev.target.closest("[data-fr-mode]"); if(!b) return;
+    frMode=b.dataset.frMode;
+    modeBar.querySelectorAll("[data-fr-mode]").forEach(el=>
+      el.setAttribute("aria-pressed", el.dataset.frMode===frMode?"true":"false"));
+    buildFertRecords();
+  });
+
+  const frBedBody=document.getElementById("frBedBody");
+  if(frBedBody) frBedBody.addEventListener("click",(ev)=>{
+    const blk=ev.target.closest("[data-frb-block]");
+    // Changing block clears the bed rather than keeping a selection you can no longer see.
+    if(blk){ frBlockName=blk.dataset.frbBlock; frBedId=null; buildFertByBed(); return; }
+    const bed=ev.target.closest("[data-frb-bed]");
+    if(bed){ frBedId = frBedId===bed.dataset.frbBed ? null : bed.dataset.frbBed; buildFertByBed(); return; }
     const d=ev.target.closest("[data-fr-del]"); if(d) frDelete(d.dataset.frDel);
   });
 })();
@@ -14956,6 +16697,93 @@ document.addEventListener('visibilitychange', () => {
   if (wkHiddenAt && Date.now() - wkHiddenAt > 10*60*1000) location.reload();
   wkHiddenAt = null;
 });
+
+/* ---------- Keeping two views of the same farm in step ----------
+   The app reads everything once at load and then never asks again, so a change made in another tab
+   — or out in the paddock on the phone — stayed invisible here until someone thought to press ↻.
+   Two cheap mechanisms cover that without a websocket, a polling loop, or any new dependency:
+
+     1. BroadcastChannel — tabs in this browser tell each other the moment they write, so a second
+        tab catches up within a few hundred milliseconds.
+     2. visibilitychange/focus — returning to a tab that sat idle re-reads the data, which is what
+        picks up edits made on another device. Deliberately NOT a timer: polling the database every
+        few seconds all day to catch a change that happens twice a week isn't a trade worth making.
+
+   Both funnel into one guarded refresh. loadAll() rebuilds everything and would throw away anything
+   half-typed, so it never runs while a dialog is open or a field has focus — the refresh is held as
+   pending and taken at the next safe moment instead.
+
+   This block only wraps the existing functions; deleting it restores the previous behaviour exactly. */
+
+const SYNC_STALE_MS    = 30*1000;   // how stale data must be before returning to a tab re-reads it
+const SYNC_DEBOUNCE_MS = 400;       // one save is often several writes — collapse them into one reload
+
+let syncChannel = null;
+try { if ("BroadcastChannel" in window) syncChannel = new BroadcastChannel("roseberry-planner-sync"); }
+catch { syncChannel = null; }       // private-mode or unsupported: focus refresh alone still works
+
+let syncLastLoadAt = Date.now();
+let syncPending = false;            // a refresh is owed but wasn't safe to take yet
+let syncBusyLoading = false;        // a refresh is already in flight
+let syncTimer = null;
+
+// A reload discards in-progress input, so anything that looks like active editing defers it.
+// Every dialog, panel, drawer and menu in this app is shown by adding .open, so one check covers all.
+function syncEditing(){
+  if (document.querySelector(".open")) return true;
+  const t = document.activeElement && document.activeElement.tagName;
+  return t === "INPUT" || t === "TEXTAREA" || t === "SELECT";
+}
+
+async function syncRefresh(){
+  if (document.hidden || syncEditing() || syncBusyLoading){ syncPending = true; return; }
+  syncPending = false;
+  syncBusyLoading = true;
+  try { await loadAll(); }
+  catch { syncPending = true; }     // offline or a bad response — try again at the next safe moment
+  finally { syncBusyLoading = false; }
+}
+
+function syncSchedule(){
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncRefresh, SYNC_DEBOUNCE_MS);
+}
+
+if (syncChannel) syncChannel.onmessage = (e) => { if (e.data && e.data.kind === "write") syncSchedule(); };
+
+// Tell the other tabs whenever this one writes. Wrapping leaves the three data paths untouched.
+["atPatch","atCreate","atDelete"].forEach((name) => {
+  const original = window[name];
+  if (typeof original !== "function") return;
+  window[name] = async function(...args){
+    const result = await original.apply(this, args);
+    if (syncChannel){ try { syncChannel.postMessage({ kind:"write", at: Date.now() }); } catch {} }
+    return result;
+  };
+});
+
+// Track when the data was last read, however that happened — first connect, the ↻ button, or a sync.
+const syncOriginalLoadAll = window.loadAll;
+if (typeof syncOriginalLoadAll === "function"){
+  window.loadAll = async function(...args){
+    const r = await syncOriginalLoadAll.apply(this, args);
+    syncLastLoadAt = Date.now();
+    return r;
+  };
+}
+
+// Coming back to a tab. The 10-minute hard reload above takes precedence and will have already
+// fired for long absences; this covers the shorter gaps it deliberately ignores.
+function syncOnReturn(){
+  if (document.hidden) return;
+  if (syncPending || Date.now() - syncLastLoadAt > SYNC_STALE_MS) syncSchedule();
+}
+document.addEventListener("visibilitychange", syncOnReturn);
+window.addEventListener("focus", syncOnReturn);
+
+// A refresh deferred because a dialog was open still has to happen once it closes. This costs
+// nothing unless a refresh is actually owed — it makes no network call otherwise.
+setInterval(() => { if (syncPending && !document.hidden && !syncEditing()) syncRefresh(); }, 3000);
 </script>
 </body>
 </html>

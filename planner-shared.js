@@ -37,6 +37,14 @@
       harvestRecords:"tblmh2KDsRkgWnA70", // "Harvest Records" — planned/actual harvest per planting × outlet × week (Harvest planner)
       tarpings:  "tblMiHkcM5GM68J2R", // "Tarpings" — a bed-and-date-range tarp used as crop termination; optionally linked to the planting it terminates
       bedIssues: "tbl3z7PMcqLruxGFF", // "Bed Issues" — persistent problems with a bed (nutrition, weeds, disease) that flag, but never block, a matching crop
+      // Bed zones — the coarse planning layer above plantings: a crop type reserved on a bed for a
+      // date window, with a metre budget. Supabase-only, placeholder id like the field walk tables.
+      bedZones:  "tblBZzones",        // "Bed Zones"
+      // Bed prep log — Supabase-only, placeholder ids (same convention as the field walk tables
+      // below). Events are the record of which cultivation was done to which beds when; Targets
+      // holds the interval per operation that decides when a bed reads as overdue.
+      bedPrepEvents:  "tblBPevents",   // "Bed Prep Events"
+      bedPrepTargets: "tblBPtargets",  // "Bed Prep Targets"
       // Spray log (Fert & Foliar base). The app-native replacement for the old wide Spray Data /
       // Ferti Data entry form. Products is the shared catalog; Mixes are saved recipes; Applications
       // are the actual log. Mix Items / Application Items are the product-and-rate lines of each.
@@ -64,6 +72,11 @@
       fertItems:        "tblFPitems",         // "Fert Items"
       fertApplications: "tblFAapps",          // "Fert Applications" — the log; also the beds-done record
       fertApplicationItems: "tblFAitems",     // "Fert Application Items"
+      // Fert product price catalog. Separate from the programs because a price changes on the
+      // supplier's schedule, not the season's. Matched to the free-text `product` on Fert Items /
+      // Fert Application Items by normalised name — deliberately NOT a link field, so pricing a
+      // product can never rewrite the agronomy rows it prices.
+      fertProducts:     "tblFPDproducts",     // "Fert Products"
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -75,10 +88,19 @@
       bi_name:"Name", bi_bed:"Bed", bi_type:"Issue type", bi_severity:"Severity",
       bi_types:"Excluded crop types", bi_crops:"Excluded crops",
       bi_from:"Active from", bi_until:"Active until", bi_notes:"Notes",
+      // Bed prep. `bpe_ops` holds the operation names straight out of BP_OPS; `bpe_task` links back
+      // to the planting_tasks row when the event was logged by ticking a Bed prep task.
+      bpe_name:"Name", bpe_date:"Date", bpe_bed:"Bed", bpe_ops:"Operations",
+      bpe_by:"Done by", bpe_notes:"Notes", bpe_task:"Task", bpe_created:"Created at",
+      bpt_op:"Operation", bpt_days:"Interval days",
       tt_name:"Name", tt_cells:"Cell count",
       tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
       tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
       tk_duration:"Minutes per 15m bed", tk_fwtag:"Field walk tag",
+      // Which fertiliser program this task carries out ("Bed Prep" -> the amendment program,
+      // "Side-dress"/"Foliar feed" -> a fertigation program). Set on the LIBRARY task only; the
+      // round is never stored, it's resolved per instance from the planting's position in its bed.
+      tk_fertProgram:"Fert program",
       ct_label:"Label", ct_task:"Task", ct_crop:"Crop", ct_variety:"Variety",
       ct_anchor:"Anchor", ct_offset:"Offset days", ct_repeat:"Repeat every (days)", ct_until:"Repeat until",
       ct_duration:"Minutes per 15m bed",
@@ -108,6 +130,10 @@
       // Add/Edit Planting dialog.
       pl_seedRef:"Seed ref", pl_traysSown:"Trays sown", pl_sowActual:"Actual sow date",
       pl_tpActual:"Actual transplant date",
+      // Wound back into a bed zone. Not a Status value — statusRank() is positional, so adding one
+      // would rank as "Planned". A parked planting keeps everything (id, bed link, tasks, harvest
+      // records) but is skipped by every read path, so unparking restores it exactly.
+      pl_parked:"Parked",
       cr_type:"Type",
       cr_method:"Method", cr_nursery:"Days in nursery", cr_dtm:"Days to maturity",
       cr_window:"Harvest window days", cr_gap:"Succession interval days",
@@ -140,11 +166,21 @@
       tr_layStart:"Lay start minute", tr_pullStart:"Pull start minute",
       tr_layTtId:"Lay TickTick Task ID", tr_pullTtId:"Pull TickTick Task ID",
       tr_layGcalId:"Lay Google Cal Event ID", tr_pullGcalId:"Pull Google Cal Event ID",
+      // Bed zones — the coarse layer above plantings. `zn_type` is the required crop type;
+      // `zn_crop` optionally narrows it to one crop. `zn_beds` empty means a bed-less demand row
+      // ("60 m of this, somewhere") rather than a reservation on a specific bed. `zn_parked` holds
+      // the plantings collapsed into this zone, so Restore knows exactly what to bring back.
+      zn_name:"Name", zn_beds:"Bed", zn_type:"Crop type", zn_crop:"Crop",
+      zn_start:"Start date", zn_end:"End date", zn_m:"Bed metres",
+      zn_parked:"Parked plantings", zn_notes:"Notes", zn_created:"Created at",
       // Spray Products (catalog). `spp_whp` is the per-product withholding period; an application's
       // WHP is the max across its products (see mixWhp below).
       spp_name:"Name", spp_cat:"Category", spp_unit:"Unit", spp_rate:"Default rate",
       spp_basis:"Rate basis", spp_whp:"WHP days", spp_organic:"Organic status",
       spp_active:"Active", spp_notes:"Notes",
+      // Pricing, so a planned spray can be costed the same way a fert round is. Same derived
+      // cost-per-unit rule as Fert Products (see fpd_* below) — pack price / pack size, ex-GST.
+      spp_packSize:"Pack size", spp_packPrice:"Pack price", spp_supplier:"Supplier",
       // Spray Mixes (saved recipes) + their ingredient lines.
       smx_name:"Name", smx_target:"Target / reason", smx_water:"Water volume", smx_waterBasis:"Water basis",
       smx_method:"Method notes", smx_whp:"WHP days", smx_fav:"Favourite", smx_active:"Active",
@@ -191,6 +227,11 @@
       fa_created:"Created at",
       fai_app:"Application", fai_product:"Product", fai_rate:"Rate per bed", fai_unit:"Unit",
       fai_total:"Total", fai_order:"Order",
+      // Fert Products. `fpd_` (not `fp_`, which is Fert Programs). Cost per unit is derived from
+      // pack size + pack price, never stored — a stored copy would go stale the moment either
+      // changes. Prices are ex-GST, matching how the bookkeeping side reads supplier invoices.
+      fpd_name:"Name", fpd_unit:"Unit", fpd_packSize:"Pack size", fpd_packPrice:"Pack price",
+      fpd_supplier:"Supplier", fpd_active:"Active", fpd_notes:"Notes", fpd_order:"Order",
     }
   };
 
@@ -202,7 +243,9 @@
     blocks:"blocks", beds:"beds", plantings:"plantings", crops:"crops", varieties:"varieties",
     trayTypes:"tray_types", tasks:"tasks", cropTasks:"crop_tasks", plantingTasks:"planting_tasks",
     salesOutlets:"sales_outlets", harvestRecords:"harvest_records", tarpings:"tarpings",
-    bedIssues:"bed_issues", sprayProducts:"spray_products", sprayMixes:"spray_mixes",
+    bedZones:"bed_zones",
+    bedIssues:"bed_issues", bedPrepEvents:"bed_prep_events", bedPrepTargets:"bed_prep_targets",
+    sprayProducts:"spray_products", sprayMixes:"spray_mixes",
     sprayMixItems:"spray_mix_items", sprayApplications:"spray_applications",
     sprayApplicationItems:"spray_application_items",
     fieldWalks:"field_walks", walkObservations:"walk_observations",
@@ -210,6 +253,7 @@
     farmInfo:"farm_info",
     fertPrograms:"fert_programs", fertRounds:"fert_rounds", fertItems:"fert_items",
     fertApplications:"fert_applications", fertApplicationItems:"fert_application_items",
+    fertProducts:"fert_products",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -479,6 +523,33 @@
       cropIds:(i.fields[F.bi_crops]||[]).slice(),
       from:i.fields[F.bi_from]||"", until:i.fields[F.bi_until]||"",
       notes:i.fields[F.bi_notes]||"",
+    }));
+  }
+
+  // Bed prep events. Unlike most parsers here, `bedIds` stays an array: one pass of the power
+  // harrow across four beds is deliberately one record, so flattening to a single bed would lose
+  // the other three. `ops` are raw BP_OPS strings — an operation renamed in code leaves old events
+  // carrying the old name, which reads as "never done" for the new one rather than corrupting.
+  function parseBedPrepEvents(records){
+    const F=CFG.f;
+    return records.map(e=>({
+      id:e.id,
+      date:e.fields[F.bpe_date]||"",
+      bedIds:(e.fields[F.bpe_bed]||[]).slice(),
+      ops:(e.fields[F.bpe_ops]||[]).slice(),
+      by:e.fields[F.bpe_by]||"",
+      notes:e.fields[F.bpe_notes]||"",
+      taskId:(e.fields[F.bpe_task]||[])[0] || null,
+    }));
+  }
+
+  // Bed prep targets. A null `days` means the operation has no target and is never flagged.
+  function parseBedPrepTargets(records){
+    const F=CFG.f;
+    return records.map(t=>({
+      id:t.id,
+      op:t.fields[F.bpt_op]||"",
+      days:num(t.fields[F.bpt_days]),
     }));
   }
 
@@ -878,6 +949,397 @@
     return out;
   }
 
+  /* ---------- Fertiliser costing ----------
+     What this does and, more importantly, what it refuses to do.
+
+     ONE RULE PRICES EVERYTHING: a Fert Item's `rate` is per 100 m² (that is the form's own label,
+     roseberry-planner.html's fpFormHtml), so amount = rate * area/100 and cost = amount * $/unit.
+     The shed page's two hero figures are both that same rule at different areas — kg/bed is it at
+     11.25 m², the fertigation batch is it at the program's own Area m². Costing therefore never
+     needs a second formula, and can't drift from what the grower reads in the shed.
+
+     Consequence worth stating: a fertigation program is costed per BED here, not per batch. Summing
+     the per-bed share over the beds it covers is the same number as the batch, scaled to the area
+     actually planted. Adding the batch on top would double count, so we never do.
+
+     `lPerBed` is not used and must not be. It is a measured volume the grower fills in from the
+     shed, blank on most rows, and in a different dimension from the priced unit. Deriving cost from
+     it would produce an authoritative-looking guess — the exact failure the fert page's own header
+     comment warns about.
+
+     Every function returns unpriced products alongside the total rather than silently treating a
+     missing price as zero. A total that quietly understates itself is worse than no total. */
+
+  // Bed area in m². Defaults to the same 15 m x 0.75 m bed FERT_BED_M2 encodes, so a bed with no
+  // dimensions recorded prices identically to the shed page's kg/bed figure. `bm` (bed metres) is
+  // the partial-bed case: a planting occupying 8 m of a bed is fertilised over 8 m, not the lot.
+  function fertBedArea(bed, bm){
+    const width = (bed && bed.wid!=null && bed.wid>0) ? bed.wid : 0.75;
+    const metres = (bm!=null && bm>0) ? bm
+                 : ((bed && bed.len!=null && bed.len>0) ? bed.len : (FERT_BED_M2/0.75));
+    return metres*width;
+  }
+
+  // g and ml are the same substance as kg and L, priced per kg and per L. Anything else is left
+  // alone and will simply fail to match the product's unit, which surfaces as unpriced.
+  const FERT_UNIT_BASE = { kg:["kg",1], g:["kg",0.001], L:["L",1], ml:["L",0.001] };
+  function fertToBaseUnit(amount, unit){
+    const conv = FERT_UNIT_BASE[unit];
+    if(!conv || amount==null) return null;
+    return { amount: amount*conv[1], unit: conv[0] };
+  }
+
+  /* Pack price / pack size. BOTH are required, deliberately.
+
+     An earlier version read a missing pack size as "the price is already per unit". That is a trap:
+     leave the field blank on a $16 bag of gypsum and the product silently prices at $16/kg instead
+     of $0.64/kg — a 25x overstatement produced by an empty field, on a page whose whole job is to
+     be trusted with money. A blank pack size now means "not priced yet" and says so.
+
+     Someone who genuinely knows a per-kilo price enters pack size 1 and that price, which reads
+     correctly and is a choice rather than an omission. */
+  function fertCostPerUnit(product){
+    if(!product || product.packPrice==null) return null;
+    if(product.packSize==null || product.packSize<=0) return null;
+    return product.packPrice/product.packSize;
+  }
+
+  const fertNameKey = s => String(s||"").trim().toLowerCase().replace(/\s+/g," ");
+
+  // The browser app parks parsed applications on `data.fertApps`; a Node-side reader following the
+  // table key would call it `fertApplications`. Accept either rather than rename a global the whole
+  // fert records page already reads.
+  const fertAppsOf = data => data.fertApplications || data.fertApps || [];
+
+  // Free-text product name -> catalog row. The fert tables store product as text (see the
+  // CFG.tables comment), so this normalised-name lookup is the only join available. Later
+  // duplicates lose to earlier ones so the sorted-by-name catalog is deterministic.
+  function indexFertProducts(products){
+    const by={};
+    (products||[]).forEach(p=>{ const k=fertNameKey(p.name); if(k && !by[k]) by[k]=p; });
+    return by;
+  }
+
+  // Cost one product line at a given area. Returns a line even when it can't be priced, flagged
+  // with `why`, so the UI can tell "no price entered" apart from "priced in the wrong unit".
+  function fertLineCost(item, productIndex, areaM2){
+    const base = fertToBaseUnit(item.rate!=null ? item.rate*areaM2/100 : null, item.unit);
+    const prod = productIndex[fertNameKey(item.product)] || null;
+    const rowUnit = base ? base.unit : null;
+    const line = {
+      product:item.product||"—", amount: base?base.amount:null, unit:rowUnit,
+      costPerUnit:null, cost:null, why:null,
+    };
+    if(base==null){ line.why = item.rate==null ? "no_rate" : "unknown_unit"; return line; }
+    if(!prod){ line.why="no_product"; return line; }
+    const cpu = fertCostPerUnit(prod);
+    if(cpu==null){ line.why="no_price"; return line; }
+    // A product priced per kg cannot price a rate given in litres. Refusing is the point.
+    if(prod.unit && rowUnit && prod.unit!==rowUnit){ line.why="unit_mismatch"; return line; }
+    line.costPerUnit=cpu; line.cost=base.amount*cpu;
+    return line;
+  }
+
+  // Cost a set of items (one round, one bed) at an area. `unpriced` names the products that
+  // contributed nothing, which is what the UI warns on.
+  function fertRoundCost(items, productIndex, areaM2){
+    const lines=(items||[]).map(i=>fertLineCost(i, productIndex, areaM2));
+    const total=lines.reduce((s,l)=>s+(l.cost||0),0);
+    const unpriced=[...new Set(lines.filter(l=>l.cost==null).map(l=>l.product))];
+    return { total, lines, unpriced, complete: unpriced.length===0 };
+  }
+
+  // A fertigation program is farm-wide (its items carry no block — see fpVisibleItems), so it runs
+  // on every block. An amendment program runs on a block only where it has rates for it.
+  function fertProgramRunsOnBlock(program, items, blockId, blockName){
+    if(!program) return false;
+    if(program.kind==="Fertigation") return true;
+    return (items||[]).some(i=>i.programId===program.id &&
+      (i.blockId ? i.blockId===blockId : (i.blockLabel && blockName && i.blockLabel===blockName)));
+  }
+
+  // Plantings on a bed, oldest sow first — the order that decides which round each one draws.
+  // `parked` plantings are excluded, matching every other read path (see pl_parked).
+  function plantingsForBed(plantings, bedId){
+    return (plantings||[])
+      .filter(p=>!p.parked && p.bedIds && p.bedIds[0]===bedId)
+      .sort((a,b)=>String(a.sow||a.tp||"").localeCompare(String(b.sow||b.tp||""))
+                 || String(a.id).localeCompare(String(b.id)));
+  }
+
+  // The Nth planting in a bed draws the Nth round, and past the last round it draws nothing.
+  // "Then stop" is a deliberate choice over wrapping: a fifth planting on a four-round program is
+  // more likely to mean the program is finished for that bed than that it restarts.
+  function roundForPlantingIndex(rounds, idx){
+    return (rounds||[])[idx] || null;
+  }
+
+  /* Season forecast. Walks bed -> its block's programs -> its plantings in date order -> the round
+     each one draws -> the cost of that round over that planting's area. Returns the roll-ups the
+     page renders, plus `rows` so a block can be drilled into.
+
+     Beds whose block resolves to nothing are reported in `orphanBeds` rather than dropped. This is
+     a live data problem, not a hypothetical: the Blocks table has DN/DS while every D bed is still
+     labelled "D", so those beds would otherwise silently forecast zero. */
+  function fertSeasonForecast(data, opts){
+    const o=opts||{};
+    const productIndex=indexFertProducts(data.fertProducts);
+    const programs=(data.fertPrograms||[]).filter(p=>!o.programId || p.id===o.programId);
+    const items=data.fertItems||[];
+    const blocksById={}; (data.blocks||[]).forEach(b=>{ blocksById[b.id]=b; });
+    const blockByName={}; (data.blocks||[]).forEach(b=>{ blockByName[String(b.name).trim()]=b; });
+
+    const rows=[], orphanBeds=[], unpriced=new Set();
+    const byProduct={}, byProgram={}, byBlock={};
+    let total=0;
+
+    (data.beds||[]).forEach(bed=>{
+      const block=blockByName[String(bed.block||"").trim()]||null;
+      if(!block){ orphanBeds.push(bed); return; }
+      const plants=plantingsForBed(data.plantings, bed.id);
+      if(!plants.length) return;
+
+      programs.forEach(prog=>{
+        if(!fertProgramRunsOnBlock(prog, items, block.id, block.name)) return;
+        const rounds=(data.fertRounds||[]).filter(r=>r.programId===prog.id);
+        plants.forEach((p, idx)=>{
+          const round=roundForPlantingIndex(rounds, idx);
+          if(!round) return;                       // past the last round: forecast nothing
+          const roundItems=items.filter(i=>i.programId===prog.id && i.roundId===round.id &&
+            (prog.kind==="Fertigation" ? true
+              : (i.blockId ? i.blockId===block.id : i.blockLabel===block.name)));
+          if(!roundItems.length) return;
+          const area=fertBedArea(bed, p.bm);
+          const res=fertRoundCost(roundItems, productIndex, area);
+          res.unpriced.forEach(u=>unpriced.add(u));
+          total+=res.total;
+          byProgram[prog.id]=(byProgram[prog.id]||0)+res.total;
+          byBlock[block.id]=(byBlock[block.id]||0)+res.total;
+          res.lines.forEach(l=>{
+            const e=(byProduct[l.product] ||= {product:l.product, amount:0, unit:l.unit, cost:0, priced:true});
+            if(l.amount!=null && (e.unit==null || e.unit===l.unit)){ e.amount+=l.amount; e.unit=l.unit; }
+            if(l.cost==null) e.priced=false; else e.cost+=l.cost;
+          });
+          rows.push({ blockId:block.id, blockName:block.name, bedId:bed.id, bedName:bed.name,
+                      plantingId:p.id, crop:p.crop, variety:p.variety, sow:p.sow||p.tp||"",
+                      plantingIndex:idx, programId:prog.id, programName:prog.name,
+                      roundId:round.id, roundName:round.name, areaM2:area,
+                      cost:res.total, lines:res.lines, complete:res.complete });
+        });
+      });
+    });
+
+    return { total, rows, byProduct, byProgram, byBlock,
+             unpriced:[...unpriced], orphanBeds,
+             beds:(data.beds||[]).length, plantings:(data.plantings||[]).length };
+  }
+
+  /* Cost of what was actually applied.
+
+     There is a real wrinkle here, and it is a property of the farm's data rather than a bug to fix.
+     The log records what the GROWER MEASURED, and for anything with a litres-per-bed figure that is
+     LITRES — see the log-beds-done modal, which prefers lPerBed and stamps unit "L". But a dry
+     amendment like compost or gypsum is bought and priced BY WEIGHT. Converting the logged litres
+     to kilos would need a bulk density per product, which this codebase deliberately refuses to
+     guess (the fertiliser page's own header comment explains why: an authoritative-looking guess is
+     the expensive kind of error to make with fertiliser).
+
+     So there are two ways to cost an application, and both are honest about which was used:
+
+       "log"   — the logged amount priced directly. Used whenever it CAN be: the product is in the
+                 catalogue and the logged unit converts to the priced unit. This is the best answer,
+                 because it's what actually went out.
+       "rates" — the application names its program, round, block and beds, so the round's own rates
+                 (always kg or L per 100 m²) can be costed over those beds' area, exactly as the
+                 forecast does. Used when the logged units can't be priced. It says what that work
+                 cost according to the plan it was carried out from.
+
+     An application with neither — no priceable log lines and no program/round to fall back on —
+     contributes nothing and names its products in `unpriced`. It is never silently zeroed.        */
+  function fertActualCost(data, opts){
+    const o=opts||{};
+    const productIndex=indexFertProducts(data.fertProducts);
+    const bedById={}; (data.beds||[]).forEach(b=>{ bedById[b.id]=b; });
+    const byProduct={}, byProgram={}; const unpriced=new Set(); const rows=[];
+    let total=0;
+
+    fertAppsOf(data).forEach(a=>{
+      if(o.from && String(a.date)<o.from) return;
+      if(o.to && String(a.date)>o.to) return;
+
+      // 1. price the logged lines where possible
+      let appTotal=0, priced=0; const lines=[];
+      (a.items||[]).forEach(it=>{
+        const amount = it.total!=null ? it.total
+                     : (it.rate!=null ? it.rate*Math.max(1,(a.bedIds||[]).length) : null);
+        const base=fertToBaseUnit(amount, it.unit||"kg");
+        const prod=productIndex[fertNameKey(it.product)]||null;
+        const cpu=prod?fertCostPerUnit(prod):null;
+        const ok = base && cpu!=null && (!prod.unit || prod.unit===base.unit);
+        const cost = ok ? base.amount*cpu : null;
+        if(cost!=null){ appTotal+=cost; priced++; }
+        lines.push({product:it.product||"—", amount:base?base.amount:null,
+                    unit:base?base.unit:null, cost});
+      });
+
+      // 2. nothing priceable in the log? cost the round it was carried out from instead
+      let basis = priced ? "log" : null;
+      if(!priced && a.programId && a.roundId){
+        const prog=(data.fertPrograms||[]).find(p=>p.id===a.programId);
+        const block=(data.blocks||[]).find(b=>b.id===a.blockId);
+        const items=(data.fertItems||[]).filter(i=>i.programId===a.programId && i.roundId===a.roundId &&
+          (prog && prog.kind==="Fertigation" ? true
+            : (i.blockId ? i.blockId===a.blockId : (block && i.blockLabel===block.name))));
+        if(items.length){
+          const area=(a.bedIds||[]).reduce((s,id)=>s+fertBedArea(bedById[id], null), 0);
+          if(area>0){
+            const res=fertRoundCost(items, productIndex, area);
+            if(res.total>0){
+              basis="rates"; appTotal=res.total;
+              lines.length=0; res.lines.forEach(l=>lines.push(l));
+            }
+          }
+        }
+      }
+
+      lines.forEach(l=>{
+        if(l.cost==null) unpriced.add(l.product||"—");
+        const e=(byProduct[l.product||"—"] ||= {product:l.product||"—", amount:0, unit:l.unit, cost:0, priced:true});
+        if(l.amount!=null && (e.unit==null||e.unit===l.unit)){ e.amount+=l.amount; e.unit=l.unit; }
+        if(l.cost==null) e.priced=false; else e.cost+=l.cost;
+      });
+
+      total+=appTotal;
+      if(a.programId) byProgram[a.programId]=(byProgram[a.programId]||0)+appTotal;
+      rows.push({ id:a.id, date:a.date, programId:a.programId, roundId:a.roundId,
+                  blockId:a.blockId, beds:(a.bedIds||[]).length, method:a.method,
+                  cost:appTotal, lines, basis:basis||"none" });
+    });
+    rows.sort((x,y)=>String(y.date).localeCompare(String(x.date)));
+    return { total, rows, byProduct, byProgram, unpriced:[...unpriced],
+             fromRates: rows.filter(r=>r.basis==="rates").length };
+  }
+
+  /* The dollar figure on a week-planner row. Resolves the library task's Fert program, then the
+     round from where this task's planting sits in its bed, then prices that round over the area the
+     planting occupies. Returns null for any task with no program set, which is most of them.
+
+     Planned sprays resolve differently — through the mix's own product lines — but price through
+     the same fertLineCost, so a spray and a fert round on the same page are the same kind of
+     number. A spray is costed over the beds it names, at whole-bed area. */
+  function fertTaskCost(row, data){
+    if(!row) return null;
+    const productIndex=indexFertProducts(data.fertProducts);
+    const bedById={}; (data.beds||[]).forEach(b=>{ bedById[b.id]=b; });
+
+    if(row.kind==="spray"){
+      const app=row.app; if(!app || !app.fromMixId) return null;
+      const mix=(data.sprayMixes||[]).find(m=>m.id===app.fromMixId); if(!mix) return null;
+      const prodById={}; (data.sprayProducts||[]).forEach(p=>{ prodById[p.id]=p; });
+      const items=(data.sprayMixItems||[]).filter(i=>i.mixId===mix.id).map(i=>({
+        product:(prodById[i.productId]||{}).name||"", rate:i.rate, unit:i.unit||"L",
+      }));
+      if(!items.length) return null;
+      const sprayIndex=indexFertProducts(data.sprayProducts);
+      const area=(app.bedIds||[]).reduce((s,id)=>s+fertBedArea(bedById[id], null), 0) || FERT_BED_M2;
+      const res=fertRoundCost(items, sprayIndex, area);
+      return { ...res, label:mix.name, kind:"spray" };
+    }
+
+    /* Find the library task this row came from. The id path covers tasks generated from a crop's
+       schedule. The name path covers MANUAL tasks — the ones added straight from the week planner's
+       ＋ Add task, which carry only a label and a bed (wkCollect gives them a synthetic planting and
+       a `task` object with no id). On this farm every logged bed-prep job is one of those, so
+       without the name fallback the badge would never appear on the exact case it exists for. */
+    const byId = row.task && row.task.id ? ctTaskById(data, row.task.id) : null;
+    const label = String((row.task && row.task.name) || "").trim().toLowerCase();
+    const byName = byId ? null : (data.tasks||[]).find(t =>
+      String(t.name||"").trim().toLowerCase()===label && t.fertProgramId);
+    const task = byId || byName;
+    const progId=task && task.fertProgramId;
+    if(!progId) return null;
+    const prog=(data.fertPrograms||[]).find(p=>p.id===progId); if(!prog) return null;
+
+    const p=row.p; const bedId=p && p.bedIds && p.bedIds[0]; if(!bedId) return null;
+    const bed=bedById[bedId]; if(!bed) return null;
+    const block=(data.blocks||[]).find(b=>String(b.name).trim()===String(bed.block||"").trim());
+    if(!block && prog.kind!=="Fertigation") return null;
+
+    /* Which round this job is. For a task tied to a planting it's that planting's position in the
+       bed. For a manual task there is no planting, so it's however many plantings that bed has
+       already had by the task's due date — a bed-prep job before the bed's third crop is round 3.
+       Falls back to the first round when the date is unknown, rather than guessing further. */
+    const plants=plantingsForBed(data.plantings, bedId);
+    let idx=plants.findIndex(x=>x.id===(p.id||""));
+    if(idx<0){
+      const dueISO = row.due instanceof Date ? wkISO(row.due) : (row.t && row.t.due) || "";
+      idx = dueISO ? plants.filter(x=>String(x.sow||x.tp||"")<=dueISO).length : 0;
+      if(idx>0) idx--;                 // the planting this prep is FOR is the one it precedes
+    }
+    const rounds=(data.fertRounds||[]).filter(r=>r.programId===prog.id);
+    const round=roundForPlantingIndex(rounds, idx<0?0:idx);
+    if(!round) return null;                        // past the last round: nothing to do or cost
+
+    const items=(data.fertItems||[]).filter(i=>i.programId===prog.id && i.roundId===round.id &&
+      (prog.kind==="Fertigation" ? true
+        : (i.blockId ? i.blockId===block.id : i.blockLabel===block.name)));
+    if(!items.length) return null;
+    const res=fertRoundCost(items, productIndex, fertBedArea(bed, p.bm));
+    return { ...res, label:`${prog.name} · ${round.name}`, kind:"fert",
+             programId:prog.id, roundId:round.id, roundName:round.name, programName:prog.name };
+  }
+
+  function parseFertProducts(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id, name:r.fields[F.fpd_name]||"", unit:r.fields[F.fpd_unit]||"kg",
+      packSize:num(r.fields[F.fpd_packSize]), packPrice:num(r.fields[F.fpd_packPrice]),
+      supplier:r.fields[F.fpd_supplier]||"", active:r.fields[F.fpd_active]!==false,
+      notes:r.fields[F.fpd_notes]||"", order:num(r.fields[F.fpd_order]),
+    })).sort((a,b)=>((a.order??1e9)-(b.order??1e9))||a.name.localeCompare(b.name));
+  }
+
+  /* Every product the programs or the log use that will NOT contribute to a total, and why.
+
+     "Has no price" is not the only way to fail to price: a product sold by the kilo cannot price a
+     rate given in litres, and that row is just as absent from the total. Both reasons are reported
+     here so the page's warning band and its "N products not priced" footnote can never disagree —
+     an earlier version counted only missing prices and quietly understated the problem by three.
+
+     `reason` is one of:
+       "no_price"      — no catalogue row at all, or a row with no pack price. Needs a price.
+       "no_pack_size"  — a price is entered but the pack size is blank, so there is nothing to
+                         divide by. Called out separately because "no price" would read as wrong to
+                         someone looking at a price they just typed in.
+       "unit_mismatch" — priced, but in a unit the rate can't be converted to. Needs the unit fixed
+                         on one side or the other.
+     Three reasons, three different fixes, so they are never lumped together. */
+  function fertUnpricedProducts(data){
+    const have=indexFertProducts(data.fertProducts);
+    const seen=new Map();
+    const note=(name, unit, where)=>{
+      const k=fertNameKey(name); if(!k) return;
+      const prod=have[k];
+      const priced=prod && fertCostPerUnit(prod)!=null;
+      const base=FERT_UNIT_BASE[unit] ? FERT_UNIT_BASE[unit][0] : null;
+      const mismatch = priced && prod.unit && base && prod.unit!==base;
+      if(priced && !mismatch) return;
+      // A price with no pack size is a different (and more surprising) problem from no price.
+      const noSize = !!prod && prod.packPrice!=null && (prod.packSize==null || prod.packSize<=0);
+      const e=seen.get(k) || {name:String(name).trim(), inCatalog:!!prod,
+                              reason: mismatch?"unit_mismatch":(noSize?"no_pack_size":"no_price"),
+                              rateUnit:base||unit||null, pricedUnit:prod?prod.unit:null,
+                              where:new Set()};
+      // A product used in two units is a unit problem even if one of the uses was fine.
+      if(mismatch) e.reason="unit_mismatch";
+      e.where.add(where); seen.set(k,e);
+    };
+    (data.fertItems||[]).forEach(i=>note(i.product, i.unit, "program"));
+    fertAppsOf(data).forEach(a=>(a.items||[]).forEach(i=>note(i.product, i.unit||"kg", "log")));
+    return [...seen.values()].map(e=>({...e, where:[...e.where]}))
+      .sort((a,b)=>a.name.localeCompare(b.name));
+  }
+
   function parseTasks(taskRecords){
     const F=CFG.f;
     return taskRecords.map(t => ({
@@ -891,6 +1353,7 @@
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
       fwTag:t.fields[F.tk_fwtag] || "",
+      fertProgramId:(t.fields[F.tk_fertProgram]||[])[0] || null,
     })).sort((a,b)=>a.name.localeCompare(b.name));
   }
 
@@ -912,6 +1375,7 @@
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
+      parked:!!p.fields[F.pl_parked],
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
   }
@@ -935,6 +1399,52 @@
       layTtId:t.fields[F.tr_layTtId]||"", pullTtId:t.fields[F.tr_pullTtId]||"",
       layGcalId:t.fields[F.tr_layGcalId]||"", pullGcalId:t.fields[F.tr_pullGcalId]||"",
     }));
+  }
+
+  // Bed zones. `bedId` null is meaningful, not missing data — a zone with no bed is a DEMAND row
+  // ("60 m of solanaceous in spring, somewhere") that hasn't been placed yet, and renders in the
+  // Crop Map's Unassigned sidebar rather than on a bed track. `cropId` null means the zone is
+  // still type-level; set, it has been refined to one crop but stays a zone, not a planting.
+  function parseBedZones(zoneRecords){
+    const F=CFG.f;
+    return zoneRecords.map(z=>({
+      id:z.id,
+      name:z.fields[F.zn_name]||"",
+      bedId:(z.fields[F.zn_beds]||[])[0] || null,
+      type:z.fields[F.zn_type]||"",
+      cropId:(z.fields[F.zn_crop]||[])[0] || null,
+      start:z.fields[F.zn_start]||"", end:z.fields[F.zn_end]||"",
+      m:num(z.fields[F.zn_m]),
+      parkedIds:(z.fields[F.zn_parked]||[]).slice(),
+      notes:z.fields[F.zn_notes]||"",
+    }));
+  }
+
+  // Does this planting count against this zone's reservation? A zone refined to a crop only claims
+  // that crop; an unrefined one claims its whole type. Callers have already matched bed and window.
+  function zoneMatchesPlanting(zone, planting, cropType){
+    if(!zone) return false;
+    if(zone.cropId) return planting.cropId === zone.cropId;
+    return !!zone.type && cropType === zone.type;
+  }
+
+  // NET DRAWDOWN — the rule that lets the coarse and fine layers coexist without double-counting.
+  //
+  // A zone is a budget, not an occupant. Plantings that match it draw the budget down, so a 30 m
+  // greens zone holding 12 m of lettuce is only still reserving 18 m. Fill it in completely and it
+  // stops consuming anything at all, which is exactly the behaviour you want as a loose plan turns
+  // into a real one.
+  //
+  // `plantings` should already be filtered to this zone's bed and overlapping its window; parked
+  // plantings must be excluded by the caller (they're represented by the zone itself now).
+  function zoneRemaining(zone, plantings, cropTypeOf){
+    if(zone.m==null) return null;                      // no budget stated ⇒ nothing to draw down
+    let claimed=0;
+    (plantings||[]).forEach(p=>{
+      if(!zoneMatchesPlanting(zone, p, cropTypeOf(p))) return;
+      if(p.bm!=null) claimed += p.bm;
+    });
+    return Math.max(0, zone.m - claimed);
   }
 
   // Tarp lifecycle, deliberately shaped like apLifecycle so the weekly planner can treat a tarp's
@@ -992,6 +1502,9 @@
       organic:r.fields[F.spp_organic]||"",
       active:r.fields[F.spp_active]!==false,   // default-on: only an explicit false retires it
       notes:r.fields[F.spp_notes]||"",
+      packSize:num(r.fields[F.spp_packSize]),
+      packPrice:num(r.fields[F.spp_packPrice]),
+      supplier:r.fields[F.spp_supplier]||"",
     })).sort((a,b)=>a.name.localeCompare(b.name));
   }
 
@@ -1384,7 +1897,8 @@
     ctTaskById, bedNameOf, wkCollect, nextMilestoneStep, buildMilestonePatch,
     TARP_STATUS_ORDER, TARP_STEPS, tarpStep, tarpRank, buildTarpPatch,
     parsePlantingTaskRecord, parseCropsAndDefs, parseBeds, parseTasks, parsePlantings, parseTarpings,
-    parseBedIssues, rangesOverlap, bedConflicts,
+    parseBedIssues, parseBedPrepEvents, parseBedPrepTargets, rangesOverlap, bedConflicts,
+    parseBedZones, zoneMatchesPlanting, zoneRemaining,
     parseSprayProducts, parseSprayMixes, parseSprayMixItems, parseSprayApplications,
     parseSprayApplicationItems, attachSprayItems, mixWhp, safeAfterISO, bedWhpActive,
     parseFieldWalks, parseWalkObservations, parseWalkLists, parseWalkListItems, attachWalkItems,
@@ -1395,6 +1909,9 @@
     injToPsi, injFromPsi, injToGpm, injSuctionAt, injBlock, injCalc,
     parseFertPrograms, parseFertRounds, parseFertItems,
     FERT_METHODS, parseFertApplications, parseFertApplicationItems, attachFertItems, fertBedsDone,
+    parseFertProducts, fertCostPerUnit, indexFertProducts, fertBedArea, fertToBaseUnit,
+    fertLineCost, fertRoundCost, fertProgramRunsOnBlock, plantingsForBed, roundForPlantingIndex,
+    fertSeasonForecast, fertActualCost, fertTaskCost, fertUnpricedProducts,
     SUGGEST_WEIGHTS, groundWindow, isoWindowsOverlap, indexPlantingsByBed, scoreBedCandidate,
     suggestBedsForPlanting, suggestBedsForUnassigned,
     createAirtableClient,
