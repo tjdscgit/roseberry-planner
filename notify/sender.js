@@ -38,13 +38,31 @@ const DIGEST_HOUR = 6;
 // silence because it reads as current.
 const TASK_LATE_GRACE_MIN = 120;
 
-webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
-
 function requireEnv(name) {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required environment variable ${name}`);
   return v;
 }
+
+// web-push validates the keys here and throws a stack trace pointing into its own internals, which
+// is a confusing way to find out you pasted the wrong thing into a GitHub secret. Check the shape
+// first and fail with something that names the secret and says what it should look like.
+function checkVapidKey(name, value, expectedLength) {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new Error(
+      `${name} is not URL-safe base64. It looks like the wrong value went into the GitHub secret ` +
+      `(a command, a quoted string, or something with padding). Expected ${expectedLength} characters ` +
+      `of [A-Za-z0-9_-]; got ${value.length}.`
+    );
+  }
+  if (value.length !== expectedLength) {
+    throw new Error(`${name} should be ${expectedLength} characters, got ${value.length}.`);
+  }
+}
+
+checkVapidKey("VAPID_PUBLIC_KEY", VAPID_PUBLIC, 87);
+checkVapidKey("VAPID_PRIVATE_KEY", VAPID_PRIVATE, 43);
+webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE);
 
 /* ---------- Supabase ---------- */
 
