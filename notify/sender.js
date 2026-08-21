@@ -197,13 +197,21 @@ function rowTime(r) {
   return `${hh}:${mm}`;
 }
 
+// Only a plain Planting Task row (including manual ones) can be ticked done with a single PATCH to
+// planting_tasks -- milestone/tarp/spray rows (row.kind set) are derived, not stored, and ticking
+// them means calling buildMilestonePatch/buildTarpPatch/logging a spray, none of which belong in a
+// quick widget tap. taskId is only included when that simple PATCH is actually valid.
+function tickableTaskId(r) {
+  return r.kind ? null : r.id;
+}
+
 async function writeWidgetSnapshot(todays, overdue, data) {
   const items = todays
     .slice(0, 5)
-    .map(r => ({ task: describeRow(r, data) || "Task", time: rowTime(r), overdue: false }))
+    .map(r => ({ task: describeRow(r, data) || "Task", time: rowTime(r), taskId: tickableTaskId(r), overdue: false }))
     .concat(
       overdue.length && !todays.length
-        ? overdue.slice(0, 5).map(r => ({ task: describeRow(r, data) || "Task", time: rowTime(r), overdue: true }))
+        ? overdue.slice(0, 5).map(r => ({ task: describeRow(r, data) || "Task", time: rowTime(r), taskId: tickableTaskId(r), overdue: true }))
         : []
     );
   const r = await fetch(`${SB_URL}/rest/v1/widget_snapshot?id=eq.1`, {
