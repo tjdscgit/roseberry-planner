@@ -10,7 +10,12 @@ name: Task reminders
 on:
   schedule:
     - cron: "*/15 * * * *"
-  workflow_dispatch:        # so you can fire one by hand to test
+  workflow_dispatch:
+    inputs:
+      test:
+        description: "Send a test notification to every registered device"
+        type: boolean
+        default: false
 
 # Nothing here writes to the repo.
 permissions:
@@ -42,4 +47,5 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          TEST_NOTIFICATION: ${{ inputs.test }}
         run: node sender.js

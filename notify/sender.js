@@ -208,6 +208,22 @@ async function main() {
 
   const subs = await loadSubscriptions();
   if (!subs.length) { console.log("No subscriptions registered; nothing to do."); return; }
+  console.log(`${subs.length} device(s) registered: ${subs.map(s => s.label || "?").join(", ")}`);
+
+  // Fired by hand from the Actions tab ("Run workflow" with test ticked). Sends one notification
+  // unconditionally so delivery can be proved on a real phone without waiting for 6am or pinning a
+  // task to the next few minutes. Deliberately skips the idempotency ledger — a test you can only
+  // run once a day would be useless.
+  if (process.env.TEST_NOTIFICATION === "true") {
+    const n = await sendToAll(subs, {
+      title: "Roseberry Planner",
+      body: `Test notification — ${local.dateISO} ${String(local.hour).padStart(2, "0")}:${String(local.minute).padStart(2, "0")}. Reminders are working.`,
+      tag: "test",
+      url: "./roseberry-planner.html",
+    });
+    console.log(`test → ${n} device(s)`);
+    return;
+  }
 
   const { rows, data } = await loadWeek(local.dateISO);
   const todays = rows.filter(r => !r.t.done && PlannerShared.wkSameDay(r.due, PlannerShared.wkParse(local.dateISO)));
