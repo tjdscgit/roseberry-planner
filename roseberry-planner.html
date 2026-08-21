@@ -2907,6 +2907,16 @@
       <button class="btn ghost" id="clearBtn" style="display:none">Disconnect &amp; forget tokens</button>
       <div class="status" id="gateStatus"></div>
 
+      <!-- Notifications are per-device, not per-account: the subscription belongs to this browser
+           on this phone, so it has to be enabled again on each device you want pinged. Hidden until
+           connected, because registering a device writes to Supabase and there's nothing to write
+           with until then. -->
+      <div id="notifyRow" style="display:none">
+        <label class="fld">Notifications <span style="opacity:.6;font-weight:400">— this device only</span></label>
+        <button class="btn ghost" id="notifyBtn">Enable notifications on this device</button>
+        <div class="status" id="notifyStatus"></div>
+      </div>
+
       <details>
         <summary>Where do these come from? <em>Airtable · Supabase · Anthropic</em></summary>
         <div class="hint">
@@ -4281,6 +4291,9 @@ document.getElementById("connectBtn").onclick=async()=>{
   document.getElementById("gateStatus").className="status";
   document.getElementById("gateStatus").textContent="Connecting…";
   await loadAll();
+  // The notifications row is only offered once there's a Supabase connection to register against,
+  // so it has to be re-evaluated after connecting, not just at boot.
+  if(typeof pushRenderState === "function") pushRenderState();
 };
 document.getElementById("clearBtn").onclick=()=>{
   localStorage.removeItem(LS_KEY);PAT="";
@@ -16683,6 +16696,117 @@ if ('serviceWorker' in navigator) {
     location.reload();
   });
 }
+
+/* ---------- Push notifications ----------
+   Registration is per-device: a subscription identifies this browser on this phone, so enabling it
+   on the ute's tablet does nothing for the one in your pocket. The sender (a GitHub Actions job)
+   reads these rows with the service role key and posts to each endpoint.
+
+   The publishable key can only INSERT into push_subscriptions — it cannot read, update or delete —
+   so a leaked key can register a device but can't enumerate or tamper with anyone else's. Two
+   consequences for this request, both load-bearing:
+     - `Prefer: return=minimal` is required, not cosmetic: asking PostgREST to return the inserted
+       row needs a SELECT that isn't granted, and the whole call fails.
+     - No `on_conflict` / `resolution=` — PostgREST treats any resolution as an upsert and demands
+       an UPDATE policy even for DO NOTHING, so it fails RLS (verified: 42501). Re-enabling on an
+       already-registered device therefore comes back as a 409 on the unique endpoint, which is a
+       success for our purposes, not an error. */
+const VAPID_PUBLIC_KEY = "BKLEUa-xdMPL3SQpxUB2HyYZuq7FAIIc5vYnJU6H7k060pt8ux8xpswZtBOBh1umDoyPqvydTHWoCwuzSaMTwSk";
+
+// Web Push wants the application server key as bytes; VAPID keys travel as base64url text.
+function pushKeyToBytes(base64url){
+  const padded = (base64url + "=".repeat((4 - base64url.length % 4) % 4)).replace(/-/g,"+").replace(/_/g,"/");
+  const raw = atob(padded);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+function pushSupported(){
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+}
+
+async function pushRenderState(){
+  const row = document.getElementById("notifyRow");
+  const btn = document.getElementById("notifyBtn");
+  const status = document.getElementById("notifyStatus");
+  if(!row) return;
+
+  // Nothing to offer until there's a Supabase connection to register against.
+  row.style.display = (connected() && BACKEND === "supabase") ? "block" : "none";
+  if(row.style.display === "none") return;
+
+  if(!pushSupported()){
+    btn.style.display = "none";
+    status.textContent = "This browser can't do notifications. On iPhone, add the app to the home screen first.";
+    return;
+  }
+  if(Notification.permission === "denied"){
+    btn.style.display = "none";
+    status.textContent = "Blocked in the browser's site settings for this app — has to be re-allowed there, not here.";
+    return;
+  }
+
+  const reg = await navigator.serviceWorker.getRegistration();
+  const sub = reg ? await reg.pushManager.getSubscription() : null;
+  if(sub){
+    btn.style.display = "none";
+    status.textContent = "On — this device will get task reminders.";
+  }else{
+    btn.style.display = "";
+    btn.textContent = "Enable notifications on this device";
+    status.textContent = "";
+  }
+}
+
+async function pushEnable(){
+  const btn = document.getElementById("notifyBtn");
+  const status = document.getElementById("notifyStatus");
+  btn.disabled = true;
+  status.textContent = "Asking…";
+  try{
+    const permission = await Notification.requestPermission();
+    if(permission !== "granted"){
+      status.textContent = permission === "denied"
+        ? "Blocked. Re-allow it in the browser's site settings for this app."
+        : "Not enabled — the prompt was dismissed.";
+      return;
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,                       // required by Chrome; every push must show something
+      applicationServerKey: pushKeyToBytes(VAPID_PUBLIC_KEY),
+    });
+
+    const raw = sub.toJSON();
+    const res = await fetch(`${SB_URL}/rest/v1/push_subscriptions`, {
+      method: "POST",
+      headers: { ...sbHeaders(), Prefer: "return=minimal" },
+      body: JSON.stringify({
+        endpoint: raw.endpoint,
+        p256dh:   raw.keys.p256dh,
+        auth:     raw.keys.auth,
+        // Just enough to tell two devices apart in the table later; not used for anything else.
+        label:    (navigator.userAgentData?.platform || navigator.platform || "device"),
+      }),
+    });
+    // 409 = this endpoint is already registered. Nothing to do and nothing wrong: the device is
+    // subscribed and the sender already knows about it.
+    if(!res.ok && res.status !== 409){
+      // Registered with the browser's push service but not recorded our side — undo it, or the
+      // device would look enabled while never being sent anything.
+      await sub.unsubscribe().catch(()=>{});
+      throw new Error(`${res.status} ${(await res.text().catch(()=>"")).slice(0,120)}`);
+    }
+    await pushRenderState();
+  }catch(e){
+    status.textContent = "Couldn't enable: " + e.message;
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("notifyBtn")?.addEventListener("click", pushEnable);
+pushRenderState();
 
 /* ---------- PWA: reload if resumed after a while ----------
    Installed/home-screen apps (especially iOS "Add to Home Screen") commonly *resume* a suspended

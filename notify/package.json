@@ -1,0 +1,13 @@
+{
+  "name": "roseberry-notify",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sends Roseberry Planner task reminders as Web Push notifications. Run from GitHub Actions.",
+  "main": "sender.js",
+  "scripts": {
+    "send": "node sender.js"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

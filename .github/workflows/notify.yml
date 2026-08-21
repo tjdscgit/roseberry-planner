@@ -1,0 +1,45 @@
+name: Task reminders
+
+# Every 15 minutes. The schedule is deliberately dumb — the sender works out local time in
+# Australia/Sydney itself and decides whether anything is owed, because a UTC cron can't hold
+# "6am at the farm" still across the daylight-saving changeover.
+#
+# GitHub delays scheduled runs under load (sometimes 5-15 minutes, occasionally skipping one), so
+# treat these times as approximate. That is fine for farm tasks and is why the sender has a grace
+# window rather than requiring an exact match.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:        # so you can fire one by hand to test
+
+# Nothing here writes to the repo.
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    # Two runs overlapping would both try to claim the same sends; one would lose on the unique
+    # constraint and log noise. Cheaper to just not overlap.
+    concurrency:
+      group: task-reminders
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        working-directory: notify
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: Send due reminders
+        working-directory: notify
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+        run: node sender.js

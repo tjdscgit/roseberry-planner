@@ -1,0 +1,7 @@
+# Installing into Google Drive corrupts node_modules (Drive's sync layer breaks tar extraction),
+# and the reminder job installs its own deps on the Actions runner anyway. Never commit it.
+node_modules/
+package-lock.json
+
+# Google Drive litter
+desktop.ini
