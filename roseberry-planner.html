@@ -16806,6 +16806,10 @@ async function pushEnable(){
 }
 
 document.getElementById("notifyBtn")?.addEventListener("click", pushEnable);
+// Re-check on every settings open, not just at boot: permission can be revoked in the browser's
+// own site settings while the app is running, and the row would otherwise still claim it's on.
+document.getElementById("gearBtn")?.addEventListener("click", pushRenderState);
+document.getElementById("gearBtnDrawer")?.addEventListener("click", pushRenderState);
 pushRenderState();
 
 /* ---------- PWA: reload if resumed after a while ----------
