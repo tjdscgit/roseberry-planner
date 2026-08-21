@@ -200,18 +200,31 @@ async function dropSubscription(id) {
 async function sendToAll(subs, payload) {
   let sent = 0;
   for (const s of subs) {
+    const who = `${s.label || "device"} ${s.id.slice(0, 8)}`;
     try {
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
         JSON.stringify(payload)
       );
       sent++;
+      console.log(`  ✓ sent to ${who}`);
     } catch (e) {
-      // 404/410 mean the browser threw the subscription away (app uninstalled, permission revoked,
-      // profile cleared). Those are permanent, so prune rather than retrying them twice an hour
-      // forever. Anything else is treated as transient and left alone.
-      if (e.statusCode === 404 || e.statusCode === 410) await dropSubscription(s.id);
-      else console.error(`send failed (${e.statusCode || "?"}) for ${s.id}:`, e.message);
+      const code = e.statusCode || "?";
+      // 404/410 mean the push service considers the registration gone (app uninstalled, data
+      // cleared, endpoint rotated). Those are permanent, so prune rather than retrying them 96
+      // times a day forever — but say so loudly. Pruning quietly is how you end up staring at a
+      // green tick wondering why no notification arrived.
+      if (code === 404 || code === 410) {
+        console.error(`  ✗ ${who}: push service says the subscription is gone (${code}). ` +
+                      `Removing it — re-enable notifications on that device to register again.`);
+        await dropSubscription(s.id);
+      } else if (code === 403) {
+        // Signed with a keypair the subscription wasn't created against.
+        console.error(`  ✗ ${who}: rejected (403). The VAPID keys used to send don't match the ` +
+                      `ones the device subscribed with. Keeping the subscription.`);
+      } else {
+        console.error(`  ✗ ${who}: send failed (${code}): ${e.message}`);
+      }
     }
   }
   return sent;
