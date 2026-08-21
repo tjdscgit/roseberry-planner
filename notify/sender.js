@@ -197,12 +197,13 @@ function rowTime(r) {
   return `${hh}:${mm}`;
 }
 
-// Only a plain Planting Task row (including manual ones) can be ticked done with a single PATCH to
-// planting_tasks -- milestone/tarp/spray rows (row.kind set) are derived, not stored, and ticking
-// them means calling buildMilestonePatch/buildTarpPatch/logging a spray, none of which belong in a
-// quick widget tap. taskId is only included when that simple PATCH is actually valid.
+// A plain Planting Task (including manual) row.id is a bare uuid -- one PATCH sets Done. A
+// milestone/tarp row.id already carries its own prefix ("ms:<plantingId>:<df>" /
+// "tarp:<tarpId>:<step>"), which the widget-refresh Edge Function's tick handler parses to call
+// the same buildMilestonePatch/buildTarpPatch the app itself uses. Only sprays are excluded --
+// logging one is a bigger action than a tick, not a single stepper call.
 function tickableTaskId(r) {
-  return r.kind ? null : r.id;
+  return r.kind === "spray" ? null : r.id;
 }
 
 async function writeWidgetSnapshot(todays, overdue, data) {
