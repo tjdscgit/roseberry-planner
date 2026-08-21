@@ -187,13 +187,23 @@ async function claimSend(kind, refId, dateISO) {
 // Written every run so the Android home-screen widget and Quick Settings tile have something to
 // read. Deliberately reuses `todays`/`overdue` as already computed for the push digest rather than
 // re-deriving "what's due" a third time — see the file header.
+// A row's clock time is its *pinned* Start minute (t.start) -- the same field the task-ping
+// section below reads. Unpinned tasks are auto-packed for display only, so they get no time here.
+function rowTime(r) {
+  const start = r.t && r.t.start;
+  if (start == null) return null;
+  const hh = String(Math.floor(start / 60)).padStart(2, "0");
+  const mm = String(start % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
 async function writeWidgetSnapshot(todays, overdue, data) {
   const items = todays
     .slice(0, 5)
-    .map(r => ({ task: describeRow(r, data) || "Task", overdue: false }))
+    .map(r => ({ task: describeRow(r, data) || "Task", time: rowTime(r), overdue: false }))
     .concat(
       overdue.length && !todays.length
-        ? overdue.slice(0, 5).map(r => ({ task: describeRow(r, data) || "Task", overdue: true }))
+        ? overdue.slice(0, 5).map(r => ({ task: describeRow(r, data) || "Task", time: rowTime(r), overdue: true }))
         : []
     );
   const r = await fetch(`${SB_URL}/rest/v1/widget_snapshot?id=eq.1`, {
