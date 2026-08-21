@@ -182,6 +182,31 @@ async function claimSend(kind, refId, dateISO) {
   return true;
 }
 
+/* ---------- widget snapshot ---------- */
+
+// Written every run so the Android home-screen widget and Quick Settings tile have something to
+// read. Deliberately reuses `todays`/`overdue` as already computed for the push digest rather than
+// re-deriving "what's due" a third time — see the file header.
+async function writeWidgetSnapshot(todays, overdue, data) {
+  const items = todays
+    .slice(0, 5)
+    .map(r => ({ task: describeRow(r, data) || "Task", overdue: false }))
+    .concat(
+      overdue.length && !todays.length
+        ? overdue.slice(0, 5).map(r => ({ task: describeRow(r, data) || "Task", overdue: true }))
+        : []
+    );
+  const r = await fetch(`${SB_URL}/rest/v1/widget_snapshot?id=eq.1`, {
+    method: "PATCH",
+    headers: sbHeaders({ Prefer: "return=minimal" }),
+    body: JSON.stringify({ updated_at: new Date().toISOString(), count: todays.length, items }),
+  });
+  if (!r.ok) {
+    // Never let a snapshot-write failure take down the actual notification send.
+    console.error(`widget snapshot ${r.status}: ${(await r.text().catch(() => "")).slice(0, 160)}`);
+  }
+}
+
 /* ---------- sending ---------- */
 
 async function loadSubscriptions() {
@@ -259,6 +284,8 @@ async function main() {
   const { rows, data } = await loadWeek(local.dateISO);
   const todays = rows.filter(r => !r.t.done && PlannerShared.wkSameDay(r.due, PlannerShared.wkParse(local.dateISO)));
   const overdue = rows.filter(r => r.overdue && !r.t.done);
+
+  await writeWidgetSnapshot(todays, overdue, data);
 
   // --- the morning digest ---
   if (local.hour === DIGEST_HOUR && await claimSend("digest", null, local.dateISO)) {
