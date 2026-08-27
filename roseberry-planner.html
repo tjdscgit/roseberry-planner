@@ -2417,6 +2417,8 @@
         <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button>
         <span class="wk-tt-status" id="wkGcalStatus"></span>
         <button class="icon-btn" id="wkGcalSyncBtn" title="Push this week's schedule to Google Calendar">📅 Google Calendar</button>
+        <span class="wk-tt-status" id="wkOpsStatus"></span>
+        <button class="icon-btn" id="wkOpsSyncBtn" title="Sync farm jobs with the Ops app now, instead of waiting for the 15-minute timer">⇄ Ops</button>
         <div class="wk-add-group">
           <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat">✨ From Claude chat</button>
           <button class="btn-ghost" id="wkAddTaskBtn">+ Add task</button>
@@ -2956,6 +2958,19 @@
         Register a free app at <a href="https://developer.ticktick.com/" target="_blank" rel="noopener">developer.ticktick.com</a>
         with redirect URI <code>https://tjdscgit.github.io/ticktick-oauth-redirect/</code>, paste its Client ID/Secret above and save,
         then connect each person's own TickTick account below — this only needs doing once per person.
+      </div>
+      </details>
+
+      <details>
+        <summary>Ops app sync <em>optional — trigger a sync instead of waiting for the 15-min timer</em></summary>
+      <label class="fld" for="opsSyncSecret">Sync secret</label>
+      <input type="password" id="opsSyncSecret" placeholder="paste the shared secret" autocomplete="off" spellcheck="false">
+      <button class="btn ghost" id="opsSyncSaveBtn">Save</button>
+      <div class="status" id="opsSyncCredStatus"></div>
+      <div class="hint">
+        Farm jobs mirror into the Ops app on a 15-minute timer either way — this only makes the
+        <b>⇄ Ops</b> button on the This week tab wait for a sync right now instead. The secret comes from
+        whoever set up the Ops app's <code>planner-sync-trigger</code> function; it is not the Supabase key above.
       </div>
       </details>
 
@@ -12125,6 +12140,65 @@ document.getElementById("wkTtSyncBtn")?.addEventListener("click", async()=>{
   }
   btn.disabled=false;
   buildWeekPlanner();
+});
+
+/* ---------- Ops app sync ----------
+   The Planner’s own writes (wkToggleDone, buildMilestonePatch, buildTarpPatch) are what the sync
+   worker calls too — see supabase/functions/_shared/planner-sync-core.mjs in roseberry-ops — so
+   this button only needs to ask that worker to run NOW instead of waiting for its 15-minute cron.
+   It calls the planner-sync-trigger Edge Function in the Ops project with a shared secret (this app
+   has no login, so it cannot hold a Supabase session the way the Ops apps do) and waits for that
+   function’s own reply, which only comes back once GitHub Actions has actually finished (or its
+   budget runs out) — so a completed sync means buildWeekPlanner() below is repainting with data
+   that already reflects both sides. */
+const OPS_SYNC_LS_SECRET = "roseberry_ops_sync_secret";
+const OPS_SYNC_FN_URL = "https://dcauvbdjizhyrdpiaeus.supabase.co/functions/v1/planner-sync-trigger";
+function opsSyncLoadSecret(){ return localStorage.getItem(OPS_SYNC_LS_SECRET) || ""; }
+function opsSyncSaveSecret(s){ localStorage.setItem(OPS_SYNC_LS_SECRET, s); }
+function opsSyncRenderSettings(){
+  $ttSafe("opsSyncSecret").value = opsSyncLoadSecret();
+}
+document.getElementById("opsSyncSaveBtn")?.addEventListener("click",()=>{
+  const secret=document.getElementById("opsSyncSecret").value.trim();
+  const statusEl=document.getElementById("opsSyncCredStatus");
+  if(!secret){ statusEl.className="status err"; statusEl.textContent="Paste the shared secret first."; return; }
+  opsSyncSaveSecret(secret);
+  statusEl.className="status ok"; statusEl.textContent="Saved.";
+});
+document.getElementById("gearBtn")?.addEventListener("click", opsSyncRenderSettings);
+window.addEventListener("load", opsSyncRenderSettings);
+
+document.getElementById("wkOpsSyncBtn")?.addEventListener("click", async()=>{
+  const btn=document.getElementById("wkOpsSyncBtn"), statusEl=document.getElementById("wkOpsStatus");
+  const secret=opsSyncLoadSecret();
+  if(!secret){
+    statusEl.textContent="Add a sync secret in Settings first — farm jobs still mirror on their own 15-min timer either way.";
+    return;
+  }
+  btn.disabled=true; statusEl.textContent="Syncing…";
+  try{
+    const resp = await fetch(OPS_SYNC_FN_URL, { method:"POST", headers:{ "X-Sync-Secret": secret } });
+    const body = await resp.json().catch(()=>({}));
+    if(!resp.ok){
+      statusEl.textContent = "Sync error: "+(body.error||resp.status);
+    } else if(body.conclusion==="failure"){
+      statusEl.textContent = "Sync ran but failed — check GitHub Actions on roseberry-ops.";
+    } else if(body.status==="completed"){
+      statusEl.textContent = "Synced with Ops.";
+      await loadAll();
+      buildWeekPlanner();
+    } else {
+      // Dispatched but not confirmed finished within the function’s own wait budget — it is
+      // still running, not stuck. Refresh anyway: if it lands in the next few seconds this still
+      // shows something useful, and the 15-minute cron will catch anything it doesn’t.
+      statusEl.textContent = "Sync started — check back shortly.";
+      await loadAll();
+      buildWeekPlanner();
+    }
+  }catch(e){
+    statusEl.textContent = "Could not reach the sync function: "+e.message;
+  }
+  btn.disabled=false;
 });
 
 /* ---------- Google Calendar export ----------
