@@ -108,11 +108,14 @@
       pt_due:"Due date", pt_done:"Done", pt_start:"Start minute",
       pt_repeat:"Repeat every (days)", pt_until:"Repeat until", pt_duration:"Minutes per 15m bed",
       pt_assignee:"Assignee", pt_ttid:"TickTick Task ID", pt_gcalid:"Google Cal Event ID",
+      // Ops app mirror id — same per-record external-id pattern as pt_ttid/pt_gcalid above.
+      pt_opsid:"Ops Task ID",
       pt_bed:"Bed",   // optional bed a task attaches to when it isn't tied to a planting
       pl_crop:"Crop", pl_bed:"Bed", pl_var:"Variety", pl_status:"Status", pl_bm:"Bed metres", pl_notes:"Notes",
       pl_sow:"Sow date", pl_tp:"Transplant date", pl_h1:"First harvest", pl_h2:"Last harvest",
       pl_sowTtId:"Sow TickTick Task ID", pl_tpTtId:"Transplant TickTick Task ID",
       pl_sowGcalId:"Sow Google Cal Event ID", pl_tpGcalId:"Transplant Google Cal Event ID",
+      pl_sowOpsId:"Sow Ops Task ID", pl_tpOpsId:"Transplant Ops Task ID",
       pl_group:"Succession group",
       pl_sowStart:"Sow start minute", pl_tpStart:"Transplant start minute",
       pl_sowAssignee:"Sow assignee", pl_tpAssignee:"Transplant assignee",
@@ -166,6 +169,7 @@
       tr_layStart:"Lay start minute", tr_pullStart:"Pull start minute",
       tr_layTtId:"Lay TickTick Task ID", tr_pullTtId:"Pull TickTick Task ID",
       tr_layGcalId:"Lay Google Cal Event ID", tr_pullGcalId:"Pull Google Cal Event ID",
+      tr_layOpsId:"Lay Ops Task ID", tr_pullOpsId:"Pull Ops Task ID",
       // Bed zones — the coarse layer above plantings. `zn_type` is the required crop type;
       // `zn_crop` optionally narrows it to one crop. `zn_beds` empty means a bed-less demand row
       // ("60 m of this, somewhere") rather than a reservation on a specific bed. `zn_parked` holds
@@ -195,6 +199,9 @@
       // (actually applied). Blank ⇒ Logged. `sap_followUp` links a scheduled follow-up back to the
       // spray it follows.
       sap_status:"Status", sap_followUp:"Follow-up of",
+      // Ops app mirror id. A planned spray surfaces in Ops as a read-only row —
+      // logging it needs product/amount/WHP, so it can only be completed here.
+      sap_opsid:"Ops Task ID",
       sai_name:"Name", sai_app:"Application", sai_product:"Product", sai_rate:"Rate",
       sai_unit:"Unit", sai_amountUsed:"Amount used", sai_order:"Order",
       // Field walk. `ob_note` keeps the prose exactly as typed (@tokens included) while
@@ -478,6 +485,7 @@
       assignee:r.fields[F.pt_assignee] || "",
       ttId:r.fields[F.pt_ttid] || "",
       gcalId:r.fields[F.pt_gcalid] || "",
+      opsId:r.fields[F.pt_opsid] || "",
       bedId:(r.fields[F.pt_bed]||[])[0] || null,
     };
   }
@@ -1371,6 +1379,7 @@
       h1Assignee:p.fields[F.pl_h1Assignee]||"", h2Assignee:p.fields[F.pl_h2Assignee]||"",
       sowTtId:p.fields[F.pl_sowTtId]||"", tpTtId:p.fields[F.pl_tpTtId]||"",
       sowGcalId:p.fields[F.pl_sowGcalId]||"", tpGcalId:p.fields[F.pl_tpGcalId]||"",
+      sowOpsId:p.fields[F.pl_sowOpsId]||"", tpOpsId:p.fields[F.pl_tpOpsId]||"",
       group:p.fields[F.pl_group]||"", bm:num(p.fields[F.pl_bm]),
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
@@ -1398,6 +1407,7 @@
       layStart:num(t.fields[F.tr_layStart]), pullStart:num(t.fields[F.tr_pullStart]),
       layTtId:t.fields[F.tr_layTtId]||"", pullTtId:t.fields[F.tr_pullTtId]||"",
       layGcalId:t.fields[F.tr_layGcalId]||"", pullGcalId:t.fields[F.tr_pullGcalId]||"",
+      layOpsId:t.fields[F.tr_layOpsId]||"", pullOpsId:t.fields[F.tr_pullOpsId]||"",
     }));
   }
 
@@ -1457,10 +1467,14 @@
   const TARP_STEPS=[
     {step:"lay",  label:"Lay tarp",  stage:"On",      df:"start", actual:"laidActual",
      assignee:"layAssignee",  startMin:"layStart",  ttId:"layTtId",  gcalId:"layGcalId",
-     fAssignee:"tr_layAssignee",  fStart:"tr_layStart",  fTt:"tr_layTtId",  fGcal:"tr_layGcalId"},
+     opsId:"layOpsId",
+     fAssignee:"tr_layAssignee",  fStart:"tr_layStart",  fTt:"tr_layTtId",  fGcal:"tr_layGcalId",
+     fOps:"tr_layOpsId"},
     {step:"pull", label:"Pull tarp", stage:"Removed", df:"end",   actual:"pulledActual",
      assignee:"pullAssignee", startMin:"pullStart", ttId:"pullTtId", gcalId:"pullGcalId",
-     fAssignee:"tr_pullAssignee", fStart:"tr_pullStart", fTt:"tr_pullTtId", fGcal:"tr_pullGcalId"},
+     opsId:"pullOpsId",
+     fAssignee:"tr_pullAssignee", fStart:"tr_pullStart", fTt:"tr_pullTtId", fGcal:"tr_pullGcalId",
+     fOps:"tr_pullOpsId"},
   ];
   function tarpStep(step){ return TARP_STEPS.find(s=>s.step===step) || null; }
 
@@ -1555,6 +1569,7 @@
       photos:(r.fields[F.sap_photos]||[]).slice(),
       notes:r.fields[F.sap_notes]||"",
       legacyRef:r.fields[F.sap_legacy]||"",
+      opsId:r.fields[F.sap_opsid]||"",
       status:r.fields[F.sap_status]||"Logged",   // blank ⇒ Logged, so legacy rows need no backfill
       followUpOfId:(r.fields[F.sap_followUp]||[])[0]||null,
       items:[],
