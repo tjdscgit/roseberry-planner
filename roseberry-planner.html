@@ -2883,10 +2883,8 @@
         <input type="password" id="patInput" placeholder="pat…" autocomplete="off" spellcheck="false">
       </div>
       <div id="supabaseFields" style="display:none">
-        <label class="fld" for="sbUrlInput">Supabase project URL</label>
-        <input type="text" id="sbUrlInput" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false">
-        <label class="fld" for="sbKeyInput">Supabase publishable key</label>
-        <input type="password" id="sbKeyInput" placeholder="sb_publishable_…" autocomplete="off" spellcheck="false">
+        <label class="fld" for="sbPasswordInput">Farm login password</label>
+        <input type="password" id="sbPasswordInput" placeholder="the shared password" autocomplete="current-password" spellcheck="false">
       </div>
 
       <label class="fld" for="akInput">Anthropic API key <span style="opacity:.6;font-weight:400">— optional, for Seed book</span></label>
@@ -2927,9 +2925,9 @@
           granted to <b>Fert &amp; Foliar</b> and <b>Roseberry Planner</b>.
         </div>
         <div class="hint">
-          <b>Supabase</b> — from your project, <b>Project Settings → API</b>: the <b>Project URL</b> and the
-          <b>Publishable key</b> (starts <code>sb_publishable_…</code>). Never paste the <b>Secret key</b> here —
-          it grants full unrestricted access and must never leave a trusted backend.
+          <b>Farm login</b> — the one password shared across every device on the farm. Ask whoever set it
+          up if you don't have it. Logging in here doesn't grant any more or less than before — it just
+          replaces pasting a Supabase key by hand.
         </div>
         <div class="hint">
           <b>Anthropic</b> — only needed for the <b>Seed book</b> page, which reads a photo of the seeding book.
@@ -3516,18 +3514,59 @@ let MODEL_QA = localStorage.getItem(MODEL_QA_KEY) || "";
 // ---- Supabase migration (Phase 3) ----
 // BACKEND selects which of the two data stores atFetch/atPatch/atCreate/atDelete actually hit.
 // Defaults to "airtable" so nothing changes for normal use until the real data has been migrated
-// (Phase 4) and this is deliberately switched over. SB_URL is stored as the bare project origin
-// (e.g. https://xxxx.supabase.co) — REST calls append /rest/v1, Storage calls /storage/v1.
+// (Phase 4) and this is deliberately switched over.
 const BACKEND_KEY = "roseberry_backend";
-const SB_URL_KEY = "roseberry_sb_url";
-const SB_KEY_KEY = "roseberry_sb_key";
 let BACKEND = localStorage.getItem(BACKEND_KEY) || "supabase";
-let SB_URL = localStorage.getItem(SB_URL_KEY) || "";
-let SB_KEY = localStorage.getItem(SB_KEY_KEY) || "";
-// Accepts whatever the user pastes (bare origin, or with a trailing /rest/v1) and normalizes to
-// the bare origin so the rest of the app can build both /rest/v1 and /storage/v1 paths off it.
-function normalizeSbUrl(v){
-  return v.trim().replace(/\/+$/,"").replace(/\/rest\/v1$/,"");
+// SB_URL/SB_KEY used to be pasted per-device into Settings. Now baked in: every table's data is
+// gated by RLS on being logged in (see SB_SESSION below), not by keeping this key secret — that's
+// what a Supabase "publishable" key is for. REST calls append /rest/v1, Storage calls /storage/v1.
+const SB_URL = "https://xgvmbuqefvpmzfbywqfw.supabase.co";
+const SB_KEY = "sb_publishable_0Sjh0qMDrEYTnLGigxDkdQ_EizyMp1E";
+// The one shared farm login (Authentication → Users in the Supabase dashboard). Everyone who has
+// the password gets full read/write, same as the old shared key — this is a login gate, not
+// per-person accounts.
+const SB_LOGIN_EMAIL = "gday@roseberrygrowers.com.au";
+// Auth session — this is the thing that's actually per-device now instead of the key. Stored as one
+// JSON blob so login/refresh only ever have to touch a single localStorage entry.
+const SB_SESSION_KEY = "roseberry_sb_session";
+let SB_SESSION = JSON.parse(localStorage.getItem(SB_SESSION_KEY) || "null") || { access_token:"", refresh_token:"", expires_at:0 };
+let sbRefreshTimer = null;
+function saveSbSession(session){
+  SB_SESSION = session ? { access_token:session.access_token, refresh_token:session.refresh_token, expires_at: Date.now() + (session.expires_in||3600)*1000 } : { access_token:"", refresh_token:"", expires_at:0 };
+  if(session) localStorage.setItem(SB_SESSION_KEY, JSON.stringify(SB_SESSION));
+  else localStorage.removeItem(SB_SESSION_KEY);
+  clearTimeout(sbRefreshTimer);
+  // Refresh well ahead of the ~1hr GoTrue expiry so a request never lands in the gap.
+  if(session) sbRefreshTimer = setTimeout(refreshSbSession, Math.max(30, (session.expires_in||3600) - 120) * 1000);
+}
+async function sbLogin(password){
+  const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+    method:"POST",
+    headers:{ apikey:SB_KEY, "Content-Type":"application/json" },
+    body: JSON.stringify({ email: SB_LOGIN_EMAIL, password }),
+  });
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error_description || j.msg || `${r.status}`);
+  saveSbSession(j);
+}
+async function refreshSbSession(){
+  if(!SB_SESSION.refresh_token) return false;
+  try{
+    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method:"POST",
+      headers:{ apikey:SB_KEY, "Content-Type":"application/json" },
+      body: JSON.stringify({ refresh_token: SB_SESSION.refresh_token }),
+    });
+    if(!r.ok){ saveSbSession(null); return false; }
+    saveSbSession(await r.json());
+    return true;
+  }catch{ return false; } // offline etc — leave the stored session alone, try again next schedule
+}
+function sbLogout(){
+  if(SB_SESSION.access_token){
+    fetch(`${SB_URL}/auth/v1/logout`, { method:"POST", headers: sbHeaders() }).catch(()=>{});
+  }
+  saveSbSession(null);
 }
 let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
 let usedDefaults = { size:false, coords:false };
@@ -3543,7 +3582,7 @@ let uiRestored = false; // only replay the saved tab/pan/zoom once per page load
 const AT_ID_TO_PG = PlannerShared.AT_ID_TO_PG;
 
 function sbHeaders(extra={}){
-  return { apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":"application/json", ...extra };
+  return { apikey:SB_KEY, Authorization:`Bearer ${SB_SESSION.access_token || SB_KEY}`, "Content-Type":"application/json", ...extra };
 }
 // PostgREST rows are flat columns with no wrapper ({ "Sow date":"2026-01-01", ... }). Reshape to
 // Airtable's {id, fields:{...}} shape so every parse* function downstream (written against that
@@ -4266,7 +4305,7 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
 
 /* ---------- Gate / settings ---------- */
 function connected(){
-  return BACKEND==="supabase" ? !!(SB_URL && SB_KEY) : !!PAT;
+  return BACKEND==="supabase" ? !!SB_SESSION.access_token : !!PAT;
 }
 function applyBackendFieldVisibility(){
   const isSb = document.getElementById("backendSelect").value==="supabase";
@@ -4286,11 +4325,13 @@ document.getElementById("connectBtn").onclick=async()=>{
   const backend = document.getElementById("backendSelect").value;
   BACKEND=backend; localStorage.setItem(BACKEND_KEY,backend);
   if(backend==="supabase"){
-    const url = normalizeSbUrl(document.getElementById("sbUrlInput").value);
-    const key = document.getElementById("sbKeyInput").value.trim();
-    if(!url||!key){gate(true,"err","Paste the Supabase URL and publishable key first.");return;}
-    SB_URL=url; localStorage.setItem(SB_URL_KEY,url);
-    SB_KEY=key; localStorage.setItem(SB_KEY_KEY,key);
+    const pw = document.getElementById("sbPasswordInput").value;
+    if(!pw){gate(true,"err","Enter the farm login password first.");return;}
+    document.getElementById("gateStatus").className="status";
+    document.getElementById("gateStatus").textContent="Logging in…";
+    try{ await sbLogin(pw); }
+    catch(e){ gate(true,"err","Couldn't log in: "+e.message); return; }
+    document.getElementById("sbPasswordInput").value="";
   } else {
     const v=document.getElementById("patInput").value.trim();
     if(!v){gate(true,"err","Paste a token first.");return;}
@@ -4313,26 +4354,23 @@ document.getElementById("connectBtn").onclick=async()=>{
 document.getElementById("clearBtn").onclick=()=>{
   localStorage.removeItem(LS_KEY);PAT="";
   localStorage.removeItem(AK_KEY);AKEY="";
-  localStorage.removeItem(SB_URL_KEY);SB_URL="";
-  localStorage.removeItem(SB_KEY_KEY);SB_KEY="";
+  sbLogout();
   localStorage.removeItem(MODEL_OCR_KEY);MODEL_OCR="";
   localStorage.removeItem(MODEL_QA_KEY);MODEL_QA="";
   localStorage.setItem(BACKEND_KEY,"airtable");BACKEND="airtable";
   document.getElementById("patInput").value="";
   document.getElementById("akInput").value="";
-  document.getElementById("sbUrlInput").value="";
-  document.getElementById("sbKeyInput").value="";
+  document.getElementById("sbPasswordInput").value="";
   document.getElementById("modelOcrInput").value="claude-opus-4-8";
   document.getElementById("modelQaInput").value="claude-sonnet-4-6";
   document.getElementById("backendSelect").value="airtable";
   applyBackendFieldVisibility();
-  gate(true,null,"Tokens forgotten.");
+  gate(true,null,"Logged out.");
 };
 document.getElementById("gearBtn").onclick=()=>{
   document.getElementById("backendSelect").value=BACKEND;
   document.getElementById("patInput").value=PAT;
-  document.getElementById("sbUrlInput").value=SB_URL;
-  document.getElementById("sbKeyInput").value=SB_KEY;
+  document.getElementById("sbPasswordInput").value="";
   document.getElementById("akInput").value=AKEY;
   document.getElementById("modelOcrInput").value=MODEL_OCR||"claude-opus-4-8";
   document.getElementById("modelQaInput").value=MODEL_QA||"claude-sonnet-4-6";
@@ -13867,7 +13905,7 @@ async function fiUploadFiles(recordId, pending, existing){
       const path=`${recordId}/${Date.now()}-${Math.random().toString(36).slice(2,8)}-${name.replace(/[^\w.\-]+/g,"_")}`;
       const r=await fetch(`${SB_URL}/storage/v1/object/${FI_BUCKET}/${path}`,{
         method:"POST",
-        headers:{ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, "Content-Type":type },
+        headers: sbHeaders({ "Content-Type":type }),
         body: blob,
       });
       if(!r.ok){ const t=await r.text().catch(()=>""); errs.push(`${name}: ${r.status} ${t.slice(0,90)}`); continue; }
@@ -13902,7 +13940,7 @@ async function fiDelete(e){
       if(!path) continue;
       try{
         await fetch(`${SB_URL}/storage/v1/object/${FI_BUCKET}/${path}`,{
-          method:"DELETE", headers:{ apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}` } });
+          method:"DELETE", headers: sbHeaders() });
       }catch(err){ console.warn("farm-docs cleanup:", err.message); }
     }
     data.farmInfo=data.farmInfo.filter(x=>x.id!==e.id);
@@ -16746,11 +16784,20 @@ function fwDeleteItem(id){
 /* ---------- boot ---------- */
 document.getElementById("backendSelect").value=BACKEND;
 document.getElementById("patInput").value=PAT;
-document.getElementById("sbUrlInput").value=SB_URL;
-document.getElementById("sbKeyInput").value=SB_KEY;
 applyBackendFieldVisibility();
-if(connected()){ loadAll(); }
-else gate(true);
+(async()=>{
+  // A stored session may have expired while the app was closed — refresh once before deciding
+  // whether to show the gate, so an overnight-closed tab doesn't demand a fresh login for no reason.
+  if(BACKEND==="supabase" && SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 120000){
+    await refreshSbSession();
+  } else if(SB_SESSION.refresh_token){
+    // Still fresh — just reschedule the background refresh timer, which a page reload always loses.
+    clearTimeout(sbRefreshTimer);
+    sbRefreshTimer = setTimeout(refreshSbSession, Math.max(30000, SB_SESSION.expires_at - Date.now() - 120000));
+  }
+  if(connected()){ loadAll(); }
+  else gate(true);
+})();
 
 /* ---------- PWA service worker ---------- */
 // updateViaCache:'none' stops the browser's own HTTP cache from shielding sw.js itself — without
