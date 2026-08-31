@@ -234,18 +234,139 @@
   .bd-chips .cm-type-chip:hover{border-color:var(--steel)}
   .bd-chips .bd-cropchip{border-left-color:var(--clay)}
   .cr-wrap .bd-chips select.bd-addcrop{width:auto;min-width:11rem;font-size:.8rem;padding:.3rem .5rem}
+  /* ---- Bed prep planner (view-bedprep) ----
+     Two renderers over one derivation (PlannerShared.bpPlanForWeek): By bed is the planning
+     surface — a chip grid you thumb through while walking the field — and By pass is the doing
+     surface, grouped by implement so one hitch-up covers every bed that needs it. */
+  .bpp-body{padding:.2rem 1rem 2rem;max-width:1000px}
+  .bpp-search{padding:.4rem 1rem 0;max-width:1000px;position:relative}
+  .bpp-search input{width:100%;max-width:22rem}
+  .bpp-search .sp-suggest{max-width:22rem}
+  .bpp-block{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);margin:.9rem 0 .4rem}
+  .bpp-block:first-child{margin-top:.3rem}
+
+  /* By bed */
+  .bpp-bed{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);
+    padding:.55rem .7rem .6rem;margin-bottom:.5rem}
+  .bpp-bed-carried{border-color:var(--clay)}
+  .bpp-bed-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.15rem}
+  .bpp-bed-name{font-weight:600;font-size:.95rem;flex:1 1 auto;min-width:0}
+  .bpp-bed-why{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);
+    margin:0 0 .4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bpp-bed-carried .bpp-bed-why{color:var(--clay)}
+  .bpp-bed-act{border:none;background:none;cursor:pointer;color:var(--steel);
+    font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;padding:.2rem .1rem}
+  .bpp-bed-act:hover{text-decoration:underline}
+  .bpp-bed-act.rm:hover{color:var(--clay)}
+  .bpp-chips{display:flex;flex-wrap:wrap;gap:.3rem}
+  /* Same base as .bd-chips .cm-type-chip — the popover that class comes from supplies no reset. */
+  .bpp-chips button{border:1px solid var(--line-2);border-radius:8px;background:var(--paper);
+    color:var(--ink-2);cursor:pointer;font-family:var(--sans);font-size:.8rem;
+    padding:.3rem .55rem;min-height:2rem;line-height:1.2}
+  .bpp-chips button:hover{border-color:var(--steel)}
+  .bpp-chips button.on{background:color-mix(in srgb, var(--steel) 16%, var(--paper));
+    border-color:var(--steel);color:var(--ink);font-weight:600}
+  .bpp-chips button.done{background:color-mix(in srgb, var(--ok) 14%, var(--paper));
+    border-color:var(--ok);color:var(--ink-2);text-decoration:line-through}
+
+  /* By pass */
+  .bpp-pass{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);
+    margin-bottom:.6rem;overflow:hidden}
+  .bpp-pass-done{opacity:.62}
+  .bpp-pass-head{display:flex;align-items:center;gap:.6rem;width:100%;text-align:left;
+    cursor:pointer;padding:.6rem .75rem;background:none;border:none;color:var(--ink);
+    font-family:var(--sans);font-size:.95rem}
+  .bpp-pass-head:hover{background:var(--paper)}
+  .bpp-pass-name{font-weight:600;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bpp-pass-meta{flex:1 1 auto;font-family:var(--mono);font-size:.7rem;color:var(--ink-2);white-space:nowrap}
+  .bpp-pass-tools{display:flex;gap:.3rem;flex:0 0 auto}
+  .bpp-pass-tool{border:1px solid var(--line-2);border-radius:7px;background:var(--paper);
+    cursor:pointer;color:var(--ink-2);font-family:var(--mono);font-size:.66rem;
+    text-transform:uppercase;letter-spacing:.06em;padding:.25rem .45rem}
+  .bpp-pass-tool:hover{border-color:var(--steel);color:var(--steel)}
+  .bpp-pass-body{padding:.1rem .75rem .7rem;background:var(--paper)}
+  .bpp-op{margin-top:.5rem}
+  .bpp-op:first-child{margin-top:.2rem}
+  .bpp-op-name{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);margin-bottom:.3rem}
+  .bpp-op-beds{display:flex;flex-wrap:wrap;gap:.3rem}
+  .bpp-tick{display:flex;align-items:center;gap:.35rem;border:1px solid var(--line-2);
+    border-radius:8px;background:var(--paper-2);cursor:pointer;font-size:.85rem;
+    padding:.3rem .55rem;min-height:2.1rem}
+  .bpp-tick:hover{border-color:var(--steel)}
+  .bpp-tick input{accent-color:var(--ok);margin:0;width:1rem;height:1rem}
+  .bpp-tick-done{background:color-mix(in srgb, var(--ok) 12%, var(--paper));border-color:var(--ok)}
+  .bpp-tick-done span{text-decoration:line-through;color:var(--ink-2)}
+  .bpp-op-blk{font-family:var(--mono);font-size:.62rem;color:var(--ink-2);
+    align-self:center;padding:0 .1rem 0 .3rem}
+  .bpp-op-blk:first-child{padding-left:0}
+
+  /* Suggestions */
+  .bpp-sugg-h{display:flex;align-items:baseline;gap:.5rem;margin:1.4rem 0 .5rem;
+    padding-top:.9rem;border-top:1px solid var(--line-2)}
+  .bpp-sugg-h b{font-size:.9rem}
+  .bpp-sugg{display:flex;align-items:center;gap:.6rem;border:1px dashed var(--line-2);
+    border-radius:10px;padding:.45rem .7rem;margin-bottom:.4rem;background:var(--paper)}
+  .bpp-sugg-name{font-weight:600;font-size:.9rem;flex:0 0 auto}
+  .bpp-sugg-why{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:.7rem;
+    color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bpp-empty{color:var(--ink-2);font-size:.9rem;padding:1.2rem 0;max-width:60ch;line-height:1.5}
+
+  @media (max-width:760px){
+    /* The nav FAB floats bottom-right over this view, so the last row needs room to be scrolled
+       clear of it — otherwise the final suggestion's "+ Add" sits underneath the hamburger. */
+    .bpp-body{padding:.2rem .7rem 5.5rem}
+    .bpp-search{padding:.4rem .7rem 0}
+    /* Field-walk targets: everything tappable clears 44px, and the chips get room to breathe. */
+    .bpp-chips button{font-size:.85rem;padding:.55rem .7rem;min-height:2.75rem}
+    .bpp-tick{padding:.55rem .7rem;min-height:2.75rem;font-size:.9rem}
+    .bpp-tick input{width:1.15rem;height:1.15rem}
+    /* Default / Remove / + Add sit next to a 44px chip grid, so they have to clear it too —
+       a 27px text button between fat chips is the one you miss with a glove on. */
+    .bpp-bed-act{padding:.6rem .5rem;min-height:2.75rem;display:inline-flex;align-items:center}
+    .bpp-sugg{flex-wrap:wrap;gap:.1rem .5rem}
+    .bpp-sugg-why{flex:1 1 100%;order:3;white-space:normal}
+    .bpp-sugg [data-sugg]{margin-left:auto}
+    .bpp-pass-head{padding:.7rem .75rem}
+    .bpp-pass-tool{padding:.55rem .6rem;min-height:2.4rem;display:inline-flex;align-items:center}
+    #view-bedprep .cm-top{flex-wrap:wrap;gap:.4rem}
+    #view-bedprep #bppModeToggle{flex:1 1 100%;margin-left:0}
+    #view-bedprep #bppModeToggle button{flex:1 1 0}
+    #bppSummary{flex:1 1 100%;margin-left:0}
+  }
   /* ---- Bed prep history (last subsection of the Beds tab) ----
      Cards rather than a table: the grid is BP_OPS-wide and would never fit a phone, and cards let
      the same markup serve desktop and the mobile drill-down without a second renderer. */
   .bp-controls{display:flex;flex-wrap:wrap;align-items:center;gap:.9rem;margin-bottom:.7rem}
   .bp-showall{display:flex;align-items:center;gap:.35rem;font-family:var(--mono);
     font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);cursor:pointer}
-  .bp-targets{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);
+/* The operation registry editor. A real table because the columns want comparing down the page
+     (is the order right? which of these share an implement?), with its own scroller so the page
+     body never scrolls sideways on a phone. */
+  .bp-reg{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);
     padding:.7rem .8rem;margin-bottom:.8rem;max-width:900px}
-  .bp-targets-grid{display:flex;flex-wrap:wrap;gap:.6rem}
-  .bp-target{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);
-    font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
-  .cr-wrap .bp-target input{width:7.5rem}
+  .bp-reg-scroll{overflow-x:auto;margin:.5rem -.2rem 0}
+  .bp-reg-tbl{border-collapse:collapse;width:100%;min-width:660px}
+  .bp-reg-tbl th{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);font-weight:400;text-align:left;
+    padding:.2rem .35rem .35rem;border-bottom:1px solid var(--line-2);white-space:nowrap}
+  .bp-reg-tbl th.n,.bp-reg-tbl td.n{text-align:right}
+  .bp-reg-tbl th.c,.bp-reg-tbl td.c{text-align:center}
+  .bp-reg-tbl td{padding:.2rem .35rem;border-bottom:1px solid var(--line)}
+  .bp-reg-tbl tr:last-child td{border-bottom:none}
+  .bp-reg-op{font-size:.85rem;white-space:nowrap;padding-right:.6rem!important}
+  .bp-reg-arch .bp-reg-op{color:var(--ink-2);text-decoration:line-through}
+  .bp-reg-tag{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);border:1px solid var(--line-2);
+    border-radius:5px;padding:.05rem .25rem;vertical-align:1px}
+  .cr-wrap .bp-reg-tbl input[type=text]{width:9rem;font-size:.82rem;padding:.2rem .35rem}
+  .cr-wrap .bp-reg-tbl input.cr-num{width:4.6rem;font-size:.82rem;padding:.2rem .35rem}
+  .bp-reg-tbl input[type=checkbox]{accent-color:var(--ok)}
+  .bp-reg-x{border:none;background:none;cursor:pointer;color:var(--ink-2);
+    font-size:.85rem;padding:.15rem .3rem;line-height:1}
+  .bp-reg-x:hover{color:var(--clay)}
+  .bp-reg-actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.6rem}
   .bp-list{display:flex;flex-direction:column;gap:.5rem;max-width:900px}
   .bp-row{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);overflow:hidden}
   .bp-row-flag{border-color:var(--clay)}
@@ -1798,14 +1919,19 @@
   #fwWalkers{width:11rem;flex:0 1 auto}
   .fw-warn{margin:.6rem .8rem 0;padding:.5rem .7rem;border:1px solid var(--clay);border-radius:9px;
     background:color-mix(in srgb,var(--clay) 7%,transparent);color:var(--clay);font-size:.86rem}
-  /* Sync badge. Four states, colour-coded, because the only thing worse than an unsynced note is
-     an unsynced note you don't know about. Always a button — tapping retries the flush. */
-  #fwSyncBadge{margin-left:auto;border-radius:999px;border:1px solid var(--line-2);cursor:pointer;
+/* Sync badge. Four states, colour-coded, because the only thing worse than an unsynced note is
+     an unsynced note you don't know about. Always a button — tapping retries the flush.
+     Worn by both Field walk and Bed prep: they share one queue, and a stuck queue has to be
+     visible from whichever page the work was done on. */
+  #fwSyncBadge,#bppSyncBadge{border-radius:999px;border:1px solid var(--line-2);cursor:pointer;
     padding:.3rem .7rem;font-size:.8rem;font-family:inherit;background:var(--paper-2);color:var(--ink-2);white-space:nowrap}
-  #fwSyncBadge.fw-sync-pending{border-color:var(--steel);color:var(--steel)}
-  #fwSyncBadge.fw-sync-offline{border-color:var(--sun,var(--clay));color:var(--ink);
+  #fwSyncBadge{margin-left:auto}
+  #fwSyncBadge.fw-sync-pending,#bppSyncBadge.fw-sync-pending{border-color:var(--steel);color:var(--steel)}
+  #fwSyncBadge.fw-sync-offline,#bppSyncBadge.fw-sync-offline{border-color:var(--sun,var(--clay));color:var(--ink);
     background:color-mix(in srgb,var(--clay) 10%,transparent)}
-  #fwSyncBadge.fw-sync-err{border-color:var(--clay);color:var(--clay);font-weight:650}
+  #fwSyncBadge.fw-sync-err,#bppSyncBadge.fw-sync-err{border-color:var(--clay);color:var(--clay);font-weight:650}
+  /* Nothing pending, nothing to say — the Bed prep toolbar is busy enough without a permanent tick. */
+  #bppSyncBadge:empty{display:none}
   /* Unsynced work has to be visible from any tab, not just this one — the drawer FAB is the only
      chrome that's on screen everywhere on a phone. */
   .nav-fab[data-fw-pending]{position:relative}
@@ -1934,6 +2060,7 @@
     <button class="tab" role="tab" aria-selected="false" data-view="fieldwalk">Field walk</button>
     <button class="tab" role="tab" aria-selected="false" id="infoTab" aria-haspopup="true">Farm info ▾</button>
     <button class="tab" role="tab" aria-selected="false" data-view="week">This week</button>
+    <button class="tab" role="tab" aria-selected="false" data-view="bedprep">Bed prep</button>
   </nav>
   <div class="tab-dd" id="harvestDropdown" hidden>
     <button type="button" data-view="harvest">Harvest planner</button>
@@ -1992,6 +2119,7 @@
     <button class="nav-drawer-item" data-view="fertcalc">Fertigation calculator</button>
     <button class="nav-drawer-item" data-view="farminfo">Reference library</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
+    <button class="nav-drawer-item" data-view="bedprep">Bed prep</button>
     <div class="nav-drawer-sep">Harvest</div>
     <button class="nav-drawer-item" data-view="harvest">Harvest planner</button>
     <button class="nav-drawer-item" data-view="whiteboard">Whiteboard</button>
@@ -2264,7 +2392,7 @@
         </p>
         <div class="bp-controls">
           <button class="btn" id="bpLogBtn">+ Log prep…</button>
-          <button type="button" class="cr-add-variety" id="bpTargetsBtn">Targets…</button>
+          <button type="button" class="cr-add-variety" id="bpTargetsBtn">Operations…</button>
           <label class="bp-showall"><input type="checkbox" id="bpShowAll"> Show all beds</label>
         </div>
         <div id="bpTargets" hidden></div>
@@ -2439,6 +2567,31 @@
         <aside class="tl-panel" id="wkPanel"></aside>
       </div>
       <div class="tl-ctx" id="wkCtxMenu"></div>
+    </section>
+
+    <!-- BED PREP (weekly pass planning). Two ways at the same data: By bed to plan it while
+         walking the field, By pass to drive it. See bppBuild() for how the two relate. -->
+    <section class="view" id="view-bedprep">
+      <div class="cm-top">
+        <button class="icon-btn" id="bppPrev" title="Previous week">◀</button>
+        <span class="cm-year" id="bppRangeLabel" style="min-width:12ch">—</span>
+        <button class="icon-btn" id="bppNext" title="Next week">▶</button>
+        <button class="icon-btn" id="bppToday" title="Jump to the current week" style="margin-left:.2rem">This week</button>
+        <div class="seg" id="bppModeToggle" style="margin-left:.6rem">
+          <button data-bppmode="bed" aria-pressed="true">By bed</button>
+          <button data-bppmode="pass" aria-pressed="false">By pass</button>
+        </div>
+        <span class="sub" id="bppSummary" style="margin-left:.6rem"></span>
+        <span class="spacer"></span>
+        <button type="button" id="bppSyncBadge" title="Sync status — tap to retry"></button>
+        <button class="icon-btn" id="bppOpsBtn" title="Edit the operations, their order and their implements">Operations…</button>
+        <button class="btn-ghost" id="bppAddBedsBtn">+ Add beds</button>
+      </div>
+      <div class="bpp-search" id="bppSearch" hidden>
+        <input type="text" id="bppBedSearch" placeholder="Add a bed by name — H10, G3…" autocomplete="off">
+        <div class="sp-suggest" id="bppBedSuggest" hidden></div>
+      </div>
+      <div class="bpp-body" id="bppBody"></div>
     </section>
 
     <!-- HARVEST PLANNER (2-panel: available-to-pick list + per-outlet planned/actual entry) -->
@@ -3568,7 +3721,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -3647,7 +3800,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedZones, fertProducts] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -3679,6 +3832,7 @@ async function loadAll(){
       fwFetch(CFG.tables.fertApplicationItems),
       fwFetch(CFG.tables.bedPrepEvents),   // same guard: an un-run migration empties the Bed prep
       fwFetch(CFG.tables.bedPrepTargets),  // history subsection rather than killing the Beds tab
+      fwFetch(CFG.tables.bedPrepPlan),     // and the Bed prep page, which then just reads empty
       fwFetch(CFG.tables.bedZones),        // likewise: no bed_zones table ⇒ no zones, planner unchanged
       fwFetch(CFG.tables.fertProducts),    // and again: no prices ⇒ costs page shows usage, no dollars
     ]);
@@ -3753,6 +3907,7 @@ async function loadAll(){
     data.bedIssues = PlannerShared.parseBedIssues(bedIssues);
     data.bedPrepEvents  = PlannerShared.parseBedPrepEvents(bedPrepEvents);
     data.bedPrepTargets = PlannerShared.parseBedPrepTargets(bedPrepTargets);
+    data.bedPrepPlan    = PlannerShared.parseBedPrepPlan(bedPrepPlan);
 
     // parse every planting and keep the full list — the Crop Map needs unassigned
     // plantings and multiple (succession) plantings per bed, not just one headline.
@@ -4222,6 +4377,7 @@ function showView(view){
   if(view==="timeline") buildTimeline();
   if(view==="crops") buildCropsTab();
   if(view==="beds") buildBedsTab();
+  if(view==="bedprep") bppBuild();
   if(view==="seedbook") buildSeedbook();
   if(view==="misc") buildMiscTab();
   if(view==="tasklib") buildTaskLibrary();
@@ -9587,11 +9743,18 @@ function bdRenderConflicts(){
    operations, because one pass of the power harrow over four beds is a single job. bpLastDone()
    pivots that back into the per-bed view the grower actually wants to read. */
 
-// Edit this one line to add or remove a prep operation. Nothing else keys off the strings, and
-// renaming one leaves old events carrying the old name — that reads as "never done" for the new
-// name rather than corrupting anything, so a rename wants a data fix-up if history matters.
+// The seed list, NOT the source of truth. Operations live in bed_prep_targets (the registry), so
+// the grower can add "Fert Spread", set the pass order and name the implement without a deploy.
+// This list only does two jobs: it fills the registry on first use via the "Set up operations"
+// button, and it keeps a name rendering if its registry row is ever deleted. Renaming an operation
+// leaves old events carrying the old name — bpOperations() brings that name back as an archived
+// orphan so history stays readable, but the two won't be treated as the same operation.
 const BP_OPS=["Power Harrowed","Bed Formed","Deep Ripped","Single Tine Ripped","Broadfork",
               "Rotary Hoed","Compost Spread","Tarped","Flame Weeded","Hand Weeded"];
+// The registry, ordered by pass. bpOps() includes archived rows (history has to stay readable);
+// bpActiveOps() is what every picker and planning view should use.
+const bpOps=()=>PlannerShared.bpOperations(data, BP_OPS);
+const bpActiveOps=()=>bpOps().filter(o=>!o.archived);
 let bpShowAll=false;         // false = only show beds with something overdue
 let bpExpanded=new Set();    // bed ids whose full operation grid is open
 let bpSel=null;              // the log modal's working state while it's open
@@ -9600,7 +9763,7 @@ let bpSel=null;              // the log modal's working state while it's open
 // never flagged — that's the default for everything until the grower sets one.
 function bpIntervals(){
   const out={};
-  (data.bedPrepTargets||[]).forEach(t=>{ if(t.op && t.days!=null) out[t.op]=t.days; });
+  bpOps().forEach(o=>{ if(o.op && o.days!=null) out[o.op]=o.days; });
   return out;
 }
 
@@ -9625,7 +9788,7 @@ function bpOverdueOps(bedId, map, iv){
   const per=(map||bpLastDone())[bedId]||{};
   const ivs=iv||bpIntervals();
   const today=todayISO();
-  return BP_OPS.filter(op=>{
+  return bpActiveOps().map(o=>o.op).filter(op=>{
     const days=ivs[op]; if(days==null) return false;
     const last=per[op]; if(!last) return false;
     return isoDiffDays(last, today) > days;
@@ -9682,11 +9845,14 @@ function bpRowHTML(bed,map,iv){
   +`</div>`;
 }
 
-// The full BP_OPS × last-done grid for one bed. Shared by the desktop row and the mobile drill-down.
+// The full operation × last-done grid for one bed. Shared by the desktop row and the mobile
+// drill-down. Archived operations appear only where this bed actually has history for them —
+// otherwise retiring an implement would leave a column of "never" on every bed forever.
 function bpGridHTML(bed,per,iv,overdue){
   const today=todayISO();
   const od=new Set(overdue||bpOverdueOps(bed.id,null,iv));
-  return `<div class="bp-grid">`+BP_OPS.map(op=>{
+  const ops=bpOps().filter(o=>!o.archived || per[o.op]).map(o=>o.op);
+  return `<div class="bp-grid">`+ops.map(op=>{
     const last=per[op];
     const target=iv[op]!=null ? ` / ${iv[op]}d` : "";
     const when=last
@@ -9699,39 +9865,167 @@ function bpGridHTML(bed,per,iv,overdue){
   }).join("")+`</div>`;
 }
 
-/* ---- Targets: how long between passes before a bed reads as overdue ---- */
+/* ---- The operation registry ----
+   One row per prep operation and everything the app needs to know about it: which implement it
+   hangs off, where it falls in the pass order, how long a bed takes, whether it's in the default
+   set, and how stale it may get before the bed flags overdue.
+
+   "Order" is the number that drives everything downstream — the pass order on the Bed prep page,
+   the chip order on a bed, the grouping of operations that share an implement. It's a plain number
+   input rather than drag-and-drop because it has to be editable on a phone with one thumb. */
+const BPT_FIELDS={ op:"bpt_op", days:"bpt_days", attachment:"bpt_attach", seq:"bpt_seq",
+                   minutes:"bpt_mins", isDefault:"bpt_default", archived:"bpt_archived" };
+
 function bpRenderTargets(){
   const box=document.getElementById("bpTargets"); if(!box) return;
-  const iv=bpIntervals();
-  box.className="bp-targets";
-  box.innerHTML=`<div class="bd-excl-label">Flag a bed once this many days have passed since the `
-    +`operation was last done. Blank = never flag.</div>`
-    +`<div class="bp-targets-grid">`+BP_OPS.map(op=>
-      `<label class="bp-target">${esc(op)}`
-      +`<input class="cr-num" type="number" min="1" step="1" data-op="${esc(op)}" `
-      +`value="${iv[op]!=null?iv[op]:""}" placeholder="—"></label>`).join("")
+  const ops=bpOps();
+  box.className="bp-reg";
+  const unregistered=ops.filter(o=>!o.id).length;
+  box.innerHTML=`<div class="bd-excl-label">The operations bed prep is made of. Order sets the `
+      +`sequence of passes; Implement groups the operations that share one attachment, so a single `
+      +`hitch-up covers all of them. Interval flags a bed once that many days have passed since the `
+      +`operation was last done — blank never flags.</div>`
+    +(ops.length?`<div class="bp-reg-scroll"><table class="bp-reg-tbl"><thead><tr>`
+        +`<th>Operation</th><th>Implement</th><th class="n">Order</th><th class="n">Interval d</th>`
+        +`<th class="n">Min/bed</th><th class="c">Default</th><th class="c">Archived</th><th></th>`
+      +`</tr></thead><tbody>`
+      +ops.map(o=>bpRegRowHTML(o)).join("")
+      +`</tbody></table></div>`:"")
+    +`<div class="bp-reg-actions">`
+      +`<button type="button" class="cr-add-variety" id="bpAddOp">+ Add operation</button>`
+      +(unregistered?`<button type="button" class="cr-add-variety" id="bpSeedOps">`
+        +`Set up ${unregistered} unsaved operation${unregistered===1?"":"s"}</button>`:"")
     +`</div>`;
-  box.querySelectorAll("input[data-op]").forEach(inp=>inp.onchange=()=>
-    bpSaveTarget(inp.dataset.op, inp.value===""?null:(+inp.value)));
+
+  box.querySelectorAll("[data-reg-id]").forEach(inp=>{
+    const commit=()=>{
+      const k=inp.dataset.regK;
+      const v = inp.type==="checkbox" ? inp.checked
+              : inp.type==="number"   ? (inp.value===""?null:(+inp.value))
+              : inp.value.trim();
+      bpSaveOp(inp.dataset.regId, inp.dataset.regOp, k, v);
+    };
+    if(inp.type==="checkbox") inp.onchange=commit; else inp.onchange=commit;
+  });
+  box.querySelectorAll("[data-reg-del]").forEach(b=>b.onclick=()=>bpDeleteOp(b.dataset.regDel));
+  const add=document.getElementById("bpAddOp"); if(add) add.onclick=bpAddOp;
+  const seed=document.getElementById("bpSeedOps"); if(seed) seed.onclick=bpSeedOps;
 }
 
-async function bpSaveTarget(op,days){
-  const existing=(data.bedPrepTargets||[]).find(t=>t.op===op);
-  const prev=existing?existing.days:undefined;
-  if(existing) existing.days=days;   // optimistic, same shape as saveBed
-  bpRenderHistory();
-  try{
-    if(existing){
-      await atPatch(CFG.farmBase, CFG.tables.bedPrepTargets, existing.id, {[CFG.f.bpt_days]:days});
-    }else{
-      const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepTargets,
-        [{[CFG.f.bpt_op]:op, [CFG.f.bpt_days]:days}]);
-      data.bedPrepTargets.push({id:created[0].id, op, days});
+function bpRegRowHTML(o){
+  // An operation with no registry row yet (a BP_OPS seed name, or one found only in old events)
+  // renders identically — editing any field creates the row, so there's no "save first" step.
+  const a=(k,extra)=>`data-reg-id="${esc(o.id||"")}" data-reg-op="${esc(o.op)}" data-reg-k="${k}" ${extra||""}`;
+  const used=(data.bedPrepEvents||[]).some(e=>(e.ops||[]).includes(o.op));
+  return `<tr class="${o.archived?"bp-reg-arch":""}">`
+    +`<td class="bp-reg-op">${esc(o.op)}${o.orphan?` <span class="bp-reg-tag">from history</span>`:""}`
+      +`${!o.id?` <span class="bp-reg-tag">unsaved</span>`:""}</td>`
+    +`<td><input type="text" ${a("attachment")} value="${esc(o.attachment||"")}" placeholder="—"></td>`
+    +`<td class="n"><input class="cr-num" type="number" step="10" ${a("seq")} value="${o.seq<4000?o.seq:""}" placeholder="—"></td>`
+    +`<td class="n"><input class="cr-num" type="number" min="1" step="1" ${a("days")} value="${o.days!=null?o.days:""}" placeholder="—"></td>`
+    +`<td class="n"><input class="cr-num" type="number" min="0" step="1" ${a("minutes")} value="${o.minutes!=null?o.minutes:""}" placeholder="—"></td>`
+    +`<td class="c"><input type="checkbox" ${a("isDefault")} ${o.isDefault?"checked":""}></td>`
+    +`<td class="c"><input type="checkbox" ${a("archived")} ${o.archived?"checked":""}></td>`
+    +`<td class="c">${o.id&&!used?`<button type="button" class="bp-reg-x" data-reg-del="${o.id}" title="Delete">✕</button>`:""}</td>`
+  +`</tr>`;
+}
+
+// Patch an existing registry row, or create it on the spot if this operation is still only a seed
+// name. Optimistic with rollback, the same shape as saveBed and the old bpSaveTarget.
+async function bpSaveOp(id, op, key, value){
+  const field=CFG.f[BPT_FIELDS[key]];
+  const existing=id ? (data.bedPrepTargets||[]).find(t=>t.id===id) : null;
+  if(existing){
+    const prev=existing[key];
+    existing[key]=value;
+    bpRenderTargets(); bpRenderHistory();
+    try{
+      await atPatch(CFG.farmBase, CFG.tables.bedPrepTargets, id, {[field]:value});
+    }catch(e){
+      existing[key]=prev;
+      console.error(e);
+      alert("Couldn't save that operation:\n"+e.message);
+      bpRenderTargets(); bpRenderHistory();
     }
+    return;
+  }
+  // Create-then-push: we need the server id, same as bpSaveLog. Seed the Sequence from where this
+  // operation already sorts, so saving one row doesn't reshuffle the list under the grower.
+  const seq=(bpOps().find(o=>o.op===op)||{}).seq;
+  const fields={[CFG.f.bpt_op]:op, [CFG.f.bpt_seq]: seq!=null&&seq<4000 ? seq : bpNextSeq()};
+  fields[field]=value;
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepTargets, [fields]);
+    data.bedPrepTargets.push({ id:created[0].id, op, days:null, attachment:"",
+      seq:fields[CFG.f.bpt_seq], minutes:null, isDefault:false, archived:false, [key]:value });
+    bpRenderTargets(); bpRenderHistory();
   }catch(e){
-    if(existing) existing.days=prev;   // rollback
     console.error(e);
-    alert("Couldn't save that target:\n"+e.message);
+    alert("Couldn't save that operation:\n"+e.message);
+    bpRenderTargets();
+  }
+}
+
+// Next free slot at the end of the pass order, leaving room to insert between existing rows.
+function bpNextSeq(){
+  const seqs=(data.bedPrepTargets||[]).map(t=>t.seq).filter(s=>s!=null);
+  return seqs.length ? Math.max(...seqs)+10 : 10;
+}
+
+async function bpAddOp(){
+  const name=(prompt("Name of the operation, as you'd say it in the paddock:")||"").trim();
+  if(!name) return;
+  if(bpOps().some(o=>o.op.toLowerCase()===name.toLowerCase())){ alert("That operation already exists."); return; }
+  const fields={[CFG.f.bpt_op]:name, [CFG.f.bpt_seq]:bpNextSeq()};
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepTargets, [fields]);
+    data.bedPrepTargets.push({ id:created[0].id, op:name, days:null, attachment:"",
+      seq:fields[CFG.f.bpt_seq], minutes:null, isDefault:false, archived:false });
+    bpRenderTargets(); bpRenderHistory();
+  }catch(e){ console.error(e); alert("Couldn't add that operation:\n"+e.message); }
+}
+
+// Write the seed list into the registry so it can be edited. Only fills gaps — an operation that
+// already has a row is left exactly as it is.
+async function bpSeedOps(){
+  const missing=bpOps().filter(o=>!o.id);
+  if(!missing.length) return;
+  // Sequences are handed out here rather than via bpNextSeq() per row: that reads the registry,
+  // which is still empty while this batch is being built, so every row would come out the same.
+  // Rows keep the order bpOperations() already put them in, which for a first run is BP_OPS order.
+  let next=bpNextSeq();
+  const rows=missing.map(o=>{
+    const seq = o.seq<4000 ? o.seq : (next += 10) - 10;
+    return {[CFG.f.bpt_op]:o.op, [CFG.f.bpt_seq]:seq, [CFG.f.bpt_archived]:!!o.archived};
+  });
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepTargets, rows);
+    created.forEach((rec,i)=>data.bedPrepTargets.push({ id:rec.id, op:missing[i].op, days:null,
+      attachment:"", seq:rows[i][CFG.f.bpt_seq], minutes:null, isDefault:false,
+      archived:!!missing[i].archived }));
+    bpRenderTargets(); bpRenderHistory();
+  }catch(e){ console.error(e); alert("Couldn't set those up:\n"+e.message); }
+}
+
+// Deleting is offered only for an operation nothing has ever been logged against — otherwise
+// archive it, which keeps the history readable. bpRegRowHTML hides the button in that case, so
+// this is belt-and-braces against a stale render.
+async function bpDeleteOp(id){
+  const row=(data.bedPrepTargets||[]).find(t=>t.id===id); if(!row) return;
+  if((data.bedPrepEvents||[]).some(e=>(e.ops||[]).includes(row.op))){
+    alert("That operation has prep logged against it. Tick Archived instead — deleting it would make those records unreadable.");
+    return;
+  }
+  const planned=(data.bedPrepPlan||[]).filter(p=>(p.ops||[]).includes(row.op)).length;
+  if(!confirm(`Delete "${row.op}"?${planned?` It's on ${planned} planned bed${planned===1?"":"s"}, which will keep showing it.`:""}`)) return;
+  const i=data.bedPrepTargets.indexOf(row);
+  data.bedPrepTargets.splice(i,1);
+  bpRenderTargets(); bpRenderHistory();
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.bedPrepTargets, id);
+  }catch(e){
+    data.bedPrepTargets.splice(i,0,row);
+    console.error(e); alert("Couldn't delete that:\n"+e.message);
     bpRenderTargets(); bpRenderHistory();
   }
 }
@@ -9760,7 +10054,9 @@ function bpCloseLog(){
 
 function bpRenderOpChips(){
   const el=document.getElementById("bpOpChips");
-  el.innerHTML=BP_OPS.map(op=>{
+  // Archived operations still show if this log already names one, so an old record can be edited.
+  const ops=bpOps().filter(o=>!o.archived || bpSel.ops.has(o.op)).map(o=>o.op);
+  el.innerHTML=ops.map(op=>{
     const on=bpSel.ops.has(op);
     return `<button type="button" class="cm-type-chip${on?" on":""}" data-op="${esc(op)}">${on?"✓ ":""}${esc(op)}</button>`;
   }).join("");
@@ -9845,6 +10141,413 @@ function bpWire(){
   modal.onclick=e=>{ if(e.target===modal) bpCloseLog(); };
 }
 bpWire();
+
+
+/* ============================ BED PREP PLANNER (view-bedprep) ============================
+   The forward-looking half of bed prep. Bed prep events record what was done; this page records
+   what still needs doing, and turns that into a run order.
+
+   Two modes over one derivation, PlannerShared.bpPlanForWeek():
+     By bed   the planning surface. Every bed that needs prep this week, with a chip per operation.
+              Tap chips while walking the field. This is where the week gets decided.
+     By pass  the doing surface. The same data grouped by implement, beds sorted in driving order,
+              so one hitch-up covers every bed that needs that attachment.
+
+   Nothing here stores "done". Ticking a bed under a pass writes a bed_prep_events record, and
+   bpPlanForWeek derives done-ness back out of it. That keeps one source of truth for what has
+   happened — the same one the Beds tab history and the overdue flags read. */
+
+let bppMode = "bed";              // "bed" (plan it) | "pass" (drive it)
+let bppSearchOpen = false;
+let bppCollapsed = new Set();     // attachment names collapsed in By pass
+const BPP_LOOKAHEAD = 21;         // days ahead a planting starts asking for its bed to be prepped
+
+// The week being planned, shared with This Week via wkStartISO so stepping it on either page
+// steps both. Every read goes through here: wkStartISO starts null and is only set when a page
+// first renders, so a write that reached wkStartISO directly could persist a null week — which
+// bpPlanForWeek then filters straight back out, silently losing the row.
+function bppWeek(){
+  if(!wkStartISO) wkStartISO = wkISO(wkMonday(new Date()));
+  return wkStartISO;
+}
+
+function bppPlan(){
+  return PlannerShared.bpPlanForWeek(data, bppWeek(), new Date(),
+                                     { bpOps: BP_OPS, lookaheadDays: BPP_LOOKAHEAD });
+}
+
+function bppBuild(){
+  const body=document.getElementById("bppBody"); if(!body) return;
+  const P=bppPlan();
+  document.getElementById("bppRangeLabel").textContent=wkFmtRange(wkParse(bppWeek()));
+
+  const outstanding=P.beds.reduce((n,b)=>n+b.remaining,0);
+  const mins=P.passes.reduce((n,p)=>n+(p.minutes||0),0);
+  document.getElementById("bppSummary").textContent = P.beds.length
+    ? `${P.beds.length} bed${P.beds.length===1?"":"s"} · ${outstanding} pass${outstanding===1?"":"es"} left`
+      + (mins?` · ~${wkFmtMins(mins)}`:"")
+    : "";
+
+  body.innerHTML = bppMode==="pass" ? bppRenderByPass(P) : bppRenderByBed(P);
+  bppWireBody(P);
+  fwRenderBadge();       // the queue may have drained (or stalled) since this page was last drawn
+}
+
+/* ---- By bed: the planning surface ---- */
+function bppRenderByBed(P){
+  const ops=bpActiveOps();
+  let html="";
+  if(P.beds.length){
+    let blk=null;
+    P.beds.forEach(b=>{
+      const bl=b.bed.block||"—";
+      if(bl!==blk){ blk=bl; html+=`<div class="bpp-block">Block ${esc(bl)}</div>`; }
+      html+=bppBedHTML(b, ops);
+    });
+  }
+
+  if(!P.beds.length && !P.suggestions.length){
+    html+=`<div class="bpp-empty">Nothing planned for this week, and nothing is asking to be.`
+      +`<br><br>Beds turn up here on their own when a planting is due on them in the next `
+      +`${BPP_LOOKAHEAD} days, when an operation is past its target interval, or when a Bed prep `
+      +`task is due. Or add any bed by name with <b>+ Add beds</b>.</div>`;
+  }
+
+  if(P.suggestions.length){
+    html+=`<div class="bpp-sugg-h"><b>Suggested</b>`
+      +`<span class="bpp-bed-why">beds that look like they want prep — tap to plan the default passes</span></div>`
+      +P.suggestions.map(s=>
+        `<div class="bpp-sugg">`
+          +`<span class="bpp-sugg-name">${esc(s.bed.name)}</span>`
+          +`<span class="bpp-sugg-why">${esc(s.reason||"")}</span>`
+          +`<button type="button" class="bpp-bed-act" data-sugg="${esc(s.bedId)}">+ Add</button>`
+        +`</div>`).join("");
+  }
+  return html;
+}
+
+function bppBedHTML(b, ops){
+  // Every active operation gets a chip, plus any already on this bed — so one planned before its
+  // operation was archived can still be seen and taken off.
+  const planned=new Set(b.ops.map(o=>o.op));
+  const doneMap={}; b.ops.forEach(o=>{ if(o.done) doneMap[o.op]=o.doneDate; });
+  const list=ops.map(o=>o.op).concat(b.ops.map(o=>o.op).filter(op=>!ops.some(x=>x.op===op)));
+  // Why this bed is on the list, most specific first: a carry-over says so, otherwise the crop
+  // it's being prepped for, otherwise the task that asked for it.
+  const why = b.carried ? `carried over from ${fmt(b.week)}`
+            : b.planting ? `${b.planting.crop}${b.planting.variety?" "+b.planting.variety:""}`
+                           + `${b.planting.tp||b.planting.sow?` · ${b.planting.tp?"TP":"Sow"} ${fmt(b.planting.tp||b.planting.sow)}`:""}`
+            : b.task ? `${b.taskName||"Bed prep"}${b.task.due?` · due ${fmt(b.task.due)}`:""}`
+            : (b.notes||"");
+  const hasDefaults=bpActiveOps().some(o=>o.isDefault);
+  return `<div class="bpp-bed${b.carried?" bpp-bed-carried":""}" data-plan="${esc(b.planId)}">`
+    +`<div class="bpp-bed-head">`
+      +`<span class="bpp-bed-name">${esc(b.bed.name)}</span>`
+      +(hasDefaults?`<button type="button" class="bpp-bed-act" data-def="${esc(b.bedId)}">Default</button>`:"")
+      +`<button type="button" class="bpp-bed-act rm" data-rm="${esc(b.planId)}">Remove</button>`
+    +`</div>`
+    +(why?`<div class="bpp-bed-why">${esc(why)}</div>`:"")
+    +`<div class="bpp-chips">`+list.map(op=>{
+        const on=planned.has(op), done=doneMap[op]!=null;
+        const cls=done?"done":(on?"on":"");
+        const title=done?`Done ${fmt(doneMap[op])}`:(on?"Planned — tap to drop":"Tap to add");
+        return `<button type="button" class="${cls}" data-op="${esc(op)}" data-bed="${esc(b.bedId)}" `
+          +`title="${esc(title)}">${done?"✓ ":""}${esc(op)}</button>`;
+      }).join("")+`</div>`
+  +`</div>`;
+}
+
+/* ---- By pass: the doing surface ---- */
+function bppRenderByPass(P){
+  if(!P.passes.length){
+    return `<div class="bpp-empty">No passes planned for this week yet. Switch to <b>By bed</b> `
+      +`and tap the operations each bed needs — they'll group by implement here.</div>`;
+  }
+  return P.passes.map(a=>{
+    const open=!bppCollapsed.has(a.name) && !a.complete;
+    const meta=a.complete
+      ? `all ${a.doneCount} done`
+      : `${a.bedCount} bed${a.bedCount===1?"":"s"}`
+        + (a.minutes?` · ~${wkFmtMins(a.minutes)}`:"")
+        + (a.doneCount?` · ${a.doneCount} done`:"");
+    return `<div class="bpp-pass${a.complete?" bpp-pass-done":""}">`
+      +`<button type="button" class="bpp-pass-head" data-pass="${esc(a.name)}">`
+        +`<span class="bpp-pass-name">${a.complete?"✓ ":""}${esc(a.name)}</span>`
+        +`<span class="bpp-pass-meta">${esc(meta)}</span>`
+        +`<span class="bpp-pass-tools">`
+          +(a.complete?"":`<span class="bpp-pass-tool" data-allpass="${esc(a.name)}" role="button" tabindex="0">Mark all</span>`)
+          +`<span class="bpp-pass-tool" data-logpass="${esc(a.name)}" role="button" tabindex="0">Log…</span>`
+        +`</span>`
+      +`</button>`
+      +(open?`<div class="bpp-pass-body">`+a.ops.map(g=>bppOpHTML(g)).join("")+`</div>`:"")
+    +`</div>`;
+  }).join("");
+}
+
+function bppOpHTML(g){
+  // Beds arrive already in driving order from bpPlanForWeek; the block labels just make the run
+  // legible — you can see you finish G before starting H.
+  const row=(list,done)=>{
+    let blk=null;
+    return list.map(b=>{
+      const bl=b.bed.block||"—";
+      const lab = bl!==blk ? (blk=bl, `<span class="bpp-op-blk">${esc(bl)}</span>`) : "";
+      return lab+`<label class="bpp-tick${done?" bpp-tick-done":""}">`
+        +`<input type="checkbox" data-tick="${esc(g.op)}" data-bed="${esc(b.bedId)}"${done?" checked":""}>`
+        +`<span>${esc(b.bed.name)}</span></label>`;
+    }).join("");
+  };
+  return `<div class="bpp-op">`
+    +`<div class="bpp-op-name">${esc(g.op)}${g.minutes?` · ~${wkFmtMins(g.minutes)}`:""}</div>`
+    +`<div class="bpp-op-beds">${row(g.beds,false)}${row(g.done,true)}</div>`
+  +`</div>`;
+}
+
+/* ---- Writes ----
+   Every write here goes through the Field walk offline queue (fwEnqueue), not a live atPatch.
+   This page gets used walking H block with no signal, which is exactly the case that queue was
+   built for: it appends to localStorage, hands back a tmp: id straight away, flushes when the
+   phone comes back, and rewrites the tmp ids to real ones on the way through (fwReconcile).
+
+   That means these functions are synchronous in effect and have no rollback — a failed write
+   stays queued and retries rather than being undone under the grower's thumb. The sync badge in
+   the toolbar is what surfaces a queue that isn't draining. */
+
+// Toggle one operation on one bed's plan, creating the plan row if this is the first tap.
+function bppToggleOp(bedId, op){
+  const P=bppPlan();
+  const row=P.beds.find(b=>b.bedId===bedId);
+  if(!row) return bppAddBed(bedId, [op]);
+  if(row.ops.some(o=>o.op===op && o.done)){
+    alert(`${op} is already logged as done on ${row.bed.name} this week.\nUntick it under By pass to undo that.`);
+    return;
+  }
+  const rec=(data.bedPrepPlan||[]).find(r=>r.id===row.planId); if(!rec) return;
+  const prev=rec.ops.slice();
+  const next=prev.includes(op) ? prev.filter(x=>x!==op) : prev.concat([op]);
+  // A bed with no operations left isn't planned at all — drop the row rather than leave a husk.
+  if(!next.length) return bppRemoveBed(row.planId);
+  rec.ops=next;
+  fwEnqueue("patch","bedPrepPlan",{[CFG.f.bpp_ops]:next},{recId:rec.id});
+  bppBuild();
+}
+
+function bppAddBed(bedId, ops, extra){
+  const bed=(data.beds||[]).find(b=>b.id===bedId); if(!bed) return;
+  const list=(ops&&ops.length)?ops.slice():bppPlan().defaultOps.slice();
+  if(!list.length){
+    alert("No default operations are set yet.\nOpen Operations… and tick “Default” on the passes a bed normally gets.");
+    return;
+  }
+  const e=extra||{}, week=bppWeek();
+  const fields={
+    [CFG.f.bpp_name]:`${bed.name} · ${week}`,
+    [CFG.f.bpp_bed]:[bedId],
+    [CFG.f.bpp_week]:week,
+    [CFG.f.bpp_ops]:list,
+    [CFG.f.bpp_created]:new Date().toISOString(),
+  };
+  if(e.plantingId) fields[CFG.f.bpp_planting]=[e.plantingId];
+  if(e.taskId)     fields[CFG.f.bpp_task]=[e.taskId];
+  // The queue hands back a tmp id immediately, so the row can be rendered and patched again right
+  // away; fwResolveRefs swaps it for the real one when the create lands.
+  const id=fwEnqueue("create","bedPrepPlan",fields);
+  data.bedPrepPlan.push({ id, bedId, week, ops:list, notes:"",
+                          plantingId:e.plantingId||null, taskId:e.taskId||null });
+  bppBuild();
+}
+
+function bppRemoveBed(planId){
+  const i=(data.bedPrepPlan||[]).findIndex(r=>r.id===planId); if(i<0) return;
+  data.bedPrepPlan.splice(i,1);
+  // Removing a bed added while still offline drops its pending create instead of queueing a
+  // create-then-delete pair — fwEnqueue handles that itself for tmp: ids.
+  fwEnqueue("delete","bedPrepPlan",null,{recId:planId});
+  bppBuild();
+}
+
+function bppApplyDefaults(bedId){
+  const P=bppPlan(), row=P.beds.find(b=>b.bedId===bedId);
+  if(!row) return bppAddBed(bedId, P.defaultOps);
+  const rec=(data.bedPrepPlan||[]).find(r=>r.id===row.planId); if(!rec) return;
+  const add=P.defaultOps.filter(op=>!rec.ops.includes(op));
+  if(!add.length) return;
+  rec.ops=rec.ops.concat(add);
+  fwEnqueue("patch","bedPrepPlan",{[CFG.f.bpp_ops]:rec.ops},{recId:rec.id});
+  bppBuild();
+}
+
+/* ---- Ticking a pass off: writes the event log directly ----
+   A tick appends to today's event for that operation rather than creating one per bed, so a run
+   over six beds lands as ONE record — the shape bed_prep_events was built for ("one pass of the
+   power harrow over four beds is a single job"). Written eagerly, with nothing held in memory
+   waiting to be flushed, so putting the phone away mid-run can't lose the ticks already made. */
+function bppTodayEventFor(op){
+  const today=todayISO();
+  return (data.bedPrepEvents||[]).find(e=>e.date===today && (e.ops||[]).length===1 && e.ops[0]===op);
+}
+
+function bppTick(op, bedId, on){
+  return on ? bppTickOn(op, bedId) : bppTickOff(op, bedId);
+}
+
+function bppTickOn(op, bedId){
+  const ev=bppTodayEventFor(op);
+  if(ev){
+    if(ev.bedIds.includes(bedId)) return;
+    ev.bedIds=ev.bedIds.concat([bedId]);
+    fwEnqueue("patch","bedPrepEvents",{[CFG.f.bpe_bed]:ev.bedIds},{recId:ev.id});
+    bppBuild();
+    return;
+  }
+  const date=todayISO();
+  const fields={
+    [CFG.f.bpe_name]:`${date} — ${op}`,
+    [CFG.f.bpe_date]:date,
+    [CFG.f.bpe_bed]:[bedId],
+    [CFG.f.bpe_ops]:[op],
+    [CFG.f.bpe_notes]:"",
+    [CFG.f.bpe_created]:new Date().toISOString(),
+  };
+  const id=fwEnqueue("create","bedPrepEvents",fields);
+  data.bedPrepEvents.push({id, date, bedIds:[bedId], ops:[op], by:"", notes:"", taskId:null});
+  bppBuild();
+}
+
+// Undo: take the bed back out of the event that marked it done, deleting the event if that empties
+// it. A multi-operation event is the awkward case — pulling the bed out drops it from every
+// operation on that record — so that one asks first rather than quietly doing more than the tick
+// implied.
+function bppTickOff(op, bedId){
+  const P=bppPlan(), row=P.beds.find(b=>b.bedId===bedId);
+  const since=row?row.week:bppWeek();
+  const ev=(data.bedPrepEvents||[])
+    .filter(e=>e.date>=since && (e.ops||[]).includes(op) && (e.bedIds||[]).includes(bedId))
+    .sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(!ev){ bppBuild(); return; }
+  if(ev.ops.length>1 && !confirm(
+      `${(data.beds.find(b=>b.id===bedId)||{}).name} was logged on ${fmt(ev.date)} as part of one `
+      +`record covering ${ev.ops.join(", ")}.\n\nUnticking removes the bed from all of them. Continue?`)){
+    bppBuild(); return;
+  }
+  const rest=ev.bedIds.filter(id=>id!==bedId);
+  if(!rest.length){
+    data.bedPrepEvents.splice(data.bedPrepEvents.indexOf(ev),1);
+    fwEnqueue("delete","bedPrepEvents",null,{recId:ev.id});
+    bppBuild();
+    return;
+  }
+  ev.bedIds=rest;
+  fwEnqueue("patch","bedPrepEvents",{[CFG.f.bpe_bed]:rest},{recId:ev.id});
+  bppBuild();
+}
+
+// Tick every outstanding bed under one attachment. Sequential rather than parallel so they all
+// land in the one event per operation, instead of racing to create several.
+function bppMarkPassDone(attachName){
+  const a=bppPlan().passes.find(p=>p.name===attachName); if(!a) return;
+  const jobs=[];
+  a.ops.forEach(g=>g.beds.forEach(b=>jobs.push([g.op, b.bedId])));
+  if(!jobs.length) return;
+  if(!confirm(`Log ${jobs.length} pass${jobs.length===1?"":"es"} as done today?`)) return;
+  // In order, so every bed for one operation lands on that operation's single event.
+  jobs.forEach(([op,bedId])=>bppTickOn(op, bedId));
+}
+
+// The full log dialog, for when the date or a note needs changing. Prefilled with everything
+// outstanding under this attachment.
+function bppLogPass(attachName){
+  const a=bppPlan().passes.find(p=>p.name===attachName); if(!a) return;
+  const beds=new Set(); a.ops.forEach(g=>g.beds.forEach(b=>beds.add(b.bedId)));
+  bpOpenLog({ ops:a.ops.map(g=>g.op), bedIds:[...beds], date:todayISO(),
+              title:`Log prep — ${a.name}` });
+}
+
+/* ---- Wiring ---- */
+function bppWireBody(P){
+  const body=document.getElementById("bppBody"); if(!body) return;
+  body.querySelectorAll("[data-op][data-bed]").forEach(b=>
+    b.onclick=()=>bppToggleOp(b.dataset.bed, b.dataset.op));
+  body.querySelectorAll("[data-def]").forEach(b=>b.onclick=()=>bppApplyDefaults(b.dataset.def));
+  body.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>bppRemoveBed(b.dataset.rm));
+  body.querySelectorAll("[data-sugg]").forEach(b=>b.onclick=()=>{
+    const s=P.suggestions.find(x=>x.bedId===b.dataset.sugg);
+    // Link whatever prompted the suggestion, so the planned bed keeps showing why it's here —
+    // and so a Bed prep task it came from stops double-counting in This week.
+    bppAddBed(b.dataset.sugg, null, s?{taskId:s.taskId, plantingId:s.plantingId}:null);
+  });
+  body.querySelectorAll("[data-tick]").forEach(cb=>
+    cb.onchange=()=>bppTick(cb.dataset.tick, cb.dataset.bed, cb.checked));
+  body.querySelectorAll("[data-pass]").forEach(h=>h.onclick=e=>{
+    // The two tools live inside the header button, so a click on either must not also collapse it.
+    if(e.target.closest("[data-logpass]") || e.target.closest("[data-allpass]")) return;
+    const k=h.dataset.pass;
+    bppCollapsed.has(k) ? bppCollapsed.delete(k) : bppCollapsed.add(k);
+    bppBuild();
+  });
+  body.querySelectorAll("[data-logpass]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation(); bppLogPass(b.dataset.logpass);
+  });
+  body.querySelectorAll("[data-allpass]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation(); bppMarkPassDone(b.dataset.allpass);
+  });
+}
+
+function bppBedSuggest(q){
+  const el=document.getElementById("bppBedSuggest");
+  q=(q||"").trim().toLowerCase();
+  if(!q){ el.hidden=true; el.innerHTML=""; return; }
+  const planned=new Set(bppPlan().beds.map(b=>b.bedId));
+  const matches=(data.beds||[]).filter(b=>!planned.has(b.id)
+    && `${b.block||""} ${b.name}`.toLowerCase().includes(q)).slice(0,12);
+  el.hidden=!matches.length;
+  el.innerHTML=matches.map(b=>
+    `<button type="button" data-add-bed="${b.id}">${esc(b.name)}`
+    +`<span class="muted">${b.block?" · "+esc(b.block):""}</span></button>`).join("");
+  el.querySelectorAll("[data-add-bed]").forEach(btn=>btn.onclick=()=>{
+    document.getElementById("bppBedSearch").value="";
+    bppBedSuggest("");
+    bppAddBed(btn.dataset.addBed, null);
+  });
+}
+
+(function bppWire(){
+  const prev=document.getElementById("bppPrev"); if(!prev) return;
+  // The week is shared with This Week (wkStartISO), so stepping it on either page steps both.
+  prev.onclick=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(bppWeek()),-7)); bppBuild(); };
+  document.getElementById("bppNext").onclick=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(bppWeek()),7)); bppBuild(); };
+  document.getElementById("bppToday").onclick=()=>{ wkStartISO=wkISO(wkMonday(new Date())); bppBuild(); };
+  document.querySelectorAll("#bppModeToggle button").forEach(b=>b.onclick=()=>{
+    bppMode=b.dataset.bppmode;
+    document.querySelectorAll("#bppModeToggle button").forEach(x=>
+      x.setAttribute("aria-pressed", x.dataset.bppmode===bppMode?"true":"false"));
+    bppBuild();
+  });
+  document.getElementById("bppAddBedsBtn").onclick=()=>{
+    bppSearchOpen=!bppSearchOpen;
+    document.getElementById("bppSearch").hidden=!bppSearchOpen;
+    if(bppSearchOpen) document.getElementById("bppBedSearch").focus();
+  };
+  document.getElementById("bppBedSearch").oninput=e=>bppBedSuggest(e.target.value);
+  // Same registry the Beds tab edits — reachable from here because this is where its effect shows.
+  document.getElementById("bppOpsBtn").onclick=()=>{
+    showView("beds");
+    const t=document.getElementById("bpTargets");
+    t.hidden=false; bpRenderTargets();
+    t.scrollIntoView({block:"center", behavior:"smooth"});
+  };
+})();
+
+// Open By pass, scrolled to one attachment. Used by This Week's bed prep rows.
+function bppOpenPass(attachName){
+  bppMode="pass";
+  bppCollapsed.delete(attachName);
+  document.querySelectorAll("#bppModeToggle button").forEach(x=>
+    x.setAttribute("aria-pressed", x.dataset.bppmode==="pass"?"true":"false"));
+  showView("bedprep");
+  const el=document.querySelector(`[data-pass="${window.CSS.escape(attachName)}"]`);
+  if(el) el.scrollIntoView({block:"start", behavior:"smooth"});
+}
 
 /* ---- Mobile: the eight-column table doesn't fit, so drill down bed by bed ---- */
 function bdBuildMobile(){
@@ -10755,7 +11458,9 @@ function wkBlockColor(g){
 // Real logic lives in planner-shared.js (so an MCP server can compute the identical "this week" /
 // overdue set) — this is just a thin wrapper binding it to the app's own `data`/`wkStartISO`.
 function wkCollect(){
-  return PlannerShared.wkCollect(data, wkStartISO, new Date());
+  // bpOps is threaded through so wkCollect can derive this week's bed prep passes — the seed list
+  // lives in the app, not in the shared module.
+  return PlannerShared.wkCollect(data, wkStartISO, new Date(), {bpOps:BP_OPS});
 }
 
 function buildWeekPlanner(){
@@ -10846,6 +11551,15 @@ function wkCostBadgeHTML(r){
   return `<span class="wk-cost${c.complete?"":" wk-cost-partial"}" title="${esc(c.label)}${
     c.complete?"":" — some products have no price yet"}">${esc(c.label)}${txt?" · "+txt:""}</span>`;
 }
+// A bed prep pass covers every bed still needing that operation, so bedNameOf() — which returns
+// only the first — would under-report the job badly ("Power harrow · G3" for a four-bed run). The
+// context line lists them in the driving order bpPlanForWeek already sorted them into, trimmed so
+// a fifteen-bed pass can't push the row's own name off screen.
+function wkBedPrepCtx(r){
+  const names=(r.p.bedIds||[]).map(id=>(data.beds.find(b=>b.id===id)||{}).name).filter(Boolean);
+  const shown=names.slice(0,6).join(", ");
+  return `${r.bpAttach} · ${shown}${names.length>6?` +${names.length-6} more`:""}`;
+}
 function wkTaskRowHTML(r, showCtx, showDue){
   const isMs=r.kind==="milestone";
   const cat=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.kind==="spray"?wkSprayPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
@@ -10857,6 +11571,8 @@ function wkTaskRowHTML(r, showCtx, showDue){
   // — so here the context line shows only the bed and, when attached, the crop it terminates.
   const ctx=showCtx?(r.manual
     ? (r.t.assignee?`<span class="wk-ctx">${esc(r.t.assignee)}</span>`:"")
+    : r.kind==="bedprep"
+      ? `<span class="wk-ctx">${esc(wkBedPrepCtx(r))}</span>`
     : r.kind==="tarp"
       ? `<span class="wk-ctx">${esc(bedNameOf(r.p)||"unassigned")}${r.p.crop.startsWith("Tarp · ")?" · "+esc(r.p.crop.slice(7)):""}</span>`
       : `<span class="wk-ctx">${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}</span>`):"";
@@ -10962,6 +11678,7 @@ document.getElementById("wkGroupModal").addEventListener("click",e=>{
 document.getElementById("wkGroupModal").addEventListener("change",e=>{
   const cb=e.target.closest(".wk-check"); if(!cb) return;
   if(wkIsSprayRowId(cb.dataset.id)){ cb.checked=false; wkCloseGroupModal(); wkToggleSpray(cb.dataset.id); return; }
+  if(wkIsBedPrepRowId(cb.dataset.id)){ cb.checked=false; wkCloseGroupModal(); wkToggleBedPrep(cb.dataset.id); return; }
   const p = cb.dataset.kind==="milestone"
     ? wkToggleMilestone(cb.dataset.plid,cb.dataset.df)
     : wkIsTarpRowId(cb.dataset.id)
@@ -10979,6 +11696,7 @@ document.getElementById("wkGroupList").addEventListener("click",e=>{
   if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
   else if(main.dataset.pl.startsWith("tarp:")) wkOpenTarp(main.dataset.pl.slice(5));
   else if(main.dataset.pl.startsWith("spray:")) sprayOpenPlan(main.dataset.pl.slice(6));
+  else if(main.dataset.pl.startsWith("bprep:")) bppOpenPass(main.dataset.pl.slice(6));
   else wkOpenPlanting(main.dataset.pl);
 });
 
@@ -11194,6 +11912,7 @@ function wkOdSidebarItemHTML(r){
   const pill=isMs?wkMsPillHTML():r.kind==="tarp"?wkTarpPillHTML():r.kind==="spray"?wkSprayPillHTML():r.manual?wkManualPillHTML():(r.task.category?`<span class="ct-cat">${esc(r.task.category)}</span>`:"");
   const lock=!!r.msLocked;
   const ctxTxt = r.manual ? (r.t.assignee?esc(r.t.assignee):"")
+    : r.kind==="bedprep" ? esc(wkBedPrepCtx(r))
     : `${esc(r.p.crop)}${r.p.variety?" · "+esc(r.p.variety):""}${bedNameOf(r.p)?" · "+esc(bedNameOf(r.p)):""}`;
   return `<div class="wk-odsb-block" data-overdue-row="${r.id}" data-min="${Math.round(wkBlockMin(r))}">`
     +`<div class="wk-block-h" data-drag="1" title="Drag onto a day to reschedule">`
@@ -11320,6 +12039,17 @@ function wkIsTarpRowId(id){ return typeof id==="string" && id.startsWith("tarp:"
 // Logged and drops it out of here on the next rebuild). The caller resets the checkbox first.
 function wkIsSprayRowId(id){ return typeof id==="string" && id.startsWith("spray:"); }
 function wkToggleSpray(rowId){ sprayOpenLogFromPlan(rowId.slice(6)); return Promise.resolve(); }
+// Bed prep passes are synthetic rows keyed "bprep:<operation>:<weekMonday>" (see wkCollect).
+// Ticking one deliberately doesn't log the whole pass from here — you tick beds off as you drive
+// them, not all at once before you start — so it opens the Bed prep page at that pass instead.
+// The caller resets the checkbox first, same as a scheduled spray.
+function wkIsBedPrepRowId(id){ return typeof id==="string" && id.startsWith("bprep:"); }
+function wkToggleBedPrep(rowId){
+  const rows=(wkCollect().rows||[]).filter(r=>r.kind==="bedprep");
+  const r=rows.find(x=>x.id===rowId);
+  bppOpenPass(r ? r.bpAttach : rowId.split(":")[1]);
+  return Promise.resolve();
+}
 async function wkToggleTarp(rowId){
   const [,tarpId,step]=rowId.split(":");
   const t=(data.tarps||[]).find(x=>x.id===tarpId); if(!t) return;
@@ -11502,6 +12232,10 @@ function wkMoveOneRow(r, toDayISO, startMin){
     return { patch: atPatch(CFG.farmBase,CFG.tables.tarpings,tp.id,fields),
              rollback:()=>{ tp.start=prevS; tp.end=prevE; if(s) tp[s.startMin]=prevMin; } };
   }
+  // A bed prep pass isn't a dated job — it's "everything still needing the S-tine this week",
+  // derived from the plan rather than scheduled. There's no record to move and no meaning in
+  // moving it, so a drag onto it is a no-op rather than a patch against an id that doesn't exist.
+  if(r.kind==="bedprep") return { patch: Promise.resolve(), rollback:()=>{} };
   const t=r.t, prevDue=t.due, prevStart=t.start;
   t.due=toDayISO; t.start=startMin;
   return { patch: atPatch(CFG.farmBase,CFG.tables.plantingTasks,t.id,{[CFG.f.pt_due]:toDayISO,[CFG.f.pt_start]:startMin}), rollback:()=>{ t.due=prevDue; t.start=prevStart; } };
@@ -11694,6 +12428,7 @@ function wkSetOdCollapsed(val){
     if(ds.kind==="milestone") wkToggleMilestone(ds.plid, ds.df);
     else if(wkIsTarpRowId(ds.id)) wkToggleTarp(ds.id);
     else if(wkIsSprayRowId(ds.id)){ cb.checked=false; wkToggleSpray(ds.id); } // opens the log, doesn't tick inline
+    else if(wkIsBedPrepRowId(ds.id)){ cb.checked=false; wkToggleBedPrep(ds.id); } // opens the page, likewise
     else if(ds.id) wkToggleDoneInteractive(ds.id, cb.checked);
   });
   wrap.addEventListener("click",e=>{
@@ -11707,6 +12442,7 @@ function wkSetOdCollapsed(val){
       if(main.dataset.pl.startsWith("manual:")) wkTaskOpen(main.dataset.pl.slice(7));
       else if(main.dataset.pl.startsWith("tarp:")) wkOpenTarp(main.dataset.pl.slice(5));
       else if(main.dataset.pl.startsWith("spray:")) sprayOpenPlan(main.dataset.pl.slice(6));
+      else if(main.dataset.pl.startsWith("bprep:")) bppOpenPass(main.dataset.pl.slice(6));
       else wkOpenPlanting(main.dataset.pl);
       return;
     }
@@ -15926,7 +16662,13 @@ function fwReconcile(tableKey, tmpId, realId){
   // This week would keep rendering a task whose id no longer matches the row in Postgres, and the
   // note's Task link (patched above) would point at nothing.
   fix(data.plantingTasks, []);
+  // Bed prep planning and pass logging queue through here too (see the Bed prep page's writes),
+  // so their tmp ids need the same swap — otherwise a later patch would target a row id that no
+  // longer exists, and the page would keep rendering a plan Postgres has under a different id.
+  fix(data.bedPrepPlan, []);
+  fix(data.bedPrepEvents, []);
   if(document.getElementById("view-fieldwalk")?.classList.contains("active")) fwRender();
+  if(document.getElementById("view-bedprep")?.classList.contains("active")) bppBuild();
 }
 
 async function fwFlush(){
@@ -15965,21 +16707,30 @@ async function fwFlush(){
   return fwFlushing;
 }
 
+// The queue is shared: Field walk fills it, and so does the Bed prep page (planning and pass
+// logging both happen out of signal). Both toolbars therefore carry a badge, because a queue that
+// isn't draining has to be visible from wherever the work was done — not only on Field walk.
+// The Bed prep one stays blank when there's nothing pending rather than saying "✓ saved", so a
+// quiet toolbar doesn't gain a permanent ornament.
 function fwRenderBadge(){
   const q=fwLoadQueue(), n=q.entries.length;
   const worst=q.entries.reduce((m,e)=>Math.max(m,e.tries||0),0);
-  const badge=document.getElementById("fwSyncBadge");
   const fab=document.getElementById("navFab");
   if(fab){ if(n) fab.setAttribute("data-fw-pending","1"); else fab.removeAttribute("data-fw-pending"); }
-  if(!badge) return;
-  badge.className = !n ? "fw-sync-ok"
+  const cls = !n ? "fw-sync-ok"
     : !navigator.onLine ? "fw-sync-offline"
     : worst>2 ? "fw-sync-err" : "fw-sync-pending";
-  badge.textContent = !n ? "✓ saved"
+  const txt = !n ? "✓ saved"
     : !navigator.onLine ? `⚑ ${n} saved on phone`
     : worst>2 ? `⚠ ${n} unsynced — tap to retry` : `⟳ ${n} unsynced`;
   const err=q.entries.find(e=>e.lastErr);
-  badge.title = err ? `Last error: ${err.lastErr}` : "Sync status — tap to retry";
+  const title = err ? `Last error: ${err.lastErr}` : "Sync status — tap to retry";
+  [["fwSyncBadge",true],["bppSyncBadge",false]].forEach(([id,showWhenIdle])=>{
+    const badge=document.getElementById(id); if(!badge) return;
+    badge.className=cls;
+    badge.textContent = (!n && !showWhenIdle) ? "" : txt;
+    badge.title=title;
+  });
 }
 
 /* ---- @-token index and autocomplete ---- */
@@ -16725,11 +17476,12 @@ function fwDeleteItem(id){
   document.getElementById("fwPrev")?.addEventListener("click", ()=>fwStep(-1));
   document.getElementById("fwNext")?.addEventListener("click", ()=>fwStep(1));
   document.getElementById("fwToday")?.addEventListener("click", ()=>{ fwDateISO=fwTodayISO(); fwRender(); });
-  document.getElementById("fwSyncBadge")?.addEventListener("click", ()=>{
-    const q=fwLoadQueue(), err=q.entries.find(e=>e.lastErr);
-    if(err && err.tries>2) alert("Couldn't sync yet:\n"+err.lastErr);
-    fwFlush();
-  });
+  ["fwSyncBadge","bppSyncBadge"].forEach(id=>
+    document.getElementById(id)?.addEventListener("click", ()=>{
+      const q=fwLoadQueue(), err=q.entries.find(e=>e.lastErr);
+      if(err && err.tries>2) alert("Couldn't sync yet:\n"+err.lastErr);
+      fwFlush();
+    }));
   document.getElementById("fwNewListBtn")?.addEventListener("click", fwNewList);
   document.getElementById("fwSeg")?.addEventListener("click", e=>{
     const b=e.target.closest("[data-fwpane]"); if(!b) return;

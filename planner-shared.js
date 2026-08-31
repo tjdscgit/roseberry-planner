@@ -40,11 +40,14 @@
       // Bed zones — the coarse planning layer above plantings: a crop type reserved on a bed for a
       // date window, with a metre budget. Supabase-only, placeholder id like the field walk tables.
       bedZones:  "tblBZzones",        // "Bed Zones"
-      // Bed prep log — Supabase-only, placeholder ids (same convention as the field walk tables
-      // below). Events are the record of which cultivation was done to which beds when; Targets
-      // holds the interval per operation that decides when a bed reads as overdue.
+      // Bed prep — Supabase-only, placeholder ids (same convention as the field walk tables below).
+      // Events are the record of which cultivation was done to which beds when. Targets is the
+      // operation registry: the list of operations and, per operation, its implement, its place in
+      // the pass order, its minutes per bed and its overdue interval. Plan is the forward-looking
+      // half: which passes a given bed needs in a given week.
       bedPrepEvents:  "tblBPevents",   // "Bed Prep Events"
-      bedPrepTargets: "tblBPtargets",  // "Bed Prep Targets"
+      bedPrepTargets: "tblBPtargets",  // "Bed Prep Targets" (the operation registry)
+      bedPrepPlan:    "tblBPplan",     // "Bed Prep Plan"
       // Spray log (Fert & Foliar base). The app-native replacement for the old wide Spray Data /
       // Ferti Data entry form. Products is the shared catalog; Mixes are saved recipes; Applications
       // are the actual log. Mix Items / Application Items are the product-and-rate lines of each.
@@ -92,7 +95,14 @@
       // to the planting_tasks row when the event was logged by ticking a Bed prep task.
       bpe_name:"Name", bpe_date:"Date", bpe_bed:"Bed", bpe_ops:"Operations",
       bpe_by:"Done by", bpe_notes:"Notes", bpe_task:"Task", bpe_created:"Created at",
-      bpt_op:"Operation", bpt_days:"Interval days",
+      // The operation registry. `bpt_seq` orders the passes; `bpt_attach` groups operations that
+      // share one implement so a single hitch-up covers all of them.
+      bpt_op:"Operation", bpt_days:"Interval days", bpt_attach:"Attachment", bpt_seq:"Sequence",
+      bpt_mins:"Minutes per bed", bpt_default:"In default set", bpt_archived:"Archived",
+      // The weekly plan. One row per bed per week; `bpp_ops` is what that bed still needs doing.
+      // There is no done flag — see parseBedPrepPlan.
+      bpp_name:"Name", bpp_bed:"Bed", bpp_week:"Week", bpp_ops:"Operations", bpp_notes:"Notes",
+      bpp_planting:"Planting", bpp_task:"Task", bpp_created:"Created at",
       tt_name:"Name", tt_cells:"Cell count",
       tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
       tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
@@ -252,6 +262,7 @@
     salesOutlets:"sales_outlets", harvestRecords:"harvest_records", tarpings:"tarpings",
     bedZones:"bed_zones",
     bedIssues:"bed_issues", bedPrepEvents:"bed_prep_events", bedPrepTargets:"bed_prep_targets",
+    bedPrepPlan:"bed_prep_plan",
     sprayProducts:"spray_products", sprayMixes:"spray_mixes",
     sprayMixItems:"spray_mix_items", sprayApplications:"spray_applications",
     sprayApplicationItems:"spray_application_items",
@@ -315,6 +326,184 @@
   // Harvest milestones (h1/h2) are deliberately excluded (handled elsewhere, not built yet).
   // `now` is injectable (defaults to the real clock) so callers/tests can pin "today".
   //
+  // ---- Bed prep: the week's plan, and the passes it implies ----------------------------------
+  //
+  // One derivation feeding both the Bed prep page and This Week, so the two can't disagree about
+  // what still needs doing. Pure, so it can be exercised against a backup snapshot in node.
+  //
+  // Returns:
+  //   beds        one entry per planned bed, each op tagged needed/done — the By-bed view
+  //   passes      the same data pivoted into attachment > operation > beds — the By-pass view
+  //   suggestions beds not yet planned that look like they want prep — the prompt to add them
+  //
+  // "Done" is never stored. An operation on a bed is done when bedPrepEvents holds a record with
+  // that bed and that operation dated on or after the plan's week Monday. That means logging a
+  // pass anywhere — this page, the Beds tab, a task tick — closes the plan out, and there is no
+  // second copy of the truth to drift.
+  function bpPlanForWeek(data, weekISO, now, opts){
+    now = now || new Date();
+    const o = opts || {};
+    const lookaheadDays = o.lookaheadDays != null ? o.lookaheadDays : 21;
+    const bpOpsSeed = o.bpOps || [];
+    const start = wkParse(weekISO);
+    const isCurrent = wkSameDay(start, wkMonday(now));
+    const bedById = {};
+    (data.beds||[]).forEach(b=>{ bedById[b.id]=b; });
+
+    const registry = bpOperations(data, bpOpsSeed);
+    const regByOp = {};
+    registry.forEach(r=>{ regByOp[r.op]=r; });
+    const defaultOps = registry.filter(r=>r.isDefault && !r.archived).map(r=>r.op);
+
+    // {bedId: {op: latest ISO}} restricted to events on or after a cutoff. Same pivot as the app's
+    // bpLastDone(), but windowed — a bed ripped in March must not read as done for September.
+    const doneSince = (cutoffISO) => {
+      const map={};
+      (data.bedPrepEvents||[]).forEach(e=>{
+        if(!e.date || e.date < cutoffISO) return;
+        (e.bedIds||[]).forEach(bid=>{
+          const per=(map[bid] || (map[bid]={}));
+          (e.ops||[]).forEach(op=>{ if(!per[op] || e.date>per[op]) per[op]=e.date; });
+        });
+      });
+      return map;
+    };
+
+    // Rows for this week, plus — on the current week only — older rows with work still outstanding.
+    // Carried rows keep their original Week so the record stays honest; they're flagged instead.
+    // Same rule as wkCollect's isCurrent handling of overdue tasks.
+    const rows=(data.bedPrepPlan||[]).filter(r=>{
+      if(!r.bedId || !r.week) return false;
+      if(r.week===weekISO) return true;
+      if(!isCurrent || r.week>=weekISO) return false;
+      const done=doneSince(r.week)[r.bedId]||{};
+      return (r.ops||[]).some(op=>!done[op]);
+    });
+
+    const beds=rows.map(r=>{
+      const bed=bedById[r.bedId];
+      const done=doneSince(r.week)[r.bedId]||{};
+      const planting=r.plantingId ? (data.plantings||[]).find(p=>p.id===r.plantingId) : null;
+      // A bed planned off a Bed prep task rather than a planting still has a reason to be here —
+      // resolve it so the card can say so instead of showing a blank context line.
+      const task=r.taskId ? (data.plantingTasks||[]).find(t=>t.id===r.taskId) : null;
+      const taskLib=task && task.taskId ? ctTaskById(data, task.taskId) : null;
+      const ops=(r.ops||[])
+        .map(op=>({ op, reg:regByOp[op]||null, done:!!done[op], doneDate:done[op]||null }))
+        .sort((a,b)=>{
+          const sa=a.reg?a.reg.seq:9999, sb=b.reg?b.reg.seq:9999;
+          return sa!==sb ? sa-sb : a.op.localeCompare(b.op);
+        });
+      return { planId:r.id, bedId:r.bedId, bed, week:r.week, notes:r.notes,
+               carried:r.week!==weekISO, planting, plantingId:r.plantingId,
+               task, taskName:(taskLib&&taskLib.name)||(task&&task.label)||"", taskId:r.taskId,
+               ops, remaining:ops.filter(x=>!x.done).length };
+    }).filter(x=>x.bed)                       // a plan row whose bed was deleted is not renderable
+      .sort(bpBedOrder);
+
+    // Pivot into pass order. Beds within an operation sort in driving order — block, then position
+    // in the block — because the whole point of this view is doing them in one run up the field.
+    const byOp={};
+    beds.forEach(b=>b.ops.forEach(x=>{
+      const g=(byOp[x.op] || (byOp[x.op]={op:x.op, reg:x.reg, beds:[], done:[]}));
+      (x.done ? g.done : g.beds).push(b);
+    }));
+    const byAttach={};
+    Object.values(byOp).forEach(g=>{
+      g.beds.sort(bpBedOrder); g.done.sort(bpBedOrder);
+      g.minutes = g.reg && g.reg.minutes!=null ? g.reg.minutes*g.beds.length : null;
+      const key=(g.reg&&g.reg.attachment)||"";
+      const a=(byAttach[key] || (byAttach[key]={attachment:key, ops:[], seq:g.reg?g.reg.seq:9999}));
+      a.ops.push(g);
+      if(g.reg && g.reg.seq<a.seq) a.seq=g.reg.seq;   // an attachment sorts by its earliest pass
+    });
+    const passes=Object.values(byAttach).map(a=>{
+      a.ops.sort((x,y)=>{
+        const sx=x.reg?x.reg.seq:9999, sy=y.reg?y.reg.seq:9999;
+        return sx!==sy ? sx-sy : x.op.localeCompare(y.op);
+      });
+      a.name = a.attachment || a.ops.map(g=>g.op).join(" / ");
+      a.bedCount = a.ops.reduce((n,g)=>n+g.beds.length, 0);
+      a.doneCount = a.ops.reduce((n,g)=>n+g.done.length, 0);
+      // A finished pass is kept rather than dropped, so a mis-tick can be undone from the view it
+      // was made in — it just sorts to the bottom and renders collapsed.
+      a.complete = a.bedCount===0;
+      const mins=a.ops.map(g=>g.minutes).filter(m=>m!=null);
+      a.minutes = mins.length ? mins.reduce((s,m)=>s+m,0) : null;
+      return a;
+    }).sort((a,b)=> (a.complete?1:0)-(b.complete?1:0) || a.seq-b.seq);
+
+    // ---- Suggestions: beds that look like they want prep but aren't planned yet ----
+    const planned=new Set(beds.map(b=>b.bedId));
+    const sugg={};                                   // bedId -> {bed, reasons:[], sources:Set}
+    // `ref` carries the planting or task that prompted the suggestion, so adding the bed can link
+    // it on the plan row — that link is what lets the bed card keep saying WHY it's being prepped
+    // ("Lettuce Cos · TP 14 Sep") once it's no longer a suggestion.
+    const add=(bedId, reason, source, ref)=>{
+      if(!bedId || planned.has(bedId)) return;
+      const bed=bedById[bedId]; if(!bed) return;
+      const s=(sugg[bedId] || (sugg[bedId]={bedId, bed, reasons:[], sources:new Set(), defaultOps}));
+      if(!s.reasons.includes(reason)) s.reasons.push(reason);
+      s.sources.add(source);
+      if(ref && ref.plantingId && !s.plantingId) s.plantingId=ref.plantingId;
+      if(ref && ref.taskId && !s.taskId) s.taskId=ref.taskId;
+    };
+
+    // 1. Upcoming plantings — a bed with a crop going in soon needs to be ready for it.
+    const horizon=wkISO(wkAddDays(start, lookaheadDays));
+    (data.plantings||[]).forEach(p=>{
+      const d=p.tp||p.sow; if(!d || d<weekISO || d>horizon) return;
+      if(p.status==="Harvested" || p.status==="Finished") return;
+      const what=p.tp?"TP":"Sow";
+      const label=(p.crop||"Crop")+(p.variety?" "+p.variety:"")+" · "+what+" "+d;
+      (p.bedIds||[]).forEach(bid=>add(bid, label, "planting", {plantingId:p.id}));
+    });
+
+    // 2. Overdue on its target interval. Yields nothing until intervals are set, and a never-done
+    //    operation is deliberately not overdue — same rule as the app's bpOverdueOps.
+    const lastEver=doneSince("");
+    const todayStr=wkISO(now);
+    (data.beds||[]).forEach(bed=>{
+      const per=lastEver[bed.id]||{};
+      registry.forEach(r=>{
+        if(r.days==null || r.archived) return;
+        const last=per[r.op]; if(!last) return;
+        const days=Math.round((wkParse(todayStr)-wkParse(last))/86400000);
+        if(days>r.days) add(bed.id, "overdue: "+r.op+" ("+days+"d)", "overdue");
+      });
+    });
+
+    // 3. Bed prep tasks already sitting in the planner for this week.
+    const end=wkISO(wkAddDays(start,7));
+    (data.plantingTasks||[]).forEach(t=>{
+      if(t.done || !t.due || !t.bedId) return;
+      if(t.due<weekISO || t.due>=end) return;
+      const lib=t.taskId ? ctTaskById(data,t.taskId) : null;
+      if(!lib || lib.category!=="Bed prep") return;
+      add(t.bedId, "task: "+(lib.name||t.label||"Bed prep")+" · due "+t.due, "task",
+          {taskId:t.id, plantingId:t.plantingId||null});
+    });
+
+    const suggestions=Object.values(sugg)
+      .map(s=>Object.assign({}, s, {sources:[...s.sources], reason:s.reasons[0]}))
+      .sort((a,b)=>bpBedOrder({bed:a.bed},{bed:b.bed}));
+
+    return { weekISO, isCurrent, beds, passes, suggestions, registry, defaultOps };
+  }
+
+  // wkCollect only derives bed prep rows when the caller supplies the operation seed list, so a
+  // consumer that doesn't know about bed prep (or doesn't want it) gets the old row set unchanged.
+  function o_bpOps(opts){ return opts && opts.bpOps && opts.bpOps.length ? opts.bpOps : null; }
+
+  // Driving order: up one block at a time, in bed order within it. Mirrors bedGroups()' sort.
+  function bpBedOrder(a,b){
+    const x=a.bed||{}, y=b.bed||{};
+    const bl=String(x.block||"").localeCompare(String(y.block||""), undefined, {numeric:true});
+    if(bl) return bl;
+    if(x.order!=null && y.order!=null && x.order!==y.order) return x.order-y.order;
+    return String(x.name||"").localeCompare(String(y.name||""), undefined, {numeric:true});
+  }
+
   // A Planting Task with no linked Planting is a "manual" task (added via the weekly planner's
   // + Add task button — a one-off job, not tied to a crop/bed). Rather than threading a nullable
   // `p` through every renderer, it gets a synthetic zero-bed planting-shaped object (`crop` = its
@@ -322,13 +511,19 @@
   // existing consumer of `row.p` (block rendering, By-crop&bed grouping, drag/assign/delete) keeps
   // working unchanged. `row.manual` flags it for the few call sites that DO want to tell the
   // difference (skip the redundant crop/bed context line, word the group-modal title correctly).
-  function wkCollect(data, wkStartISO, now){
+  function wkCollect(data, wkStartISO, now, opts){
     now = now || new Date();
     const start=wkParse(wkStartISO), end=wkAddDays(start,7), rows=[];
     // Overdue (still-open tasks due before the window) only surface on the *current* week.
     const isCurrent=wkSameDay(start, wkMonday(now));
+    // A Bed prep task that a bed_prep_plan row was built from is represented by that plan's pass
+    // rows below, so showing the task as well would double-count the same work. Bed prep tasks
+    // with no plan row keep rendering exactly as they always have.
+    const bpPlannedTaskIds=new Set();
+    (data.bedPrepPlan||[]).forEach(r=>{ if(r.taskId) bpPlannedTaskIds.add(r.taskId); });
     (data.plantingTasks||[]).forEach(t=>{
       if(!t.due) return;
+      if(bpPlannedTaskIds.has(t.id)) return;
       const manual=!t.plantingId;
       let p=null;
       if(manual){
@@ -420,6 +615,29 @@
         due, overdue, inWeek, minutes:null,
       });
     });
+    // Bed prep passes. One row per operation, covering every bed still needing it — a pass with one
+    // attachment over six beds is one job, not six, which is the same reasoning as the
+    // bed_prep_events shape. Derived rather than materialised as Planting Tasks: the plan changes
+    // every time a chip is tapped on the Bed prep page, and derived rows can't drift out of step
+    // with it. Beds already logged are subtracted, so the row shrinks as the run progresses and
+    // drops out entirely once the last bed is ticked — the same lifecycle as a planned spray.
+    //
+    // `bpOps` has to be passed in: the seed list lives in the app, not here.
+    if(o_bpOps(opts)){
+      const bp=bpPlanForWeek(data, wkStartISO, now, {bpOps:o_bpOps(opts)});
+      bp.passes.forEach(a=>a.ops.forEach(g=>{
+        if(!g.beds.length) return;
+        rows.push({
+          id:`bprep:${g.op}:${wkStartISO}`, kind:"bedprep", bpOp:g.op, bpAttach:a.name,
+          bpBeds:g.beds.map(b=>b.bedId),
+          t:{done:false, repeat:0, start:null, assignee:""},
+          p:{ id:`bprep:${a.name}`, crop:a.name, variety:"",
+              bedIds:g.beds.map(b=>b.bedId), bm:0, cropId:null },
+          task:{name:g.op, category:"Bed prep"},
+          due:start, overdue:false, inWeek:true, minutes:g.minutes,
+        });
+      }));
+    }
     return {rows,start};
   }
 
@@ -551,14 +769,83 @@
     }));
   }
 
-  // Bed prep targets. A null `days` means the operation has no target and is never flagged.
+  // The bed prep operation registry. A null `days` means the operation has no overdue target and
+  // is never flagged. `seq` is null for a row that predates the registry columns — bpOperations()
+  // falls back to BP_OPS order for those rather than sorting them all to the front.
   function parseBedPrepTargets(records){
     const F=CFG.f;
     return records.map(t=>({
       id:t.id,
       op:t.fields[F.bpt_op]||"",
       days:num(t.fields[F.bpt_days]),
+      attachment:t.fields[F.bpt_attach]||"",
+      seq:num(t.fields[F.bpt_seq]),
+      minutes:num(t.fields[F.bpt_mins]),
+      isDefault:!!t.fields[F.bpt_default],
+      archived:!!t.fields[F.bpt_archived],
     }));
+  }
+
+  // The weekly bed prep plan: one row per bed per week, listing the passes that bed needs.
+  // `week` is the Monday of the target week.
+  //
+  // There is deliberately no done flag here. An operation counts as done when bedPrepEvents holds
+  // a record with that bed + operation dated on or after `week` (see bpPlanForWeek), which keeps
+  // the event log the single source of truth for what actually happened — the same table that
+  // feeds bpLastDone(), the overdue flags and the Beds tab history. Log a pass from the Beds tab,
+  // from a task tick or from the Bed prep page and the plan closes itself out either way.
+  function parseBedPrepPlan(records){
+    const F=CFG.f;
+    return records.map(r=>({
+      id:r.id,
+      bedId:(r.fields[F.bpp_bed]||[])[0] || null,
+      week:r.fields[F.bpp_week]||"",
+      ops:(r.fields[F.bpp_ops]||[]).slice(),
+      notes:r.fields[F.bpp_notes]||"",
+      plantingId:(r.fields[F.bpp_planting]||[])[0] || null,
+      taskId:(r.fields[F.bpp_task]||[])[0] || null,
+    }));
+  }
+
+  // The ordered operation registry, which is what every operation list in the app renders from.
+  //
+  // Four tiers, kept apart by disjoint `seq` bands so a seed name can never collide with a real
+  // Sequence value and jump the queue:
+  //   0-3999   registry rows with an explicit Sequence — the order the grower set
+  //   4000+    registry rows predating the Sequence column, in BP_OPS order
+  //   5000+    BP_OPS names with no registry row yet
+  //   9000+    names found only in old events
+  // The last two tiers matter because deleting a registry row must not make historical events
+  // unreadable — an operation named by an event still has to render somewhere, so it comes back as
+  // a bare entry with no interval or minutes.
+  //
+  // `archived` rows are returned too. Callers showing a picker filter them out; callers showing
+  // history keep them, which is the whole point of archiving rather than deleting.
+  function bpOperations(data, bpOpsSeed){
+    const rows=(data && data.bedPrepTargets)||[], seed=bpOpsSeed||[];
+    const seedIndex={}; seed.forEach((op,i)=>{ seedIndex[op]=i; });
+    const out=[], seen=new Set();
+    rows.filter(r=>r.op).forEach(r=>{
+      if(seen.has(r.op)) return;                       // a duplicate row for one op: first wins
+      seen.add(r.op);
+      out.push({ id:r.id, op:r.op, attachment:r.attachment||"", days:r.days,
+                 minutes:r.minutes, isDefault:!!r.isDefault, archived:!!r.archived,
+                 seq: r.seq!=null ? r.seq
+                    : 4000 + (seedIndex[r.op]!=null ? seedIndex[r.op] : 999) });
+    });
+    seed.forEach((op,i)=>{
+      if(seen.has(op)) return;
+      seen.add(op);
+      out.push({ id:null, op, attachment:"", days:null, minutes:null,
+                 isDefault:false, archived:false, seq:5000+i });
+    });
+    ((data && data.bedPrepEvents)||[]).forEach(e=>(e.ops||[]).forEach(op=>{
+      if(!op || seen.has(op)) return;
+      seen.add(op);
+      out.push({ id:null, op, attachment:"", days:null, minutes:null,
+                 isDefault:false, archived:true, seq:9000, orphan:true });
+    }));
+    return out.sort((a,b)=> a.seq!==b.seq ? a.seq-b.seq : a.op.localeCompare(b.op));
   }
 
   // Do two date ranges overlap? A null/blank end of a range means unbounded that way, so an issue
@@ -1912,7 +2199,8 @@
     ctTaskById, bedNameOf, wkCollect, nextMilestoneStep, buildMilestonePatch,
     TARP_STATUS_ORDER, TARP_STEPS, tarpStep, tarpRank, buildTarpPatch,
     parsePlantingTaskRecord, parseCropsAndDefs, parseBeds, parseTasks, parsePlantings, parseTarpings,
-    parseBedIssues, parseBedPrepEvents, parseBedPrepTargets, rangesOverlap, bedConflicts,
+    parseBedIssues, parseBedPrepEvents, parseBedPrepTargets, parseBedPrepPlan,
+    bpOperations, bpPlanForWeek, bpBedOrder, rangesOverlap, bedConflicts,
     parseBedZones, zoneMatchesPlanting, zoneRemaining,
     parseSprayProducts, parseSprayMixes, parseSprayMixItems, parseSprayApplications,
     parseSprayApplicationItems, attachSprayItems, mixWhp, safeAfterISO, bedWhpActive,
