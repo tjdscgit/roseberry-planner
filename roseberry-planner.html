@@ -155,7 +155,8 @@
   #view-crops.active,#view-beds.active,#view-seedbook.active,#view-outlets.active,
   #view-whiteboard.active,
   #view-misc.active,#view-tasklib.active,#view-croptasks.active,
-  #view-farminfo.active,#view-fertprog.active,#view-fertrec.active{display:flex;flex-direction:column}
+  #view-farminfo.active,#view-fertprog.active,#view-fertrec.active,
+  #view-bedprep.active{display:flex;flex-direction:column}
   /* min-height:0 is load-bearing: without it a flex child's default min-height:auto lets .cr-wrap
      size to its content instead of shrinking to the space main{overflow:hidden} actually gives it
      — the scrollbar never appears and the tail of a long list (many seed-book/whiteboard cards)
@@ -238,7 +239,8 @@
      Two renderers over one derivation (PlannerShared.bpPlanForWeek): By bed is the planning
      surface — a chip grid you thumb through while walking the field — and By pass is the doing
      surface, grouped by implement so one hitch-up covers every bed that needs it. */
-  .bpp-body{padding:.2rem 1rem 2rem;max-width:1000px}
+  .bpp-body{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;padding:.2rem 1rem 2rem;max-width:1000px}
   .bpp-search{padding:.4rem 1rem 0;max-width:1000px;position:relative}
   .bpp-search input{width:100%;max-width:22rem}
   .bpp-search .sp-suggest{max-width:22rem}
