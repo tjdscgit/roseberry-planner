@@ -11463,8 +11463,16 @@ function wkTypeKey(r){
   if(r.kind==="milestone") return "ms:"+r.task.name;
   if(r.kind==="tarp") return "tarp:"+r.tarpStep;   // lay and pull group separately, like distinct task types
   if(r.kind==="spray") return "spray:"+r.app.id;   // each scheduled spray is its own job, never merged
+  if(r.kind==="bedprep") return "bedprep:"+r.task.name;   // one group per operation — see wkCalGroupKey
   return "task:"+((r.t&&r.t.taskId)||r.task.name);
 }
+// The calendar's own grouping key: every bed prep pass in the week collapses to one block, because
+// the paddock experience is one continuous span of bed prep work, not five auto-scheduled blocks
+// scattered through the day. wkTypeKey (above) deliberately keeps them apart — that's what "By task
+// type" groups by, and telling the passes apart is the whole point of that view — so the merge
+// lives here instead, used only by the day/calendar rendering and everything a calendar block's
+// click, drag or context menu resolves back through (wkOpenGroupModal, wkCommitMove, wkCtxDescs).
+function wkCalGroupKey(r){ return r.kind==="bedprep" ? "bedprep" : wkTypeKey(r); }
 /* ---- Row accessors: one place that knows how each KIND of week-planner row stores its
    assignee, its pinned clock time and its outbound sync ids.
 
@@ -11655,8 +11663,9 @@ function wkTaskRowHTML(r, showCtx, showDue){
 function wkPackDay(dayRows){
   const gmap=new Map();
   dayRows.forEach(r=>{
-    const k=wkTypeKey(r);
-    if(!gmap.has(k)) gmap.set(k,{key:k,name:r.task.name,kind:r.kind,msDf:r.msDf,category:r.task.category||"",members:[]});
+    const k=wkCalGroupKey(r);
+    if(!gmap.has(k)) gmap.set(k,{key:k,name:r.kind==="bedprep"?"Bed prep":r.task.name,
+      kind:r.kind,msDf:r.msDf,category:r.task.category||"",members:[]});
     gmap.get(k).members.push(r);
   });
   const groups=[...gmap.values()];
@@ -11690,6 +11699,7 @@ function wkBlockHTML(g, dayISO){
     // manual tasks have no crop/bed — the block header already carries their name, so show the
     // assignee (if any) here instead of repeating it.
     const memTxt = m.manual ? (m.t.assignee?esc(m.t.assignee):"")
+      : m.kind==="bedprep" ? `${esc(m.task.name)} · ${esc(wkBedPrepCtx(m).split(" · ").slice(1).join(" · "))}`
       : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}${bedNameOf(m.p)?" · "+esc(bedNameOf(m.p)):""}`;
     return `<div class="wk-mem${m.t.done?" done":""}">`
       +`<input type="checkbox" class="wk-check" ${m.t.done?"checked":""} ${lock?"disabled":""} `
@@ -11712,16 +11722,23 @@ let wkGroupKey=null, wkGroupDay=null;
 function wkOpenGroupModal(key,dayISO){
   wkGroupKey=key; wkGroupDay=dayISO;
   const {rows}=wkCollect();
-  const members=rows.filter(r=>r.inWeek && wkSameDay(r.due,wkParse(dayISO)) && wkTypeKey(r)===key);
+  const members=rows.filter(r=>r.inWeek && wkSameDay(r.due,wkParse(dayISO)) && wkCalGroupKey(r)===key);
   if(!members.length){ wkCloseGroupModal(); return; }
-  const unit = members[0].manual ? "task" : "planting";
-  document.getElementById("wkGroupTitle").textContent=
-    `${members[0].task.name} · ${members.length} ${unit}${members.length===1?"":"s"}`;
+  const isBedPrep = members[0].kind==="bedprep";
+  // "pass" doesn't take a bare -s ("passs"), so bed prep gets its own plural rather than the
+  // generic unit+"s" the other kinds use.
+  const unit = isBedPrep ? (members.length===1?"pass":"passes") : members[0].manual ? "task" : "planting";
+  document.getElementById("wkGroupTitle").textContent= isBedPrep
+    ? `Bed prep · ${members.length} ${unit}`
+    : `${members[0].task.name} · ${members.length} ${unit}${members.length===1?"":"s"}`;
   document.getElementById("wkGroupList").innerHTML=members.slice()
     .sort((a,b)=>a.p.crop.localeCompare(b.p.crop)).map(m=>{
       const lock=!!m.msLocked;   // milestone or tarp step already stepped past
-      const crop = m.manual ? esc(m.task.name) : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}`;
+      const crop = m.manual ? esc(m.task.name)
+        : m.kind==="bedprep" ? esc(m.task.name)
+        : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}`;
       const meta = m.manual ? `${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}`
+        : m.kind==="bedprep" ? esc(wkBedPrepCtx(m))
         : `${esc(bedNameOf(m.p)||"unassigned")} · ${fmt(m.due)}${m.t.assignee?` · ${esc(m.t.assignee)}`:""}`;
       return `<div class="wk-group-row${m.t.done?" done":""}">`
         +`<input type="checkbox" class="wk-check" ${m.t.done?"checked":""} ${lock?"disabled":""} `
@@ -12308,7 +12325,7 @@ function wkMoveOneRow(r, toDayISO, startMin){
 // downstream shift for everything after it (see wkConfirmAndShift below). Optimistic, rolls back on error.
 async function wkCommitMove(grp, fromDayISO, toDayISO, startMin){
   const {rows}=wkCollect(), fromDay=wkParse(fromDayISO);
-  const members=rows.filter(r=>wkTypeKey(r)===grp && wkSameDay(r.due,fromDay));
+  const members=rows.filter(r=>wkCalGroupKey(r)===grp && wkSameDay(r.due,fromDay));
   if(!members.length){ buildWeekPlanner(); return; }
   const moves=members.map(r=>wkMoveOneRow(r,toDayISO,startMin));
   buildWeekPlanner();
@@ -12396,7 +12413,7 @@ let wkCtxTarget=null;
 function wkCtxDescs(target){
   if(target.kind==="member") return [target.desc];
   const {rows}=wkCollect();
-  const members=rows.filter(r=>wkTypeKey(r)===target.grp && wkSameDay(r.due,wkParse(target.day)));
+  const members=rows.filter(r=>wkCalGroupKey(r)===target.grp && wkSameDay(r.due,wkParse(target.day)));
   // Three descriptor shapes, one per row kind. Tarps are assignable but NOT deletable (there's no
   // Planting Task behind them), which the delete action filters on via isMilestone/isTarp.
   return members.map(r=>
@@ -12520,6 +12537,7 @@ function wkSetOdCollapsed(val){
         // A scheduled spray has no assignee/reschedule context menu — right-click just opens its
         // plan editor, same as a left-click on the row.
         if(wkIsSprayRowId(cb.dataset.id)){ e.preventDefault(); sprayOpenPlan(cb.dataset.id.slice(6)); return; }
+        if(wkIsBedPrepRowId(cb.dataset.id)){ e.preventDefault(); wkToggleBedPrep(cb.dataset.id); return; }
         e.preventDefault();
         // data-id is a real Planting Task id for a task row, but a synthetic id for the derived
         // kinds — "ms:<pid>:<df>" for a milestone, "tarp:<recId>:<step>" for a tarp job (see
@@ -12534,6 +12552,11 @@ function wkSetOdCollapsed(val){
       return;
     }
     const block=e.target.closest(".wk-block");
+    if(block && block.dataset.grp==="bedprep"){
+      e.preventDefault();
+      showView("bedprep");
+      return;
+    }
     if(block && block.dataset.grp){
       e.preventDefault();
       wkShowCtxMenu(e, {kind:"block", grp:block.dataset.grp, day:block.dataset.day});
