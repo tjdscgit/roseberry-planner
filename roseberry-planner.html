@@ -356,11 +356,13 @@
   .bp-reg-tbl td{padding:.2rem .35rem;border-bottom:1px solid var(--line)}
   .bp-reg-tbl tr:last-child td{border-bottom:none}
   .bp-reg-op{font-size:.85rem;white-space:nowrap;padding-right:.6rem!important}
+  .bp-reg-arch .bp-reg-op input{color:var(--ink-2);text-decoration:line-through}
   .bp-reg-arch .bp-reg-op{color:var(--ink-2);text-decoration:line-through}
   .bp-reg-tag{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;
     letter-spacing:.06em;color:var(--ink-2);border:1px solid var(--line-2);
     border-radius:5px;padding:.05rem .25rem;vertical-align:1px}
   .cr-wrap .bp-reg-tbl input[type=text]{width:9rem;font-size:.82rem;padding:.2rem .35rem}
+  .cr-wrap .bp-reg-op input[type=text]{width:11rem;font-weight:600}
   .cr-wrap .bp-reg-tbl input.cr-num{width:4.6rem;font-size:.82rem;padding:.2rem .35rem}
   .bp-reg-tbl input[type=checkbox]{accent-color:var(--ok)}
   .bp-reg-x{border:none;background:none;cursor:pointer;color:var(--ink-2);
@@ -2386,9 +2388,11 @@
 
         <div class="ap-sect">Bed prep history</div>
         <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
-          What cultivation has been done to each bed, and when. Set a target interval per operation
-          under Targets and any bed past it is flagged here. Advisory only — nothing on this list
-          blocks a planting.
+          What cultivation has been done to each bed, and when. Under <b>Operations…</b> you set
+          what the passes are, their order, which implement each one hangs off and how long a bed
+          takes — that list drives the Bed prep page. Give an operation a target interval there and
+          any bed past it is flagged here. Renaming one carries its existing records with it.
+          Advisory only — nothing on this list blocks a planting.
         </p>
         <div class="bp-controls">
           <button class="btn" id="bpLogBtn">+ Log prep…</button>
@@ -9918,7 +9922,9 @@ function bpRegRowHTML(o){
   const a=(k,extra)=>`data-reg-id="${esc(o.id||"")}" data-reg-op="${esc(o.op)}" data-reg-k="${k}" ${extra||""}`;
   const used=(data.bedPrepEvents||[]).some(e=>(e.ops||[]).includes(o.op));
   return `<tr class="${o.archived?"bp-reg-arch":""}">`
-    +`<td class="bp-reg-op">${esc(o.op)}${o.orphan?` <span class="bp-reg-tag">from history</span>`:""}`
+    +`<td class="bp-reg-op"><input type="text" ${a("op")} value="${esc(o.op)}" `
+      +`title="Rename — existing records are carried across">`
+      +`${o.orphan?` <span class="bp-reg-tag">from history</span>`:""}`
       +`${!o.id?` <span class="bp-reg-tag">unsaved</span>`:""}</td>`
     +`<td><input type="text" ${a("attachment")} value="${esc(o.attachment||"")}" placeholder="—"></td>`
     +`<td class="n"><input class="cr-num" type="number" step="10" ${a("seq")} value="${o.seq<4000?o.seq:""}" placeholder="—"></td>`
@@ -9930,9 +9936,64 @@ function bpRegRowHTML(o){
   +`</tr>`;
 }
 
+// Renaming carries every record across with it. The operation name is the only link between a
+// registry row and the prep events and planned beds that used it, so a bare rename would leave
+// those pointing at a name nothing defines any more — they'd come back as "from history" orphans
+// and the bed would read as never having had that pass done. Rather than warn about that, this
+// just rewrites them, and says how many it touched.
+async function bpRenameOp(id, oldName, raw){
+  const name=(raw||"").trim();
+  if(!name || name===oldName){ bpRenderTargets(); return; }
+  if(bpOps().some(o=>o.op!==oldName && o.op.toLowerCase()===name.toLowerCase())){
+    alert(`There's already an operation called "${name}".`);
+    bpRenderTargets(); return;
+  }
+  const events=(data.bedPrepEvents||[]).filter(e=>(e.ops||[]).includes(oldName));
+  const plans=(data.bedPrepPlan||[]).filter(p=>(p.ops||[]).includes(oldName));
+  const carried=[
+    events.length?`${events.length} prep record${events.length===1?"":"s"}`:null,
+    plans.length?`${plans.length} planned bed${plans.length===1?"":"s"}`:null,
+  ].filter(Boolean).join(" and ");
+  if(carried && !confirm(`Rename "${oldName}" to "${name}"?\n\n${carried} will be updated to match.`)) {
+    bpRenderTargets(); return;
+  }
+  try{
+    // The registry row first: if anything below fails, the rename is at least visible and can be
+    // re-run, rather than the records naming an operation that doesn't exist yet.
+    if(id){
+      await atPatch(CFG.farmBase, CFG.tables.bedPrepTargets, id, {[CFG.f.bpt_op]:name});
+      const row=(data.bedPrepTargets||[]).find(t=>t.id===id); if(row) row.op=name;
+    }else{
+      const seq=(bpOps().find(o=>o.op===oldName)||{}).seq;
+      const fields={[CFG.f.bpt_op]:name, [CFG.f.bpt_seq]: seq!=null&&seq<4000 ? seq : bpNextSeq()};
+      const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepTargets, [fields]);
+      data.bedPrepTargets.push({ id:created[0].id, op:name, days:null, attachment:"",
+        seq:fields[CFG.f.bpt_seq], minutes:null, isDefault:false, archived:false });
+    }
+    const swap=list=>list.map(x=>x===oldName?name:x);
+    for(const e of events){
+      const ops=swap(e.ops);
+      await atPatch(CFG.farmBase, CFG.tables.bedPrepEvents, e.id, {[CFG.f.bpe_ops]:ops});
+      e.ops=ops;
+    }
+    for(const p of plans){
+      const ops=swap(p.ops);
+      await atPatch(CFG.farmBase, CFG.tables.bedPrepPlan, p.id, {[CFG.f.bpp_ops]:ops});
+      p.ops=ops;
+    }
+  }catch(e){
+    console.error(e);
+    alert("Couldn't finish the rename:\n"+e.message
+      +"\n\nSome records may still carry the old name — reload and try again.");
+  }
+  bpRenderTargets(); bpRenderHistory();
+  if(document.getElementById("view-bedprep")?.classList.contains("active")) bppBuild();
+}
+
 // Patch an existing registry row, or create it on the spot if this operation is still only a seed
 // name. Optimistic with rollback, the same shape as saveBed and the old bpSaveTarget.
 async function bpSaveOp(id, op, key, value){
+  if(key==="op") return bpRenameOp(id, op, value);
   const field=CFG.f[BPT_FIELDS[key]];
   const existing=id ? (data.bedPrepTargets||[]).find(t=>t.id===id) : null;
   if(existing){
@@ -10013,7 +10074,9 @@ async function bpSeedOps(){
 async function bpDeleteOp(id){
   const row=(data.bedPrepTargets||[]).find(t=>t.id===id); if(!row) return;
   if((data.bedPrepEvents||[]).some(e=>(e.ops||[]).includes(row.op))){
-    alert("That operation has prep logged against it. Tick Archived instead — deleting it would make those records unreadable.");
+    alert(`"${row.op}" has prep logged against it.\n\nEdit the name to rename it (the records come `
+      +`with it), or tick Archived to retire it. Deleting would leave those records naming an `
+      +`operation nothing defines.`);
     return;
   }
   const planned=(data.bedPrepPlan||[]).filter(p=>(p.ops||[]).includes(row.op)).length;
@@ -10022,7 +10085,7 @@ async function bpDeleteOp(id){
   data.bedPrepTargets.splice(i,1);
   bpRenderTargets(); bpRenderHistory();
   try{
-    await atDelete(CFG.farmBase, CFG.tables.bedPrepTargets, id);
+    await atDelete(CFG.farmBase, CFG.tables.bedPrepTargets, [id]);
   }catch(e){
     data.bedPrepTargets.splice(i,0,row);
     console.error(e); alert("Couldn't delete that:\n"+e.message);
@@ -13497,7 +13560,7 @@ async function sprayDeleteRecord(id){
   try{
     const itemIds=(a.items||[]).map(it=>it.id);
     if(itemIds.length) await atDelete(CFG.farmBase, CFG.tables.sprayApplicationItems, itemIds);
-    await atDelete(CFG.farmBase, CFG.tables.sprayApplications, id);
+    await atDelete(CFG.farmBase, CFG.tables.sprayApplications, [id]);
     await loadAll();
     buildSprayRecords();
   }catch(e){ alert("Couldn't delete: "+e.message); }

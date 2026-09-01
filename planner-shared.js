@@ -813,11 +813,17 @@
   // Sequence value and jump the queue:
   //   0-3999   registry rows with an explicit Sequence — the order the grower set
   //   4000+    registry rows predating the Sequence column, in BP_OPS order
-  //   5000+    BP_OPS names with no registry row yet
+  //   5000+    BP_OPS seed names, ONLY while the registry is still empty
   //   9000+    names found only in old events
-  // The last two tiers matter because deleting a registry row must not make historical events
-  // unreadable — an operation named by an event still has to render somewhere, so it comes back as
-  // a bare entry with no interval or minutes.
+  //
+  // The seed tier fills a blank slate and then gets out of the way. Once the registry has any row
+  // at all, the hardcoded list has done its job: continuing to inject it would resurrect names the
+  // grower has deliberately renamed or deleted, which is how "Single Tine Ripped" came back as an
+  // unsaved row immediately after being renamed to "S-tine Ripped".
+  //
+  // The history tier never gets out of the way, because that one is an integrity need rather than a
+  // convenience: an operation named by an existing event has to render somewhere, or that event
+  // silently stops counting. Those come back flagged `orphan` and archived.
   //
   // `archived` rows are returned too. Callers showing a picker filter them out; callers showing
   // history keep them, which is the whole point of archiving rather than deleting.
@@ -833,7 +839,7 @@
                  seq: r.seq!=null ? r.seq
                     : 4000 + (seedIndex[r.op]!=null ? seedIndex[r.op] : 999) });
     });
-    seed.forEach((op,i)=>{
+    if(!out.length) seed.forEach((op,i)=>{
       if(seen.has(op)) return;
       seen.add(op);
       out.push({ id:null, op, attachment:"", days:null, minutes:null,
