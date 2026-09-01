@@ -334,7 +334,9 @@
   // Returns:
   //   beds        one entry per planned bed, each op tagged needed/done — the By-bed view
   //   passes      the same data pivoted into attachment > operation > beds — the By-pass view
-  //   suggestions beds not yet planned that look like they want prep — the prompt to add them
+  //   suggestions beds not yet planned that look like they want prep — the prompt to add them.
+  //               Sourced from: a planting due soon, an operation past its target interval, or a
+  //               Bed prep task due within lookaheadDays either side of the week (not only inside it)
   //
   // "Done" is never stored. An operation on a bed is done when bedPrepEvents holds a record with
   // that bed and that operation dated on or after the plan's week Monday. That means logging a
@@ -473,14 +475,22 @@
       });
     });
 
-    // 3. Bed prep tasks already sitting in the planner for this week.
-    const end=wkISO(wkAddDays(start,7));
+    // 3. Bed prep tasks close to this week, not only inside it. A task due a few days into next
+    //    week still means the bed should be ready now, and one overdue from just before this week
+    //    hasn't stopped needing doing just because the week turned over — so both sides of the week
+    //    are in play here, using the same lookaheadDays dial as the plantings source above (source
+    //    1) so "close" means one distance across every source, not a different window per rule.
+    const taskBack=wkISO(wkAddDays(start, -lookaheadDays));
+    const weekEnd=wkISO(wkAddDays(start,7));
     (data.plantingTasks||[]).forEach(t=>{
       if(t.done || !t.due || !t.bedId) return;
-      if(t.due<weekISO || t.due>=end) return;
+      if(t.due<taskBack || t.due>horizon) return;
       const lib=t.taskId ? ctTaskById(data,t.taskId) : null;
       if(!lib || lib.category!=="Bed prep") return;
-      add(t.bedId, "task: "+(lib.name||t.label||"Bed prep")+" · due "+t.due, "task",
+      const when = t.due<weekISO ? "overdue since "+t.due
+                 : t.due<weekEnd ? "due "+t.due
+                 : "due "+t.due+" (next)";
+      add(t.bedId, "task: "+(lib.name||t.label||"Bed prep")+" · "+when, "task",
           {taskId:t.id, plantingId:t.plantingId||null});
     });
 
