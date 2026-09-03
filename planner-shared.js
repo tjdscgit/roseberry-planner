@@ -80,11 +80,28 @@
       // Fert Application Items by normalised name — deliberately NOT a link field, so pricing a
       // product can never rewrite the agronomy rows it prices.
       fertProducts:     "tblFPDproducts",     // "Fert Products"
+      // Irrigation — Supabase-only, placeholder ids as above. weather_observations is written only
+      // by the Ecowitt ingest job (weather/ingest.js); the app reads it and never writes it, which
+      // is what keeps the station's API keys off every phone. irrigation_events is the other half
+      // of the soil-water balance: without a record of what was applied, the deficit never resets.
+      weatherObs:       "tblWXobs",           // "Weather Observations" — one row per day per station
+      irrigEvents:      "tblIRevents",        // "Irrigation Events"
+      irrigSettings:    "tblIRsettings",      // "Irrigation Settings" — one row, id 'farm'
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
+      // A block is the irrigation valve — one tap, everything under it — so it is also the middle
+      // tier of the dripline inheritance. Same five fields as the bed, meaning the same thing.
+      blk_emitSpacing:"Emitter spacing cm", blk_emitFlow:"Emitter flow L/hr",
+      blk_lines:"Dripline count", blk_wetWidth:"Wetted width m", blk_soil:"Soil type",
+      blk_irrigNotes:"Irrigation notes",
       bed_name:"Bed", bed_block:"Block", bed_len:"Length m", bed_wid:"Width m", bed_order:"Order in block",
       bed_category:"Bed category", bed_tunnel:"Under tunnel", bed_notes:"Bed notes",
+      // Irrigation — the dripline lying on this bed, and what the soil under it holds. Every one of
+      // these is nullable and null means "inherit": bed -> its block -> the farm defaults in
+      // irrigation_settings. See irrigSpecFor().
+      bed_emitSpacing:"Emitter spacing cm", bed_emitFlow:"Emitter flow L/hr",
+      bed_lines:"Dripline count", bed_wetWidth:"Wetted width m", bed_soil:"Soil type",
       // Bed Issues — what's wrong with a bed and which crops that rules out. `bi_types` is the
       // rotation family (matches Crop.Type), `bi_crops` names individual crops; an issue with both
       // empty is a note on the bed and flags nothing. Blank from/until = unbounded on that side.
@@ -249,6 +266,28 @@
       // changes. Prices are ex-GST, matching how the bookkeeping side reads supplier invoices.
       fpd_name:"Name", fpd_unit:"Unit", fpd_packSize:"Pack size", fpd_packPrice:"Pack price",
       fpd_supplier:"Supplier", fpd_active:"Active", fpd_notes:"Notes", fpd_order:"Order",
+      // Weather observations — one row per day per station, written by the ingest job. `wx_et0` is
+      // stored rather than derived on read so that tuning the kernel later can't retroactively
+      // change the figure a past irrigation was decided on. `wx_method` says which formula got
+      // used: 'pm' (Penman-Monteith, needs solar) or 'hargreaves' (temperature only, the fallback).
+      wx_date:"Date", wx_station:"Station", wx_tmax:"Temp max C", wx_tmin:"Temp min C",
+      wx_rhmax:"RH max pct", wx_rhmin:"RH min pct", wx_rhmean:"RH mean pct",
+      wx_wind:"Wind mean m/s", wx_gust:"Wind gust max m/s",
+      wx_solarW:"Solar mean W/m2", wx_solarMJ:"Solar MJ/m2",
+      wx_rain:"Rain mm", wx_et0:"ET0 mm", wx_method:"Method", wx_points:"Points",
+      wx_raw:"Raw", wx_created:"Created at",
+      // Irrigation events — what was actually applied. `ie_beds` empty means the whole block, which
+      // is the normal case. `ie_mm` is frozen at log time from the dripline spec then, so
+      // re-measuring a dripper next year doesn't rewrite what the soil already received.
+      ie_date:"Date", ie_block:"Block", ie_beds:"Bed", ie_minutes:"Minutes",
+      ie_mm:"Applied mm", ie_source:"Source", ie_by:"By", ie_notes:"Notes", ie_created:"Created at",
+      // Irrigation settings — the single 'farm' row. Shared decisions, deliberately not localStorage.
+      is_lat:"Latitude", is_elev:"Elevation m", is_anemHeight:"Anemometer height m",
+      is_soil:"Default soil type", is_emitSpacing:"Default emitter spacing cm",
+      is_emitFlow:"Default emitter flow L/hr", is_lines:"Default dripline count",
+      is_wetWidth:"Default wetted width m", is_percentile:"Block percentile",
+      is_overshoot:"Overshoot fraction", is_eff:"Efficiency", is_pumpFlow:"Pump flow L/hr",
+      is_start:"Balance start", is_notes:"Notes",
     }
   };
 
@@ -272,6 +311,8 @@
     fertPrograms:"fert_programs", fertRounds:"fert_rounds", fertItems:"fert_items",
     fertApplications:"fert_applications", fertApplicationItems:"fert_application_items",
     fertProducts:"fert_products",
+    weatherObs:"weather_observations", irrigEvents:"irrigation_events",
+    irrigSettings:"irrigation_settings",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -743,6 +784,27 @@
       category:b.fields[F.bed_category]||"",
       tunnel:!!b.fields[F.bed_tunnel],
       notes:b.fields[F.bed_notes]||"",
+      // Irrigation. null (not 0) means "not set here, inherit" — irrigSpecFor() walks bed -> block
+      // -> farm. num() already turns "" and undefined into null, which is the whole trick.
+      emitSpacing:num(b.fields[F.bed_emitSpacing]), emitFlow:num(b.fields[F.bed_emitFlow]),
+      lines:num(b.fields[F.bed_lines]), wetWidth:num(b.fields[F.bed_wetWidth]),
+      soil:b.fields[F.bed_soil]||"",
+    }));
+  }
+
+  // Blocks. The app has always parsed these inline in roseberry-planner.html; this is the same
+  // shape, here so the ingest job and the irrigation kernel can read a block's dripline defaults
+  // without pulling in the page.
+  function parseBlocks(blockRecords){
+    const F=CFG.f;
+    return blockRecords.map(b => ({
+      id:b.id, name:b.fields[F.blk_name] ?? "?",
+      x:num(b.fields[F.blk_x]), y:num(b.fields[F.blk_y]),
+      orient:b.fields[F.blk_orient] || "Beds run vertical",
+      preferredCropTypes:(b.fields[F.blk_prefTypes]||[]).slice(),
+      emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
+      lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
+      soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
     }));
   }
 
@@ -2207,8 +2269,792 @@
     return {atFetch, atPatch, atCreate, atDelete};
   }
 
+  /* =========================================================================
+     Irrigation — parsers and the dripline inheritance
+     =========================================================================
+     The water-balance kernel itself (ET0, Kc, the soil bucket, run times) lands in the next
+     section. What lives here is the plumbing underneath it: reading the three new tables, and
+     answering "what dripline is on this bed, and what soil is under it" — a question with three
+     possible answers and a defined order of precedence. */
+
+  // Farm-wide fallbacks. These are the values used when irrigation_settings hasn't been touched,
+  // and they match the DEFAULTs in the DDL so the two can't drift apart quietly.
+  const IRRIG_DEFAULTS = {
+    lat:-28.60, elev:150, anemHeight:2.0,
+    soil:"Clay loam", emitSpacing:30, emitFlow:1.6, lines:2, wetWidth:null,
+    percentile:75, overshoot:0.10, eff:0.90, pumpFlow:null, start:null,
+  };
+
+  function parseWeatherObs(records){
+    const F=CFG.f;
+    return records.map(r => ({
+      id:r.id, date:r.fields[F.wx_date]||"", station:r.fields[F.wx_station]||"",
+      tmax:num(r.fields[F.wx_tmax]), tmin:num(r.fields[F.wx_tmin]),
+      rhMax:num(r.fields[F.wx_rhmax]), rhMin:num(r.fields[F.wx_rhmin]),
+      rhMean:num(r.fields[F.wx_rhmean]),
+      wind:num(r.fields[F.wx_wind]), gust:num(r.fields[F.wx_gust]),
+      solarW:num(r.fields[F.wx_solarW]), solarMJ:num(r.fields[F.wx_solarMJ]),
+      rain:num(r.fields[F.wx_rain]), et0:num(r.fields[F.wx_et0]),
+      method:r.fields[F.wx_method]||"", points:num(r.fields[F.wx_points]),
+      raw:r.fields[F.wx_raw]||null, created:r.fields[F.wx_created]||"",
+    })).sort((a,b)=> String(a.date).localeCompare(String(b.date)));
+  }
+
+  // Index by ISO date for the day-by-day balance walk. Two stations on the same day would collide;
+  // the last one wins, which is the right answer while there is only ever one station.
+  function indexWeatherByDate(obs){
+    const m={}; (obs||[]).forEach(o=>{ if(o.date) m[String(o.date).slice(0,10)]=o; });
+    return m;
+  }
+
+  function parseIrrigationEvents(records){
+    const F=CFG.f;
+    const arr = v => Array.isArray(v) ? v : [];
+    return records.map(r => ({
+      id:r.id, date:String(r.fields[F.ie_date]||"").slice(0,10),
+      block:r.fields[F.ie_block]||"", bedIds:arr(r.fields[F.ie_beds]).slice(),
+      minutes:num(r.fields[F.ie_minutes]), mm:num(r.fields[F.ie_mm]),
+      source:r.fields[F.ie_source]||"logged", by:r.fields[F.ie_by]||"",
+      notes:r.fields[F.ie_notes]||"", created:r.fields[F.ie_created]||"",
+    })).sort((a,b)=> a.date.localeCompare(b.date));
+  }
+
+  // The single 'farm' row. Missing table, missing row and missing column all collapse to the same
+  // thing — the defaults above — so the page works before anyone has opened the settings card.
+  function parseIrrigSettings(records){
+    const F=CFG.f, D=IRRIG_DEFAULTS;
+    const r=(records||[])[0];
+    const f=r ? (r.fields||{}) : {};
+    const pick=(key, dflt)=>{ const v=num(f[key]); return v==null ? dflt : v; };
+    return {
+      id:r ? r.id : "farm",
+      lat:pick(F.is_lat, D.lat), elev:pick(F.is_elev, D.elev),
+      anemHeight:pick(F.is_anemHeight, D.anemHeight),
+      soil:f[F.is_soil]||D.soil,
+      emitSpacing:pick(F.is_emitSpacing, D.emitSpacing),
+      emitFlow:pick(F.is_emitFlow, D.emitFlow),
+      lines:pick(F.is_lines, D.lines),
+      wetWidth:pick(F.is_wetWidth, D.wetWidth),
+      percentile:pick(F.is_percentile, D.percentile),
+      overshoot:pick(F.is_overshoot, D.overshoot),
+      eff:pick(F.is_eff, D.eff),
+      pumpFlow:pick(F.is_pumpFlow, D.pumpFlow),
+      start:String(f[F.is_start]||"").slice(0,10) || null,
+      notes:f[F.is_notes]||"",
+    };
+  }
+
+  // Resolve a bed's block. Exact name first, then longest prefix — because the live data has a
+  // Blocks table carrying DN and DS while every D bed is still labelled plain "D" (the same drift
+  // fertSeasonForecast reports as orphanBeds). Without the prefix pass, an entire block of beds
+  // would silently inherit farm defaults instead of its own valve's dripline, and the only symptom
+  // would be a run time that is quietly wrong. Returns null when nothing matches, so callers can
+  // surface the bed rather than pretend.
+  function blockForBed(bed, blocks){
+    return blockMatch(bed, blocks).block;
+  }
+
+  // The same resolution, with its working shown. `ambiguous` matters: label "D" prefix-matches both
+  // DN and DS, and picking one of them is a coin toss that changes a run time. Sorting by name
+  // keeps the choice stable across reloads (an unstable one would be far worse — the number would
+  // change for no visible reason), but the flag is what lets the page say so out loud rather than
+  // present a guess as a fact.
+  function blockMatch(bed, blocks){
+    const want=String((bed&&bed.block)||"").trim();
+    if(!want) return { block:null, how:"none", ambiguous:false, candidates:[] };
+    const list=blocks||[];
+    const exact=list.find(b=>String(b.name||"").trim()===want);
+    if(exact) return { block:exact, how:"exact", ambiguous:false, candidates:[exact] };
+    const pre=list.filter(b=>String(b.name||"").trim().indexOf(want)===0)
+                  .sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+    if(!pre.length) return { block:null, how:"none", ambiguous:false, candidates:[] };
+    return { block:pre[0], how:"prefix", ambiguous:pre.length>1, candidates:pre };
+  }
+
+  // Available water capacity, mm of water per metre of soil depth. Ordinary FAO-56 midpoints —
+  // the spread between soil types is far larger than the error within any one of them, so picking
+  // roughly the right texture matters and picking exactly the right number does not.
+  const SOIL_TYPES = {
+    "Sand":60, "Loamy sand":80, "Sandy loam":110, "Loam":150,
+    "Silt loam":170, "Clay loam":160, "Clay":150,
+  };
+  function soilAWC(name){
+    const k=Object.keys(SOIL_TYPES).find(s=>s.toLowerCase()===String(name||"").trim().toLowerCase());
+    return k ? SOIL_TYPES[k] : SOIL_TYPES["Clay loam"];
+  }
+
+  // What is actually lying on this bed, and where each number came from. `from` is carried through
+  // to the UI on purpose: when a run time looks wrong, the first question is always which of the
+  // three tiers supplied the figure, and answering it should not require opening Supabase.
+  function irrigSpecFor(bed, blocks, settings){
+    const set=settings||parseIrrigSettings([]);
+    const bm=blockMatch(bed, blocks);
+    const blk=bm.block;
+    const from={};
+    const pick=(key, dflt)=>{
+      if(bed && bed[key]!=null && bed[key]!==""){ from[key]="bed"; return bed[key]; }
+      if(blk && blk[key]!=null && blk[key]!==""){ from[key]="block"; return blk[key]; }
+      from[key]="farm"; return dflt;
+    };
+    const emitSpacing=pick("emitSpacing", set.emitSpacing);
+    const emitFlow   =pick("emitFlow",    set.emitFlow);
+    const lines      =pick("lines",       set.lines);
+    const soil       =pick("soil",        set.soil);
+    // Wetted width has a fourth fallback the others don't: the bed's own width. A single dripline
+    // does not wet a 1.5 m bed, but two or three do, and the bed width is the closest thing to a
+    // measured answer that already exists in the data.
+    let wetWidth=pick("wetWidth", set.wetWidth);
+    if(wetWidth==null){ wetWidth = num(bed && bed.wid); if(wetWidth!=null) from.wetWidth="bed size"; }
+
+    const len=num(bed && bed.len);
+    // floor(), not round(): a 30 m bed on 30 cm spacing has 100 emitters, and half an emitter
+    // delivers nothing.
+    const emitters = (len!=null && emitSpacing>0)
+      ? Math.floor(len*100/emitSpacing) * Math.max(1, lines||1) : null;
+    const flowLph  = emitters!=null && emitFlow!=null ? emitters*emitFlow : null;
+    const wetArea  = (len!=null && wetWidth!=null) ? len*wetWidth : null;
+    // 1 L spread over 1 m² is 1 mm deep, so L/hr over m² is millimetres per hour with no constant.
+    const appRateMmHr = (flowLph!=null && wetArea>0) ? flowLph/wetArea : null;
+
+    return { block:blk, blockName:blk?blk.name:"", blockMatch:bm, from,
+             emitSpacing, emitFlow, lines, wetWidth, soil, awc:soilAWC(soil),
+             emitters, flowLph, wetArea, appRateMmHr,
+             known: appRateMmHr!=null && appRateMmHr>0 };
+  }
+
+  // Minutes to put `mm` of water on this bed, and the litres it takes to do it. Efficiency covers
+  // everything the model refuses to itemise — distribution uniformity down the line, the wet patch
+  // that misses the root zone, evaporation off the surface — in one honest fudge factor.
+  function irrigRunTime(spec, mm, eff){
+    const e=(eff==null||!(eff>0)) ? IRRIG_DEFAULTS.eff : eff;
+    if(!spec || !spec.known || !(mm>0)) return { minutes:0, litres:0 };
+    const minutes = mm / spec.appRateMmHr * 60 / e;
+    const litres  = mm * spec.wetArea / e;
+    return { minutes, litres };
+  }
+
+  /* =========================================================================
+     Climate — moved here from roseberry-planner.html
+     =========================================================================
+     This used to live in the page, where only the page could reach it. The irrigation kernel needs
+     the same growth-stage clock to decide which crop coefficient applies on a given day, and the
+     weather ingest job runs in Node with no page at all, so it moves down here unchanged. The page
+     now delegates to these, so there is still exactly one definition of a crop's adjusted DTM. */
+
+  // Local-time ISO helpers. Deliberately not Date.parse/toISOString: those go through UTC, and a
+  // farm at UTC+10 would see every date slip a day for half the year.
+  function irIsoToDate(iso){ const [y,m,d]=String(iso).slice(0,10).split("-").map(Number); return new Date(y,m-1,d); }
+  function irDateToISO(dt){ return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0"); }
+  function irAddDays(iso,n){ const dt=irIsoToDate(iso); dt.setDate(dt.getDate()+(n||0)); return irDateToISO(dt); }
+  function irDiffDays(a,b){ if(!a||!b) return null; return Math.round((irIsoToDate(b)-irIsoToDate(a))/86400000); }
+  function irDayOfYear(iso){
+    const d=irIsoToDate(iso);
+    return Math.round((d - new Date(d.getFullYear(),0,0))/86400000);
+  }
+
+  // Plants develop on accumulated warmth, not calendar days. We bank the crop's heat requirement
+  // forward from its growth-start date through the farm's monthly average temperatures; warm months
+  // bank faster (fewer days), cold months slower (more days).
+  // CLIMATE.meanC = mean daily temp °C per month (Jan..Dec). Sourced from the farm's own weather
+  // station (EasyWeather WIFI4DA1), 1075 daily means over 3 years (Jul 2023 – Jul 2026).
+  const CLIMATE = { meanC:[23.8,23.3,21.7,18.6,16.1,12.1,11.8,14.3,16.8,20.6,21.8,23.9] };
+  CLIMATE.annual = CLIMATE.meanC.reduce((a,b)=>a+b,0)/12;   // ≈19.0 °C
+  const WARM_CROPS = ["tomato","capsicum","chilli","chili","eggplant","cucumber","zucchini",
+    "pumpkin","squash","basil","bean","corn","melon","okra","sweet potato"];
+  function isWarmCrop(name){ const n=(name||"").toLowerCase(); return WARM_CROPS.some(w=>n.includes(w)); }
+  function baseTempFor(name){ return isWarmCrop(name) ? 10 : 4.5; }   // °C threshold
+  const CLIMATE_DAMP = 0.5;   // pull toward nominal so the swing matches Heirloom's
+
+  function climateAdjustedDTM(cropName, nominalDTM, startISO){
+    if(!startISO || !nominalDTM || nominalDTM<=0) return nominalDTM;
+    const base = baseTempFor(cropName);
+    const reqGDD = nominalDTM * Math.max(0.5, CLIMATE.annual - base);
+    const d = irIsoToDate(startISO);
+    const cap = nominalDTM*3 + 60;
+    let acc=0, days=0;
+    while(acc < reqGDD && days < cap){
+      acc += Math.max(0, CLIMATE.meanC[d.getMonth()] - base);
+      d.setDate(d.getDate()+1); days++;
+    }
+    let adj = Math.round(nominalDTM + CLIMATE_DAMP*(days - nominalDTM));
+    // warm-season crops are at their genetic minimum in summer — they can't beat the rated days,
+    // they only slow down off-season
+    if(isWarmCrop(cropName)) adj = Math.max(adj, nominalDTM);
+    return Math.max(1, adj);
+  }
+
+  /* =========================================================================
+     ET0 — FAO-56 Penman-Monteith
+     =========================================================================
+     Reference evapotranspiration: how much water a short, well-watered grass sward would use on a
+     given day. It is the whole basis of the irrigation page — every crop's demand is this number
+     scaled by a crop coefficient — so it is also the one calculation here with a published right
+     answer to check against, and it is checked (FAO-56 Example 18, Brussels, 3.9 mm/day).
+
+     Everything below is FAO-56 Chapters 3-4 in the paper's own notation, so each line can be read
+     against the source rather than trusted. Units: temperature °C, wind m/s at 2 m, radiation
+     MJ/m2/day, pressure kPa, result mm/day. */
+
+  const ET0_ALBEDO = 0.23;          // grass reference
+  const ET0_SB = 4.903e-9;          // Stefan-Boltzmann, MJ K^-4 m^-2 day^-1
+  const ET0_SOLAR_CONST = 0.0820;   // MJ m^-2 min^-1
+  const ET0_MAX = 15;               // sanity ceiling, mm/day — above this a sensor has died
+
+  // Saturation vapour pressure at temperature t (kPa). FAO-56 eq. 11.
+  function svp(t){ return 0.6108 * Math.exp(17.27*t/(t+237.3)); }
+
+  // Extraterrestrial radiation for a day and latitude, MJ/m2/day. FAO-56 eqs. 21-25. Pure astronomy
+  // — no weather in it at all — which is why it doubles as the check that a station's measured
+  // solar figure is physically possible.
+  function et0Ra(latDeg, doy){
+    const phi = latDeg * Math.PI/180;
+    const dr  = 1 + 0.033*Math.cos(2*Math.PI*doy/365);
+    const dec = 0.409*Math.sin(2*Math.PI*doy/365 - 1.39);
+    // Inside the polar circles this argument leaves [-1,1] — clamped so a latitude typo yields a
+    // bounded wrong number rather than a NaN propagating silently into every run time.
+    const x   = Math.max(-1, Math.min(1, -Math.tan(phi)*Math.tan(dec)));
+    const ws  = Math.acos(x);
+    return (24*60/Math.PI) * ET0_SOLAR_CONST * dr *
+           (ws*Math.sin(phi)*Math.sin(dec) + Math.cos(phi)*Math.cos(dec)*Math.sin(ws));
+  }
+
+  // Wind measured at height zw, converted to the 2 m the equation assumes. FAO-56 eq. 47.
+  function et0WindTo2m(uz, zw){
+    if(uz==null) return null;
+    const h = (zw==null||!(zw>0)) ? 2 : zw;
+    return h===2 ? uz : uz * 4.87 / Math.log(67.8*h - 5.42);
+  }
+
+  // Bound the answer, but never silently: a figure outside this range is not a hot day, it is a
+  // dead sensor, and the warning is the part that matters.
+  function clampEt0(v, warnings){
+    if(v==null || !isFinite(v)) return null;
+    if(v < 0 || v > ET0_MAX) warnings.push({code:"et0_out_of_range", value:v});
+    return Math.max(0, Math.min(ET0_MAX, v));
+  }
+
+  /* Daily ET0.
+     `d`:    {date, tmax, tmin, rhMax, rhMin, rhMean, wind, solarMJ | solarW}
+     `site`: {lat, elev, anemHeight}
+     Returns {et0, method, ...intermediates, warnings}. Never throws, and returns et0 null when
+     there is genuinely nothing to work with — a missing day must read as missing, not as a day on
+     which the crop used no water. */
+  function et0Daily(d, site){
+    const S = site||{};
+    const lat  = S.lat!=null ? S.lat : IRRIG_DEFAULTS.lat;
+    const elev = S.elev!=null ? S.elev : IRRIG_DEFAULTS.elev;
+    const warnings = [];
+    const out = { et0:null, method:null, warnings };
+
+    const tmax = num(d.tmax), tmin = num(d.tmin);
+    if(tmax==null || tmin==null){ warnings.push({code:"no_temp"}); return out; }
+    if(tmin > tmax){ warnings.push({code:"temp_inverted", tmax, tmin}); return out; }
+
+    const doy = d.date ? irDayOfYear(d.date) : 1;
+    const Ra  = et0Ra(lat, doy);
+    // FAO-56 is explicit that this is the mean of the EXTREMES, not the mean of the day's readings.
+    const Tmean = (tmax+tmin)/2;
+    out.Ra = Ra; out.Tmean = Tmean;
+
+    // Solar: accept MJ/m2/day directly, or a mean W/m2 from the station.
+    let Rs = num(d.solarMJ);
+    if(Rs==null && num(d.solarW)!=null) Rs = num(d.solarW)*86400/1e6;
+
+    const P = 101.3 * Math.pow((293 - 0.0065*elev)/293, 5.26);
+    const gamma = 0.000665 * P;
+    const delta = 4098 * svp(Tmean) / Math.pow(Tmean+237.3, 2);
+
+    const es = (svp(tmax) + svp(tmin))/2;
+    let ea = null;
+    if(num(d.rhMax)!=null && num(d.rhMin)!=null){
+      ea = (svp(tmin)*d.rhMax/100 + svp(tmax)*d.rhMin/100)/2;   // eq. 17, the preferred form
+    }else if(num(d.rhMean)!=null){
+      ea = es * d.rhMean/100;                                    // eq. 19, the fallback
+      warnings.push({code:"rh_mean_only"});
+    }
+
+    const u2 = et0WindTo2m(num(d.wind), S.anemHeight);
+
+    // Hargreaves-Samani. No solar (or no humidity or wind to use it with) means the full equation
+    // cannot run. A temperature-only estimate is roughly +/-15-20% here, which is far better than
+    // recording a zero — a zero would read as "the crop used no water today" and quietly suppress
+    // an irrigation that was needed.
+    if(Rs==null || ea==null || u2==null){
+      if(Rs==null) warnings.push({code:"no_solar"});
+      if(ea==null) warnings.push({code:"no_humidity"});
+      if(u2==null) warnings.push({code:"no_wind"});
+      const et0h = 0.0023 * (Tmean+17.8) * Math.sqrt(Math.max(0, tmax-tmin)) * 0.408 * Ra;
+      out.et0 = clampEt0(et0h, warnings); out.method = "hargreaves";
+      return out;
+    }
+
+    const Rso = (0.75 + 2e-5*elev) * Ra;
+    // Measured Rs above the clear-sky ceiling is physically impossible, so it means a miscalibrated
+    // or wrongly-united sensor. The ratio below is capped at 1 regardless; the warning is what
+    // matters, because that is a station fault to fix rather than a weather event.
+    if(Rs > Rso*1.05) warnings.push({code:"solar_above_clear_sky", Rs, Rso});
+
+    const Rns = (1-ET0_ALBEDO)*Rs;
+    const Rnl = ET0_SB
+      * ((Math.pow(tmax+273.16,4) + Math.pow(tmin+273.16,4))/2)
+      * (0.34 - 0.14*Math.sqrt(Math.max(0,ea)))
+      * (1.35*Math.min(Rso>0 ? Rs/Rso : 1, 1.0) - 0.35);
+    const Rn = Rns - Rnl;
+    const G = 0;   // daily step: soil heat flux is negligible over 24 h (FAO-56 eq. 42)
+
+    const numer = 0.408*delta*(Rn-G) + gamma*(900/(Tmean+273))*u2*(es-ea);
+    const denom = delta + gamma*(1 + 0.34*u2);
+
+    Object.assign(out, { Rs, Rso, Rns, Rnl, Rn, es, ea, u2, delta, gamma, P });
+    out.et0 = clampEt0(numer/denom, warnings);
+    out.method = "pm";
+    return out;
+  }
+
+  /* =========================================================================
+     Crop coefficients
+     =========================================================================
+     Single Kc (FAO-56 Table 12), keyed off the rotation family the planner already stores on every
+     crop, with a name-substring override for the few that differ sharply from their family. The
+     dual Kcb+Ke form is more correct on paper and is deliberately not used: it needs per-bed
+     wetted-fraction and evaporation-layer bookkeeping, and the accuracy it buys is smaller than the
+     error in guessing the soil texture.
+
+     `zr` is rooting depth in metres and `p` the fraction of available water the crop can draw down
+     before it is stressed. Those two feed the trigger point; the Kc numbers feed the demand. */
+  const KC_FALLBACK = { ini:0.60, mid:1.00, end:0.90, zr:0.40, p:0.40 };
+  const KC_BARE     = { ini:0.30, mid:0.30, end:0.30, zr:0.30, p:0.50 };
+
+  const KC_BY_TYPE = {
+    "leafy greens":{ini:0.70,mid:1.00,end:0.95,zr:0.30,p:0.30},
+    "leafy":       {ini:0.70,mid:1.00,end:0.95,zr:0.30,p:0.30},
+    "salad":       {ini:0.70,mid:1.00,end:0.95,zr:0.30,p:0.30},
+    "brassica":    {ini:0.70,mid:1.05,end:0.95,zr:0.45,p:0.40},
+    "allium":      {ini:0.70,mid:1.05,end:0.75,zr:0.30,p:0.30},
+    "solanaceae":  {ini:0.60,mid:1.15,end:0.80,zr:0.60,p:0.40},
+    "nightshade":  {ini:0.60,mid:1.15,end:0.80,zr:0.60,p:0.40},
+    "cucurbit":    {ini:0.50,mid:1.00,end:0.80,zr:0.60,p:0.50},
+    "root":        {ini:0.50,mid:1.05,end:0.95,zr:0.40,p:0.40},
+    "legume":      {ini:0.50,mid:1.05,end:0.90,zr:0.50,p:0.45},
+    "potato":      {ini:0.50,mid:1.15,end:0.75,zr:0.45,p:0.35},
+    "herb":        {ini:0.60,mid:1.00,end:0.90,zr:0.40,p:0.40},
+    "flower":      {ini:0.50,mid:1.00,end:0.85,zr:0.40,p:0.45},
+  };
+  // Checked before the family table. Sweet corn is the one that matters most: it is nobody's idea
+  // of a leafy green but often sits in a family alongside things far shallower-rooted than it.
+  const KC_BY_NAME = [
+    ["sweet corn", {ini:0.30,mid:1.15,end:1.05,zr:0.60,p:0.50}],
+    ["corn",       {ini:0.30,mid:1.15,end:1.05,zr:0.60,p:0.50}],
+    ["garlic",     {ini:0.70,mid:1.00,end:0.70,zr:0.30,p:0.30}],
+    ["onion",      {ini:0.70,mid:1.05,end:0.75,zr:0.30,p:0.30}],
+    ["strawberr",  {ini:0.40,mid:0.85,end:0.75,zr:0.25,p:0.20}],
+    ["asparagus",  {ini:0.50,mid:0.95,end:0.30,zr:1.20,p:0.45}],
+    ["potato",     {ini:0.50,mid:1.15,end:0.75,zr:0.45,p:0.35}],
+  ];
+
+  function kcProfile(cropName, cropType){
+    const n=String(cropName||"").toLowerCase();
+    const hit=KC_BY_NAME.find(function(e){ return n.indexOf(e[0])>=0; });
+    if(hit) return hit[1];
+    const t=String(cropType||"").toLowerCase().trim();
+    if(KC_BY_TYPE[t]) return KC_BY_TYPE[t];
+    const key=Object.keys(KC_BY_TYPE).find(function(k){ return t.indexOf(k)>=0; });
+    return key ? KC_BY_TYPE[key] : KC_FALLBACK;
+  }
+
+  // Stage boundaries as fractions of the season. Rounded FAO-56 Table 11 proportions for vegetable
+  // crops — the exact split matters far less than having development ramp rather than step, which
+  // is what stops a bed jumping from 0.70 to 1.15 overnight.
+  const KC_STAGES = { ini:0.20, dev:0.50, mid:0.85 };
+
+  // Kc on a given day, from how far through its season the planting is. Before the clock starts the
+  // ground is bare; past the end of harvest it is bare again.
+  function kcOnDay(prof, frac){
+    if(frac==null) return prof.mid;
+    if(frac < 0) return KC_BARE.ini;
+    const S=KC_STAGES;
+    if(frac <= S.ini) return prof.ini;
+    if(frac <= S.dev) return prof.ini + (prof.mid-prof.ini)*(frac-S.ini)/(S.dev-S.ini);
+    if(frac <= S.mid) return prof.mid;
+    if(frac <= 1)     return prof.mid + (prof.end-prof.mid)*(frac-S.mid)/(1-S.mid);
+    return prof.end;
+  }
+
+  /* =========================================================================
+     Soil-water balance
+     =========================================================================
+     A bucket per bed, walked one day at a time. Each day the crop takes ETc out, rain and any
+     logged irrigation put water back, and what is left is the deficit — how many millimetres short
+     of field capacity the root zone is right now. When the deficit passes the readily-available
+     water for that crop and soil, the bed is due.
+
+     Two things make this honest rather than decorative. The first is that irrigation_events feed
+     back in, so watering actually resets the model. The second is that the deficit is capped at
+     total available water: without that, one gap in the weather data compounds forever and the
+     page ends up recommending a 200 mm run with complete confidence. */
+
+  const IRRIG_INTERCEPTION_MM = 2.0;   // canopy and surface losses before rain reaches the root zone
+  const IRRIG_TUNNEL_FACTOR   = 0.75;  // under plastic: no wind, lower ET, and no rain at all
+  // How far back the balance starts when nothing is configured. Deliberately short. The bucket only
+  // knows about irrigation that has been logged, so every unlogged day pushes the deficit further
+  // from the truth; a long default window all but guarantees the model saturates and starts
+  // recommending absurd runs. Three weeks is long enough to span a dry spell and short enough that
+  // a few missed logs don't compound into nonsense.
+  const IRRIG_DEFAULT_DAYS    = 21;
+
+  // How far through its season a planting is on `iso`, as a fraction: 0 at the start of growth,
+  // 1 at the end of harvest. Null before the clock starts.
+  //
+  // The clock starts at transplanting for transplanted crops and at sowing for direct-sown ones,
+  // preferring the actual date over the planned one — a planting that went in three weeks late is
+  // three weeks less thirsty than the plan says, and using the planned date would have the model
+  // watering a bare bed.
+  function plantingSeasonFrac(p, iso, dtmDays){
+    const start = p.tpActual || p.tp || p.sowActual || p.sow;
+    if(!start) return null;
+    const startISO = String(start).slice(0,10);
+    // End of the season: last harvest if known, else first harvest, else sow plus the crop's
+    // (climate-adjusted) days to maturity.
+    let endISO = p.h2 || p.h1 || null;
+    if(endISO) endISO = String(endISO).slice(0,10);
+    if(!endISO){
+      const dtm = dtmDays || climateAdjustedDTM(p.crop, num(p.dtm) || 70, startISO);
+      endISO = irAddDays(startISO, Math.max(1, Math.round(dtm)));
+    }
+    const span = irDiffDays(startISO, endISO);
+    if(span==null || span<=0) return null;
+    const gone = irDiffDays(startISO, iso);
+    if(gone==null) return null;
+    return gone/span;
+  }
+
+  /* The bed's crop coefficient and root-zone parameters on one day.
+
+     A bed can carry several plantings at once, at different stages, so Kc is the bed-metre-weighted
+     mean across the occupants with the unplanted metres counted as bare ground. That gives the
+     right water DEMAND for the bed as a whole.
+
+     Root depth and depletion fraction are taken as the MINIMUM across occupants instead, because
+     they set the trigger, not the demand — and the shallowest-rooted crop is the one that runs out
+     of water first. Averaging them would let a deep-rooted tomato's reserves excuse a lettuce
+     alongside it drying out, which is precisely the failure this page exists to prevent. */
+  function bedCropStateOn(bed, plantings, iso){
+    const occupants=[];
+    (plantings||[]).forEach(p=>{
+      if(p.parked) return;
+      if(!p.bedIds || p.bedIds[0]!==bed.id) return;
+      const w=groundWindow(p);
+      if(!isoWindowsOverlap(iso, iso, w.s, w.e)) return;
+      occupants.push(p);
+    });
+
+    const bedLen = num(bed.len);
+    if(!occupants.length){
+      return { kc:KC_BARE.ini, zr:KC_BARE.zr, p:KC_BARE.p, occupants:[], bare:true };
+    }
+
+    let kcM=0, usedM=0, zr=Infinity, dep=Infinity;
+    const detail=[];
+    occupants.forEach(p=>{
+      const prof=kcProfile(p.crop, p.cropType || p.type);
+      const frac=plantingSeasonFrac(p, iso);
+      const kc=kcOnDay(prof, frac);
+      // A planting with no recorded bed metres is treated as filling the bed — the same assumption
+      // bedUsage() already makes for occupancy, so the two can't disagree about the same bed.
+      const m = num(p.bm) != null ? num(p.bm) : (bedLen || 0);
+      kcM += kc*m; usedM += m;
+      zr = Math.min(zr, prof.zr); dep = Math.min(dep, prof.p);
+      detail.push({ id:p.id, crop:p.crop, kc, frac, m });
+    });
+
+    const freeM = bedLen!=null ? Math.max(0, bedLen-usedM) : 0;
+    const totalM = usedM + freeM;
+    const kc = totalM>0 ? (kcM + freeM*KC_BARE.ini)/totalM : KC_BARE.ini;
+
+    return { kc, zr:isFinite(zr)?zr:KC_BARE.zr, p:isFinite(dep)?dep:KC_BARE.p,
+             occupants:detail, bare:false, usedM, freeM };
+  }
+
+  /* Walk one bed's bucket from `startISO` to `endISO`.
+
+     `ctx` = { weatherByDate, plantings, spec, settings }. Returns the final state plus the whole
+     series, because the series is what makes the model arguable — a grower who can see the deficit
+     fall to zero on the day it rained will believe the number at the end of it. */
+  function irrigBedBalance(bed, ctx, startISO, endISO){
+    const wx = ctx.weatherByDate||{};
+    const spec = ctx.spec || irrigSpecFor(bed, ctx.blocks, ctx.settings);
+    const events = ctx.eventsByBed && ctx.eventsByBed[bed.id] ? ctx.eventsByBed[bed.id] : {};
+    const warnings=[], series=[];
+
+    let D=0, missing=0, capped=0;
+    let iso=startISO;
+    let last=null;
+
+    while(iso <= endISO){
+      const o = wx[iso];
+      const st = bedCropStateOn(bed, ctx.plantings, iso);
+      const taw = spec.awc * st.zr;
+
+      let et0 = o ? num(o.et0) : null;
+      if(et0==null){
+        missing++;
+        // A day with no weather is carried at the trailing mean rather than zero. Zero would read
+        // as "the crop used nothing", which understates the deficit and suppresses an irrigation;
+        // the trailing mean at least keeps the bucket moving at the rate the week has been going.
+        et0 = last!=null ? last : null;
+      }else{
+        last = et0;
+      }
+
+      const etc = et0!=null ? et0 * st.kc * (bed.tunnel ? IRRIG_TUNNEL_FACTOR : 1) : 0;
+      const rainRaw = o ? (num(o.rain)||0) : 0;
+      const peff = bed.tunnel ? 0 : Math.max(0, rainRaw - IRRIG_INTERCEPTION_MM);
+      const irr = events[iso] || 0;
+
+      const before = D;
+      D = D + etc - peff - irr;
+      if(D < 0) D = 0;
+      if(D > taw){ D = taw; capped++; }
+
+      series.push({ date:iso, et0, kc:st.kc, etc, rain:rainRaw, peff, irr, d:D, taw,
+                    raw:st.p, bare:st.bare });
+      iso = irAddDays(iso, 1);
+      void before;
+    }
+
+    const st = bedCropStateOn(bed, ctx.plantings, endISO);
+    const taw = spec.awc * st.zr;
+    // FAO-56 eq. 22: a crop under high evaporative demand wilts at a smaller depletion than the
+    // same crop on a mild day, so the trigger moves with the weather rather than sitting still.
+    const recentEtc = series.length ? mean_(series.slice(-7).map(s=>s.etc)) : 3;
+    const pAdj = Math.max(0.1, Math.min(0.8, st.p + 0.04*(5 - recentEtc)));
+    const raw = pAdj * taw;
+
+    // Saturated means the bucket hit the soil's total capacity and stayed there — at which point it
+    // has stopped counting and the real deficit is "at least this much", not "this much". It happens
+    // for one reason in practice: irrigation was applied and never logged. Reporting it as an
+    // ordinary deficit would put a seven-hour run on the screen on the first morning anyone opened
+    // the page, which is the fastest possible way to make the whole thing untrustworthy.
+    const saturated = taw>0 && D >= taw - 1e-6;
+    if(missing) warnings.push({code:"missing_weather_days", days:missing});
+    if(capped)  warnings.push({code:"deficit_capped", days:capped});
+    if(saturated) warnings.push({code:"balance_saturated"});
+    if(!spec.known) warnings.push({code:"no_dripline_spec"});
+
+    return {
+      bed, spec, series, warnings, saturated,
+      deficit:D, taw, raw, pAdj, kc:st.kc, zr:st.zr,
+      occupants:st.occupants, bare:st.bare,
+      stress: raw>0 ? D/raw : 0,
+      needsWater: raw>0 && D >= raw,
+      // Days until the deficit reaches the trigger at the recent rate. This is the number that
+      // plans a week, rather than only answering about today.
+      daysToTrigger: (recentEtc>0.05 && raw>D) ? (raw-D)/(recentEtc||1) : 0,
+    };
+  }
+
+  function mean_(a){ const v=a.filter(x=>x!=null&&isFinite(x)); return v.length ? v.reduce((x,y)=>x+y,0)/v.length : 0; }
+
+  // Value at percentile P of a set of {value, weight} pairs, weights being bed metres so a 45 m bed
+  // counts for more than a 12 m one.
+  //
+  // Sorted by `value` — the millimetres — and that ordering is load-bearing. Sorting by the stress
+  // ratio instead was tried first, on the reasoning that urgency is stress rather than depth, and
+  // it produced a percentile that was not monotone in P: the most-stressed bed is not necessarily
+  // the deepest-deficit one, so raising the slider could ask for LESS water. A control that moves
+  // the wrong way is worse than a slightly cruder rule, and the stress ranking still does its real
+  // job — deciding which beds are urgent, and in what order they are shown.
+  function weightedPercentile(items, P){
+    if(!items.length) return 0;
+    const sorted=items.slice().sort((a,b)=>a.value-b.value);
+    const total=sorted.reduce((s,i)=>s+(i.weight||0),0);
+    if(total<=0) return sorted[Math.min(sorted.length-1, Math.floor(sorted.length*P/100))].value;
+    const want=total*Math.max(0,Math.min(100,P))/100;
+    let acc=0;
+    for(const it of sorted){ acc += (it.weight||0); if(acc >= want) return it.value; }
+    return sorted[sorted.length-1].value;
+  }
+
+  /* Turn a block's per-bed deficits into one run time.
+
+     One valve waters the whole block, so whatever number is chosen, some beds get too much and
+     others too little. Two rules resolve that:
+
+       1. Aim at the Pth percentile of the block's deficits, ranked by stress and weighted by bed
+          metres. P defaults to 75 — cover three-quarters of the demand and accept that the driest
+          quarter runs a little short. P=100 is "match the driest bed", P=50 a weighted median, so
+          the grower can dial the compromise seasonally against what they actually see.
+
+       2. Never exceed the smallest bed's deficit plus a little overshoot. Water past that is
+          drainage: it goes below the root zone, taking nitrate with it, and on clay loam it also
+          means an anaerobic root zone. This is a hard ceiling, a min not an average, and it
+          overrides the percentile whenever the block's spread is wide.
+
+     When the ceiling bites, the shortfall is not hidden — it comes back as `short`, so the page can
+     name the beds that will still be dry afterwards. A follow-up the grower can act on beats a
+     cleverer single number they can't check. */
+  function irrigBlockPlan(blockName, balances, settings){
+    const set = settings || parseIrrigSettings([]);
+    const P = set.percentile!=null ? set.percentile : IRRIG_DEFAULTS.percentile;
+    const over = set.overshoot!=null ? set.overshoot : IRRIG_DEFAULTS.overshoot;
+    const eff = set.eff;
+    const warnings=[];
+
+    const usable = balances.filter(b=>b.spec && b.spec.known);
+    if(!usable.length){
+      return { block:blockName, beds:balances, targetMm:0, minutes:0, litres:0,
+               needsWater:false, warnings:[{code:"no_usable_beds"}] };
+    }
+
+    const items = usable.map(b=>({
+      key: b.stress, value: b.deficit, weight: num(b.bed.len) || 1,
+    }));
+    let target = weightedPercentile(items, P);
+
+    // The ceiling: never put on more than the wettest bed can take without draining.
+    //
+    // Bare beds are excluded from it. They have no roots to suffocate and no crop whose nitrate is
+    // worth conserving, and leaving them in makes one empty bed veto irrigation for everything
+    // around it — a block with a single fallow bed watered yesterday would be held to a couple of
+    // millimetres while the crop beside it sat two-and-a-half times past its trigger. That is the
+    // behaviour that would get the page ignored. They are still reported as over-watered below, so
+    // the cost of the choice stays visible.
+    const ceilingBeds = usable.filter(b => !b.bare);
+    const ceiling = ceilingBeds.length
+      ? Math.min(...ceilingBeds.map(b => b.deficit + over*b.taw))
+      : Infinity;
+    let ceilingBit = false;
+    if(isFinite(ceiling) && target > ceiling){ target = ceiling; ceilingBit = true; }
+    if(target < 0) target = 0;
+
+    // Who this compromise leaves wrong, and by how much.
+    const beds = usable.map(b=>{
+      const after = b.deficit - target;
+      return Object.assign({}, b, {
+        applied: target,
+        after,                                   // >0 still short, <0 past field capacity
+        shortMm: after > 0.5 ? after : 0,
+        overMm: after < -0.5 ? -after : 0,
+        drains: after < -over*b.taw,
+      });
+    });
+
+    const short = beds.filter(b=>b.shortMm > 0.5);
+    if(ceilingBit && short.length) warnings.push({code:"block_split_needed", beds:short.map(b=>b.bed.name)});
+    if(beds.some(b=>b.drains)) warnings.push({code:"over_capacity", beds:beds.filter(b=>b.drains).map(b=>b.bed.name)});
+
+    // Run time is set by the driest bed's dripline, since one valve means one duration; each bed's
+    // own litres then differ because their driplines do.
+    const worst = beds.slice().sort((a,b)=>b.stress-a.stress)[0];
+    const rt = irrigRunTime(worst.spec, target, eff);
+    const litres = beds.reduce((s,b)=> s + irrigRunTime(b.spec, target, eff).litres, 0);
+    const blockFlow = beds.reduce((s,b)=> s + (b.spec.flowLph||0), 0);
+
+    if(set.pumpFlow && blockFlow > set.pumpFlow){
+      warnings.push({code:"over_pump", blockFlowLph:blockFlow, pumpLph:set.pumpFlow});
+    }
+    const rates = beds.map(b=>b.spec.appRateMmHr).filter(r=>r>0);
+    if(rates.length && Math.min(...rates) < 3) warnings.push({code:"low_app_rate", mmPerHr:Math.min(...rates)});
+    if(rates.length && Math.max(...rates) > 15) warnings.push({code:"high_app_rate", mmPerHr:Math.max(...rates)});
+
+    // If the beds driving this recommendation have saturated, the number is a lower bound on a
+    // quantity the model no longer knows. The page shows a prompt to log a run instead of minutes.
+    const saturated = beds.some(b => b.saturated && b.needsWater);
+    if(saturated) warnings.push({code:"uncalibrated"});
+
+    return {
+      block: blockName, saturated,
+      beds: beds.sort((a,b)=>b.stress-a.stress),
+      targetMm: target, minutes: rt.minutes, litres, blockFlowLph: blockFlow,
+      needsWater: beds.some(b=>b.needsWater),
+      driest: beds[0],
+      // Soonest any bed in the block hits its trigger — what makes "ok, 4 days away" possible.
+      daysToTrigger: Math.min(...beds.map(b=>b.daysToTrigger)),
+      ceilingBit, warnings,
+    };
+  }
+
+  // Index logged irrigation as bedId -> ISO date -> millimetres, which is the shape the day walk
+  // wants. An event with no beds listed covers every bed in its block, which is the normal case:
+  // one valve, everything under it.
+  function indexIrrigationByBed(events, beds, blocks){
+    const out={};
+    const bedsByBlock={};
+    (beds||[]).forEach(b=>{
+      const blk=blockForBed(b, blocks);
+      const key=blk ? blk.name : (b.block||"");
+      (bedsByBlock[key] ||= []).push(b);
+    });
+    (events||[]).forEach(e=>{
+      if(!e.date || e.mm==null) return;
+      const targets = (e.bedIds && e.bedIds.length)
+        ? e.bedIds
+        : (bedsByBlock[e.block]||[]).map(b=>b.id);
+      targets.forEach(id=>{
+        out[id] ||= {};
+        out[id][e.date] = (out[id][e.date]||0) + e.mm;
+      });
+    });
+    return out;
+  }
+
+  /* The whole page in one call: every block, ordered most urgent first.
+     `data` = {beds, blocks, plantings, weatherByDate, irrigEvents, irrigSettings}. */
+  function irrigPlan(data, todayISO){
+    const set = data.irrigSettings || parseIrrigSettings([]);
+    const today = todayISO || irDateToISO(new Date());
+    const start = set.start || irAddDays(today, -IRRIG_DEFAULT_DAYS);
+    const eventsByBed = indexIrrigationByBed(data.irrigEvents, data.beds, data.blocks);
+
+    const ctx = { weatherByDate:data.weatherByDate||{}, plantings:data.plantings||[],
+                  blocks:data.blocks||[], settings:set, eventsByBed };
+
+    const byBlock={};
+    (data.beds||[]).forEach(bed=>{
+      const spec = irrigSpecFor(bed, data.blocks, set);
+      const bal = irrigBedBalance(bed, Object.assign({}, ctx, {spec}), start, today);
+      const key = spec.blockName || bed.block || "—";
+      (byBlock[key] ||= []).push(bal);
+    });
+
+    const blocks = Object.keys(byBlock)
+      .map(name => irrigBlockPlan(name, byBlock[name], set))
+      .sort((a,b)=>{
+        if(a.needsWater !== b.needsWater) return a.needsWater ? -1 : 1;
+        return (b.driest ? b.driest.stress : 0) - (a.driest ? a.driest.stress : 0);
+      });
+
+    const obs = data.weatherObs || [];
+    const latest = obs.length ? obs[obs.length-1] : null;
+    const staleDays = latest ? irDiffDays(String(latest.date).slice(0,10), today) : null;
+
+    return { today, start, blocks, latest, staleDays,
+             rain7: sumRecent(obs, today, 7, "rain"),
+             et07:  sumRecent(obs, today, 7, "et0") };
+  }
+
+  function sumRecent(obs, todayISO, days, key){
+    const from = irAddDays(todayISO, -(days-1));
+    let s=0, n=0;
+    (obs||[]).forEach(o=>{
+      const d=String(o.date).slice(0,10);
+      if(d>=from && d<=todayISO && num(o[key])!=null){ s+=num(o[key]); n++; }
+    });
+    return n ? s : null;
+  }
+
   return {
     CFG, num, PG_TABLES, AT_ID_TO_PG,
+    IRRIG_DEFAULTS, SOIL_TYPES, soilAWC,
+    parseBlocks, parseWeatherObs, indexWeatherByDate, parseIrrigationEvents, parseIrrigSettings,
+    blockForBed, blockMatch, irrigSpecFor, irrigRunTime,
+    CLIMATE, WARM_CROPS, isWarmCrop, baseTempFor, CLIMATE_DAMP, climateAdjustedDTM,
+    irIsoToDate, irDateToISO, irAddDays, irDiffDays, irDayOfYear,
+    svp, et0Ra, et0WindTo2m, et0Daily, ET0_MAX,
+    KC_BY_TYPE, KC_BY_NAME, KC_FALLBACK, KC_BARE, KC_STAGES, kcProfile, kcOnDay,
+    IRRIG_INTERCEPTION_MM, IRRIG_TUNNEL_FACTOR, IRRIG_DEFAULT_DAYS,
+    plantingSeasonFrac, bedCropStateOn, irrigBedBalance, weightedPercentile,
+    irrigBlockPlan, indexIrrigationByBed, irrigPlan,
     DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields,
     STATUS_ORDER, statusRank, apLifecycle,
     wkParse, wkISO, wkMonday, wkAddDays, wkSameDay,

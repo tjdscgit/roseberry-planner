@@ -1,0 +1,10 @@
+{
+  "name": "roseberry-weather",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pulls the farm's Ecowitt station history into weather_observations, with FAO-56 ET0 computed by planner-shared.js. Run from GitHub Actions.",
+  "main": "ingest.js",
+  "scripts": {
+    "ingest": "node ingest.js"
+  }
+}

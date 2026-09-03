@@ -1,0 +1,58 @@
+name: Weather ingest
+
+# Once a day, not every fifteen minutes. There is one new row per day to fetch and Ecowitt rate-limit
+# their API, so a frequent poll would buy nothing and risk being throttled at the moment it matters.
+#
+# 20:20 UTC is about 06:20 AEST — after the farm's day has closed at the station, and before anyone
+# opens the irrigation page to decide what to water. Deliberately a separate workflow from
+# notify.yml: that one runs 96 times a day for task reminders, and a weather API failure must not
+# take the reminders down with it.
+on:
+  schedule:
+    - cron: "20 20 * * *"
+  workflow_dispatch:
+    inputs:
+      backfill_days:
+        description: "How many days back to fetch (use 400 once, to seed the soil-water balance with history)"
+        type: string
+        default: "2"
+      dry_run:
+        description: "Fetch and print, but write nothing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    # Two runs overlapping would upsert the same days concurrently. Harmless — the unique index
+    # makes it idempotent — but there is no reason to pay Ecowitt's rate limit twice for it.
+    concurrency:
+      group: weather-ingest
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # No dependencies: the job uses built-in fetch and requires ../planner-shared.js directly.
+      # The step is kept so adding one later doesn't need the workflow reopened.
+      - name: Install
+        working-directory: weather
+        run: npm install --omit=dev --no-audit --no-fund
+
+      - name: Fetch and store
+        working-directory: weather
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ECOWITT_APPLICATION_KEY: ${{ secrets.ECOWITT_APPLICATION_KEY }}
+          ECOWITT_API_KEY: ${{ secrets.ECOWITT_API_KEY }}
+          ECOWITT_MAC: ${{ secrets.ECOWITT_MAC }}
+          BACKFILL_DAYS: ${{ inputs.backfill_days }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node ingest.js

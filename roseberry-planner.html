@@ -221,6 +221,19 @@
   .bd-issue{border:1px solid var(--line-2);border-radius:10px;padding:.7rem .8rem;
     background:var(--paper);display:flex;flex-direction:column;gap:.6rem}
   .bd-issue-line{display:flex;flex-wrap:wrap;align-items:flex-end;gap:.6rem}
+  /* Dripline panel. Set apart from the issue cards above it because it describes the bed's
+     plumbing, not a problem with the bed — a dashed edge reads as "reference", not "attention". */
+  .bd-irrig{border-style:dashed}
+  .bd-irrig-hd{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;
+    letter-spacing:.06em;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:.5rem;align-items:baseline}
+  .bd-irrig-sub{text-transform:none;letter-spacing:0;font-size:.7rem;color:var(--ink-3,var(--ink-2));
+    font-family:inherit;opacity:.85}
+  .bd-irrig-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(10.5rem,1fr));gap:.55rem}
+  .bd-irrig-f{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);
+    font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
+  .bd-irrig-f input,.bd-irrig-f select{width:100%;max-width:none}
+  .bd-irrig-out{font-size:.78rem;color:var(--ink-2);font-family:var(--mono)}
+  .bd-irrig-warn{display:block;margin-top:.35rem;color:var(--warn,#b45309);font-family:inherit}
   .bd-issue-line label{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);
     font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2)}
   .bd-issue-line label.bd-grow{flex:1 1 100%}
@@ -393,6 +406,16 @@
     background:rgba(0,0,0,.45);padding:1rem}
   #bpModal.open{display:flex}
   #bpModal .wk-task-form input{width:100%}
+  #irLogModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.45);padding:1rem}
+  #irLogModal.open{display:flex}
+  #irLogModal .wk-task-form input,#irLogModal .wk-task-form select{width:100%}
+  /* What the entered minutes actually come to, updating as they are typed. Logging a run is the
+     one place a wrong number silently corrupts the model for weeks, so the consequence is shown
+     before it is saved rather than inferred afterwards. */
+  .ir-logsum{font-family:var(--mono);font-size:.78rem;color:var(--ink-2);line-height:1.5;
+    border:1px solid var(--line);border-radius:8px;background:var(--paper-2);padding:.5rem .65rem}
+  .ir-logsum b{color:var(--ink);font-weight:650}
   .bd-conflicts{display:flex;flex-direction:column;gap:.5rem;max-width:900px}
   .bd-conflict{display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;
     padding:.6rem .75rem;border-radius:10px;background:var(--paper-2);color:var(--ink);
@@ -1642,6 +1665,99 @@
     .fc-out{grid-template-columns:1fr 1fr}
   }
 
+  /* ---------- Irrigation ----------
+     Read at 6am on a phone, standing in the dark deciding what to turn on. That is the whole brief.
+     One scrolling column of block cards, most urgent first, each answering a single question in
+     figures big enough to read at arm's length: how many minutes.
+
+     Borrows the fertigation calculator's card, stat and warning idioms rather than inventing a
+     second visual language for the same kind of instrument. */
+  #view-irrig{overflow:auto;-webkit-overflow-scrolling:touch}
+  .ir-wrap{max-width:52rem;width:100%;margin:0 auto;padding:1rem 1.1rem 4rem;
+    display:flex;flex-direction:column;gap:1rem}
+  .ir-card{border:1px solid var(--line-2);border-radius:12px;background:var(--paper);
+    padding:.9rem 1rem}
+  .ir-card > h3{margin:0 0 .1rem;font-size:.95rem;display:flex;align-items:baseline;
+    justify-content:space-between;gap:.6rem;flex-wrap:wrap}
+  .ir-hint{font-size:.8rem;color:var(--ink-2);line-height:1.45;margin:.25rem 0 0}
+  .ir-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.55rem;
+    margin-top:.7rem}
+  .ir-stat{border:1px solid var(--line);border-radius:10px;background:var(--paper-2);
+    padding:.55rem .7rem}
+  .ir-stat .k{font-family:var(--mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.07em;
+    color:var(--ink-2);display:block}
+  .ir-stat .v{font-family:var(--mono);font-size:1.25rem;font-weight:650;line-height:1.25;
+    display:block;margin-top:.15rem}
+  .ir-stat .u{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-left:.2rem;
+    font-weight:400}
+  .ir-stat .n{font-size:.72rem;color:var(--ink-2);display:block;margin-top:.1rem;line-height:1.3}
+  .ir-stat.hero{border-color:var(--steel);background:color-mix(in srgb,var(--steel) 8%,transparent)}
+  .ir-stat.hero .v{font-size:1.85rem}
+  .ir-note{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-top:.55rem;line-height:1.5}
+  .ir-warn{display:flex;gap:.5rem;align-items:flex-start;border:1px solid var(--clay);
+    border-radius:10px;background:color-mix(in srgb,var(--clay) 8%,transparent);
+    padding:.5rem .7rem;font-size:.84rem;line-height:1.45;margin-top:.55rem}
+  .ir-warn .m{color:var(--clay);font-weight:700;flex:0 0 auto}
+
+  /* A block that is due, and one that is not, must be distinguishable across a dark yard without
+     reading a word of it — hence the left edge, not a badge. */
+  .ir-block{border-left:4px solid var(--line-2)}
+  .ir-block.due{border-left-color:var(--clay)}
+  .ir-block.ok{opacity:.72}
+  .ir-block.ok .ir-out{margin-top:.45rem}
+  .ir-blocktitle{font-family:var(--mono);font-size:1rem;letter-spacing:.04em;font-weight:650}
+  .ir-blockstate{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
+    letter-spacing:.08em;padding:.15rem .45rem;border-radius:999px;border:1px solid var(--line-2);
+    color:var(--ink-2)}
+  .ir-blockstate.due{color:var(--clay);border-color:var(--clay);
+    background:color-mix(in srgb,var(--clay) 10%,transparent)}
+  .ir-sub{font-size:.78rem;color:var(--ink-2);margin-top:.4rem;line-height:1.4}
+  .ir-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.65rem}
+  .ir-btn{font:inherit;font-size:.82rem;padding:.42rem .8rem;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink)}
+  .ir-btn:hover{border-color:var(--steel)}
+  .ir-btn.primary{border-color:var(--steel);background:color-mix(in srgb,var(--steel) 14%,transparent)}
+
+  /* The per-bed strip. This is the honest account of the block compromise: one valve, several
+     crops, and a bar per bed showing how far past its trigger it is and where this run leaves it.
+     It is the part of the page that stops the headline minutes being a black box. */
+  .ir-beds{margin-top:.7rem;display:flex;flex-direction:column;gap:.3rem}
+  .ir-bed{display:grid;grid-template-columns:3.4rem 1fr 4.2rem;gap:.5rem;align-items:center;
+    font-family:var(--mono);font-size:.72rem}
+  .ir-bed .nm{color:var(--ink);font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ir-bed .after{text-align:right;color:var(--ink-2);white-space:nowrap}
+  .ir-bed .after.short{color:var(--clay)}
+  .ir-bar{position:relative;height:.85rem;border-radius:4px;background:var(--paper-2);
+    border:1px solid var(--line);overflow:hidden}
+  .ir-bar .fill{position:absolute;left:0;top:0;bottom:0;background:var(--steel);opacity:.75}
+  .ir-bar.warm .fill{background:var(--wheat,#c9a227)}
+  .ir-bar.hot  .fill{background:var(--clay)}
+  /* Where the trigger sits, so a bar can be read against it rather than against nothing. */
+  .ir-bar .trig{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--ink-2);opacity:.55}
+  .ir-bed .crop{color:var(--ink-2);font-weight:400}
+  .ir-bedhd{display:grid;grid-template-columns:3.4rem 1fr 4.2rem;gap:.5rem;
+    font-family:var(--mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--ink-2);margin-top:.55rem}
+  .ir-bedhd .after{text-align:right}
+
+  .ir-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:.6rem;
+    margin-top:.7rem}
+  .ir-settings label{display:flex;flex-direction:column;gap:.2rem;font-family:var(--mono);
+    font-size:.62rem;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2)}
+  .ir-settings input,.ir-settings select{width:100%;max-width:none;padding:.45rem .55rem;
+    font-family:var(--mono);font-size:.9rem;border:1px solid var(--line-2);border-radius:8px;
+    background:var(--paper-2);color:var(--ink)}
+  .ir-fold{cursor:pointer;user-select:none}
+  .ir-fold::-webkit-details-marker{display:none}
+
+  @media(max-width:760px){
+    #view-irrig .cm-top > .sub{display:none}
+    .ir-wrap{padding:.7rem .75rem 4rem;gap:.75rem}
+    .ir-out{grid-template-columns:1fr 1fr}
+    .ir-bed,.ir-bedhd{grid-template-columns:2.8rem 1fr 3.6rem}
+    .ir-settings{grid-template-columns:1fr 1fr}
+  }
+
   /* ---------- Fertiliser programs ----------
      Designed for a phone propped on a shelf at arm's length while both hands are busy mixing.
      That drives every choice here: three shallow pages instead of one dense table, tap targets
@@ -2084,6 +2200,7 @@
     <button type="button" data-view="fertprog">Fertiliser programs</button>
     <button type="button" data-view="fertcost">Fertiliser costs</button>
     <button type="button" data-view="fertcalc">Fertigation calculator</button>
+    <button type="button" data-view="irrig">Irrigation</button>
   </div>
   <div class="tab-dd" id="sprayDropdown" hidden>
     <button type="button" data-view="sprayrec">Records</button>
@@ -2121,6 +2238,7 @@
     <button class="nav-drawer-item" data-view="fertprog">Fertiliser programs</button>
     <button class="nav-drawer-item" data-view="fertcost">Fertiliser costs</button>
     <button class="nav-drawer-item" data-view="fertcalc">Fertigation calculator</button>
+    <button class="nav-drawer-item" data-view="irrig">Irrigation</button>
     <button class="nav-drawer-item" data-view="farminfo">Reference library</button>
     <button class="nav-drawer-item" data-view="week">This week</button>
     <button class="nav-drawer-item" data-view="bedprep">Bed prep</button>
@@ -2887,6 +3005,15 @@
         <div id="fcResults"></div>
       </div>
     </section>
+
+    <section class="view" id="view-irrig">
+      <div class="cm-top">
+        <span class="sub">Irrigation &middot; from the farm's own weather station</span>
+      </div>
+      <div class="ir-wrap">
+        <div id="irResults"></div>
+      </div>
+    </section>
   </main>
 
   <!-- Fertiliser application log. Opened either from the rates page (program/round/block already
@@ -3019,6 +3146,30 @@
         <span class="spacer"></span>
         <button class="btn-ghost" id="bpCancel">Cancel</button>
         <button class="btn-primary" id="bpSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="irLogModal">
+    <div class="wk-group-card">
+      <button class="ap-x" id="irLogClose" title="Close">✕</button>
+      <div class="wk-group-title" id="irLogTitle">Log an irrigation run</div>
+      <div class="wk-task-form">
+        <label class="ap-trow-f"><span>Date</span><input type="date" id="irLogDate"></label>
+        <label class="ap-trow-f"><span>Minutes run</span>
+          <input type="number" id="irLogMinutes" min="0" step="1" inputmode="numeric"></label>
+        <div>
+          <div class="bd-excl-label">Beds</div>
+          <div class="bd-chips" id="irLogBedChips"></div>
+        </div>
+        <label class="ap-trow-f"><span>Notes</span>
+          <input type="text" id="irLogNotes" placeholder="Optional" maxlength="200"></label>
+        <div class="ir-logsum" id="irLogSummary"></div>
+      </div>
+      <div class="ap-actions">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="irLogCancel">Cancel</button>
+        <button class="btn-primary" id="irLogSave">Save</button>
       </div>
     </div>
   </div>
@@ -3727,7 +3878,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[] };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -3806,7 +3957,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -3841,6 +3992,9 @@ async function loadAll(){
       fwFetch(CFG.tables.bedPrepPlan),     // and the Bed prep page, which then just reads empty
       fwFetch(CFG.tables.bedZones),        // likewise: no bed_zones table ⇒ no zones, planner unchanged
       fwFetch(CFG.tables.fertProducts),    // and again: no prices ⇒ costs page shows usage, no dollars
+      fwFetch(CFG.tables.weatherObs),      // no weather table ⇒ irrigation page says so, rest unaffected
+      fwFetch(CFG.tables.irrigEvents),
+      fwFetch(CFG.tables.irrigSettings),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -3898,6 +4052,9 @@ async function loadAll(){
       x:num(b.fields[F.blk_x]), y:num(b.fields[F.blk_y]),
       orient:b.fields[F.blk_orient] || "Beds run vertical",
       preferredCropTypes:(b.fields[F.blk_prefTypes]||[]).slice(),
+      emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
+      lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
+      soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
     }));
 
     data.beds = beds.map(b => ({
@@ -3908,6 +4065,10 @@ async function loadAll(){
       category:b.fields[F.bed_category]||"",
       tunnel:!!b.fields[F.bed_tunnel],
       notes:b.fields[F.bed_notes]||"",
+      // Irrigation: null means inherit (bed -> block -> farm). See PlannerShared.irrigSpecFor.
+      emitSpacing:num(b.fields[F.bed_emitSpacing]), emitFlow:num(b.fields[F.bed_emitFlow]),
+      lines:num(b.fields[F.bed_lines]), wetWidth:num(b.fields[F.bed_wetWidth]),
+      soil:b.fields[F.bed_soil]||"",
     }));
 
     data.bedIssues = PlannerShared.parseBedIssues(bedIssues);
@@ -3999,6 +4160,13 @@ async function loadAll(){
       PlannerShared.parseFertApplications(fertApps),
       PlannerShared.parseFertApplicationItems(fertAppItems));
     data.fertProducts = PlannerShared.parseFertProducts(fertProducts);
+
+    // Irrigation. Settings parse to the farm defaults when the row (or the whole table) is absent,
+    // so every downstream caller gets a complete object and none of them need a null check.
+    data.weatherObs    = PlannerShared.parseWeatherObs(weatherObs);
+    data.weatherByDate = PlannerShared.indexWeatherByDate(data.weatherObs);
+    data.irrigEvents   = PlannerShared.parseIrrigationEvents(irrigEvents);
+    data.irrigSettings = PlannerShared.parseIrrigSettings(irrigSettings);
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -4400,6 +4568,7 @@ function showView(view){
   if(view==="fertprog") buildFertProg();
   if(view==="fertrec") buildFertRecords();
   if(view==="fertcalc") buildFertCalc();
+  if(view==="irrig") buildIrrig();
   if(view==="fertcost") buildFertCost();
 }
 document.querySelectorAll(".tab[data-view]").forEach(t=>t.onclick=()=>{
@@ -4441,7 +4610,8 @@ document.addEventListener("click",()=>{ document.querySelectorAll(".tab-dd").for
   // sub-views that live under a dropdown tab rather than their own top-level tab
   const DROPDOWN_PARENT={ beds:miscTab, seedbook:miscTab, misc:miscTab, tasklib:miscTab, croptasks:miscTab,
                           harvest:harvestTab, whiteboard:harvestTab, outlets:harvestTab, season:harvestTab,
-                          farminfo:infoTab, fertprog:infoTab, fertcost:infoTab, fertcalc:infoTab };
+                          farminfo:infoTab, fertprog:infoTab, fertcost:infoTab, fertcalc:infoTab,
+                          irrig:infoTab };
   if(!fab||!drawer) return;
   function open(){ drawer.classList.add("open"); backdrop.classList.add("open"); fab.setAttribute("aria-expanded","true"); }
   function close(){ drawer.classList.remove("open"); backdrop.classList.remove("open"); fab.setAttribute("aria-expanded","false"); }
@@ -7856,38 +8026,17 @@ function isoDiffDays(a,b){ if(!a||!b) return null; return Math.round((isoToDate(
 function todayISO(){ return dateToISO(new Date()); }
 
 // ---- Climate-adjusted DTM (Growing Degree Days) ----
-// Plants develop on accumulated warmth, not calendar days. We bank the crop's heat
-// requirement forward from its growth-start date through the farm's monthly average
-// temperatures; warm months bank faster (fewer days), cold months slower (more days).
-// CLIMATE.meanC = mean daily temp °C per month (Jan..Dec).
-// Sourced from the farm's own weather station (EasyWeather WIFI4DA1), 1075 daily means
-// over 3 years (Jul 2023 – Jul 2026). Regenerate from a fresh export the same way if updated.
-const CLIMATE = { meanC:[23.8,23.3,21.7,18.6,16.1,12.1,11.8,14.3,16.8,20.6,21.8,23.9] };
-CLIMATE.annual = CLIMATE.meanC.reduce((a,b)=>a+b,0)/12;   // ≈19.0 °C
-// Base (threshold) temperature per crop: warm-season crops need more warmth to grow.
-const WARM_CROPS = ["tomato","capsicum","chilli","chili","eggplant","cucumber","zucchini",
-  "pumpkin","squash","basil","bean","corn","melon","okra","sweet potato"];
-function isWarmCrop(name){ const n=(name||"").toLowerCase(); return WARM_CROPS.some(w=>n.includes(w)); }
-function baseTempFor(name){ return isWarmCrop(name) ? 10 : 4.5; }   // °C threshold
-const CLIMATE_DAMP = 0.5;   // pull toward nominal so the swing matches Heirloom's (calibrated on their Beets curve)
-// Season-adjusted days-to-maturity for a crop starting growth on startISO.
-function climateAdjustedDTM(cropName, nominalDTM, startISO){
-  if(!startISO || !nominalDTM || nominalDTM<=0) return nominalDTM;
-  const base = baseTempFor(cropName);
-  const reqGDD = nominalDTM * Math.max(0.5, CLIMATE.annual - base);   // heat units this crop needs
-  const d = isoToDate(startISO);
-  const cap = nominalDTM*3 + 60;   // safety bound (crop that can't mature this season)
-  let acc=0, days=0;
-  while(acc < reqGDD && days < cap){
-    acc += Math.max(0, CLIMATE.meanC[d.getMonth()] - base);
-    d.setDate(d.getDate()+1); days++;
-  }
-  let adj = Math.round(nominalDTM + CLIMATE_DAMP*(days - nominalDTM));   // damped toward nominal
-  // warm-season crops are at their genetic minimum in summer — they can't beat the rated days,
-  // they only slow down off-season (matches Heirloom's flat-in-summer cucumber curve)
-  if(isWarmCrop(cropName)) adj = Math.max(adj, nominalDTM);
-  return Math.max(1, adj);
-}
+// The implementation moved to planner-shared.js when the irrigation kernel started needing the
+// same growth-stage clock to decide which crop coefficient applies on a given day (and the Node
+// weather job needs it with no page around at all). These are aliases, not copies: two definitions
+// of a crop's adjusted DTM would eventually disagree, and the disagreement would show up as an
+// irrigation recommendation that contradicts the timeline on the same screen.
+const CLIMATE      = PlannerShared.CLIMATE;
+const WARM_CROPS   = PlannerShared.WARM_CROPS;
+const CLIMATE_DAMP = PlannerShared.CLIMATE_DAMP;
+const isWarmCrop   = PlannerShared.isWarmCrop;
+const baseTempFor  = PlannerShared.baseTempFor;
+const climateAdjustedDTM = PlannerShared.climateAdjustedDTM;
 const CLIMATE_PREF_KEY = "roseberry_climate_dtm";
 function loadClimatePref(){ return localStorage.getItem(CLIMATE_PREF_KEY) !== "0"; }   // default ON
 function saveClimatePref(on){ localStorage.setItem(CLIMATE_PREF_KEY, on ? "1" : "0"); }
@@ -9584,8 +9733,65 @@ function bdIssuesRow(bed){
   add.type="button"; add.className="cr-add-variety"; add.textContent="+ Add issue…";
   add.onclick=async()=>{ if(await bdAddIssue(bed)) buildBedsTab(); };
   wrap.appendChild(add);
+  wrap.appendChild(bdIrrigCard(bed));
   td.appendChild(wrap); tr.appendChild(td);
   return tr;
+}
+
+/* ---- Dripline on this bed. Lives in the expanded row rather than the main table because the
+   beds table is already eight columns wide and these five are read once a season, not weekly.
+   Every field is blank-by-default and blank means inherit, so the placeholder shows the value
+   that would be used and where it comes from — which is the whole answer to "why is this bed's
+   run time different from its neighbour's". ---- */
+// Shared by the bed dripline panel and the irrigation page: trailing zeros on a run time read as
+// false precision, so they go.
+function irNum(v,d=1){ return (v==null||!isFinite(v)) ? "—" : (+v).toFixed(d).replace(/\.0+$/,""); }
+
+function bdIrrigCard(bed){
+  const box=document.createElement("div");
+  box.className="bd-issue bd-irrig";
+  const spec=PlannerShared.irrigSpecFor(bed, data.blocks, data.irrigSettings);
+  const src=k=>spec.from[k]==="bed" ? "" : ` (from ${spec.from[k]})`;
+  const soils=Object.keys(PlannerShared.SOIL_TYPES);
+  const numCell=(k,label,step,val,shown)=>
+    `<label class="bd-irrig-f"><span>${esc(label)}</span>`
+   +`<input class="cr-num" type="number" min="0" step="${step}" data-ik="${k}" value="${val??""}"`
+   +` placeholder="${esc(String(shown??"—"))}${esc(src(k))}"></label>`;
+
+  box.innerHTML=
+    `<div class="bd-irrig-hd">Dripline &amp; soil`
+   +`<span class="bd-irrig-sub">blank = inherit from ${esc(spec.blockName||"the farm default")}</span></div>`
+   +`<div class="bd-irrig-grid">`
+   + numCell("emitSpacing","Emitter spacing cm","1",bed.emitSpacing,spec.emitSpacing)
+   + numCell("emitFlow","Emitter flow L/hr","0.1",bed.emitFlow,spec.emitFlow)
+   + numCell("lines","Driplines per bed","1",bed.lines,spec.lines)
+   + numCell("wetWidth","Wetted width m","0.05",bed.wetWidth,spec.wetWidth)
+   +`<label class="bd-irrig-f"><span>Soil type</span><select data-ik="soil">`
+   + `<option value="">— ${esc(spec.soil)}${esc(src("soil"))}</option>`
+   + soils.map(o=>`<option${o===bed.soil?" selected":""}>${esc(o)}</option>`).join("")
+   +`</select></label></div>`
+   +`<div class="bd-irrig-out">${
+       spec.known
+         ? `${spec.emitters} emitters · ${irNum(spec.flowLph,0)} L/hr · `
+           +`${irNum(spec.appRateMmHr,1)} mm/hr · 10 mm takes `
+           +`${irNum(PlannerShared.irrigRunTime(spec,10,(data.irrigSettings||{}).eff).minutes,0)} min`
+         : `Bed length is blank, so no run time can be worked out for this bed.`
+     }${spec.blockMatch && spec.blockMatch.ambiguous
+         ? ` <span class="bd-irrig-warn">Block "${esc(bed.block)}" matches ${
+             esc(spec.blockMatch.candidates.map(c=>c.name).join(" and "))
+           } — using ${esc(spec.blockName)}. Rename the bed's block to be sure.</span>`
+         : ""}</div>`;
+
+  box.querySelectorAll('[data-ik]').forEach(el=>{
+    el.onchange=async e=>{
+      const k=el.dataset.ik;
+      const v = k==="soil" ? (e.target.value||"")
+                           : (e.target.value===""?null:(+e.target.value));
+      await saveBed(bed.id,k,v);
+      buildBedsTab();   // the derived line above is now stale whichever way the write went
+    };
+  });
+  return box;
 }
 
 function bdIssueCard(bed,i){
@@ -9642,7 +9848,9 @@ function bdIssueCard(bed,i){
 
 /* ---- Bed + issue writes. Optimistic with rollback, same shape as saveTrayType. ---- */
 const BD_BED_FIELDS={ category:"bed_category", tunnel:"bed_tunnel", notes:"bed_notes",
-                      len:"bed_len", wid:"bed_wid", order:"bed_order" };
+                      len:"bed_len", wid:"bed_wid", order:"bed_order",
+                      emitSpacing:"bed_emitSpacing", emitFlow:"bed_emitFlow",
+                      lines:"bed_lines", wetWidth:"bed_wetWidth", soil:"bed_soil" };
 async function saveBed(id,key,val){
   const bed=(data.beds||[]).find(b=>b.id===id); if(!bed) return;
   const prev=bed[key];
@@ -14885,6 +15093,457 @@ function fiCloseFile(){
 
    Everything is converted to the table's own units (PSI / GPM / GPH) on the way in and back out
    again for display, so no figure is ever rounded twice. */
+/* ==========================================================================
+   Irrigation calculator
+   ==========================================================================
+   Answers one question — which blocks need water this morning, and for how many minutes — from the
+   weather station's record of what actually fell and what the crop actually used.
+
+   All the arithmetic lives in planner-shared.js (et0Daily, irrigBedBalance, irrigBlockPlan,
+   irrigPlan). This file does units, wording and DOM, exactly as the fertigation calculator does,
+   so the numbers on screen and the numbers the ingest job stores come from one implementation.
+
+   The two things this page must never do: present a confident figure computed from stale weather,
+   and hide the fact that one valve waters several crops at different stages. The conditions strip
+   handles the first; the per-bed strip handles the second. */
+
+const IR_EXPANDED = new Set();   // which block cards are open, kept across re-renders
+
+function buildIrrig(){ irRender(); }
+
+// Everything the page needs, recomputed from `data` each render. Cheap enough — a 60-day walk over
+// ~180 beds is a few milliseconds — and recomputing beats caching something that would go stale the
+// moment a run is logged.
+function irPlan(){
+  return PlannerShared.irrigPlan({
+    beds:data.beds, blocks:data.blocks, plantings:data.plantingsActive || data.plantings,
+    weatherByDate:data.weatherByDate, weatherObs:data.weatherObs,
+    irrigEvents:data.irrigEvents, irrigSettings:data.irrigSettings,
+  }, todayISO());
+}
+
+function irStat(k,v,u,note,cls){
+  return `<div class="ir-stat ${cls||""}"><span class="k">${esc(k)}</span>`
+       + `<span class="v">${esc(v)}${u?`<span class="u">${esc(u)}</span>`:""}</span>`
+       + (note?`<span class="n">${esc(note)}</span>`:"") + `</div>`;
+}
+function irWarnBox(text){
+  return `<div class="ir-warn"><span class="m">!</span><span>${text}</span></div>`;
+}
+
+// Warning codes carry data, not prose, so the wording lives here where it can be changed without
+// touching the kernel — and so the same code can read differently in different places.
+function irWarnText(w){
+  switch(w.code){
+    case "block_split_needed":
+      return `${esc(w.beds.join(" and "))} will still be short after this run. `
+           + `Hand-water ${w.beds.length>1?"them":"it"}, or run the block again tomorrow.`;
+    case "over_capacity":
+      return `${esc(w.beds.join(" and "))} will take more than the root zone can hold — `
+           + `the excess drains straight past it. Usually means the bed is empty or was watered recently.`;
+    case "over_pump":
+      return `This block wants ${irNum(w.blockFlowLph,0)} L/hr but the pump is set at `
+           + `${irNum(w.pumpLph,0)} L/hr. Pressure will drop and the far end will get less than the near end.`;
+    case "low_app_rate":
+      return `At ${irNum(w.mmPerHr,1)} mm/hr this dripline is slow — the runs will be long. `
+           + `Check the emitter flow and spacing on the beds in this block.`;
+    case "high_app_rate":
+      return `At ${irNum(w.mmPerHr,1)} mm/hr water goes on faster than clay loam takes it in. `
+           + `Two shorter runs will soak in where one long one would pond.`;
+    case "no_usable_beds":
+      return `No bed in this block has a length recorded, so there is nothing to work a run time from.`;
+    case "missing_weather_days":
+      return `${w.days} day${w.days===1?"":"s"} in this window had no weather reading.`;
+    case "deficit_capped":
+      return `The deficit hit the soil's total capacity on ${w.days} day${w.days===1?"":"s"} — `
+           + `the model has lost track. Log an irrigation, or move the balance start date forward.`;
+    case "no_dripline_spec":
+      return `No bed length recorded, so no run time can be worked out.`;
+    case "uncalibrated":
+      return `The soil-water model has run out of road here — the deficit has been sitting at the `
+           + `soil's full capacity, which almost always means water went on and wasn't logged. `
+           + `Log a run below (any run, even an estimate) and the figures come back.`;
+    case "balance_saturated":
+      return `This bed's deficit is pinned at the soil's capacity, so the real figure is at least `
+           + `this and possibly more.`;
+    default:
+      return esc(w.code);
+  }
+}
+
+function irRender(){
+  const box=document.getElementById("irResults"); if(!box) return;
+  const set=data.irrigSettings || PlannerShared.parseIrrigSettings([]);
+
+  if(!(data.weatherObs||[]).length){
+    box.innerHTML=`<div class="ir-card"><h3>No weather yet</h3>
+      <p class="ir-hint">This page works from the farm's own Ecowitt station: it reads what fell and
+      what the crop used, and turns the difference into a run time. Nothing has been recorded yet.</p>
+      <p class="ir-hint">The <code>Weather ingest</code> GitHub Action fills this in once a day. Run it
+      manually with a large <em>backfill_days</em> to seed it with history — without a couple of weeks
+      behind it the soil-water balance is starting from a guess.</p></div>`
+      + irSettingsCard(set);
+    return;
+  }
+
+  const plan=irPlan();
+  let html="";
+
+  /* ---- Conditions. Stale weather producing confident run times is the one way this page could
+     actually do harm, so the staleness check comes before anything else on the screen. ---- */
+  if(plan.staleDays!=null && plan.staleDays>1){
+    html+=irWarnBox(
+      `The last weather reading is from ${esc(fmt(plan.latest.date))}, ${plan.staleDays} days ago. `
+      + `Everything below is running on old numbers — treat the run times as a rough guide until the `
+      + `station reports again.`);
+  }
+  const lastEt0 = plan.latest ? plan.latest.et0 : null;
+  html+=`<div class="ir-card"><h3>Conditions</h3>
+    <div class="ir-out">
+      ${irStat("ET0 last reading", irNum(lastEt0,1), "mm",
+               plan.latest ? fmt(plan.latest.date)+(plan.latest.method==="hargreaves"?" · estimated":"") : "")}
+      ${irStat("Rain, 7 days", irNum(plan.rain7,1), "mm")}
+      ${irStat("Crop demand, 7 days", irNum(plan.et07,1), "mm", "reference ET0, before crop factor")}
+      ${irStat("Balance from", plan.start ? fmt(plan.start) : "—", "",
+               "soil assumed full on this date")}
+    </div></div>`;
+
+  /* ---- Blocks, most urgent first. ---- */
+  const due=plan.blocks.filter(b=>b.needsWater);
+  const ok=plan.blocks.filter(b=>!b.needsWater);
+
+  if(!plan.blocks.length){
+    html+=`<div class="ir-card"><h3>No blocks</h3>
+      <p class="ir-hint">No bed has a block recorded, so there is nothing to group a valve around.</p></div>`;
+  }
+  if(plan.blocks.length && !due.length){
+    html+=`<div class="ir-card"><h3>Nothing is due</h3>
+      <p class="ir-hint">Every block is still above its trigger point. The soonest is
+      ${esc(irSoonest(plan.blocks))}.</p></div>`;
+  }
+  due.forEach(b=>{ html+=irBlockCard(b, set, true); });
+  ok.forEach(b=>{ html+=irBlockCard(b, set, false); });
+
+  html+=irSettingsCard(set);
+  html+=`<div class="ir-card"><h3>What this is doing</h3>
+    <p class="ir-hint">Reference evapotranspiration from the station (FAO-56 Penman-Monteith), scaled
+    by a crop coefficient that follows each planting through its season, minus rainfall, tracked as a
+    running soil-water deficit per bed. A bed is due when that deficit passes the water its crop can
+    readily draw on — shallow-rooted crops reach that point sooner, which is why a lettuce and a
+    tomato at the same deficit are not equally urgent.</p>
+    <p class="ir-note">It assumes the soil was at field capacity on the balance start date, and it
+    only knows about irrigation that has been logged here. It is an estimate to argue with, not an
+    instruction — if it disagrees with what the soil looks like when you dig, the soil is right, and
+    the soil type or wetted width is the setting to change.</p></div>`;
+
+  box.innerHTML=html;
+  irWire();
+}
+
+function irSoonest(blocks){
+  const withDays=blocks.filter(b=>isFinite(b.daysToTrigger)).sort((a,b)=>a.daysToTrigger-b.daysToTrigger);
+  if(!withDays.length) return "not something the data can say yet";
+  const b=withDays[0];
+  const d=Math.round(b.daysToTrigger);
+  return `${b.block} in about ${d===0?"a day":d+" day"+(d===1?"":"s")}`;
+}
+
+function irBlockCard(b, set, due){
+  const open=IR_EXPANDED.has(b.block);
+  const days=Math.round(b.daysToTrigger);
+  let html=`<div class="ir-card ir-block ${due?"due":"ok"}">
+    <h3><span class="ir-blocktitle">Block ${esc(b.block)}</span>
+      <span class="ir-blockstate ${due?"due":""}">${
+        due ? "needs water"
+            : (isFinite(b.daysToTrigger) ? `ok · ~${days<=0?"today":days+"d"}` : "ok")
+      }</span></h3>`;
+
+  if(due && b.saturated){
+    // No minutes here on purpose. A number this page cannot stand behind is worse than no number:
+    // it gets acted on once, turns out wrong, and the page is never opened again.
+    html+=`<div class="ir-out">
+      ${irStat("Needs water", "yes", "", "but how much can't be worked out yet", "hero")}
+      ${irStat("At least", irNum(b.targetMm,0), "mm", "the model stopped counting here")}
+    </div>`;
+  }else if(due){
+    html+=`<div class="ir-out">
+      ${irStat("Run for", irNum(b.minutes,0), "min", "", "hero")}
+      ${irStat("Water on", irNum(b.targetMm,1), "mm", "across the block")}
+      ${irStat("Total", irNum(b.litres,0), "L", b.blockFlowLph ? irNum(b.blockFlowLph,0)+" L/hr flowing" : "")}
+    </div>`;
+    html+=`<div class="ir-sub">${b.beds.length} bed${b.beds.length===1?"":"s"} on this valve · `
+        + `driest is ${esc(b.driest.bed.name)} at ${irNum(b.driest.stress*100,0)}% of its trigger`
+        + (b.ceilingBit ? ` · held back so the wettest bed doesn't drain` : "") + `</div>`;
+  }
+  if(due && b.saturated){
+    html+=`<div class="ir-sub">${b.beds.length} bed${b.beds.length===1?"":"s"} on this valve · `
+        + `driest is ${esc(b.driest.bed.name)}</div>`;
+  }
+  if(!due){
+    html+=`<div class="ir-sub">${b.beds.length} bed${b.beds.length===1?"":"s"} · `
+        + `driest is ${esc(b.driest.bed.name)} at ${irNum(b.driest.stress*100,0)}% of its trigger`
+        + (isFinite(b.daysToTrigger) && days>0 ? ` · due in about ${days} day${days===1?"":"s"}` : "")
+        + `</div>`;
+  }
+
+  b.warnings.forEach(w=>{ html+=irWarnBox(irWarnText(w)); });
+
+  html+=`<div class="ir-actions">
+    <button type="button" class="ir-btn" data-irtoggle="${esc(b.block)}">${open?"Hide beds":"Show beds"}</button>`
+    + (due ? `<button type="button" class="ir-btn primary" data-irlog="${esc(b.block)}">Log this run</button>` : "")
+    + `</div>`;
+
+  if(open) html+=irBedStrip(b);
+  html+=`</div>`;
+  return html;
+}
+
+/* One row per bed: how far past its trigger it is now, and where this run leaves it.
+   The bar is scaled so the trigger sits at a fixed place regardless of the crop, which is what lets
+   beds with very different root depths be compared down a single column. */
+function irBedStrip(b){
+  const TRIG_AT=0.62;          // where the trigger line sits across the bar
+  let html=`<div class="ir-bedhd"><span>Bed</span><span>Deficit against trigger</span>
+    <span class="after">After</span></div><div class="ir-beds">`;
+  b.beds.forEach(bd=>{
+    const ratio=bd.raw>0 ? bd.deficit/bd.raw : 0;
+    const pct=Math.max(2, Math.min(100, ratio*TRIG_AT*100));
+    const heat = ratio>=1 ? "hot" : ratio>=0.6 ? "warm" : "";
+    const crop = bd.occupants.length
+      ? bd.occupants.map(o=>o.crop).join(", ")
+      : "fallow";
+    const after = bd.shortMm>0.5 ? `−${irNum(bd.shortMm,1)}`
+                : bd.overMm>0.5  ? `+${irNum(bd.overMm,1)}`
+                : "✓";
+    const cls = bd.shortMm>0.5 ? " short" : "";
+    const spec = bd.spec;
+    const outcome = bd.shortMm>0.5 ? `still ${irNum(bd.shortMm,1)} mm short after this run`
+                  : bd.overMm>0.5  ? `${irNum(bd.overMm,1)} mm more than it can hold`
+                  : `refilled to field capacity`;
+    const title = `${bd.bed.name} — ${outcome}. Deficit ${irNum(bd.deficit,1)} mm, trigger ${irNum(bd.raw,1)} mm, `
+                + `capacity ${irNum(bd.taw,1)} mm · Kc ${irNum(bd.kc,2)} · roots ${bd.zr} m · `
+                + `${spec.soil} · ${irNum(spec.appRateMmHr,1)} mm/hr`;
+    html+=`<div class="ir-bed" title="${esc(title)}">
+      <span class="nm">${esc(bd.bed.name)}</span>
+      <span class="ir-bar ${heat}"><span class="fill" style="width:${pct.toFixed(1)}%"></span>
+        <span class="trig" style="left:${(TRIG_AT*100).toFixed(0)}%"></span></span>
+      <span class="after${cls}">${esc(after)}</span>
+    </div>
+    <div class="ir-bed"><span class="nm"></span><span class="crop">${esc(crop)}</span><span></span></div>`;
+  });
+  html+=`</div>`;
+  return html;
+}
+
+function irSettingsCard(set){
+  const soils=Object.keys(PlannerShared.SOIL_TYPES);
+  const f=(k,label,val,step,hint)=>
+    `<label><span>${esc(label)}</span>
+      <input type="number" step="${step}" data-irset="${k}" value="${val==null?"":val}"
+        ${hint?`placeholder="${esc(hint)}"`:""}></label>`;
+  return `<details class="ir-card"><summary class="ir-fold"><strong>Settings</strong>
+      <span class="ir-hint" style="margin-left:.4rem">how the compromise is struck, and the farm's own numbers</span></summary>
+    <div class="ir-settings">
+      <label><span>Cover this much of the block</span>
+        <input type="number" min="0" max="100" step="5" data-irset="percentile" value="${set.percentile}"></label>
+      ${f("eff","Irrigation efficiency",set.eff,"0.05")}
+      ${f("overshoot","Allowed overshoot",set.overshoot,"0.05")}
+      <label><span>Default soil type</span><select data-irset="soil">
+        ${soils.map(o=>`<option${o===set.soil?" selected":""}>${esc(o)}</option>`).join("")}
+      </select></label>
+      ${f("emitSpacing","Default emitter spacing cm",set.emitSpacing,"1")}
+      ${f("emitFlow","Default emitter flow L/hr",set.emitFlow,"0.1")}
+      ${f("lines","Default driplines per bed",set.lines,"1")}
+      ${f("pumpFlow","Pump flow L/hr",set.pumpFlow,"10","not set")}
+      <label><span>Balance start date</span>
+        <input type="date" data-irset="start" value="${esc(set.start||"")}"></label>
+    </div>
+    <p class="ir-note">"Cover this much of the block" is the compromise one valve forces. At 100 the
+    run matches the thirstiest bed and everything else gets too much; at 50 it matches the middle and
+    the driest quarter runs short. 75 is the default. Whatever it is set to, no run is allowed to put
+    more on than the wettest cropped bed can hold — past that, water drains below the roots and takes
+    nitrate with it.</p>
+  </details>`;
+}
+
+function irWire(){
+  document.querySelectorAll("[data-irtoggle]").forEach(el=>{
+    el.onclick=()=>{
+      const k=el.dataset.irtoggle;
+      IR_EXPANDED.has(k) ? IR_EXPANDED.delete(k) : IR_EXPANDED.add(k);
+      irRender();
+    };
+  });
+  document.querySelectorAll("[data-irlog]").forEach(el=>{
+    el.onclick=()=>irLogRun(el.dataset.irlog);
+  });
+  document.querySelectorAll("[data-irset]").forEach(el=>{
+    el.onchange=()=>irSaveSetting(el.dataset.irset, el);
+  });
+}
+
+/* ---- Settings write straight through to the single 'farm' row. Optimistic with rollback, the same
+   shape as saveBed, because a setting that appears to save and silently didn't would show up later
+   as a run time nobody can explain. ---- */
+const IR_SET_FIELDS={ percentile:"is_percentile", eff:"is_eff", overshoot:"is_overshoot",
+                      soil:"is_soil", emitSpacing:"is_emitSpacing", emitFlow:"is_emitFlow",
+                      lines:"is_lines", pumpFlow:"is_pumpFlow", start:"is_start" };
+async function irSaveSetting(key, el){
+  const set=data.irrigSettings; if(!set) return;
+  const raw=el.value;
+  const val = (key==="soil") ? (raw||"")
+            : (key==="start") ? (raw||null)
+            : (raw===""? null : (+raw));
+  const prev=set[key];
+  set[key]=val;
+  irRender();
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.irrigSettings, set.id || "farm",
+                  {[CFG.f[IR_SET_FIELDS[key]]]:val});
+  }catch(e){
+    set[key]=prev; irRender();
+    console.error(e);
+    alert("Couldn't save that setting:\n"+e.message);
+  }
+}
+
+/* ---- Logging a run. This is what closes the loop: without it the deficit never resets and every
+   block reads red forever, so it has to be quicker than not bothering.
+
+   Minutes are prefilled with the recommendation but stay editable, because what actually happened
+   is worth more to the model than what was suggested — someone who ran it for 40 minutes instead of
+   115 should be able to say so in one field. Beds default to the whole block (one valve, everything
+   under it) and are only worth narrowing when a hose was dragged somewhere specific. ---- */
+let irLogState = { block:null, beds:null };
+
+function irLogRun(blockName){
+  const plan=irPlan();
+  const b=plan.blocks.find(x=>x.block===blockName);
+  if(!b) return;
+  irLogState={ block:blockName, beds:new Set() };   // empty = the whole block
+
+  document.getElementById("irLogTitle").textContent=`Log a run on block ${blockName}`;
+  document.getElementById("irLogDate").value=todayISO();
+  document.getElementById("irLogMinutes").value = b.saturated ? "" : String(Math.round(b.minutes));
+  document.getElementById("irLogNotes").value="";
+  irLogChips(b);
+  irLogSummary();
+  document.getElementById("irLogModal").classList.add("open");
+  document.getElementById("irLogMinutes").focus();
+}
+
+function irLogChips(b){
+  const box=document.getElementById("irLogBedChips");
+  box.innerHTML=`<button type="button" class="cm-type-chip" data-irbed="">Whole block</button>`
+    + b.beds.map(x=>`<button type="button" class="cm-type-chip" data-irbed="${esc(x.bed.id)}">${esc(x.bed.name)}</button>`).join("");
+  irLogPaintChips();
+  box.querySelectorAll("[data-irbed]").forEach(el=>{
+    el.onclick=()=>{
+      const id=el.dataset.irbed;
+      if(!id) irLogState.beds.clear();
+      else irLogState.beds.has(id) ? irLogState.beds.delete(id) : irLogState.beds.add(id);
+      irLogPaintChips(); irLogSummary();
+    };
+  });
+}
+function irLogPaintChips(){
+  document.querySelectorAll("#irLogBedChips [data-irbed]").forEach(el=>{
+    const id=el.dataset.irbed;
+    const on = id ? irLogState.beds.has(id) : irLogState.beds.size===0;
+    el.setAttribute("aria-pressed", on ? "true" : "false");
+    el.style.opacity = on ? "1" : ".5";
+  });
+}
+
+// Minutes -> millimetres, through the same dripline the recommendation came from, so a run logged
+// at the suggested length lands on exactly the suggested depth. Where beds differ, the depth
+// differs with them — that is the honest answer, and the summary says so.
+function irLogDepths(){
+  const plan=irPlan();
+  const b=plan.blocks.find(x=>x.block===irLogState.block);
+  if(!b) return [];
+  const mins=parseFloat(document.getElementById("irLogMinutes").value);
+  if(!isFinite(mins) || mins<=0) return [];
+  const eff=(data.irrigSettings||{}).eff || PlannerShared.IRRIG_DEFAULTS.eff;
+  const chosen = irLogState.beds.size
+    ? b.beds.filter(x=>irLogState.beds.has(x.bed.id))
+    : b.beds;
+  return chosen.map(x=>({
+    bed:x.bed, spec:x.spec,
+    mm: x.spec.appRateMmHr>0 ? mins*x.spec.appRateMmHr/60*eff : null,
+    deficit:x.deficit,
+  }));
+}
+
+function irLogSummary(){
+  const box=document.getElementById("irLogSummary");
+  const rows=irLogDepths();
+  if(!rows.length){ box.innerHTML=`Enter the minutes the valve actually ran for.`; return; }
+  const mms=rows.map(r=>r.mm).filter(v=>v!=null);
+  if(!mms.length){ box.innerHTML=`These beds have no dripline recorded, so the depth can't be worked out — the run will still be logged.`; return; }
+  const lo=Math.min(...mms), hi=Math.max(...mms);
+  const depth = Math.abs(hi-lo)<0.05 ? `<b>${irNum(lo,1)} mm</b>` : `<b>${irNum(lo,1)}–${irNum(hi,1)} mm</b>`;
+  const litres=rows.reduce((s,r)=> s + (r.mm!=null && r.spec.wetArea ? r.mm*r.spec.wetArea : 0), 0);
+  const stillShort=rows.filter(r=>r.mm!=null && r.deficit-r.mm > 2);
+  box.innerHTML = `That puts ${depth} on ${rows.length} bed${rows.length===1?"":"s"}`
+    + (litres>0 ? ` — about <b>${irNum(litres,0)} L</b>.` : ".")
+    + (stillShort.length
+        ? `<br>${esc(stillShort.map(r=>r.bed.name).join(", "))} will still be short afterwards.`
+        : `<br>That refills every bed selected.`);
+}
+
+async function irLogSave(){
+  const rows=irLogDepths();
+  const minutes=parseFloat(document.getElementById("irLogMinutes").value);
+  if(!isFinite(minutes) || minutes<=0){ alert("Enter how many minutes the valve ran for."); return; }
+  const date=document.getElementById("irLogDate").value || todayISO();
+  const notes=document.getElementById("irLogNotes").value.trim();
+
+  // One row per event, not per bed. The depth stored is the mean across the beds it covered, and it
+  // is frozen here: re-measuring a dripper next year must not rewrite what the soil already got.
+  const mms=rows.map(r=>r.mm).filter(v=>v!=null);
+  const mm = mms.length ? mms.reduce((a,b)=>a+b,0)/mms.length : null;
+
+  const fields={
+    [CFG.f.ie_date]: date,
+    [CFG.f.ie_block]: irLogState.block,
+    [CFG.f.ie_beds]: irLogState.beds.size ? [...irLogState.beds] : [],
+    [CFG.f.ie_minutes]: minutes,
+    [CFG.f.ie_mm]: mm==null ? null : Math.round(mm*100)/100,
+    [CFG.f.ie_source]: "logged",
+    [CFG.f.ie_by]: (typeof fwCurrentWalkerKey==="function" ? (fwCurrentWalkerKey()||"") : ""),
+    [CFG.f.ie_notes]: notes,
+    [CFG.f.ie_created]: new Date().toISOString(),
+  };
+  const btn=document.getElementById("irLogSave");
+  btn.disabled=true;
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.irrigEvents, [fields]);
+    data.irrigEvents=(data.irrigEvents||[]).concat(
+      PlannerShared.parseIrrigationEvents([{id:rec.id, fields}]));
+    irLogClose();
+    irRender();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't log that run:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+
+function irLogClose(){ document.getElementById("irLogModal").classList.remove("open"); }
+
+(function wireIrLogModal(){
+  const $=id=>document.getElementById(id);
+  if(!$("irLogModal")) return;
+  $("irLogClose").onclick=irLogClose;
+  $("irLogCancel").onclick=irLogClose;
+  $("irLogSave").onclick=irLogSave;
+  $("irLogMinutes").oninput=irLogSummary;
+  $("irLogModal").addEventListener("click", e=>{ if(e.target.id==="irLogModal") irLogClose(); });
+  document.addEventListener("keydown", e=>{
+    if(e.key==="Escape" && $("irLogModal").classList.contains("open")) irLogClose();
+  });
+})();
+
 const FC_KEY="rbFertCalc";
 const FC_PRESS_LABEL={kpa:"kPa", bar:"bar", psi:"PSI"};
 const FC_FLOW_LABEL={lpm:"L/min", lph:"L/hr", gpm:"GPM"};
