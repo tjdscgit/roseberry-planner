@@ -4052,6 +4052,7 @@ async function loadAll(){
       x:num(b.fields[F.blk_x]), y:num(b.fields[F.blk_y]),
       orient:b.fields[F.blk_orient] || "Beds run vertical",
       preferredCropTypes:(b.fields[F.blk_prefTypes]||[]).slice(),
+      method:b.fields[F.blk_method]||"", precipRate:num(b.fields[F.blk_precip]),
       emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
       lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
       soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
@@ -4066,6 +4067,8 @@ async function loadAll(){
       tunnel:!!b.fields[F.bed_tunnel],
       notes:b.fields[F.bed_notes]||"",
       // Irrigation: null means inherit (bed -> block -> farm). See PlannerShared.irrigSpecFor.
+      // method: 'drip' or 'overhead' (wobblers etc); precipRate only matters for overhead.
+      method:b.fields[F.bed_method]||"", precipRate:num(b.fields[F.bed_precip]),
       emitSpacing:num(b.fields[F.bed_emitSpacing]), emitFlow:num(b.fields[F.bed_emitFlow]),
       lines:num(b.fields[F.bed_lines]), wetWidth:num(b.fields[F.bed_wetWidth]),
       soil:b.fields[F.bed_soil]||"",
@@ -9747,6 +9750,10 @@ function bdIssuesRow(bed){
 // false precision, so they go.
 function irNum(v,d=1){ return (v==null||!isFinite(v)) ? "—" : (+v).toFixed(d).replace(/\.0+$/,""); }
 
+// Blank-string fields (method, soil) vs numeric ones (everything else) need different write-back
+// parsing, so the set of string keys is named once here rather than re-checked at each call site.
+const BD_IRRIG_STRING_KEYS=new Set(["method","soil"]);
+
 function bdIrrigCard(bed){
   const box=document.createElement("div");
   box.className="bd-issue bd-irrig";
@@ -9758,37 +9765,65 @@ function bdIrrigCard(bed){
    +`<input class="cr-num" type="number" min="0" step="${step}" data-ik="${k}" value="${val??""}"`
    +` placeholder="${esc(String(shown??"—"))}${esc(src(k))}"></label>`;
 
+  // The method select shows the effective (inherited) method as its blank-option label, same idiom
+  // as the soil select below it — but switching it re-renders the whole card, since drip and
+  // overhead show a different field set entirely rather than one field changing value.
+  const methodField=
+    `<label class="bd-irrig-f"><span>Irrigation method</span><select data-ik="method">`
+   +`<option value="">— ${spec.method==="overhead"?"Overhead":"Drip"}${esc(src("method"))}</option>`
+   +`<option value="Drip"${bed.method==="Drip"?" selected":""}>Drip</option>`
+   +`<option value="Overhead"${bed.method==="Overhead"?" selected":""}>Overhead</option>`
+   +`</select></label>`;
+
+  const soilField=
+    `<label class="bd-irrig-f"><span>Soil type</span><select data-ik="soil">`
+   +`<option value="">— ${esc(spec.soil)}${esc(src("soil"))}</option>`
+   +soils.map(o=>`<option${o===bed.soil?" selected":""}>${esc(o)}</option>`).join("")
+   +`</select></label>`;
+
+  const fields = spec.method==="overhead"
+    ? methodField + soilField
+      + numCell("precipRate","Precipitation rate mm/hr","0.1",bed.precipRate,spec.precipRate)
+    : methodField + soilField
+      + numCell("emitSpacing","Emitter spacing cm","1",bed.emitSpacing,spec.emitSpacing)
+      + numCell("emitFlow","Emitter flow L/hr","0.1",bed.emitFlow,spec.emitFlow)
+      + numCell("lines","Driplines per bed","1",bed.lines,spec.lines)
+      + numCell("wetWidth","Wetted width m","0.05",bed.wetWidth,spec.wetWidth);
+
+  const outLine = !spec.known
+    ? (spec.method==="overhead"
+        ? `No precipitation rate recorded, so no run time can be worked out for this bed.`
+        : `Bed length is blank, so no run time can be worked out for this bed.`)
+    : spec.method==="overhead"
+      ? `${irNum(spec.appRateMmHr,1)} mm/hr over the whole bed · 10 mm takes `
+        +`${irNum(PlannerShared.irrigRunTime(spec,10).minutes,0)} min`
+        +(spec.unmeasured ? ` <span class="bd-irrig-warn">— still the built-in placeholder, not a `
+          +`catch-can reading. Set several straight-sided cans across the wetted area, run the `
+          +`system a timed 30–60 min, and enter the depth collected ÷ hours run.</span>` : "")
+      : `${spec.emitters} emitters · ${irNum(spec.flowLph,0)} L/hr · `
+        +`${irNum(spec.appRateMmHr,1)} mm/hr · 10 mm takes `
+        +`${irNum(PlannerShared.irrigRunTime(spec,10).minutes,0)} min`;
+
   box.innerHTML=
-    `<div class="bd-irrig-hd">Dripline &amp; soil`
+    `<div class="bd-irrig-hd">${spec.method==="overhead"?"Overhead":"Dripline"} &amp; soil`
    +`<span class="bd-irrig-sub">blank = inherit from ${esc(spec.blockName||"the farm default")}</span></div>`
-   +`<div class="bd-irrig-grid">`
-   + numCell("emitSpacing","Emitter spacing cm","1",bed.emitSpacing,spec.emitSpacing)
-   + numCell("emitFlow","Emitter flow L/hr","0.1",bed.emitFlow,spec.emitFlow)
-   + numCell("lines","Driplines per bed","1",bed.lines,spec.lines)
-   + numCell("wetWidth","Wetted width m","0.05",bed.wetWidth,spec.wetWidth)
-   +`<label class="bd-irrig-f"><span>Soil type</span><select data-ik="soil">`
-   + `<option value="">— ${esc(spec.soil)}${esc(src("soil"))}</option>`
-   + soils.map(o=>`<option${o===bed.soil?" selected":""}>${esc(o)}</option>`).join("")
-   +`</select></label></div>`
-   +`<div class="bd-irrig-out">${
-       spec.known
-         ? `${spec.emitters} emitters · ${irNum(spec.flowLph,0)} L/hr · `
-           +`${irNum(spec.appRateMmHr,1)} mm/hr · 10 mm takes `
-           +`${irNum(PlannerShared.irrigRunTime(spec,10,(data.irrigSettings||{}).eff).minutes,0)} min`
-         : `Bed length is blank, so no run time can be worked out for this bed.`
-     }${spec.blockMatch && spec.blockMatch.ambiguous
+   +`<div class="bd-irrig-grid">${fields}</div>`
+   +`<div class="bd-irrig-out">${outLine}${
+       spec.blockMatch && spec.blockMatch.ambiguous
          ? ` <span class="bd-irrig-warn">Block "${esc(bed.block)}" matches ${
              esc(spec.blockMatch.candidates.map(c=>c.name).join(" and "))
            } — using ${esc(spec.blockName)}. Rename the bed's block to be sure.</span>`
-         : ""}</div>`;
+         : ""
+     }</div>`;
 
   box.querySelectorAll('[data-ik]').forEach(el=>{
     el.onchange=async e=>{
       const k=el.dataset.ik;
-      const v = k==="soil" ? (e.target.value||"")
-                           : (e.target.value===""?null:(+e.target.value));
+      const v = BD_IRRIG_STRING_KEYS.has(k) ? (e.target.value||"")
+                                            : (e.target.value===""?null:(+e.target.value));
       await saveBed(bed.id,k,v);
-      buildBedsTab();   // the derived line above is now stale whichever way the write went
+      buildBedsTab();   // the derived line above is now stale whichever way the write went, and a
+                         // method switch changes which fields this card even shows
     };
   });
   return box;
@@ -9849,6 +9884,7 @@ function bdIssueCard(bed,i){
 /* ---- Bed + issue writes. Optimistic with rollback, same shape as saveTrayType. ---- */
 const BD_BED_FIELDS={ category:"bed_category", tunnel:"bed_tunnel", notes:"bed_notes",
                       len:"bed_len", wid:"bed_wid", order:"bed_order",
+                      method:"bed_method", precipRate:"bed_precip",
                       emitSpacing:"bed_emitSpacing", emitFlow:"bed_emitFlow",
                       lines:"bed_lines", wetWidth:"bed_wetWidth", soil:"bed_soil" };
 async function saveBed(id,key,val){
@@ -15145,13 +15181,15 @@ function irWarnText(w){
       return `This block wants ${irNum(w.blockFlowLph,0)} L/hr but the pump is set at `
            + `${irNum(w.pumpLph,0)} L/hr. Pressure will drop and the far end will get less than the near end.`;
     case "low_app_rate":
-      return `At ${irNum(w.mmPerHr,1)} mm/hr this dripline is slow — the runs will be long. `
-           + `Check the emitter flow and spacing on the beds in this block.`;
+      return `${esc(w.bed)} is only getting ${irNum(w.mmPerHr,1)} mm/hr` +
+             (w.method==="overhead" ? " from overhead — the run will be long." : " from drip — the run will be long, check the emitter flow and spacing.");
     case "high_app_rate":
-      return `At ${irNum(w.mmPerHr,1)} mm/hr water goes on faster than clay loam takes it in. `
-           + `Two shorter runs will soak in where one long one would pond.`;
+      return `${esc(w.bed)} is getting ${irNum(w.mmPerHr,1)} mm/hr` +
+             (w.method==="overhead"
+               ? " from overhead — faster than clay loam takes it in. Two shorter runs will soak in where one long one would pond."
+               : " from drip — faster than clay loam takes it in through a narrow strip. Two shorter runs will soak in where one long one would pond.");
     case "no_usable_beds":
-      return `No bed in this block has a length recorded, so there is nothing to work a run time from.`;
+      return `No bed in this block has enough recorded to work a run time from — a length for drip, or a precipitation rate for overhead.`;
     case "missing_weather_days":
       return `${w.days} day${w.days===1?"":"s"} in this window had no weather reading.`;
     case "deficit_capped":
@@ -15159,6 +15197,12 @@ function irWarnText(w){
            + `the model has lost track. Log an irrigation, or move the balance start date forward.`;
     case "no_dripline_spec":
       return `No bed length recorded, so no run time can be worked out.`;
+    case "no_precip_rate":
+      return `No precipitation rate recorded for this overhead bed, so no run time can be worked out.`;
+    case "precip_unmeasured":
+      return `This overhead bed is still on the built-in placeholder rate, not a measured one. `
+           + `A catch-can test — several cans across the wetted area, run 30–60 min, measure the `
+           + `depth collected — gives a real figure worth trusting.`;
     case "uncalibrated":
       return `The soil-water model has run out of road here — the deficit has been sitting at the `
            + `soil's full capacity, which almost always means water went on and wasn't logged. `
@@ -15322,7 +15366,7 @@ function irBedStrip(b){
                   : `refilled to field capacity`;
     const title = `${bd.bed.name} — ${outcome}. Deficit ${irNum(bd.deficit,1)} mm, trigger ${irNum(bd.raw,1)} mm, `
                 + `capacity ${irNum(bd.taw,1)} mm · Kc ${irNum(bd.kc,2)} · roots ${bd.zr} m · `
-                + `${spec.soil} · ${irNum(spec.appRateMmHr,1)} mm/hr`;
+                + `${spec.soil} · ${spec.method==="overhead"?"overhead":"drip"} ${irNum(spec.appRateMmHr,1)} mm/hr`;
     html+=`<div class="ir-bed" title="${esc(title)}">
       <span class="nm">${esc(bd.bed.name)}</span>
       <span class="ir-bar ${heat}"><span class="fill" style="width:${pct.toFixed(1)}%"></span>
@@ -15346,14 +15390,20 @@ function irSettingsCard(set){
     <div class="ir-settings">
       <label><span>Cover this much of the block</span>
         <input type="number" min="0" max="100" step="5" data-irset="percentile" value="${set.percentile}"></label>
-      ${f("eff","Irrigation efficiency",set.eff,"0.05")}
+      <label><span>Default irrigation method</span><select data-irset="method">
+        <option value="Drip"${String(set.method||"").toLowerCase()!=="overhead"?" selected":""}>Drip</option>
+        <option value="Overhead"${String(set.method||"").toLowerCase()==="overhead"?" selected":""}>Overhead</option>
+      </select></label>
       ${f("overshoot","Allowed overshoot",set.overshoot,"0.05")}
       <label><span>Default soil type</span><select data-irset="soil">
         ${soils.map(o=>`<option${o===set.soil?" selected":""}>${esc(o)}</option>`).join("")}
       </select></label>
+      ${f("eff","Drip efficiency",set.eff,"0.05")}
       ${f("emitSpacing","Default emitter spacing cm",set.emitSpacing,"1")}
       ${f("emitFlow","Default emitter flow L/hr",set.emitFlow,"0.1")}
       ${f("lines","Default driplines per bed",set.lines,"1")}
+      ${f("effOverhead","Overhead efficiency",set.effOverhead,"0.05")}
+      ${f("precipRate","Default precipitation rate mm/hr",set.precipRate,"0.5")}
       ${f("pumpFlow","Pump flow L/hr",set.pumpFlow,"10","not set")}
       <label><span>Balance start date</span>
         <input type="date" data-irset="start" value="${esc(set.start||"")}"></label>
@@ -15363,6 +15413,10 @@ function irSettingsCard(set){
     the driest quarter runs short. 75 is the default. Whatever it is set to, no run is allowed to put
     more on than the wettest cropped bed can hold — past that, water drains below the roots and takes
     nitrate with it.</p>
+    <p class="ir-note">"Default irrigation method" only matters for a bed or block that hasn't been
+    told otherwise — set the method on individual beds (Beds tab) or blocks wherever it actually
+    varies. The default precipitation rate is a placeholder, not a measurement: replace it with a
+    catch-can reading on any block that's actually overhead, or the run times there are a guess.</p>
   </details>`;
 }
 
@@ -15386,12 +15440,15 @@ function irWire(){
    shape as saveBed, because a setting that appears to save and silently didn't would show up later
    as a run time nobody can explain. ---- */
 const IR_SET_FIELDS={ percentile:"is_percentile", eff:"is_eff", overshoot:"is_overshoot",
-                      soil:"is_soil", emitSpacing:"is_emitSpacing", emitFlow:"is_emitFlow",
+                      soil:"is_soil", method:"is_method", precipRate:"is_precip",
+                      effOverhead:"is_effOverhead",
+                      emitSpacing:"is_emitSpacing", emitFlow:"is_emitFlow",
                       lines:"is_lines", pumpFlow:"is_pumpFlow", start:"is_start" };
+const IR_SET_STRING_KEYS=new Set(["soil","method"]);
 async function irSaveSetting(key, el){
   const set=data.irrigSettings; if(!set) return;
   const raw=el.value;
-  const val = (key==="soil") ? (raw||"")
+  const val = IR_SET_STRING_KEYS.has(key) ? (raw||"")
             : (key==="start") ? (raw||null)
             : (raw===""? null : (+raw));
   const prev=set[key];
@@ -15455,24 +15512,29 @@ function irLogPaintChips(){
   });
 }
 
-// Minutes -> millimetres, through the same dripline the recommendation came from, so a run logged
-// at the suggested length lands on exactly the suggested depth. Where beds differ, the depth
-// differs with them — that is the honest answer, and the summary says so.
+// Minutes -> millimetres, through the same spec (dripline or precipitation rate) the recommendation
+// came from, so a run logged at the suggested length lands on exactly the suggested depth. Where
+// beds differ, the depth differs with them — that is the honest answer, and the summary says so.
 function irLogDepths(){
   const plan=irPlan();
   const b=plan.blocks.find(x=>x.block===irLogState.block);
   if(!b) return [];
   const mins=parseFloat(document.getElementById("irLogMinutes").value);
   if(!isFinite(mins) || mins<=0) return [];
-  const eff=(data.irrigSettings||{}).eff || PlannerShared.IRRIG_DEFAULTS.eff;
   const chosen = irLogState.beds.size
     ? b.beds.filter(x=>irLogState.beds.has(x.bed.id))
     : b.beds;
-  return chosen.map(x=>({
-    bed:x.bed, spec:x.spec,
-    mm: x.spec.appRateMmHr>0 ? mins*x.spec.appRateMmHr/60*eff : null,
-    deficit:x.deficit,
-  }));
+  // Each bed's own efficiency, drip or overhead — a block mixing methods (a drip greenhouse zone
+  // and an overhead field zone on one logged run, say) must not have the overhead loss applied to
+  // the drip beds or vice versa.
+  return chosen.map(x=>{
+    const eff = x.spec.eff>0 ? x.spec.eff : PlannerShared.IRRIG_DEFAULTS.eff;
+    return {
+      bed:x.bed, spec:x.spec,
+      mm: x.spec.appRateMmHr>0 ? mins*x.spec.appRateMmHr/60*eff : null,
+      deficit:x.deficit,
+    };
+  });
 }
 
 function irLogSummary(){

@@ -92,6 +92,7 @@
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
       // A block is the irrigation valve — one tap, everything under it — so it is also the middle
       // tier of the dripline inheritance. Same five fields as the bed, meaning the same thing.
+      blk_method:"Irrigation method", blk_precip:"Precipitation rate mm/hr",
       blk_emitSpacing:"Emitter spacing cm", blk_emitFlow:"Emitter flow L/hr",
       blk_lines:"Dripline count", blk_wetWidth:"Wetted width m", blk_soil:"Soil type",
       blk_irrigNotes:"Irrigation notes",
@@ -100,6 +101,11 @@
       // Irrigation — the dripline lying on this bed, and what the soil under it holds. Every one of
       // these is nullable and null means "inherit": bed -> its block -> the farm defaults in
       // irrigation_settings. See irrigSpecFor().
+      // "Irrigation method" is 'Drip' or 'Overhead'; blank inherits the same way as everything else
+      // here. Overhead uses `bed_precip` (a catch-can-measured mm/hr) instead of the dripline
+      // fields below -- the two methods wet a bed differently enough that one number can't serve
+      // both.
+      bed_method:"Irrigation method", bed_precip:"Precipitation rate mm/hr",
       bed_emitSpacing:"Emitter spacing cm", bed_emitFlow:"Emitter flow L/hr",
       bed_lines:"Dripline count", bed_wetWidth:"Wetted width m", bed_soil:"Soil type",
       // Bed Issues — what's wrong with a bed and which crops that rules out. `bi_types` is the
@@ -283,10 +289,15 @@
       ie_mm:"Applied mm", ie_source:"Source", ie_by:"By", ie_notes:"Notes", ie_created:"Created at",
       // Irrigation settings — the single 'farm' row. Shared decisions, deliberately not localStorage.
       is_lat:"Latitude", is_elev:"Elevation m", is_anemHeight:"Anemometer height m",
-      is_soil:"Default soil type", is_emitSpacing:"Default emitter spacing cm",
+      is_soil:"Default soil type", is_method:"Default irrigation method",
+      is_precip:"Default precipitation rate mm/hr",
+      is_emitSpacing:"Default emitter spacing cm",
       is_emitFlow:"Default emitter flow L/hr", is_lines:"Default dripline count",
       is_wetWidth:"Default wetted width m", is_percentile:"Block percentile",
-      is_overshoot:"Overshoot fraction", is_eff:"Efficiency", is_pumpFlow:"Pump flow L/hr",
+      // is_eff keeps the column name "Efficiency" -- it's the live Postgres column and predates the
+      // drip/overhead split; only the UI now calls it "Drip efficiency" alongside the new one.
+      is_overshoot:"Overshoot fraction", is_eff:"Efficiency",
+      is_effOverhead:"Overhead efficiency", is_pumpFlow:"Pump flow L/hr",
       is_start:"Balance start", is_notes:"Notes",
     }
   };
@@ -786,6 +797,7 @@
       notes:b.fields[F.bed_notes]||"",
       // Irrigation. null (not 0) means "not set here, inherit" — irrigSpecFor() walks bed -> block
       // -> farm. num() already turns "" and undefined into null, which is the whole trick.
+      method:b.fields[F.bed_method]||"", precipRate:num(b.fields[F.bed_precip]),
       emitSpacing:num(b.fields[F.bed_emitSpacing]), emitFlow:num(b.fields[F.bed_emitFlow]),
       lines:num(b.fields[F.bed_lines]), wetWidth:num(b.fields[F.bed_wetWidth]),
       soil:b.fields[F.bed_soil]||"",
@@ -802,6 +814,7 @@
       x:num(b.fields[F.blk_x]), y:num(b.fields[F.blk_y]),
       orient:b.fields[F.blk_orient] || "Beds run vertical",
       preferredCropTypes:(b.fields[F.blk_prefTypes]||[]).slice(),
+      method:b.fields[F.blk_method]||"", precipRate:num(b.fields[F.blk_precip]),
       emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
       lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
       soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
@@ -2281,8 +2294,22 @@
   // and they match the DEFAULTs in the DDL so the two can't drift apart quietly.
   const IRRIG_DEFAULTS = {
     lat:-28.60, elev:150, anemHeight:2.0,
-    soil:"Clay loam", emitSpacing:30, emitFlow:1.6, lines:2, wetWidth:null,
-    percentile:75, overshoot:0.10, eff:0.90, pumpFlow:null, start:null,
+    soil:"Clay loam",
+    // Two irrigation methods, two application-rate models. Drip wets a strip along the bed and its
+    // rate is derived from emitter spacing and flow. Overhead (wobblers, impacts, micro-sprays)
+    // wets the whole bed footprint at once, and the honest way to know that rate is a catch-can
+    // test, not a spacing calculation -- wobbler output varies too much with nozzle, pressure and
+    // riser height for a formula to be trustworthy. `precipRate` is that measured figure.
+    method:"drip",
+    emitSpacing:30, emitFlow:1.6, lines:2, wetWidth:null,
+    // 8 mm/hr is a mid-range published figure for ag wobblers on a typical grid at typical
+    // operating pressure -- a placeholder to keep the page usable before anyone has run a catch-can
+    // test, not a number to trust. irrigSpecFor() flags a bed still sitting on this exact value.
+    precipRate:8,
+    percentile:75, overshoot:0.10,
+    eff:0.90,        // drip: FAO-56's own typical distribution efficiency for well-maintained tape
+    effOverhead:0.70, // overhead: lower because wind drift and evaporation take more before it lands
+    pumpFlow:null, start:null,
   };
 
   function parseWeatherObs(records){
@@ -2331,6 +2358,8 @@
       lat:pick(F.is_lat, D.lat), elev:pick(F.is_elev, D.elev),
       anemHeight:pick(F.is_anemHeight, D.anemHeight),
       soil:f[F.is_soil]||D.soil,
+      method:f[F.is_method]||D.method,
+      precipRate:pick(F.is_precip, D.precipRate),
       emitSpacing:pick(F.is_emitSpacing, D.emitSpacing),
       emitFlow:pick(F.is_emitFlow, D.emitFlow),
       lines:pick(F.is_lines, D.lines),
@@ -2338,6 +2367,7 @@
       percentile:pick(F.is_percentile, D.percentile),
       overshoot:pick(F.is_overshoot, D.overshoot),
       eff:pick(F.is_eff, D.eff),
+      effOverhead:pick(F.is_effOverhead, D.effOverhead),
       pumpFlow:pick(F.is_pumpFlow, D.pumpFlow),
       start:String(f[F.is_start]||"").slice(0,10) || null,
       notes:f[F.is_notes]||"",
@@ -2386,6 +2416,13 @@
   // What is actually lying on this bed, and where each number came from. `from` is carried through
   // to the UI on purpose: when a run time looks wrong, the first question is always which of the
   // three tiers supplied the figure, and answering it should not require opening Supabase.
+  //
+  // Method branches here because drip and overhead don't share a model, not just a number. Drip
+  // wets a strip along the bed — application rate comes from emitter spacing and flow. Overhead
+  // (wobblers, impacts, micro-sprays) wets the whole bed footprint at once, at a rate that varies
+  // too much with nozzle, pressure and riser height to derive from spacing alone; the only honest
+  // figure is a measured one (a catch-can test), so `precipRate` is taken as given rather than
+  // calculated.
   function irrigSpecFor(bed, blocks, settings){
     const set=settings||parseIrrigSettings([]);
     const bm=blockMatch(bed, blocks);
@@ -2396,17 +2433,36 @@
       if(blk && blk[key]!=null && blk[key]!==""){ from[key]="block"; return blk[key]; }
       from[key]="farm"; return dflt;
     };
+    const method = (pick("method", set.method) || "drip").toLowerCase()==="overhead" ? "overhead" : "drip";
+    const soil   = pick("soil", set.soil);
+    const len=num(bed && bed.len), wid=num(bed && bed.wid);
+
+    if(method==="overhead"){
+      const precipRate = pick("precipRate", set.precipRate);
+      // Whole bed, not a wetted strip — overhead covers everything under the pattern, walkways
+      // included on some layouts, but the bed footprint is the number the balance can act on.
+      const wetArea = (len!=null && wid!=null) ? len*wid : null;
+      const appRateMmHr = precipRate>0 ? precipRate : null;
+      return { block:blk, blockName:blk?blk.name:"", blockMatch:bm, from, method,
+               soil, awc:soilAWC(soil), precipRate, wetArea, appRateMmHr,
+               eff: set.effOverhead,
+               // Still sitting on the shipped placeholder, not a catch-can reading. Distinct from
+               // the "which tier supplied it" question `from` already answers -- a farm-level value
+               // someone deliberately set from their own test is a real number; this checks whether
+               // anyone has touched it at all.
+               unmeasured: precipRate === IRRIG_DEFAULTS.precipRate,
+               known: appRateMmHr!=null && appRateMmHr>0 && wetArea>0 };
+    }
+
     const emitSpacing=pick("emitSpacing", set.emitSpacing);
     const emitFlow   =pick("emitFlow",    set.emitFlow);
     const lines      =pick("lines",       set.lines);
-    const soil       =pick("soil",        set.soil);
     // Wetted width has a fourth fallback the others don't: the bed's own width. A single dripline
     // does not wet a 1.5 m bed, but two or three do, and the bed width is the closest thing to a
     // measured answer that already exists in the data.
     let wetWidth=pick("wetWidth", set.wetWidth);
-    if(wetWidth==null){ wetWidth = num(bed && bed.wid); if(wetWidth!=null) from.wetWidth="bed size"; }
+    if(wetWidth==null){ wetWidth = wid; if(wetWidth!=null) from.wetWidth="bed size"; }
 
-    const len=num(bed && bed.len);
     // floor(), not round(): a 30 m bed on 30 cm spacing has 100 emitters, and half an emitter
     // delivers nothing.
     const emitters = (len!=null && emitSpacing>0)
@@ -2416,17 +2472,22 @@
     // 1 L spread over 1 m² is 1 mm deep, so L/hr over m² is millimetres per hour with no constant.
     const appRateMmHr = (flowLph!=null && wetArea>0) ? flowLph/wetArea : null;
 
-    return { block:blk, blockName:blk?blk.name:"", blockMatch:bm, from,
+    return { block:blk, blockName:blk?blk.name:"", blockMatch:bm, from, method,
              emitSpacing, emitFlow, lines, wetWidth, soil, awc:soilAWC(soil),
              emitters, flowLph, wetArea, appRateMmHr,
+             eff: set.eff,
              known: appRateMmHr!=null && appRateMmHr>0 };
   }
 
   // Minutes to put `mm` of water on this bed, and the litres it takes to do it. Efficiency covers
   // everything the model refuses to itemise — distribution uniformity down the line, the wet patch
-  // that misses the root zone, evaporation off the surface — in one honest fudge factor.
+  // that misses the root zone, evaporation off the surface — in one honest fudge factor, and it
+  // differs by method (drip loses much less to wind and evaporation than overhead does), so the
+  // default comes from the spec itself rather than one setting applied to every bed regardless.
   function irrigRunTime(spec, mm, eff){
-    const e=(eff==null||!(eff>0)) ? IRRIG_DEFAULTS.eff : eff;
+    const e=(eff!=null && eff>0) ? eff
+          : (spec && spec.eff>0) ? spec.eff
+          : IRRIG_DEFAULTS.eff;
     if(!spec || !spec.known || !(mm>0)) return { minutes:0, litres:0 };
     const minutes = mm / spec.appRateMmHr * 60 / e;
     const litres  = mm * spec.wetArea / e;
@@ -2839,7 +2900,8 @@
     if(missing) warnings.push({code:"missing_weather_days", days:missing});
     if(capped)  warnings.push({code:"deficit_capped", days:capped});
     if(saturated) warnings.push({code:"balance_saturated"});
-    if(!spec.known) warnings.push({code:"no_dripline_spec"});
+    if(!spec.known) warnings.push({code: spec.method==="overhead" ? "no_precip_rate" : "no_dripline_spec"});
+    if(spec.known && spec.method==="overhead" && spec.unmeasured) warnings.push({code:"precip_unmeasured"});
 
     return {
       bed, spec, series, warnings, saturated,
@@ -2897,7 +2959,6 @@
     const set = settings || parseIrrigSettings([]);
     const P = set.percentile!=null ? set.percentile : IRRIG_DEFAULTS.percentile;
     const over = set.overshoot!=null ? set.overshoot : IRRIG_DEFAULTS.overshoot;
-    const eff = set.eff;
     const warnings=[];
 
     const usable = balances.filter(b=>b.spec && b.spec.known);
@@ -2943,19 +3004,33 @@
     if(ceilingBit && short.length) warnings.push({code:"block_split_needed", beds:short.map(b=>b.bed.name)});
     if(beds.some(b=>b.drains)) warnings.push({code:"over_capacity", beds:beds.filter(b=>b.drains).map(b=>b.bed.name)});
 
-    // Run time is set by the driest bed's dripline, since one valve means one duration; each bed's
-    // own litres then differ because their driplines do.
+    // Run time is set by the driest bed's own spec — its dripline, or its measured precipitation
+    // rate — since one valve means one duration; each bed's own litres then differ because their
+    // hardware does. Each irrigRunTime() call takes its efficiency from that bed's own spec (drip
+    // vs overhead), not one setting applied to every bed regardless of method.
     const worst = beds.slice().sort((a,b)=>b.stress-a.stress)[0];
-    const rt = irrigRunTime(worst.spec, target, eff);
-    const litres = beds.reduce((s,b)=> s + irrigRunTime(b.spec, target, eff).litres, 0);
-    const blockFlow = beds.reduce((s,b)=> s + (b.spec.flowLph||0), 0);
+    const rt = irrigRunTime(worst.spec, target);
+    const litres = beds.reduce((s,b)=> s + irrigRunTime(b.spec, target).litres, 0);
+    // Flow-rate aggregation only means anything for drip (head flow isn't modelled for overhead —
+    // wobbler output varies too much with pressure to trust a formula, same reasoning as the
+    // application rate itself) — overhead beds contribute 0 and are silently excluded from the
+    // pump-capacity check. A block mixing drip and overhead on one valve is unusual in practice; if
+    // it happens here, this check under-reports true flow for it.
+    const blockFlow = beds.reduce((s,b)=> s + (b.spec.method==="drip" ? (b.spec.flowLph||0) : 0), 0);
 
     if(set.pumpFlow && blockFlow > set.pumpFlow){
       warnings.push({code:"over_pump", blockFlowLph:blockFlow, pumpLph:set.pumpFlow});
     }
-    const rates = beds.map(b=>b.spec.appRateMmHr).filter(r=>r>0);
-    if(rates.length && Math.min(...rates) < 3) warnings.push({code:"low_app_rate", mmPerHr:Math.min(...rates)});
-    if(rates.length && Math.max(...rates) > 15) warnings.push({code:"high_app_rate", mmPerHr:Math.max(...rates)});
+    // Overhead legitimately runs at a higher precipitation rate than drip — it's spread across the
+    // whole bed rather than concentrated in a narrow wetted strip — so "too fast" and "too slow"
+    // sit at different thresholds for each method rather than one band for both.
+    const APP_RATE_BAND = { drip:{low:3, high:15}, overhead:{low:5, high:25} };
+    beds.forEach(b=>{
+      const rate=b.spec.appRateMmHr; if(!(rate>0)) return;
+      const band=APP_RATE_BAND[b.spec.method]||APP_RATE_BAND.drip;
+      if(rate<band.low)  warnings.push({code:"low_app_rate",  mmPerHr:rate, method:b.spec.method, bed:b.bed.name});
+      if(rate>band.high) warnings.push({code:"high_app_rate", mmPerHr:rate, method:b.spec.method, bed:b.bed.name});
+    });
 
     // If the beds driving this recommendation have saturated, the number is a lower bound on a
     // quantity the model no longer knows. The page shows a prompt to log a run instead of minutes.
