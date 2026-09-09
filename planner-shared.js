@@ -125,7 +125,8 @@
       // The weekly plan. One row per bed per week; `bpp_ops` is what that bed still needs doing.
       // There is no done flag — see parseBedPrepPlan.
       bpp_name:"Name", bpp_bed:"Bed", bpp_week:"Week", bpp_ops:"Operations", bpp_notes:"Notes",
-      bpp_planting:"Planting", bpp_task:"Task", bpp_created:"Created at",
+      bpp_planting:"Planting", bpp_task:"Task", bpp_created:"Created at", bpp_startMin:"Start minute",
+      bpp_day:"Day", bpp_minutesOverride:"Minutes override",
       tt_name:"Name", tt_cells:"Cell count",
       tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
       tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
@@ -146,12 +147,20 @@
       pt_bed:"Bed",   // optional bed a task attaches to when it isn't tied to a planting
       pl_crop:"Crop", pl_bed:"Bed", pl_var:"Variety", pl_status:"Status", pl_bm:"Bed metres", pl_notes:"Notes",
       pl_sow:"Sow date", pl_tp:"Transplant date", pl_h1:"First harvest", pl_h2:"Last harvest",
+      // Crop failure (drought, disease, pest, etc.) — distinct from Finished, which means it was
+      // harvested out normally. "Failed" gates the Timeline bar's strikethrough; the reason itself
+      // isn't a separate column — it's appended to Notes so it shows up wherever Notes already does.
+      pl_failed:"Failed", pl_failureDate:"Failure date",
       pl_sowTtId:"Sow TickTick Task ID", pl_tpTtId:"Transplant TickTick Task ID",
       pl_sowGcalId:"Sow Google Cal Event ID", pl_tpGcalId:"Transplant Google Cal Event ID",
       pl_sowOpsId:"Sow Ops Task ID", pl_tpOpsId:"Transplant Ops Task ID",
       pl_group:"Succession group",
       pl_sowStart:"Sow start minute", pl_tpStart:"Transplant start minute",
       pl_sowAssignee:"Sow assignee", pl_tpAssignee:"Transplant assignee",
+      // Per-planting override for one milestone block's length — same "minutes per 15m bed" unit
+      // as a Task's own duration, so wkBlockMin's scaling math (dur*bm/15) applies unchanged. Falls
+      // back to the shared library Task's duration (msTask.duration) when unset, same as before.
+      pl_sowDuration:"Sow duration", pl_tpDuration:"Transplant duration",
       pl_h1Assignee:"First harvest assignee", pl_h2Assignee:"Last harvest assignee",
       pl_rows:"Number of rows", pl_rowSpacing:"Spacing between rows cm", pl_plantSpacing:"In-row spacing cm",
       pl_seeder:"Seeder type", pl_harvestUnit:"Harvest unit", pl_plantsPerUnit:"Plants per unit",
@@ -451,7 +460,8 @@
       return { planId:r.id, bedId:r.bedId, bed, week:r.week, notes:r.notes,
                carried:r.week!==weekISO, planting, plantingId:r.plantingId,
                task, taskName:(taskLib&&taskLib.name)||(task&&task.label)||"", taskId:r.taskId,
-               ops, remaining:ops.filter(x=>!x.done).length };
+               ops, remaining:ops.filter(x=>!x.done).length, startMin:r.startMin, day:r.day,
+               minutesOverride:r.minutesOverride };
     }).filter(x=>x.bed)                       // a plan row whose bed was deleted is not renderable
       .sort(bpBedOrder);
 
@@ -465,7 +475,16 @@
     const byAttach={};
     Object.values(byOp).forEach(g=>{
       g.beds.sort(bpBedOrder); g.done.sort(bpBedOrder);
-      g.minutes = g.reg && g.reg.minutes!=null ? g.reg.minutes*g.beds.length : null;
+      const withMinOverride=g.beds.find(b=>b.minutesOverride!=null);
+      g.minutes = withMinOverride ? withMinOverride.minutesOverride
+        : (g.reg && g.reg.minutes!=null ? g.reg.minutes*g.beds.length : null);
+      // One bed_prep_plan row per bed per week, but a pass is scheduled as one job — the beds
+      // share a single start time once any of them has one set (see wkMoveOneRow's write-back,
+      // which patches every bed row in the group together).
+      const withStart=g.beds.find(b=>b.startMin!=null);
+      g.startMin = withStart ? withStart.startMin : null;
+      const withDay=g.beds.find(b=>b.day!=null);
+      g.day = withDay ? withDay.day : null;
       const key=(g.reg&&g.reg.attachment)||"";
       const a=(byAttach[key] || (byAttach[key]={attachment:key, ops:[], seq:g.reg?g.reg.seq:9999}));
       a.ops.push(g);
@@ -619,7 +638,11 @@
         if(!overdue && !inWeek) return;
         const msName = step.df==="tp" ? "Transplant" : (p.tp ? "Sow (trays)" : "Direct sow");
         const msTask = (data.tasks||[]).find(x=>x.name===msName);
-        const msMinutes = msTask && msTask.duration!=null ? msTask.duration*(p.bm||0)/15 : null;
+        // A per-planting override (dragged on this one block) beats the shared library Task's
+        // default — same unit (minutes per 15m bed) either way, so the scaling below is unchanged.
+        const msDurOverride = step.df==="tp" ? p.tpDuration : p.sowDuration;
+        const msDur = msDurOverride!=null ? msDurOverride : (msTask && msTask.duration!=null ? msTask.duration : null);
+        const msMinutes = msDur!=null ? msDur*(p.bm||0)/15 : null;
         const msStart = step.df==="tp" ? p.tpStart : p.sowStart;
         rows.push({
           id:`ms:${p.id}:${step.df}`, kind:"milestone", msDf:step.df, msLocked:cur>sr,
@@ -691,12 +714,16 @@
         if(!g.beds.length) return;
         rows.push({
           id:`bprep:${g.op}:${wkStartISO}`, kind:"bedprep", bpOp:g.op, bpAttach:a.name,
-          bpBeds:g.beds.map(b=>b.bedId),
-          t:{done:false, repeat:0, start:null, assignee:""},
+          bpBeds:g.beds.map(b=>b.bedId), bpPlanIds:g.beds.map(b=>b.planId),
+          t:{done:false, repeat:0, start:g.startMin, assignee:""},
           p:{ id:`bprep:${a.name}`, crop:a.name, variety:"",
               bedIds:g.beds.map(b=>b.bedId), bm:0, cropId:null },
           task:{name:g.op, category:"Bed prep"},
-          due:start, overdue:false, inWeek:true, minutes:g.minutes,
+          // No day chosen yet — or a day carried in from a stale/previous week's plan row, now
+          // outside the 7 columns actually on screen — defaults to the week's Monday, same as
+          // always; a day genuinely within the browsed week (dragged here) shows there instead.
+          due:(g.day && g.day>=wkStartISO && g.day<wkISO(end)) ? wkParse(g.day) : start,
+          overdue:false, inWeek:true, minutes:g.minutes,
         });
       }));
     }
@@ -889,6 +916,15 @@
       notes:r.fields[F.bpp_notes]||"",
       plantingId:(r.fields[F.bpp_planting]||[])[0] || null,
       taskId:(r.fields[F.bpp_task]||[])[0] || null,
+      // One row per bed per week — a pass covering several beds carries the same start time/day on
+      // each of their rows (see bpPlanForWeek's grouping and wkMoveOneRow's write-back). `day`
+      // defaults to unset (shows on the week's Monday, per bpPlanForWeek/wkCollect) until dragged
+      // to a specific day in Calendar; `week` still governs which WEEK the pass belongs to.
+      startMin: num(r.fields[F.bpp_startMin]),
+      day: r.fields[F.bpp_day]||null,
+      // Overrides the computed reg.minutes*bedCount estimate once a pass's block has been resized
+      // in Calendar — same shared-across-the-pass's-beds convention as startMin/day.
+      minutesOverride: num(r.fields[F.bpp_minutesOverride]),
     }));
   }
 
@@ -1755,6 +1791,7 @@
       sowStart:num(p.fields[F.pl_sowStart]), tpStart:num(p.fields[F.pl_tpStart]),
       sowAssignee:p.fields[F.pl_sowAssignee]||"", tpAssignee:p.fields[F.pl_tpAssignee]||"",
       h1Assignee:p.fields[F.pl_h1Assignee]||"", h2Assignee:p.fields[F.pl_h2Assignee]||"",
+      sowDuration:num(p.fields[F.pl_sowDuration]), tpDuration:num(p.fields[F.pl_tpDuration]),
       sowTtId:p.fields[F.pl_sowTtId]||"", tpTtId:p.fields[F.pl_tpTtId]||"",
       sowGcalId:p.fields[F.pl_sowGcalId]||"", tpGcalId:p.fields[F.pl_tpGcalId]||"",
       sowOpsId:p.fields[F.pl_sowOpsId]||"", tpOpsId:p.fields[F.pl_tpOpsId]||"",
@@ -1763,6 +1800,7 @@
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
       parked:!!p.fields[F.pl_parked],
+      failed:!!p.fields[F.pl_failed], failureDate:p.fields[F.pl_failureDate]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
   }
