@@ -15544,13 +15544,22 @@ function wkRenderCalendar(rows,start,overdueRows){
   let gutter=`<div class="wk-cal-gutter">`;
   for(let m=WK_T0;m<=WK_T1;m+=60) gutter+=`<div class="wk-hr" style="top:${(m-WK_T0)*WK_PXMIN}px">${wkClock(m)}</div>`;
   gutter+=`</div>`;
-  let cols="", todayIdx=-1;
+  let cols="", todayIdx=-1, mobileEmptyDay=null;
   idxs.forEach((i,pos)=>{ if(wkSameDay(wkAddDays(start,i),today)) todayIdx=pos; });
   for(const i of idxs){
     const day=wkAddDays(start,i), dayISO=wkISO(day), isToday=wkSameDay(day,today);
     let lines=""; for(let m=WK_T0;m<=WK_T1;m+=60) lines+=`<div class="wk-line" style="top:${(m-WK_T0)*WK_PXMIN}px"></div>`;
-    const blocks=wkPackDay(rows.filter(r=>r.inWeek && wkSameDay(r.due,day))).map(g=>wkBlockHTML(g,dayISO)).join("");
+    const packed=wkPackDay(rows.filter(r=>r.inWeek && wkSameDay(r.due,day)));
+    // Mobile only ever shows the one selected day, and an empty one (weekends, a light day) is
+    // common — the full 6am-6pm grid for zero jobs was exactly the tall-and-empty dead space this
+    // was meant to get rid of, so swap in a short message instead of an all-day-tall blank grid.
+    if(cmIsMobile() && idxs.length===1 && !packed.length){ mobileEmptyDay=day; break; }
+    const blocks=packed.map(g=>wkBlockHTML(g,dayISO)).join("");
     cols+=`<div class="wk-cal-col${isToday?" wk-today":""}" data-day="${dayISO}">${lines}${blocks}</div>`;
+  }
+  if(mobileEmptyDay){
+    return `<div class="wk-cal">${head}${adrow}`
+      +`<div class="wk-planner-empty">Nothing scheduled for ${wkSameDay(mobileEmptyDay,today)?"today":"this day"}.</div></div>`;
   }
   // Now-line: only meaningful when today is one of the visible columns and inside the 6am-6pm span.
   let nowLine="";
