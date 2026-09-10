@@ -1302,7 +1302,12 @@
   .wk-odsb-row{display:flex;align-items:center;gap:.4rem;cursor:pointer}
   .wk-odsb-ctx{font-size:.76rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wk-odsb-due{font-family:var(--mono);font-size:.68rem;color:var(--clay);font-weight:700}
-  .wk-body{flex:1 1 auto;overflow:auto;padding:1rem 1.2rem;background:var(--paper);min-width:0}
+  /* min-height:0 is load-bearing (same issue as .cr-wrap elsewhere in this file): without it a flex
+     child's default min-height:auto lets .wk-body grow to fit its own content instead of being
+     capped by .wk-content's real height — which meant Calendar's "fit to screen" math was reading
+     .wk-body.clientHeight AFTER it had already stretched to whatever the grid rendered at, making
+     every fit calculation converge back to full size regardless of the toggle. */
+  .wk-body{flex:1 1 auto;min-height:0;overflow:auto;padding:1rem 1.2rem;background:var(--paper);min-width:0}
   /* ---- Crop map chrome. The design replaces a row of mismatched pill buttons with three things:
      a season dropdown, a three-way tool group, and a Filters popover. Anything that is an ACTION
      rather than a mode lives behind the title row's overflow menu. ---- */
@@ -14874,8 +14879,13 @@ function buildWeekPlanner(){
         // 1080px-tall grid (720min × 1.5), so on anything shorter than that it scrolled anyway,
         // silently breaking the one promise this mode makes. 0.4 is just a divide-by-zero guard for
         // a not-yet-laid-out container, not a real UI floor.
-        const headRowH=48, bodyPad=32;   // rough allowance for the sticky day-header row + .wk-body's own padding
-        const availH=Math.max(60, body.clientHeight-headRowH-bodyPad);
+        // The day-header row is display:none on mobile now (the day-tab strip above already names
+        // the day), so it costs 0px there instead of the ~48px it costs on desktop; the all-day
+        // strip renders on both and was never accounted for before, which used to roughly cancel
+        // out against overcounting the header row — now that the header really is gone, leaving it
+        // out here would overshoot the true available height by exactly its width again.
+        const headRowH=cmIsMobile()?0:48, adRowH=40, bodyPad=32;
+        const availH=Math.max(60, body.clientHeight-headRowH-adRowH-bodyPad);
         WK_PXMIN=Math.max(0.4, availH/(WK_T1-WK_T0));
       }else{
         WK_PXMIN=WK_FIXED_PXMIN;
