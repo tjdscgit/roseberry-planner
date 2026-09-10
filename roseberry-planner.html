@@ -2018,7 +2018,12 @@
       background:var(--paper-2)}
     #cmUnassigned .cm-un-body{max-height:50vh}
     #cmUnassigned.collapsed{flex:none}
-    .tl-panel{width:min(320px,86vw);flex-basis:min(320px,86vw)}
+    /* Every side detail panel (crop map, timeline, today, this week) becomes a full-screen dialog
+       on phone instead of a squeezed sidebar shoved in beside the content — there's no room for
+       both at this width, and a panel that takes over the screen reads as "you tapped a task",
+       the way the desktop sidebar does, instead of a sliver pinned to the edge. */
+    .tl-panel.open{position:fixed;inset:0;width:100%;max-width:100%;flex-basis:auto;
+      z-index:52;border-radius:0}
     /* The rail (nav[role=tablist]) and the top bar are the phone chrome now — they become the
        bottom tab bar and the title row rather than being hidden for a hamburger. */
     .cm-block-picker{display:flex}
@@ -2041,6 +2046,9 @@
     .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
     .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
+    /* Calendar mode's day header repeats the day the wk-day-picker tab strip above it already
+       shows (mobile only ever renders the one selected day) — pure dead space at this width. */
+    .wk-cal-headrow{display:none}
     /* Minimal phone header: the 4-way layout toggle and the Claude-chat quick-add move into the
        ⋯ menu (see the wk-menu-mobile-only rows next to wkMoreMenu in the HTML) instead of fighting
        for room inline — the title row is then just the name and that one menu button, and the
@@ -14881,6 +14889,17 @@ function buildWeekPlanner(){
                    : wkMode==="day" ? wkRenderCalendar(rows,start,overdueRows)
                    : wkMode==="type" ? wkRenderByType(bedTypeRows)
                    : wkRenderByBed(bedTypeRows);
+    // Calendar mode always draws the full 6am-6pm grid, so a day whose first job isn't until mid-
+    // morning opens on a screenful of empty hours on a phone (no room to shrink the grid down to
+    // fit, unlike wkCalFit on desktop). Scroll straight to just above the first thing on the day —
+    // or "now", if that's earlier — instead of making the farmer scroll past the blank hours first.
+    if(wkMode==="day" && cmIsMobile() && !wkCalFit){
+      requestAnimationFrame(()=>{
+        const tops=[...body.querySelectorAll(".wk-block,.wk-cal-now")]
+          .map(el=>parseFloat(el.style.top)||0);
+        if(tops.length) body.scrollTop=Math.max(0,Math.min(...tops)-60);
+      });
+    }
   }
   const fitBtn=document.getElementById("wkCalFitBtn");
   if(fitBtn){
