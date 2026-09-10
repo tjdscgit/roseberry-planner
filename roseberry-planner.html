@@ -14865,7 +14865,11 @@ function buildWeekPlanner(){
     // "fixed" draws every hour at the same constant size regardless of window height and lets
     // .wk-body scroll for the rest — see wkCalFit.
     if(wkMode==="day"){
-      if(wkCalFit){
+      // A phone always fits, regardless of the saved wkCalFit preference (which is really a
+      // desktop choice, persisted from whenever it was last toggled there) — full-size mode draws
+      // every hour at a constant height and lets the day scroll, which on a screen this short means
+      // a mostly-empty grid stretching well past the fold on any day that isn't packed solid.
+      if(wkCalFit || cmIsMobile()){
         // No floor here — "fit" means fit, full stop. A 1.5px/min floor used to force a minimum
         // 1080px-tall grid (720min × 1.5), so on anything shorter than that it scrolled anyway,
         // silently breaking the one promise this mode makes. 0.4 is just a divide-by-zero guard for
@@ -14889,21 +14893,13 @@ function buildWeekPlanner(){
                    : wkMode==="day" ? wkRenderCalendar(rows,start,overdueRows)
                    : wkMode==="type" ? wkRenderByType(bedTypeRows)
                    : wkRenderByBed(bedTypeRows);
-    // Calendar mode always draws the full 6am-6pm grid, so a day whose first job isn't until mid-
-    // morning opens on a screenful of empty hours on a phone (no room to shrink the grid down to
-    // fit, unlike wkCalFit on desktop). Scroll straight to just above the first thing on the day —
-    // or "now", if that's earlier — instead of making the farmer scroll past the blank hours first.
-    if(wkMode==="day" && cmIsMobile() && !wkCalFit){
-      requestAnimationFrame(()=>{
-        const tops=[...body.querySelectorAll(".wk-block,.wk-cal-now")]
-          .map(el=>parseFloat(el.style.top)||0);
-        if(tops.length) body.scrollTop=Math.max(0,Math.min(...tops)-60);
-      });
-    }
   }
   const fitBtn=document.getElementById("wkCalFitBtn");
   if(fitBtn){
-    fitBtn.style.display = wkMode==="day" ? "" : "none";
+    // Hidden on mobile: the day always renders fit-to-screen there now (see above), so the toggle
+    // would only offer a "expand to full size and scroll past empty hours" state that's the exact
+    // dead space this was meant to get rid of.
+    fitBtn.style.display = (wkMode==="day" && !cmIsMobile()) ? "" : "none";
     // Icon shows the ACTION a click performs (same convention as the label it replaced) — expand
     // arrows when currently compressed-to-fit (click to show all times at full size), inward
     // shrink arrows when currently at full size (click to compress back to fit-without-scrolling).
