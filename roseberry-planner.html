@@ -16510,6 +16510,23 @@ function wkSetOdCollapsed(val){
       wkOpenTaskRowPanel(pl, rowId, !!e.target.closest(".wk-ctx, .wk-mem-txt"));
       return;
     }
+    // A calendar block's own header handles its click-vs-drag resolution in wkOnPointerUp (the
+    // [data-drag] check above already excludes it here), but a fit-to-screen mobile grid can
+    // compress a block down to a sliver a few px tall — its header alone isn't a reliable tap
+    // target at that height. A tap landing anywhere else on the block (its padding, the space below
+    // a one-line member preview) falls through the [data-pl]/[data-drag] checks above with nothing
+    // to open, and reads as the tap having done nothing. Route those the same place the header
+    // would: the single job/bed-prep panel, or the group dialog for a grouped block.
+    const blk=e.target.closest(".wk-block");
+    if(blk){
+      if(+blk.dataset.total>1) wkOpenGroupPanel(blk.dataset.grp, blk.dataset.day);
+      else{
+        const rowId=blk.querySelector(".wk-check")?.dataset.id;
+        const r=rowId ? wkCollect().rows.find(x=>x.id===rowId) : null;
+        if(r) (r.kind==="bedprep" ? wkOpenBedPrepPanel : wkOpenJobPanel)(r);
+      }
+      return;
+    }
     wkClosePlantingPanel();                             // clicked elsewhere in the view — close it
   });
   wrap.addEventListener("pointerdown", wkOnPointerDown);
