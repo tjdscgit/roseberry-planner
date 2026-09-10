@@ -1189,6 +1189,14 @@
   .wk-cal-gutter{position:relative;border-right:1px solid var(--line)}
   .wk-hr{position:absolute;right:8px;transform:translateY(-50%);font-family:var(--mono);
     font-size:9px;color:var(--ink-2)}
+  /* Mobile only: the hour label lives inside the (edge-to-edge) day column itself instead of a
+     separate gutter strip to its left — see wkRenderCalendar. A small pill keeps it legible sitting
+     directly on the hour line rather than floating on nothing. */
+  .wk-hr-in{position:absolute;left:6px;transform:translateY(-50%);font-family:var(--mono);
+    font-size:9.5px;color:var(--ink-2);background:var(--paper);padding:0 4px;border-radius:3px;
+    pointer-events:none;z-index:1}
+  .wk-cal-adlbl-in{font-family:var(--mono);font-size:8px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ink-2)}
   .wk-cal-col{position:relative;border-left:1px solid var(--line)}
   /* The artboard tints today's whole column, not just its header — a soft wash the same colour as
      the rail's "selected" state, so the eye finds today without a filled block fighting the events.
@@ -15523,13 +15531,20 @@ function wkBoardCardHTML(r,showDue){
 
 function wkRenderCalendar(rows,start,overdueRows){
   const gridH=(WK_T1-WK_T0)*WK_PXMIN, today=new Date();
+  const isMobile=cmIsMobile();
   // Mobile: narrow the grid to just the selected day (see wkDrawDayPicker), expanded to fill the
   // width via its own 1fr — same idea as Crop Map's single-block-picked layout.
-  const idxs = cmIsMobile()
+  const idxs = isMobile
     ? [Math.max(0,[...Array(7)].findIndex((_,i)=>wkISO(wkAddDays(start,i))===wkSelectedDay))]
     : [0,1,2,3,4,5,6];
-  const colsTemplate=`54px repeat(${idxs.length},minmax(104px,1fr))`;
-  let head=`<div class="wk-cal-grid wk-cal-headrow" style="grid-template-columns:${colsTemplate}"><div class="wk-cal-corner"></div>`;
+  // Desktop reserves a 54px gutter column for the hour labels, to the left of the day columns.
+  // Mobile has no room to spare on a single column for a separate label strip, so the day column
+  // there runs the full grid width and the hour labels are drawn inside it instead (see wk-hr-in
+  // below) — "inside the calendar area" rather than in a strip to its left.
+  const colsTemplate = isMobile
+    ? `repeat(${idxs.length},minmax(104px,1fr))`
+    : `54px repeat(${idxs.length},minmax(104px,1fr))`;
+  let head=`<div class="wk-cal-grid wk-cal-headrow" style="grid-template-columns:${colsTemplate}">${isMobile?"":'<div class="wk-cal-corner"></div>'}`;
   for(const i of idxs){ const day=wkAddDays(start,i);
     head+=`<div class="wk-cal-dayhead${wkSameDay(day,today)?" wk-today":""}"><span class="wk-dh-day">${WK_DAYS[i].toUpperCase()}</span><span class="wk-dh-date">${day.getDate()}</span></div>`; }
   head+=`</div>`;
@@ -15537,23 +15552,33 @@ function wkRenderCalendar(rows,start,overdueRows){
   // in — everything else stays blank (see the note by .wk-cal-adrow on why untimed tasks aren't
   // placed here too). Clicking it opens the existing overdue sidebar rather than duplicating its list.
   const odN=(overdueRows||[]).length;
-  let adrow=`<div class="wk-cal-grid wk-cal-adrow" style="grid-template-columns:${colsTemplate}"><div class="wk-cal-adlbl">all-day</div>`;
+  let adrow=`<div class="wk-cal-grid wk-cal-adrow" style="grid-template-columns:${colsTemplate}">${isMobile?"":'<div class="wk-cal-adlbl">all-day</div>'}`;
   for(const i of idxs){ const day=wkAddDays(start,i);
-    adrow+=`<div class="wk-cal-adcell">${(odN&&wkSameDay(day,today))?`<div class="wk-adpill" id="wkAdOdPill">${odN} overdue</div>`:""}</div>`; }
+    adrow+=`<div class="wk-cal-adcell">${isMobile?'<span class="wk-cal-adlbl-in">all-day</span>':""}${(odN&&wkSameDay(day,today))?`<div class="wk-adpill" id="wkAdOdPill">${odN} overdue</div>`:""}</div>`; }
   adrow+=`</div>`;
-  let gutter=`<div class="wk-cal-gutter">`;
-  for(let m=WK_T0;m<=WK_T1;m+=60) gutter+=`<div class="wk-hr" style="top:${(m-WK_T0)*WK_PXMIN}px">${wkClock(m)}</div>`;
-  gutter+=`</div>`;
+  let gutter="";
+  if(!isMobile){
+    gutter=`<div class="wk-cal-gutter">`;
+    for(let m=WK_T0;m<=WK_T1;m+=60) gutter+=`<div class="wk-hr" style="top:${(m-WK_T0)*WK_PXMIN}px">${wkClock(m)}</div>`;
+    gutter+=`</div>`;
+  }
   let cols="", todayIdx=-1, mobileEmptyDay=null;
   idxs.forEach((i,pos)=>{ if(wkSameDay(wkAddDays(start,i),today)) todayIdx=pos; });
   for(const i of idxs){
     const day=wkAddDays(start,i), dayISO=wkISO(day), isToday=wkSameDay(day,today);
-    let lines=""; for(let m=WK_T0;m<=WK_T1;m+=60) lines+=`<div class="wk-line" style="top:${(m-WK_T0)*WK_PXMIN}px"></div>`;
+    let lines="";
+    for(let m=WK_T0;m<=WK_T1;m+=60){
+      const top=(m-WK_T0)*WK_PXMIN;
+      lines+=`<div class="wk-line" style="top:${top}px"></div>`;
+      // Mobile-only: the hour label rides inside the day column, sitting right on its own line
+      // instead of in a separate gutter to the left — see the colsTemplate note above.
+      if(isMobile) lines+=`<div class="wk-hr-in" style="top:${top}px">${wkClock(m)}</div>`;
+    }
     const packed=wkPackDay(rows.filter(r=>r.inWeek && wkSameDay(r.due,day)));
     // Mobile only ever shows the one selected day, and an empty one (weekends, a light day) is
     // common — the full 6am-6pm grid for zero jobs was exactly the tall-and-empty dead space this
     // was meant to get rid of, so swap in a short message instead of an all-day-tall blank grid.
-    if(cmIsMobile() && idxs.length===1 && !packed.length){ mobileEmptyDay=day; break; }
+    if(isMobile && idxs.length===1 && !packed.length){ mobileEmptyDay=day; break; }
     const blocks=packed.map(g=>wkBlockHTML(g,dayISO)).join("");
     cols+=`<div class="wk-cal-col${isToday?" wk-today":""}" data-day="${dayISO}">${lines}${blocks}</div>`;
   }
@@ -15565,8 +15590,9 @@ function wkRenderCalendar(rows,start,overdueRows){
   let nowLine="";
   const nowMin=today.getHours()*60+today.getMinutes();
   if(todayIdx>=0 && nowMin>=WK_T0 && nowMin<=WK_T1){
-    // Full-width line (left:54px so it starts at the gutter edge, not under it).
-    nowLine=`<div class="wk-cal-now" style="top:${(nowMin-WK_T0)*WK_PXMIN}px;left:54px;right:0"></div>`;
+    // Full-width line — starts at the gutter edge on desktop (54px), at the screen edge on mobile
+    // (0), where there's no separate gutter column to skip past.
+    nowLine=`<div class="wk-cal-now" style="top:${(nowMin-WK_T0)*WK_PXMIN}px;left:${isMobile?0:54}px;right:0"></div>`;
   }
   return `<div class="wk-cal">${head}${adrow}`
     +`<div class="wk-cal-grid wk-cal-bodyrow" style="height:${gridH}px;grid-template-columns:${colsTemplate}">${gutter}${cols}${nowLine}</div></div>`;
