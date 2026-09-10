@@ -222,10 +222,6 @@
        .rail-utils, so it inherits .railbtn's sizing/hover and .rail-utils' fixed top-right dock —
        nothing left to set here but visibility. */
     .sheet-btn{display:flex}
-    /* .rail-utils floats fixed over the top-right corner of whichever view is active, so any view
-       whose title row runs content (a sort select, extra buttons) all the way to the right edge —
-       Today's sort-by dropdown among them — needs that corner reserved or the two overlap. */
-    .vw-title{padding-right:150px}
   }
 
   main{flex:1 1 auto;position:relative;overflow:hidden}
@@ -1051,8 +1047,11 @@
 
   @media (max-width:760px){
     /* The view name and its summary are the first things to yield room — the mode switch and the
-       ⋯ menu are controls, and a control you cannot reach is worse than a title you cannot read. */
-    .vw-title{gap:.45rem;padding:0 .6rem}
+       ⋯ menu are controls, and a control you cannot reach is worse than a title you cannot read.
+       Right padding reserves the corner .rail-utils floats over (fixed, top-right) — without it,
+       a title row that runs all the way to the edge (Today's sort-by select, others' icon buttons)
+       renders underneath those icons instead of beside them. */
+    .vw-title{gap:.45rem;padding:0 150px 0 .6rem}
     .vw-name{font-size:1rem}
     .vw-title .sub{display:none}
     .vw-tools{padding:.3rem .6rem;gap:.3rem}
