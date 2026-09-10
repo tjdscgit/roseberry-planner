@@ -2059,6 +2059,10 @@
     .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
     .wk-cal{min-width:0;margin:0 -1.2rem}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column; negative margin cancels .wk-body's side padding so the grid runs edge to edge instead of stopping short of the screen */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
+    /* The hour label now lives inside the day column (wk-hr-in) rather than a side gutter, so a
+       task card starting flush at the left edge sits right on top of it. Give the card room to
+       start clear of the label instead. */
+    .wk-block{left:44px}
     /* Calendar mode's day header repeats the day the wk-day-picker tab strip above it already
        shows (mobile only ever renders the one selected day) — pure dead space at this width. */
     .wk-cal-headrow{display:none}
