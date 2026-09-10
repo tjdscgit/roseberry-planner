@@ -181,7 +181,6 @@
      .shell-main holds nothing but <main> now. The view name already lives in .vw-name. */
   .shell-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;
     background:var(--paper);overflow:hidden}
-  .sheet-btn{display:none}   /* phone only; the media query below turns it on */
 
   /* ---- Phone: the rail can't come with us, so it becomes a bottom tab bar and the list panel
      becomes a sheet you pull up from the strip. Same five destinations, same order. ---- */
@@ -218,10 +217,6 @@
     .sbstrip{display:none}
     .navrow{min-height:48px;font-size:15px}
     .shell-main{order:2;flex:1 1 auto;min-height:0}
-    /* The phone's way into the list panel, since there is no 16px strip to tap. Sits in
-       .rail-utils, so it inherits .railbtn's sizing/hover and .rail-utils' fixed top-right dock —
-       nothing left to set here but visibility. */
-    .sheet-btn{display:flex}
   }
 
   main{flex:1 1 auto;position:relative;overflow:hidden}
@@ -1051,7 +1046,7 @@
        Right padding reserves the corner .rail-utils floats over (fixed, top-right) — without it,
        a title row that runs all the way to the edge (Today's sort-by select, others' icon buttons)
        renders underneath those icons instead of beside them. */
-    .vw-title{gap:.45rem;padding:0 115px 0 .6rem;height:48px}
+    .vw-title{gap:.45rem;padding:0 82px 0 .6rem;height:48px}
     .vw-name{font-size:1rem}
     .vw-title .sub{display:none}
     .vw-tools{padding:.25rem .6rem;gap:.3rem;min-height:40px}
@@ -2957,13 +2952,6 @@
     </button>
     <div class="rail-spacer"></div>
     <div class="rail-utils">
-    <!-- Phone only (.sheet-btn is display:none above 760px) — opens the list panel as a pull-up
-         sheet, since there is no hover strip to tap on a touch screen. Lives here rather than in a
-         brand bar because there is no brand bar in the redesign; this fixed-position group is the
-         one piece of chrome that already survives being tucked in behind whichever view is showing. -->
-    <button type="button" class="railbtn sheet-btn" id="sheetBtn" aria-label="Show list">
-      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h13.2"/></svg>
-    </button>
     <button class="railbtn" id="reloadBtn" title="Reload data" aria-label="Reload data">
       <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M16.4 10a6.4 6.4 0 10-1.9 4.5"/><path d="M16.4 4.6v4h-4"/></svg>
     </button>
@@ -5910,8 +5898,18 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
 
 document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
   const cfg=RAIL_GROUPS[b.dataset.rail]; if(!cfg) return;
+  const wrap=document.getElementById("sbwrap");
+  const isMobile=window.innerWidth<=760;
+  // On a phone there's no hover to reveal the list, and the old top-bar hamburger only duplicated
+  // this tap — so the bottom tab itself now opens the sheet of that destination's views. Tapping
+  // the tab you're already on just toggles the sheet, rather than re-navigating underneath it.
+  if(isMobile && b.dataset.rail===currentRail && wrap){
+    wrap.classList.toggle("open");
+    return;
+  }
   currentRail=b.dataset.rail;
   showView(cfg.groups[0].views[0][0]);
+  if(isMobile && wrap) wrap.classList.add("open");
 });
 
 /* The list panel floats open on hover on a mouse, and on tap from the 16px strip on a touch
@@ -5924,13 +5922,12 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
     if(e.target.closest(".navrow")) return;
     wrap.classList.toggle("open");
   });
-  // Phone: the strip is gone, so the top bar's list button opens the sheet, and picking a row
-  // (handled in renderSidebar) or tapping outside closes it.
-  const sheet=document.getElementById("sheetBtn");
-  if(sheet) sheet.onclick=e=>{ e.stopPropagation(); wrap.classList.toggle("open"); };
+  // Phone: the strip is gone, so a bottom-tab tap opens the sheet (wired into the
+  // .railbtn[data-rail] click handler above, since it already knows which destination was
+  // tapped) — picking a row (handled in renderSidebar) or tapping outside closes it.
   document.addEventListener("click",e=>{
     if(window.innerWidth>760) return;
-    if(e.target.closest("#sbwrap")||e.target.closest("#sheetBtn")) return;
+    if(e.target.closest("#sbwrap")||e.target.closest(".railbtn[data-rail]")) return;
     wrap.classList.remove("open");
   });
 })();
