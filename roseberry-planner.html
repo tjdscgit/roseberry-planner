@@ -138,20 +138,19 @@
   .ico-s{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;
     stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 
-  /* ---- List panel: 16px closed, floats open over the content on hover ---- */
-  .sbwrap{width:16px;flex:0 0 auto;position:relative;background:var(--paper-2);
-    border-right:1px solid var(--line);z-index:39}
-  .sbinner{position:absolute;top:0;left:0;bottom:0;width:16px;overflow:hidden auto;
+  /* ---- Rail + list panel hover zone: wraps .rail and .sbwrap so the panel is one contiguous
+     hover region with the icons that open it (see the hover script near RAIL_GROUPS). ---- */
+  .railzone{position:relative;display:flex;flex:0 0 auto}
+
+  /* ---- List panel: 0 width closed (no permanent strip), floats open to 260px OVER the content
+     on hover, so the view underneath never reflows. ---- */
+  .sbwrap{position:absolute;left:56px;top:0;bottom:0;width:0;z-index:39;pointer-events:none}
+  .sbinner{position:absolute;top:0;left:0;bottom:0;width:0;overflow:hidden auto;
     background:var(--paper-2);border-right:1px solid var(--line);
     padding:12px 10px;display:flex;flex-direction:column;gap:2px;
-    box-shadow:6px 0 24px rgba(0,0,0,.28);opacity:0;
-    transition:width .56s cubic-bezier(.16,1,.3,1),opacity .22s ease;z-index:30}
-  .sbwrap.open .sbinner{width:260px;opacity:1;
-    transition:width .56s cubic-bezier(.16,1,.3,1),opacity .32s ease .2s}
-  .sbstrip{position:absolute;top:0;left:0;bottom:0;width:16px;display:flex;
-    align-items:flex-start;justify-content:center;padding-top:14px;color:var(--ink-2);
-    z-index:31;opacity:1;transition:opacity .22s ease;pointer-events:none}
-  .sbwrap.open .sbstrip{opacity:0}
+    box-shadow:6px 0 24px rgba(0,0,0,.28);opacity:0;pointer-events:none;
+    transition:width .32s cubic-bezier(.16,1,.3,1),opacity .22s ease}
+  .sbwrap.open .sbinner{width:260px;opacity:1;pointer-events:auto}
   .sb-group{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
     color:var(--ink-2);margin:14px 0 4px 10px;white-space:nowrap}
   .sb-group:first-child{margin-top:2px}
@@ -208,13 +207,13 @@
       content:"";position:absolute;top:12px;right:calc(50% - 16px);
       width:7px;height:7px;border-radius:50%;background:var(--clay);
     }
-    .sbwrap{order:1;width:auto;height:0;border-right:none;overflow:visible}
+    .railzone{display:contents}
+    .sbwrap{order:1;position:static;left:auto;width:auto;height:0;overflow:visible;pointer-events:auto}
     .sbinner{width:100%;height:auto;max-height:70dvh;top:auto;bottom:0;left:0;right:0;
       border-right:none;border-top:1px solid var(--line);
-      transform:translateY(101%);opacity:1;transition:transform .28s cubic-bezier(.16,1,.3,1);
+      transform:translateY(101%);opacity:1;pointer-events:auto;transition:transform .28s cubic-bezier(.16,1,.3,1);
       padding-bottom:78px;position:fixed;z-index:50}
     .sbwrap.open .sbinner{width:100%;transform:none;opacity:1}
-    .sbstrip{display:none}
     .navrow{min-height:48px;font-size:15px}
     .shell-main{order:2;flex:1 1 auto;min-height:0}
     /* The phone's way into the list panel, since there is no 16px strip to tap. Sits in
@@ -1261,10 +1260,10 @@
   .wk-group-row-beds{font-family:var(--sans);font-size:.76rem;color:var(--ink-2);
     margin-top:.3rem;line-height:1.4}
   /* ---- add/edit manual task modal (reuses .wk-group-card + .ap-trow-f/.ap-actions) ---- */
-  #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal,#tlSuccessionModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open{display:flex}
-  #wkDateModal .wk-group-card,#tlRemoveModal .wk-group-card{width:min(360px,100%)}
+  #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open{display:flex}
+  #wkDateModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
   .wk-task-form-row{display:flex;gap:.9rem}
   .wk-task-typeseg{align-self:stretch}
@@ -2928,7 +2927,12 @@
 <div id="app">
 
   <!-- ===== Rail: the five places you can be. Every one of the 24 views hangs off one of these,
-       so nothing needs a hamburger. Sub-views live in the list panel to the right. ===== -->
+       so nothing needs a hamburger. Sub-views live in the list panel to the right.
+       railzone wraps the rail + list panel as one hover region: hovering a group icon previews
+       that group's menu, hovering the rest of the rail shows the current view's group, and
+       moving into the panel itself is sticky (doesn't flip back while you're aiming at a row).
+       There is no more always-visible strip — the panel is 0-width until hovered. ===== -->
+  <div class="railzone" id="railzone">
   <nav class="rail" role="tablist" aria-label="Sections">
     <div class="rail-mark">
       <svg viewBox="0 0 20 20" class="ico" style="color:#fff;width:17px;height:17px" aria-hidden="true"><path d="M10 17.5v-6.2"/><path d="M10 11.3C10 8.4 7.6 6.2 4.4 6.2c0 3 2.3 5.1 5.6 5.1z"/><path d="M10 11.3c0-2.6 2.2-4.6 5.1-4.6 0 2.7-2.3 4.6-5.1 4.6z"/></svg>
@@ -2969,14 +2973,13 @@
     </div>
   </nav>
 
-  <!-- ===== List panel. Closed it is a 16px bar; hovering floats it open to 260px OVER the
-       content rather than pushing it, so the view underneath never reflows. Rows are written by
-       renderSidebar() from RAIL_GROUPS below — the markup here is only the frame. ===== -->
+  <!-- ===== List panel. Closed it takes no space at all; hovering a rail icon (or the rest of the
+       rail) floats it open to 260px OVER the content rather than pushing it, so the view
+       underneath never reflows. Rows are written by paintSidebar() from RAIL_GROUPS below — the
+       markup here is only the frame. ===== -->
   <div class="sbwrap" id="sbwrap">
     <div class="sbinner" id="sbinner"></div>
-    <div class="sbstrip" aria-hidden="true">
-      <svg viewBox="0 0 20 20" class="ico-s"><path d="M8 5l5 5-5 5"/></svg>
-    </div>
+  </div>
   </div>
 
   <div class="shell-main">
@@ -4267,6 +4270,26 @@
           <button class="btn-ghost" id="tlDeleteBack">Back</button>
           <button class="btn-primary" id="tlDeleteConfirm" style="background:var(--clay)">Delete permanently</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline bar right-click → Add succession. Duplicates the planting `count` times, `gap`
+       days apart, starting `gap` days after the ORIGINAL planting's own sow date — see
+       tlCreateSuccessions. This never opens the full Add-planting dialog; it just drives the
+       same Count/Gap creation path that dialog already has, headlessly. -->
+  <div id="tlSuccessionModal">
+    <div class="wk-group-card">
+      <button class="ap-x" id="tlSuccessionClose" title="Close">✕</button>
+      <div class="wk-group-title">Add succession</div>
+      <p class="sub" style="max-width:40ch;margin:.3rem 0 1rem">Duplicates this planting, spaced out after it.</p>
+      <label class="ap-trow-f"><span>How many successions</span><input type="number" id="tlSuccessionCount" min="1" step="1" value="1"></label>
+      <label class="ap-trow-f"><span>Days apart</span><input type="number" id="tlSuccessionGap" min="1" step="1" value="14"></label>
+      <p class="sub" id="tlSuccessionMsg" style="min-height:1.2em"></p>
+      <div class="ap-actions">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="tlSuccessionCancel">Cancel</button>
+        <button class="btn-primary" id="tlSuccessionAdd">Add</button>
       </div>
     </div>
   </div>
@@ -5815,11 +5838,12 @@ const sbFilter = ({label,count,swatch,act,on}) =>
   + (count==null ? "" : `<span class="navn">${esc(count)}</span>`)
   + `</button>`;
 
-function renderSidebar(){
-  const box=document.getElementById("sbinner"); if(!box) return;
-  const cfg=RAIL_GROUPS[currentRail]; if(!cfg) return;
+/* Builds the nav-row markup for one rail group (no extras) — shared by the committed panel
+   (paintSidebar(currentRail)) and the hover preview (paintSidebar(hoveredRail)). */
+function sidebarNavHTML(rail){
+  const cfg=RAIL_GROUPS[rail]; if(!cfg) return "";
   const countOf=v=>{ try{ const n=SIDEBAR_COUNT[v]?.(); return (n==null||n===0)?null:n; }catch{ return null; } };
-  let html = cfg.groups.map(g =>
+  return cfg.groups.map(g =>
     sbGroup(g.name) +
     g.views.map(([v,label]) =>{
       const n=countOf(v);
@@ -5829,8 +5853,19 @@ function renderSidebar(){
         + `</button>`;
     }).join("")
   ).join("");
-  try{ html += SIDEBAR_EXTRAS[currentView]?.() || ""; }
-  catch(e){ console.error("sidebar extras for "+currentView, e); }
+}
+
+/* Paints the list panel for `rail`. When `rail` is the currentRail this also draws the current
+   view's own filter/card extras — previewing a *different* group on hover has no view of its own
+   to attach extras to, so those are skipped. */
+function paintSidebar(rail){
+  const box=document.getElementById("sbinner"); if(!box) return;
+  if(!RAIL_GROUPS[rail]) return;
+  let html = sidebarNavHTML(rail);
+  if(rail===currentRail){
+    try{ html += SIDEBAR_EXTRAS[currentView]?.() || ""; }
+    catch(e){ console.error("sidebar extras for "+currentView, e); }
+  }
   box.innerHTML = html;
 
   box.querySelectorAll(".navrow[data-view]").forEach(b=>b.onclick=()=>{
@@ -5843,6 +5878,9 @@ function renderSidebar(){
     SIDEBAR_ACTIONS[currentView]?.(el.dataset.sbact, el);
   });
 }
+// Redraws the panel for whatever is actually selected — used by showView() and after data
+// changes. Hover preview (below) calls paintSidebar() directly with a different rail instead.
+function renderSidebar(){ paintSidebar(currentRail); }
 
 /* ---------- Views ---------- */
 function showView(view){
@@ -5897,20 +5935,39 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
   showView(cfg.groups[0].views[0][0]);
 });
 
-/* The list panel floats open on hover on a mouse, and on tap from the 16px strip on a touch
-   screen (where there is no hover to lean on). */
+/* The list panel floats open on hover on a mouse — no separate strip to hover first. Hovering a
+   rail group icon (.railbtn[data-rail]) previews THAT group; hovering anywhere else on the rail
+   (the logo, the gaps, the utility buttons) shows the current view's own group; moving into the
+   panel itself is sticky, so aiming the cursor at a row doesn't flip the list back under it. On a
+   touch screen (no hover) the phone's list button opens the sheet instead — see sheetBtn below. */
 (function(){
-  const wrap=document.getElementById("sbwrap"); if(!wrap) return;
-  wrap.addEventListener("mouseenter",()=>wrap.classList.add("open"));
-  wrap.addEventListener("mouseleave",()=>wrap.classList.remove("open"));
+  const zone=document.getElementById("railzone"); if(!zone) return;
+  const wrap=document.getElementById("sbwrap");
+  let hoverRail=null;
+
+  function preview(rail){
+    if(hoverRail!==rail){ paintSidebar(rail); hoverRail=rail; }
+    wrap.classList.add("open");
+  }
+  zone.addEventListener("mouseover",e=>{
+    const btn=e.target.closest(".railbtn[data-rail]");
+    if(btn){ preview(btn.dataset.rail); return; }
+    if(e.target.closest("#sbwrap")) return;              // inside the panel: sticky
+    if(e.target.closest(".rail")) preview(currentRail);  // open rail space
+  });
+  zone.addEventListener("mouseleave",()=>{
+    wrap.classList.remove("open");
+    hoverRail=null;
+    paintSidebar(currentRail);   // reset so the next open (hover or tap) reflects reality
+  });
   wrap.addEventListener("click",e=>{
     if(e.target.closest(".navrow")) return;
     wrap.classList.toggle("open");
   });
-  // Phone: the strip is gone, so the top bar's list button opens the sheet, and picking a row
-  // (handled in renderSidebar) or tapping outside closes it.
+  // Phone: no hover, so the top bar's list button opens the sheet, and picking a row
+  // (handled in paintSidebar) or tapping outside closes it.
   const sheet=document.getElementById("sheetBtn");
-  if(sheet) sheet.onclick=e=>{ e.stopPropagation(); wrap.classList.toggle("open"); };
+  if(sheet) sheet.onclick=e=>{ e.stopPropagation(); paintSidebar(currentRail); wrap.classList.toggle("open"); };
   document.addEventListener("click",e=>{
     if(window.innerWidth>760) return;
     if(e.target.closest("#sbwrap")||e.target.closest("#sheetBtn")) return;
@@ -10004,8 +10061,8 @@ document.getElementById("tlCtxMenu").addEventListener("click",e=>{
   tlHideCtxMenu();
   if(act==="collapse") tlSetAllCollapsed(true);
   else if(act==="expand") tlSetAllCollapsed(false);
-  else if(act==="duplicate" && target) tlDuplicatePlanting(target.p, false);
-  else if(act==="succession" && target) tlDuplicatePlanting(target.p, true);
+  else if(act==="duplicate" && target) tlDuplicatePlanting(target.p);
+  else if(act==="succession" && target) tlOpenSuccessionModal(target.p);
   else if(act==="removecrop" && target) tlOpenRemoveCropModal(target.p, null, tlClosePanel, {});
 });
 document.addEventListener("click",e=>{ if(!e.target.closest("#tlCtxMenu")) tlHideCtxMenu(); });
@@ -10824,27 +10881,16 @@ function apOpenEdit(p){
   $ap("apStep2").style.display="block";
   $ap("apModal").classList.add("open");
 }
-// Timeline bar right-click → Duplicate / Add succession. Both open the real Add-planting dialog
-// (create mode, so apDoCreate writes a brand-new record — never patches the one being copied from)
-// pre-filled from `p`'s own field values, not just the crop's library defaults, the way apOpenEdit
-// fills an edit. A duplicate keeps `p`'s own dates so the user picks a bed/date before saving —
-// two plantings can't share a bed on the same day. A succession instead starts the day after `p`'s
-// own bed-free date (h2, or h1/sow if it has no harvest window yet) and recomputes tp/h1/h2 from
-// there via apCascadeFromSow, the same cascade a hand-typed sow date triggers.
-function tlDuplicatePlanting(p, asSuccession){
+// Shared by "Duplicate planting" and "Add succession" (both from a Timeline bar's right-click) —
+// fills the Add-planting form's fields from `p`'s own values rather than just the crop's library
+// defaults, the way apOpenEdit fills an edit. Leaves apMode="create" so whatever calls this ends
+// in apDoCreate() writing a brand-new record — the planting being copied from is never touched.
+// Dates/count/gap are each caller's own job, since duplicate and succession want different things.
+function tlPrefillApFromPlanting(p){
   apMode="create"; apEditPlanting=null; apEditMembers=[]; apCropId=p.cropId;
-  $ap("apCropName").textContent=(p.crop||"Crop")+(p.variety?" · "+p.variety:"");
-  $ap("apDefaultsNote").textContent = asSuccession
-    ? "New succession, prefilled from this planting — pick a bed and check the dates before saving."
-    : "Duplicate of this planting — pick a bed and check the dates before saving.";
-  $ap("apBack").style.display="";
-  $ap("apDelete").style.display="none";
-  $ap("apCreate").textContent="Add planting";
-  $ap("apScopeWrap").style.display="none";
   apStatusVal="Planned";
   apFillBeds(); $ap("apBed").value = p.bedIds && p.bedIds[0] ? p.bedIds[0] : "";
   apFillVarieties(p.cropId, p.variety||"");
-  $ap("apGroup").value = asSuccession ? (p.group||"") : "";
   $ap("apBm").value = p.bm ?? "";
   $ap("apNotes").value = "";
   $ap("apRows").value = p.rows ?? "";
@@ -10870,18 +10916,26 @@ function tlDuplicatePlanting(p, asSuccession){
   apNominalDtm = dtm;
   $ap("apWindow").value = win!=null?win:"";
   $ap("apSowActual").value=""; $ap("apTpActual").value="";
-  if(asSuccession){
-    const freeFrom = p.h2 || p.h1 || p.sow;
-    $ap("apSow").value = freeFrom ? isoAddDays(freeFrom, 1) : "";
-    apCascadeFromSow();
-  }else{
-    $ap("apSow").value=p.sow||""; $ap("apTp").value=p.tp||"";
-    $ap("apH1").value=p.h1||""; $ap("apH2").value=p.h2||"";
-    apSyncDtm();
-  }
+  $ap("apTarp").checked=false;
+  $ap("apCount").value="1"; $ap("apGap").value="14";
+}
+// "Duplicate planting" — a single copy, opened in the real dialog so the user can pick a bed/date
+// before saving (two plantings can't share a bed on the same day, so this can't just auto-save).
+function tlDuplicatePlanting(p){
+  tlPrefillApFromPlanting(p);
+  $ap("apCropName").textContent=(p.crop||"Crop")+(p.variety?" · "+p.variety:"");
+  $ap("apDefaultsNote").textContent="Duplicate of this planting — pick a bed and check the dates before saving.";
+  $ap("apBack").style.display="";
+  $ap("apDelete").style.display="none";
+  $ap("apCreate").textContent="Add planting";
+  $ap("apScopeWrap").style.display="none";
+  $ap("apGroup").value="";
+  $ap("apSow").value=p.sow||""; $ap("apTp").value=p.tp||"";
+  $ap("apH1").value=p.h1||""; $ap("apH2").value=p.h2||"";
+  apSyncDtm();
   apSyncYield();
   apUpdateRowsSummary(); apUpdateHarvestSummary();
-  $ap("apTarp").checked=false; apUpdateTarpVis();
+  apUpdateTarpVis();
   apRefreshBedFlags();
   apSnapshot();
   apLoadTaskRows();   // no saved schedule for a not-yet-created planting — falls back to crop defaults
@@ -10890,6 +10944,42 @@ function tlDuplicatePlanting(p, asSuccession){
   $ap("apStep1").style.display="none";
   $ap("apStep2").style.display="block";
   $ap("apModal").classList.add("open");
+}
+// "Add succession" — headless: fills the same Add-planting form fields behind the scenes (never
+// opened/shown), sets it to create `count` new plantings `gap` days apart starting `gap` days
+// after `p`'s OWN sow date, then runs the exact same apDoCreate() a manual multi-succession Add
+// Planting run uses (climate-aware per-succession harvest recompute, task/tarp materialization,
+// the lot) — see the Count/Gap fields on that dialog. `p` itself is never touched.
+async function tlCreateSuccessions(p, count, gap){
+  tlPrefillApFromPlanting(p);
+  $ap("apGroup").value = p.group || "";
+  $ap("apSow").value = p.sow ? isoAddDays(p.sow, gap) : "";
+  $ap("apTp").value=""; $ap("apH1").value=""; $ap("apH2").value="";
+  $ap("apCount").value=String(count); $ap("apGap").value=String(gap);
+  await apDoCreate();
+}
+function tlOpenSuccessionModal(p){
+  const modal=document.getElementById("tlSuccessionModal");
+  document.getElementById("tlSuccessionCount").value="1";
+  document.getElementById("tlSuccessionGap").value="14";
+  document.getElementById("tlSuccessionMsg").textContent="";
+  modal.classList.add("open");
+  const close=()=>modal.classList.remove("open");
+  document.getElementById("tlSuccessionClose").onclick=close;
+  document.getElementById("tlSuccessionCancel").onclick=close;
+  document.getElementById("tlSuccessionAdd").onclick=async ()=>{
+    const count=Math.max(1,parseInt(document.getElementById("tlSuccessionCount").value)||1);
+    const gap=Math.max(1,parseInt(document.getElementById("tlSuccessionGap").value)||1);
+    const btn=document.getElementById("tlSuccessionAdd"), msgEl=document.getElementById("tlSuccessionMsg");
+    btn.disabled=true; msgEl.style.color="var(--ink-2)"; msgEl.textContent=`Adding ${count} succession${count>1?"s":""}…`;
+    // apDoCreate never throws — it reports failure by leaving an error in apMsg (clay-coloured)
+    // instead, so that's what tells this modal whether to close or keep showing the problem.
+    await tlCreateSuccessions(p, count, gap);
+    btn.disabled=false;
+    const apMsg=$ap("apMsg");
+    if(apMsg.style.color==="var(--clay)" && apMsg.textContent){ msgEl.style.color="var(--clay)"; msgEl.textContent=apMsg.textContent; }
+    else close();
+  };
 }
 function apSnapshot(){
   apInitial={
