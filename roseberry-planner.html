@@ -1051,7 +1051,7 @@
        Right padding reserves the corner .rail-utils floats over (fixed, top-right) — without it,
        a title row that runs all the way to the edge (Today's sort-by select, others' icon buttons)
        renders underneath those icons instead of beside them. */
-    .vw-title{gap:.45rem;padding:0 150px 0 .6rem}
+    .vw-title{gap:.45rem;padding:0 115px 0 .6rem}
     .vw-name{font-size:1rem}
     .vw-title .sub{display:none}
     .vw-tools{padding:.3rem .6rem;gap:.3rem}
@@ -2961,9 +2961,6 @@
     <button type="button" class="railbtn sheet-btn" id="sheetBtn" aria-label="Show list">
       <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h13.2"/></svg>
     </button>
-    <button class="railbtn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
-      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M16.2 11.8A6.6 6.6 0 018.2 3.8a6.6 6.6 0 108 8z"/></svg>
-    </button>
     <button class="railbtn" id="reloadBtn" title="Reload data" aria-label="Reload data">
       <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M16.4 10a6.4 6.4 0 10-1.9 4.5"/><path d="M16.4 4.6v4h-4"/></svg>
     </button>
@@ -4358,6 +4355,9 @@
       <h1>Roseberry <b>Planner</b></h1>
       <p>Tokens are stored in this browser only.</p>
 
+      <label class="fld">Appearance</label>
+      <button type="button" class="btn ghost" id="themeBtn" style="display:flex;align-items:center;gap:.5rem;justify-content:center"></button>
+
       <label class="fld" for="backendSelect">Data backend</label>
       <select id="backendSelect">
         <option value="airtable">Airtable</option>
@@ -4970,12 +4970,12 @@ const THEME_ICON_SUN='<svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><c
 function setTheme(t){
   theme=t; document.documentElement.setAttribute("data-theme",t);
   localStorage.setItem(THEME_KEY,t);
-  // The rail's theme button is an icon button, so this swaps its <svg> rather than its text —
-  // writing textContent here would silently blank the icon.
+  // Lives in the settings panel now (not the rail), so it carries an icon AND a label saying what
+  // tapping it does next — a bare icon button worked in the rail but reads as unlabelled in a form.
   const tbtn=document.getElementById("themeBtn");
   if(tbtn){
-    tbtn.innerHTML = t==="dark" ? THEME_ICON_SUN : THEME_ICON_MOON;
-    tbtn.title = t==="dark" ? "Switch to light mode" : "Switch to dark mode";
+    tbtn.innerHTML = (t==="dark" ? THEME_ICON_SUN : THEME_ICON_MOON) +
+      "<span>"+(t==="dark" ? "Switch to light mode" : "Switch to dark mode")+"</span>";
   }
 }
 setTheme(theme);
