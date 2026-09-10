@@ -1051,14 +1051,15 @@
        Right padding reserves the corner .rail-utils floats over (fixed, top-right) — without it,
        a title row that runs all the way to the edge (Today's sort-by select, others' icon buttons)
        renders underneath those icons instead of beside them. */
-    .vw-title{gap:.45rem;padding:0 115px 0 .6rem}
+    .vw-title{gap:.45rem;padding:0 115px 0 .6rem;height:48px}
     .vw-name{font-size:1rem}
     .vw-title .sub{display:none}
-    .vw-tools{padding:.3rem .6rem;gap:.3rem}
-    /* 44px minimum on anything you tap in the field, per the redesign. */
+    .vw-tools{padding:.25rem .6rem;gap:.3rem;min-height:40px}
+    /* 44px minimum on anything you tap in the field, per the redesign — the row around a button
+       can run tighter than that (the button itself still meets it), which is what actually
+       shrinks the bar; padding the row out to match the button would just bring the bulk back. */
     .vw-title button,.vw-tools button{min-height:44px;display:inline-flex;
       align-items:center;justify-content:center}
-    .vw-more{width:44px;height:44px}
   }
   .wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;align-items:start}
   .wk-col{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);overflow:hidden}
@@ -1760,6 +1761,9 @@
     color:var(--clay);font-size:.78rem;padding:.42rem .8rem;cursor:pointer}
   .btn-danger:hover{background:var(--clay);color:#fff}
   .wk-qa-label-short{display:none}
+  .wk-menu-mobile-only{display:none}
+  .wk-menu-divider{height:1px;background:var(--line-2);margin:.3rem 6px}
+  .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
@@ -2042,25 +2046,17 @@
     .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
     .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
-    /* #view-week's title row has ~7 controls (name, 4-way mode toggle, sync menu) — too many for
-       one row on a phone, and with no wrap they were rendering past the right edge, clipped under
-       the fixed top-right icons and unreachable (the redesign renamed .cm-top to .vw-title but this
-       rule was never updated to match, so it silently stopped doing anything). Wrapping + giving the
-       mode toggle its own full-width row keeps everything on-screen and tappable. */
-    #view-week .vw-title{flex-wrap:wrap;row-gap:.4rem;height:auto;padding-top:.5rem;padding-bottom:.5rem}
-    #view-week #wkModeToggle{flex:1 1 100%;margin-left:0}
-    #view-week #wkModeToggle button{flex:1 1 0;font-size:.66rem;padding:.4rem .3rem}
+    /* Minimal phone header: the 4-way layout toggle and the Claude-chat quick-add move into the
+       ⋯ menu (see the wk-menu-mobile-only rows next to wkMoreMenu in the HTML) instead of fighting
+       for room inline — the title row is then just the name and that one menu button, and the
+       tools row is just date nav plus the two core add actions. */
+    #view-week .vw-title .seg{display:none}
+    #view-week #wkQuickAddBtn{display:none}
+    #view-week .wk-menu-mobile-only{display:flex}
+    #view-week .wk-menu-mobile-only.wk-menu-divider{display:block}
     #view-week .wk-tt-status{white-space:normal}
-    /* Add task / Add planting: same idea as the mode toggle above — rather than leaving them to
-       fall wherever the wrap happens to land (and risk being pushed below the fold on a short
-       viewport, since .cm-top's wrapped rows aren't scrollable — see the overflow:hidden note
-       above), give them their own guaranteed full-width row so they're always reachable. */
     #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.4rem}
     #view-week .wk-add-group button{flex:1 1 0;font-size:.8rem;padding:.55rem .3rem;justify-content:center}
-    /* "From Claude chat" wrapped to two lines and threw the row's height off against its two
-       neighbours — a short label at this width reads just as clearly and keeps all three level. */
-    .wk-qa-label-full{display:none}
-    .wk-qa-label-short{display:inline}
     /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
        @media(max-width:760px) block at the very end of this stylesheet. The field-walk base rules
        are declared after this block, so at equal specificity they would win the cascade and
@@ -3718,6 +3714,16 @@
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="4.6" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.4" cy="10" r="1.3" fill="currentColor" stroke="none"/></svg>
         </button>
         <div class="vw-menu" id="wkMoreMenu" hidden>
+          <!-- Mobile only: the layout toggle and the Claude-chat quick-add live inline on desktop
+               (room for them there), but on a phone they move in here so the title row stays down
+               to just the name and this menu button — see the max-width:760px rules below. -->
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="board" aria-pressed="true" style="flex:1 1 auto;text-align:left">Board</button></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="day" aria-pressed="false" style="flex:1 1 auto;text-align:left">Calendar</button></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="bed" aria-pressed="false" style="flex:1 1 auto;text-align:left">By crop &amp; bed</button></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="type" aria-pressed="false" style="flex:1 1 auto;text-align:left">By task type</button></div>
+          <div class="wk-menu-mobile-only wk-menu-divider"></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-qa-row" style="flex:1 1 auto;text-align:left">✦ From Claude chat</button></div>
+          <div class="wk-menu-mobile-only wk-menu-divider"></div>
           <div class="vw-menu-row"><span class="wk-tt-status" id="wkTtStatus"></span>
             <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button></div>
           <div class="vw-menu-row"><span class="wk-tt-status" id="wkGcalStatus"></span>
@@ -16516,14 +16522,21 @@ function wkSetOdCollapsed(val){
   if(today) today.onclick=()=>{ wkStartISO=wkISO(wkMonday(new Date())); buildWeekPlanner(); };
   const fitBtn=document.getElementById("wkCalFitBtn");
   if(fitBtn) fitBtn.onclick=()=>{ wkCalFit=!wkCalFit; saveUiState(); buildWeekPlanner(); };
-  document.querySelectorAll("#wkModeToggle button").forEach(b=>b.onclick=()=>{
+  // [data-wkmode] rather than "#wkModeToggle button" so the duplicate rows inside the mobile ⋯
+  // menu (wk-menu-mobile-only) toggle in lockstep with the inline desktop seg — same handler,
+  // whichever copy is actually visible at the current width.
+  document.querySelectorAll("[data-wkmode]").forEach(b=>b.onclick=()=>{
     wkMode=b.dataset.wkmode;
-    document.querySelectorAll("#wkModeToggle button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.wkmode===wkMode?"true":"false"));
+    document.querySelectorAll("[data-wkmode]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.wkmode===wkMode?"true":"false"));
+    if(moreMenu){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); }
     buildWeekPlanner();
   });
   const add=document.getElementById("wkAddBtn"); if(add) add.onclick=apOpen;
   const addTask=document.getElementById("wkAddTaskBtn"); if(addTask) addTask.onclick=()=>wkTaskOpen(null);
-  const quickAdd=document.getElementById("wkQuickAddBtn"); if(quickAdd) quickAdd.onclick=qaOpen;
+  document.querySelectorAll("#wkQuickAddBtn, .wk-qa-row").forEach(b=>b.onclick=()=>{
+    if(moreMenu){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); }
+    qaOpen();
+  });
 })();
 
 function saveUiState(){
@@ -16584,7 +16597,7 @@ function restoreUiState(){
 
   if(saved.week && saved.week.mode){
     wkMode=saved.week.mode;
-    document.querySelectorAll("#wkModeToggle button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
+    document.querySelectorAll("[data-wkmode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
   }
   if(saved.week && "calFit" in saved.week) wkCalFit=!!saved.week.calFit;
 
