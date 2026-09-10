@@ -1759,6 +1759,7 @@
   .btn-danger{border:1px solid var(--clay);border-radius:8px;background:none;
     color:var(--clay);font-size:.78rem;padding:.42rem .8rem;cursor:pointer}
   .btn-danger:hover{background:var(--clay);color:#fff}
+  .wk-qa-label-short{display:none}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
@@ -2041,19 +2042,25 @@
     .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
     .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
-    /* #view-week's toolbar has ~10 controls (nav, mode toggle, TickTick, add) — too many for one row on a
-       phone, and with no wrap they were rendering past the right edge, clipped by main{overflow:hidden}
-       and unreachable. Wrapping + giving the mode toggle its own full-width row keeps everything on-screen. */
-    #view-week .cm-top{flex-wrap:wrap;row-gap:.5rem}
+    /* #view-week's title row has ~7 controls (name, 4-way mode toggle, sync menu) — too many for
+       one row on a phone, and with no wrap they were rendering past the right edge, clipped under
+       the fixed top-right icons and unreachable (the redesign renamed .cm-top to .vw-title but this
+       rule was never updated to match, so it silently stopped doing anything). Wrapping + giving the
+       mode toggle its own full-width row keeps everything on-screen and tappable. */
+    #view-week .vw-title{flex-wrap:wrap;row-gap:.4rem;height:auto;padding-top:.5rem;padding-bottom:.5rem}
     #view-week #wkModeToggle{flex:1 1 100%;margin-left:0}
-    #view-week #wkModeToggle button{flex:1 1 0}
+    #view-week #wkModeToggle button{flex:1 1 0;font-size:.66rem;padding:.4rem .3rem}
     #view-week .wk-tt-status{white-space:normal}
     /* Add task / Add planting: same idea as the mode toggle above — rather than leaving them to
        fall wherever the wrap happens to land (and risk being pushed below the fold on a short
        viewport, since .cm-top's wrapped rows aren't scrollable — see the overflow:hidden note
        above), give them their own guaranteed full-width row so they're always reachable. */
-    #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.5rem}
-    #view-week .wk-add-group button{flex:1 1 0}
+    #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.4rem}
+    #view-week .wk-add-group button{flex:1 1 0;font-size:.8rem;padding:.55rem .3rem;justify-content:center}
+    /* "From Claude chat" wrapped to two lines and threw the row's height off against its two
+       neighbours — a short label at this width reads just as clearly and keeps all three level. */
+    .wk-qa-label-full{display:none}
+    .wk-qa-label-short{display:inline}
     /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
        @media(max-width:760px) block at the very end of this stylesheet. The field-walk base rules
        are declared after this block, so at equal specificity they would win the cascade and
@@ -3727,7 +3734,7 @@
         <button class="icon-btn" id="wkCalFitBtn" style="display:none;margin-left:.2rem"></button>
         <span class="spacer"></span>
         <div class="wk-add-group">
-          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="display:flex;align-items:center;gap:.4rem;color:var(--ink-2)"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg>From Claude chat</button>
+          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="display:flex;align-items:center;gap:.4rem;color:var(--ink-2);white-space:nowrap"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg><span class="wk-qa-label-full">From Claude chat</span><span class="wk-qa-label-short">Claude</span></button>
           <button class="btn-ghost" id="wkAddTaskBtn">+ Add task</button>
           <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
         </div>
