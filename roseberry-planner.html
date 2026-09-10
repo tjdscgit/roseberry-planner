@@ -2049,7 +2049,7 @@
     .wk-day-picker .cm-block-tab{font-size:.82rem;padding:.65rem 1.05rem}
     /* selected day needs to read at a glance in a scrollable strip — an underline is too easy to miss */
     .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
-    .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
+    .wk-cal{min-width:0;margin:0 -1.2rem}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column; negative margin cancels .wk-body's side padding so the grid runs edge to edge instead of stopping short of the screen */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
     /* Calendar mode's day header repeats the day the wk-day-picker tab strip above it already
        shows (mobile only ever renders the one selected day) — pure dead space at this width. */
