@@ -188,31 +188,32 @@
   @media (max-width:760px){
     #app{flex-direction:column}
     .rail{
-      order:3;flex-direction:row;width:auto;height:72px;padding:0 0 6px;gap:0;
+      order:3;flex-direction:row;width:auto;height:56px;padding:0;gap:0;
       border-right:none;border-top:1px solid var(--line);
     }
     .rail-mark,.rail-spacer{display:none}
     /* Theme/reload/settings move into the top bar on a phone — the tab bar is for destinations
        only, and five 44px targets already fill the width. They are NOT hidden: settings has to
        stay reachable (the Whiteboard page tells you to open it). */
-    .rail-utils{position:fixed;top:0;right:4px;height:52px;flex-direction:row;gap:0;z-index:41}
-    .rail-utils .railbtn{width:40px;height:44px}
+    .rail-utils{position:fixed;top:0;right:4px;height:44px;flex-direction:row;gap:0;z-index:41}
+    .rail-utils .railbtn{width:36px;height:40px}
     .railbtn[data-rail]{flex:1 1 0;width:auto;height:100%;border-radius:0;
-      flex-direction:column;gap:5px;position:relative}
+      flex-direction:column;gap:3px;position:relative}
+    .railbtn[data-rail] .ico{width:17px;height:17px}
     .railbtn[data-rail]::after{
-      content:attr(data-rail);font-family:var(--mono);font-size:9.5px;
+      content:attr(data-rail);font-family:var(--mono);font-size:8.5px;
       letter-spacing:.05em;text-transform:uppercase;
     }
     .railbtn[data-rail][aria-selected="true"]{background:none;color:var(--steel)}
     .railbtn[data-fw-pending]::before{
-      content:"";position:absolute;top:12px;right:calc(50% - 16px);
+      content:"";position:absolute;top:9px;right:calc(50% - 16px);
       width:7px;height:7px;border-radius:50%;background:var(--clay);
     }
     .sbwrap{order:1;width:auto;height:0;border-right:none;overflow:visible}
     .sbinner{width:100%;height:auto;max-height:70dvh;top:auto;bottom:0;left:0;right:0;
       border-right:none;border-top:1px solid var(--line);
       transform:translateY(101%);opacity:1;transition:transform .28s cubic-bezier(.16,1,.3,1);
-      padding-bottom:78px;position:fixed;z-index:50}
+      padding-bottom:62px;position:fixed;z-index:50}
     .sbwrap.open .sbinner{width:100%;transform:none;opacity:1}
     .sbstrip{display:none}
     .navrow{min-height:48px;font-size:15px}
@@ -221,6 +222,10 @@
        .rail-utils, so it inherits .railbtn's sizing/hover and .rail-utils' fixed top-right dock —
        nothing left to set here but visibility. */
     .sheet-btn{display:flex}
+    /* .rail-utils floats fixed over the top-right corner of whichever view is active, so any view
+       whose title row runs content (a sort select, extra buttons) all the way to the right edge —
+       Today's sort-by dropdown among them — needs that corner reserved or the two overlap. */
+    .vw-title{padding-right:150px}
   }
 
   main{flex:1 1 auto;position:relative;overflow:hidden}
