@@ -180,31 +180,31 @@
      .shell-main holds nothing but <main> now. The view name already lives in .vw-name. */
   .shell-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;
     background:var(--paper);overflow:hidden}
-  .sheet-btn{display:none}   /* phone only; the media query below turns it on */
 
   /* ---- Phone: the rail can't come with us, so it becomes a bottom tab bar and the list panel
      becomes a sheet you pull up from the strip. Same five destinations, same order. ---- */
   @media (max-width:760px){
     #app{flex-direction:column}
     .rail{
-      order:3;flex-direction:row;width:auto;height:72px;padding:0 0 6px;gap:0;
+      order:3;flex-direction:row;width:auto;height:56px;padding:0;gap:0;
       border-right:none;border-top:1px solid var(--line);
     }
     .rail-mark,.rail-spacer{display:none}
     /* Theme/reload/settings move into the top bar on a phone — the tab bar is for destinations
        only, and five 44px targets already fill the width. They are NOT hidden: settings has to
        stay reachable (the Whiteboard page tells you to open it). */
-    .rail-utils{position:fixed;top:0;right:4px;height:52px;flex-direction:row;gap:0;z-index:41}
-    .rail-utils .railbtn{width:40px;height:44px}
+    .rail-utils{position:fixed;top:0;right:4px;height:44px;flex-direction:row;gap:0;z-index:41}
+    .rail-utils .railbtn{width:36px;height:40px}
     .railbtn[data-rail]{flex:1 1 0;width:auto;height:100%;border-radius:0;
-      flex-direction:column;gap:5px;position:relative}
+      flex-direction:column;gap:3px;position:relative}
+    .railbtn[data-rail] .ico{width:17px;height:17px}
     .railbtn[data-rail]::after{
-      content:attr(data-rail);font-family:var(--mono);font-size:9.5px;
+      content:attr(data-rail);font-family:var(--mono);font-size:8.5px;
       letter-spacing:.05em;text-transform:uppercase;
     }
     .railbtn[data-rail][aria-selected="true"]{background:none;color:var(--steel)}
     .railbtn[data-fw-pending]::before{
-      content:"";position:absolute;top:12px;right:calc(50% - 16px);
+      content:"";position:absolute;top:9px;right:calc(50% - 16px);
       width:7px;height:7px;border-radius:50%;background:var(--clay);
     }
     .railzone{display:contents}
@@ -212,14 +212,10 @@
     .sbinner{width:100%;height:auto;max-height:70dvh;top:auto;bottom:0;left:0;right:0;
       border-right:none;border-top:1px solid var(--line);
       transform:translateY(101%);opacity:1;pointer-events:auto;transition:transform .28s cubic-bezier(.16,1,.3,1);
-      padding-bottom:78px;position:fixed;z-index:50}
+      padding-bottom:62px;position:fixed;z-index:50}
     .sbwrap.open .sbinner{width:100%;transform:none;opacity:1}
     .navrow{min-height:48px;font-size:15px}
     .shell-main{order:2;flex:1 1 auto;min-height:0}
-    /* The phone's way into the list panel, since there is no 16px strip to tap. Sits in
-       .rail-utils, so it inherits .railbtn's sizing/hover and .rail-utils' fixed top-right dock —
-       nothing left to set here but visibility. */
-    .sheet-btn{display:flex}
   }
 
   main{flex:1 1 auto;position:relative;overflow:hidden}
@@ -1045,15 +1041,19 @@
 
   @media (max-width:760px){
     /* The view name and its summary are the first things to yield room — the mode switch and the
-       ⋯ menu are controls, and a control you cannot reach is worse than a title you cannot read. */
-    .vw-title{gap:.45rem;padding:0 .6rem}
+       ⋯ menu are controls, and a control you cannot reach is worse than a title you cannot read.
+       Right padding reserves the corner .rail-utils floats over (fixed, top-right) — without it,
+       a title row that runs all the way to the edge (Today's sort-by select, others' icon buttons)
+       renders underneath those icons instead of beside them. */
+    .vw-title{gap:.45rem;padding:0 82px 0 .6rem;height:48px}
     .vw-name{font-size:1rem}
     .vw-title .sub{display:none}
-    .vw-tools{padding:.3rem .6rem;gap:.3rem}
-    /* 44px minimum on anything you tap in the field, per the redesign. */
+    .vw-tools{padding:.25rem .6rem;gap:.3rem;min-height:40px}
+    /* 44px minimum on anything you tap in the field, per the redesign — the row around a button
+       can run tighter than that (the button itself still meets it), which is what actually
+       shrinks the bar; padding the row out to match the button would just bring the bulk back. */
     .vw-title button,.vw-tools button{min-height:44px;display:inline-flex;
       align-items:center;justify-content:center}
-    .vw-more{width:44px;height:44px}
   }
   .wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;align-items:start}
   .wk-col{border:1px solid var(--line-2);border-radius:10px;background:var(--paper-2);overflow:hidden}
@@ -1188,6 +1188,14 @@
   .wk-cal-gutter{position:relative;border-right:1px solid var(--line)}
   .wk-hr{position:absolute;right:8px;transform:translateY(-50%);font-family:var(--mono);
     font-size:9px;color:var(--ink-2)}
+  /* Mobile only: the hour label lives inside the (edge-to-edge) day column itself instead of a
+     separate gutter strip to its left — see wkRenderCalendar. A small pill keeps it legible sitting
+     directly on the hour line rather than floating on nothing. */
+  .wk-hr-in{position:absolute;left:6px;transform:translateY(-50%);font-family:var(--mono);
+    font-size:9.5px;color:var(--ink-2);background:var(--paper);padding:0 4px;border-radius:3px;
+    pointer-events:none;z-index:1}
+  .wk-cal-adlbl-in{font-family:var(--mono);font-size:8px;letter-spacing:.09em;
+    text-transform:uppercase;color:var(--ink-2)}
   .wk-cal-col{position:relative;border-left:1px solid var(--line)}
   /* The artboard tints today's whole column, not just its header — a soft wash the same colour as
      the rail's "selected" state, so the eye finds today without a filled block fighting the events.
@@ -1301,7 +1309,12 @@
   .wk-odsb-row{display:flex;align-items:center;gap:.4rem;cursor:pointer}
   .wk-odsb-ctx{font-size:.76rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wk-odsb-due{font-family:var(--mono);font-size:.68rem;color:var(--clay);font-weight:700}
-  .wk-body{flex:1 1 auto;overflow:auto;padding:1rem 1.2rem;background:var(--paper);min-width:0}
+  /* min-height:0 is load-bearing (same issue as .cr-wrap elsewhere in this file): without it a flex
+     child's default min-height:auto lets .wk-body grow to fit its own content instead of being
+     capped by .wk-content's real height — which meant Calendar's "fit to screen" math was reading
+     .wk-body.clientHeight AFTER it had already stretched to whatever the grid rendered at, making
+     every fit calculation converge back to full size regardless of the toggle. */
+  .wk-body{flex:1 1 auto;min-height:0;overflow:auto;padding:1rem 1.2rem;background:var(--paper);min-width:0}
   /* ---- Crop map chrome. The design replaces a row of mismatched pill buttons with three things:
      a season dropdown, a three-way tool group, and a Filters popover. Anything that is an ACTION
      rather than a mode lives behind the title row's overflow menu. ---- */
@@ -1754,6 +1767,10 @@
   .btn-danger{border:1px solid var(--clay);border-radius:8px;background:none;
     color:var(--clay);font-size:.78rem;padding:.42rem .8rem;cursor:pointer}
   .btn-danger:hover{background:var(--clay);color:#fff}
+  .wk-qa-label-short{display:none}
+  .wk-menu-mobile-only{display:none}
+  .wk-menu-divider{height:1px;background:var(--line-2);margin:.3rem 6px}
+  .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
@@ -2013,7 +2030,12 @@
       background:var(--paper-2)}
     #cmUnassigned .cm-un-body{max-height:50vh}
     #cmUnassigned.collapsed{flex:none}
-    .tl-panel{width:min(320px,86vw);flex-basis:min(320px,86vw)}
+    /* Every side detail panel (crop map, timeline, today, this week) becomes a full-screen dialog
+       on phone instead of a squeezed sidebar shoved in beside the content — there's no room for
+       both at this width, and a panel that takes over the screen reads as "you tapped a task",
+       the way the desktop sidebar does, instead of a sliver pinned to the edge. */
+    .tl-panel.open{position:fixed;inset:0;width:100%;max-width:100%;flex-basis:auto;
+      z-index:52;border-radius:0}
     /* The rail (nav[role=tablist]) and the top bar are the phone chrome now — they become the
        bottom tab bar and the title row rather than being hidden for a hamburger. */
     .cm-block-picker{display:flex}
@@ -2034,21 +2056,26 @@
     .wk-day-picker .cm-block-tab{font-size:.82rem;padding:.65rem 1.05rem}
     /* selected day needs to read at a glance in a scrollable strip — an underline is too easy to miss */
     .wk-day-picker .cm-block-tab[aria-selected="true"]{background:var(--steel);color:#fff;border-radius:8px}
-    .wk-cal{min-width:0}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column */
+    .wk-cal{min-width:0;margin:0 -1.2rem}   /* the 860px desktop floor (sized for all 7 columns) fought the single mobile column; negative margin cancels .wk-body's side padding so the grid runs edge to edge instead of stopping short of the screen */
     .wk-hr{font-size:.68rem}   /* the desktop .58rem axis labels were hard to read at phone viewing distance */
-    /* #view-week's toolbar has ~10 controls (nav, mode toggle, TickTick, add) — too many for one row on a
-       phone, and with no wrap they were rendering past the right edge, clipped by main{overflow:hidden}
-       and unreachable. Wrapping + giving the mode toggle its own full-width row keeps everything on-screen. */
-    #view-week .cm-top{flex-wrap:wrap;row-gap:.5rem}
-    #view-week #wkModeToggle{flex:1 1 100%;margin-left:0}
-    #view-week #wkModeToggle button{flex:1 1 0}
+    /* The hour label now lives inside the day column (wk-hr-in) rather than a side gutter, so a
+       task card starting flush at the left edge sits right on top of it. Give the card room to
+       start clear of the label instead. */
+    .wk-block{left:44px}
+    /* Calendar mode's day header repeats the day the wk-day-picker tab strip above it already
+       shows (mobile only ever renders the one selected day) — pure dead space at this width. */
+    .wk-cal-headrow{display:none}
+    /* Minimal phone header: the 4-way layout toggle and the Claude-chat quick-add move into the
+       ⋯ menu (see the wk-menu-mobile-only rows next to wkMoreMenu in the HTML) instead of fighting
+       for room inline — the title row is then just the name and that one menu button, and the
+       tools row is just date nav plus the two core add actions. */
+    #view-week .vw-title .seg{display:none}
+    #view-week #wkQuickAddBtn{display:none}
+    #view-week .wk-menu-mobile-only{display:flex}
+    #view-week .wk-menu-mobile-only.wk-menu-divider{display:block}
     #view-week .wk-tt-status{white-space:normal}
-    /* Add task / Add planting: same idea as the mode toggle above — rather than leaving them to
-       fall wherever the wrap happens to land (and risk being pushed below the fold on a short
-       viewport, since .cm-top's wrapped rows aren't scrollable — see the overflow:hidden note
-       above), give them their own guaranteed full-width row so they're always reachable. */
-    #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.5rem}
-    #view-week .wk-add-group button{flex:1 1 0}
+    #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.4rem}
+    #view-week .wk-add-group button{flex:1 1 0;font-size:.8rem;padding:.55rem .3rem;justify-content:center}
     /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
        @media(max-width:760px) block at the very end of this stylesheet. The field-walk base rules
        are declared after this block, so at equal specificity they would win the cascade and
@@ -2954,21 +2981,11 @@
     </button>
     <div class="rail-spacer"></div>
     <div class="rail-utils">
-    <!-- Phone only (.sheet-btn is display:none above 760px) — opens the list panel as a pull-up
-         sheet, since there is no hover strip to tap on a touch screen. Lives here rather than in a
-         brand bar because there is no brand bar in the redesign; this fixed-position group is the
-         one piece of chrome that already survives being tucked in behind whichever view is showing. -->
-    <button type="button" class="railbtn sheet-btn" id="sheetBtn" aria-label="Show list">
-      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.4 6h13.2M3.4 10h13.2M3.4 14h13.2"/></svg>
-    </button>
-    <button class="railbtn" id="themeBtn" title="Toggle dark mode" aria-label="Toggle dark mode">
-      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M16.2 11.8A6.6 6.6 0 018.2 3.8a6.6 6.6 0 108 8z"/></svg>
-    </button>
     <button class="railbtn" id="reloadBtn" title="Reload data" aria-label="Reload data">
       <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M16.4 10a6.4 6.4 0 10-1.9 4.5"/><path d="M16.4 4.6v4h-4"/></svg>
     </button>
     <button class="railbtn" id="gearBtn" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.4v2.2M10 15.4v2.2M17.6 10h-2.2M4.6 10H2.4M15.4 4.6l-1.6 1.6M6.2 13.8l-1.6 1.6M15.4 15.4l-1.6-1.6M6.2 6.2L4.6 4.6"/></svg>
+      <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     </button>
     </div>
   </nav>
@@ -3713,6 +3730,16 @@
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="4.6" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.4" cy="10" r="1.3" fill="currentColor" stroke="none"/></svg>
         </button>
         <div class="vw-menu" id="wkMoreMenu" hidden>
+          <!-- Mobile only: the layout toggle and the Claude-chat quick-add live inline on desktop
+               (room for them there), but on a phone they move in here so the title row stays down
+               to just the name and this menu button — see the max-width:760px rules below. -->
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="board" aria-pressed="true" style="flex:1 1 auto;text-align:left">Board</button></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="day" aria-pressed="false" style="flex:1 1 auto;text-align:left">Calendar</button></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="bed" aria-pressed="false" style="flex:1 1 auto;text-align:left">By crop &amp; bed</button></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="type" aria-pressed="false" style="flex:1 1 auto;text-align:left">By task type</button></div>
+          <div class="wk-menu-mobile-only wk-menu-divider"></div>
+          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-qa-row" style="flex:1 1 auto;text-align:left">✦ From Claude chat</button></div>
+          <div class="wk-menu-mobile-only wk-menu-divider"></div>
           <div class="vw-menu-row"><span class="wk-tt-status" id="wkTtStatus"></span>
             <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button></div>
           <div class="vw-menu-row"><span class="wk-tt-status" id="wkGcalStatus"></span>
@@ -3729,7 +3756,7 @@
         <button class="icon-btn" id="wkCalFitBtn" style="display:none;margin-left:.2rem"></button>
         <span class="spacer"></span>
         <div class="wk-add-group">
-          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="display:flex;align-items:center;gap:.4rem;color:var(--ink-2)"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg>From Claude chat</button>
+          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="display:flex;align-items:center;gap:.4rem;color:var(--ink-2);white-space:nowrap"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg><span class="wk-qa-label-full">From Claude chat</span><span class="wk-qa-label-short">Claude</span></button>
           <button class="btn-ghost" id="wkAddTaskBtn">+ Add task</button>
           <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
         </div>
@@ -4377,6 +4404,9 @@
       <h1>Roseberry <b>Planner</b></h1>
       <p>Tokens are stored in this browser only.</p>
 
+      <label class="fld">Appearance</label>
+      <button type="button" class="btn ghost" id="themeBtn" style="display:flex;align-items:center;gap:.5rem;justify-content:center"></button>
+
       <label class="fld" for="backendSelect">Data backend</label>
       <select id="backendSelect">
         <option value="airtable">Airtable</option>
@@ -4989,12 +5019,12 @@ const THEME_ICON_SUN='<svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><c
 function setTheme(t){
   theme=t; document.documentElement.setAttribute("data-theme",t);
   localStorage.setItem(THEME_KEY,t);
-  // The rail's theme button is an icon button, so this swaps its <svg> rather than its text —
-  // writing textContent here would silently blank the icon.
+  // Lives in the settings panel now (not the rail), so it carries an icon AND a label saying what
+  // tapping it does next — a bare icon button worked in the rail but reads as unlabelled in a form.
   const tbtn=document.getElementById("themeBtn");
   if(tbtn){
-    tbtn.innerHTML = t==="dark" ? THEME_ICON_SUN : THEME_ICON_MOON;
-    tbtn.title = t==="dark" ? "Switch to light mode" : "Switch to dark mode";
+    tbtn.innerHTML = (t==="dark" ? THEME_ICON_SUN : THEME_ICON_MOON) +
+      "<span>"+(t==="dark" ? "Switch to light mode" : "Switch to dark mode")+"</span>";
   }
 }
 setTheme(theme);
@@ -5931,15 +5961,26 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
 
 document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
   const cfg=RAIL_GROUPS[b.dataset.rail]; if(!cfg) return;
+  const wrap=document.getElementById("sbwrap");
+  const isMobile=window.innerWidth<=760;
+  // On a phone there's no hover to reveal the list, and the old top-bar hamburger only duplicated
+  // this tap — so the bottom tab itself now opens the sheet of that destination's views. Tapping
+  // the tab you're already on just toggles the sheet, rather than re-navigating underneath it.
+  if(isMobile && b.dataset.rail===currentRail && wrap){
+    wrap.classList.toggle("open");
+    return;
+  }
   currentRail=b.dataset.rail;
   showView(cfg.groups[0].views[0][0]);
+  if(isMobile && wrap) wrap.classList.add("open");
 });
 
 /* The list panel floats open on hover on a mouse — no separate strip to hover first. Hovering a
    rail group icon (.railbtn[data-rail]) previews THAT group; hovering anywhere else on the rail
    (the logo, the gaps, the utility buttons) shows the current view's own group; moving into the
    panel itself is sticky, so aiming the cursor at a row doesn't flip the list back under it. On a
-   touch screen (no hover) the phone's list button opens the sheet instead — see sheetBtn below. */
+   touch screen (no hover) a bottom-tab tap opens the sheet instead (wired into the
+   .railbtn[data-rail] click handler above). */
 (function(){
   const zone=document.getElementById("railzone"); if(!zone) return;
   const wrap=document.getElementById("sbwrap");
@@ -5964,13 +6005,12 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
     if(e.target.closest(".navrow")) return;
     wrap.classList.toggle("open");
   });
-  // Phone: no hover, so the top bar's list button opens the sheet, and picking a row
-  // (handled in paintSidebar) or tapping outside closes it.
-  const sheet=document.getElementById("sheetBtn");
-  if(sheet) sheet.onclick=e=>{ e.stopPropagation(); paintSidebar(currentRail); wrap.classList.toggle("open"); };
+  // Phone: the strip is gone, so a bottom-tab tap opens the sheet (wired into the
+  // .railbtn[data-rail] click handler above, since it already knows which destination was
+  // tapped) — picking a row (handled in paintSidebar) or tapping outside closes it.
   document.addEventListener("click",e=>{
     if(window.innerWidth>760) return;
-    if(e.target.closest("#sbwrap")||e.target.closest("#sheetBtn")) return;
+    if(e.target.closest("#sbwrap")||e.target.closest(".railbtn[data-rail]")) return;
     wrap.classList.remove("open");
   });
 })();
@@ -14933,13 +14973,22 @@ function buildWeekPlanner(){
     // "fixed" draws every hour at the same constant size regardless of window height and lets
     // .wk-body scroll for the rest — see wkCalFit.
     if(wkMode==="day"){
-      if(wkCalFit){
+      // A phone always fits, regardless of the saved wkCalFit preference (which is really a
+      // desktop choice, persisted from whenever it was last toggled there) — full-size mode draws
+      // every hour at a constant height and lets the day scroll, which on a screen this short means
+      // a mostly-empty grid stretching well past the fold on any day that isn't packed solid.
+      if(wkCalFit || cmIsMobile()){
         // No floor here — "fit" means fit, full stop. A 1.5px/min floor used to force a minimum
         // 1080px-tall grid (720min × 1.5), so on anything shorter than that it scrolled anyway,
         // silently breaking the one promise this mode makes. 0.4 is just a divide-by-zero guard for
         // a not-yet-laid-out container, not a real UI floor.
-        const headRowH=48, bodyPad=32;   // rough allowance for the sticky day-header row + .wk-body's own padding
-        const availH=Math.max(60, body.clientHeight-headRowH-bodyPad);
+        // The day-header row is display:none on mobile now (the day-tab strip above already names
+        // the day), so it costs 0px there instead of the ~48px it costs on desktop; the all-day
+        // strip renders on both and was never accounted for before, which used to roughly cancel
+        // out against overcounting the header row — now that the header really is gone, leaving it
+        // out here would overshoot the true available height by exactly its width again.
+        const headRowH=cmIsMobile()?0:48, adRowH=40, bodyPad=32;
+        const availH=Math.max(60, body.clientHeight-headRowH-adRowH-bodyPad);
         WK_PXMIN=Math.max(0.4, availH/(WK_T1-WK_T0));
       }else{
         WK_PXMIN=WK_FIXED_PXMIN;
@@ -14960,7 +15009,10 @@ function buildWeekPlanner(){
   }
   const fitBtn=document.getElementById("wkCalFitBtn");
   if(fitBtn){
-    fitBtn.style.display = wkMode==="day" ? "" : "none";
+    // Hidden on mobile: the day always renders fit-to-screen there now (see above), so the toggle
+    // would only offer a "expand to full size and scroll past empty hours" state that's the exact
+    // dead space this was meant to get rid of.
+    fitBtn.style.display = (wkMode==="day" && !cmIsMobile()) ? "" : "none";
     // Icon shows the ACTION a click performs (same convention as the label it replaced) — expand
     // arrows when currently compressed-to-fit (click to show all times at full size), inward
     // shrink arrows when currently at full size (click to compress back to fit-without-scrolling).
@@ -15574,13 +15626,20 @@ function wkBoardCardHTML(r,showDue){
 
 function wkRenderCalendar(rows,start,overdueRows){
   const gridH=(WK_T1-WK_T0)*WK_PXMIN, today=new Date();
+  const isMobile=cmIsMobile();
   // Mobile: narrow the grid to just the selected day (see wkDrawDayPicker), expanded to fill the
   // width via its own 1fr — same idea as Crop Map's single-block-picked layout.
-  const idxs = cmIsMobile()
+  const idxs = isMobile
     ? [Math.max(0,[...Array(7)].findIndex((_,i)=>wkISO(wkAddDays(start,i))===wkSelectedDay))]
     : [0,1,2,3,4,5,6];
-  const colsTemplate=`54px repeat(${idxs.length},minmax(104px,1fr))`;
-  let head=`<div class="wk-cal-grid wk-cal-headrow" style="grid-template-columns:${colsTemplate}"><div class="wk-cal-corner"></div>`;
+  // Desktop reserves a 54px gutter column for the hour labels, to the left of the day columns.
+  // Mobile has no room to spare on a single column for a separate label strip, so the day column
+  // there runs the full grid width and the hour labels are drawn inside it instead (see wk-hr-in
+  // below) — "inside the calendar area" rather than in a strip to its left.
+  const colsTemplate = isMobile
+    ? `repeat(${idxs.length},minmax(104px,1fr))`
+    : `54px repeat(${idxs.length},minmax(104px,1fr))`;
+  let head=`<div class="wk-cal-grid wk-cal-headrow" style="grid-template-columns:${colsTemplate}">${isMobile?"":'<div class="wk-cal-corner"></div>'}`;
   for(const i of idxs){ const day=wkAddDays(start,i);
     head+=`<div class="wk-cal-dayhead${wkSameDay(day,today)?" wk-today":""}"><span class="wk-dh-day">${WK_DAYS[i].toUpperCase()}</span><span class="wk-dh-date">${day.getDate()}</span></div>`; }
   head+=`</div>`;
@@ -15588,27 +15647,47 @@ function wkRenderCalendar(rows,start,overdueRows){
   // in — everything else stays blank (see the note by .wk-cal-adrow on why untimed tasks aren't
   // placed here too). Clicking it opens the existing overdue sidebar rather than duplicating its list.
   const odN=(overdueRows||[]).length;
-  let adrow=`<div class="wk-cal-grid wk-cal-adrow" style="grid-template-columns:${colsTemplate}"><div class="wk-cal-adlbl">all-day</div>`;
+  let adrow=`<div class="wk-cal-grid wk-cal-adrow" style="grid-template-columns:${colsTemplate}">${isMobile?"":'<div class="wk-cal-adlbl">all-day</div>'}`;
   for(const i of idxs){ const day=wkAddDays(start,i);
-    adrow+=`<div class="wk-cal-adcell">${(odN&&wkSameDay(day,today))?`<div class="wk-adpill" id="wkAdOdPill">${odN} overdue</div>`:""}</div>`; }
+    adrow+=`<div class="wk-cal-adcell">${isMobile?'<span class="wk-cal-adlbl-in">all-day</span>':""}${(odN&&wkSameDay(day,today))?`<div class="wk-adpill" id="wkAdOdPill">${odN} overdue</div>`:""}</div>`; }
   adrow+=`</div>`;
-  let gutter=`<div class="wk-cal-gutter">`;
-  for(let m=WK_T0;m<=WK_T1;m+=60) gutter+=`<div class="wk-hr" style="top:${(m-WK_T0)*WK_PXMIN}px">${wkClock(m)}</div>`;
-  gutter+=`</div>`;
-  let cols="", todayIdx=-1;
+  let gutter="";
+  if(!isMobile){
+    gutter=`<div class="wk-cal-gutter">`;
+    for(let m=WK_T0;m<=WK_T1;m+=60) gutter+=`<div class="wk-hr" style="top:${(m-WK_T0)*WK_PXMIN}px">${wkClock(m)}</div>`;
+    gutter+=`</div>`;
+  }
+  let cols="", todayIdx=-1, mobileEmptyDay=null;
   idxs.forEach((i,pos)=>{ if(wkSameDay(wkAddDays(start,i),today)) todayIdx=pos; });
   for(const i of idxs){
     const day=wkAddDays(start,i), dayISO=wkISO(day), isToday=wkSameDay(day,today);
-    let lines=""; for(let m=WK_T0;m<=WK_T1;m+=60) lines+=`<div class="wk-line" style="top:${(m-WK_T0)*WK_PXMIN}px"></div>`;
-    const blocks=wkPackDay(rows.filter(r=>r.inWeek && wkSameDay(r.due,day))).map(g=>wkBlockHTML(g,dayISO)).join("");
+    let lines="";
+    for(let m=WK_T0;m<=WK_T1;m+=60){
+      const top=(m-WK_T0)*WK_PXMIN;
+      lines+=`<div class="wk-line" style="top:${top}px"></div>`;
+      // Mobile-only: the hour label rides inside the day column, sitting right on its own line
+      // instead of in a separate gutter to the left — see the colsTemplate note above.
+      if(isMobile) lines+=`<div class="wk-hr-in" style="top:${top}px">${wkClock(m)}</div>`;
+    }
+    const packed=wkPackDay(rows.filter(r=>r.inWeek && wkSameDay(r.due,day)));
+    // Mobile only ever shows the one selected day, and an empty one (weekends, a light day) is
+    // common — the full 6am-6pm grid for zero jobs was exactly the tall-and-empty dead space this
+    // was meant to get rid of, so swap in a short message instead of an all-day-tall blank grid.
+    if(isMobile && idxs.length===1 && !packed.length){ mobileEmptyDay=day; break; }
+    const blocks=packed.map(g=>wkBlockHTML(g,dayISO)).join("");
     cols+=`<div class="wk-cal-col${isToday?" wk-today":""}" data-day="${dayISO}">${lines}${blocks}</div>`;
+  }
+  if(mobileEmptyDay){
+    return `<div class="wk-cal">${head}${adrow}`
+      +`<div class="wk-planner-empty">Nothing scheduled for ${wkSameDay(mobileEmptyDay,today)?"today":"this day"}.</div></div>`;
   }
   // Now-line: only meaningful when today is one of the visible columns and inside the 6am-6pm span.
   let nowLine="";
   const nowMin=today.getHours()*60+today.getMinutes();
   if(todayIdx>=0 && nowMin>=WK_T0 && nowMin<=WK_T1){
-    // Full-width line (left:54px so it starts at the gutter edge, not under it).
-    nowLine=`<div class="wk-cal-now" style="top:${(nowMin-WK_T0)*WK_PXMIN}px;left:54px;right:0"></div>`;
+    // Full-width line — starts at the gutter edge on desktop (54px), at the screen edge on mobile
+    // (0), where there's no separate gutter column to skip past.
+    nowLine=`<div class="wk-cal-now" style="top:${(nowMin-WK_T0)*WK_PXMIN}px;left:${isMobile?0:54}px;right:0"></div>`;
   }
   return `<div class="wk-cal">${head}${adrow}`
     +`<div class="wk-cal-grid wk-cal-bodyrow" style="height:${gridH}px;grid-template-columns:${colsTemplate}">${gutter}${cols}${nowLine}</div></div>`;
@@ -16522,6 +16601,23 @@ function wkSetOdCollapsed(val){
       wkOpenTaskRowPanel(pl, rowId, !!e.target.closest(".wk-ctx, .wk-mem-txt"));
       return;
     }
+    // A calendar block's own header handles its click-vs-drag resolution in wkOnPointerUp (the
+    // [data-drag] check above already excludes it here), but a fit-to-screen mobile grid can
+    // compress a block down to a sliver a few px tall — its header alone isn't a reliable tap
+    // target at that height. A tap landing anywhere else on the block (its padding, the space below
+    // a one-line member preview) falls through the [data-pl]/[data-drag] checks above with nothing
+    // to open, and reads as the tap having done nothing. Route those the same place the header
+    // would: the single job/bed-prep panel, or the group dialog for a grouped block.
+    const blk=e.target.closest(".wk-block");
+    if(blk){
+      if(+blk.dataset.total>1) wkOpenGroupPanel(blk.dataset.grp, blk.dataset.day);
+      else{
+        const rowId=blk.querySelector(".wk-check")?.dataset.id;
+        const r=rowId ? wkCollect().rows.find(x=>x.id===rowId) : null;
+        if(r) (r.kind==="bedprep" ? wkOpenBedPrepPanel : wkOpenJobPanel)(r);
+      }
+      return;
+    }
     wkClosePlantingPanel();                             // clicked elsewhere in the view — close it
   });
   wrap.addEventListener("pointerdown", wkOnPointerDown);
@@ -16595,14 +16691,21 @@ function wkSetOdCollapsed(val){
   if(today) today.onclick=()=>{ wkStartISO=wkISO(wkMonday(new Date())); buildWeekPlanner(); };
   const fitBtn=document.getElementById("wkCalFitBtn");
   if(fitBtn) fitBtn.onclick=()=>{ wkCalFit=!wkCalFit; saveUiState(); buildWeekPlanner(); };
-  document.querySelectorAll("#wkModeToggle button").forEach(b=>b.onclick=()=>{
+  // [data-wkmode] rather than "#wkModeToggle button" so the duplicate rows inside the mobile ⋯
+  // menu (wk-menu-mobile-only) toggle in lockstep with the inline desktop seg — same handler,
+  // whichever copy is actually visible at the current width.
+  document.querySelectorAll("[data-wkmode]").forEach(b=>b.onclick=()=>{
     wkMode=b.dataset.wkmode;
-    document.querySelectorAll("#wkModeToggle button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.wkmode===wkMode?"true":"false"));
+    document.querySelectorAll("[data-wkmode]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.wkmode===wkMode?"true":"false"));
+    if(moreMenu){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); }
     buildWeekPlanner();
   });
   const add=document.getElementById("wkAddBtn"); if(add) add.onclick=apOpen;
   const addTask=document.getElementById("wkAddTaskBtn"); if(addTask) addTask.onclick=()=>wkTaskOpen(null);
-  const quickAdd=document.getElementById("wkQuickAddBtn"); if(quickAdd) quickAdd.onclick=qaOpen;
+  document.querySelectorAll("#wkQuickAddBtn, .wk-qa-row").forEach(b=>b.onclick=()=>{
+    if(moreMenu){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); }
+    qaOpen();
+  });
 })();
 
 function saveUiState(){
@@ -16663,7 +16766,7 @@ function restoreUiState(){
 
   if(saved.week && saved.week.mode){
     wkMode=saved.week.mode;
-    document.querySelectorAll("#wkModeToggle button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
+    document.querySelectorAll("[data-wkmode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.wkmode===wkMode?"true":"false"));
   }
   if(saved.week && "calFit" in saved.week) wkCalFit=!!saved.week.calFit;
 
