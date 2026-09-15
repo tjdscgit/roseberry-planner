@@ -6445,6 +6445,19 @@ function sidebarNavHTML(rail){
 /* Paints the list panel for `rail`. When `rail` is the currentRail this also draws the current
    view's own filter/card extras — previewing a *different* group on hover has no view of its own
    to attach extras to, so those are skipped. */
+// Settings (#gearBtn) lives outside #sbinner's rebuilt-every-render innerHTML (see the HTML
+// comment by it — every sync service binds straight to it at page load, before the sidebar has
+// necessarily painted the "more" group even once) so appendChild moves the same node into the
+// panel instead of destroying/recreating it. Called from paintSidebar AND from the rail-tap
+// handler directly — a same-rail tap on a phone only toggles the sheet open/closed and skips
+// paintSidebar entirely (see the .railbtn[data-rail] click handler), so relying on paintSidebar
+// alone left Settings never appended the first time that shortcut path ran before any other.
+function syncGearBtn(rail){
+  const gearBtn=document.getElementById("gearBtn"), box=document.getElementById("sbinner");
+  if(!gearBtn||!box) return;
+  if(rail==="more"){ box.appendChild(gearBtn); gearBtn.style.display="flex"; }
+  else gearBtn.style.display="none";
+}
 function paintSidebar(rail){
   const box=document.getElementById("sbinner"); if(!box) return;
   if(!RAIL_GROUPS[rail]) return;
@@ -6454,15 +6467,7 @@ function paintSidebar(rail){
     catch(e){ console.error("sidebar extras for "+currentView, e); }
   }
   box.innerHTML = html;
-  // Settings (#gearBtn) lives outside this innerHTML rewrite (see the HTML comment by it — every
-  // sync service binds straight to it at page load) so it survives every repaint; appendChild here
-  // moves the same node into the panel — for whichever rail is actually on screen right now,
-  // hover-previewed rail included, not just currentRail — rather than destroying and recreating it.
-  const gearBtn=document.getElementById("gearBtn");
-  if(gearBtn){
-    if(rail==="more"){ box.appendChild(gearBtn); gearBtn.style.display="flex"; }
-    else gearBtn.style.display="none";
-  }
+  syncGearBtn(rail);
 
   box.querySelectorAll(".navrow[data-view]").forEach(b=>b.onclick=()=>{
     showView(b.dataset.view);
@@ -6534,6 +6539,7 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
   // the tab you're already on just toggles the sheet, rather than re-navigating underneath it.
   if(isMobile && b.dataset.rail===currentRail && wrap){
     wrap.classList.toggle("open");
+    syncGearBtn(currentRail);   // this path skips paintSidebar entirely — Settings needs its own sync
     return;
   }
   currentRail=b.dataset.rail;
