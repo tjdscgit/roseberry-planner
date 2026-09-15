@@ -5695,7 +5695,8 @@ let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
 // per-device, and doesn't touch Airtable. It's a rotate() on a group nested inside the block's own
 // (translate-only) drag group, so dragging and tilting never fight over the same transform.
 const FM_ROT_KEY="roseberry_blockrot_v1";
-let fmBlockRotations={};
+const FM_ROT_DEFAULT={"AB":82,"C":82,"I":81,"G":82,"H":82,"GH2":81,"F":82,"E":82,"D":82,"GH1":81,"GH3":81};
+let fmBlockRotations={...FM_ROT_DEFAULT};
 (function(){ try{ const raw=localStorage.getItem(FM_ROT_KEY); if(raw) fmBlockRotations=JSON.parse(raw); }catch(e){} })();
 function fmSaveBlockRot(){
   try{ localStorage.setItem(FM_ROT_KEY, JSON.stringify(fmBlockRotations)); }
