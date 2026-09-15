@@ -16843,8 +16843,14 @@ function wkOpenTaskRowPanel(pl, rowId, isCtxClick){
 
 // ---- Calendar drag-and-drop: drag a block's header to another day/time. ----
 let wkDrag=null;
+// Mobile has no hover, and a plain tap already opens the edit dialog (the wkContent click handler
+// skips [data-drag] targets so tap and drag never fight over the same header) — so on a touch
+// device a drag only arms after a deliberate long-press, same gesture most calendar apps use,
+// rather than a tap always trying to become a drag. Desktop starts dragging immediately, same as
+// before.
+let wkLongPressTimer=null;
+const WK_LONG_PRESS_MS=450, WK_LONG_PRESS_SLOP=10;
 function wkOnPointerDown(e){
-  if(cmIsMobile()) return;   // mobile: tapping opens the edit dialog directly instead of dragging
   if(e.button!=null && e.button!==0) return;                    // primary button / touch only
   const h=e.target.closest(".wk-block-h[data-drag]"); if(!h) return;
   // matches either a calendar block (grouped, same-day) or an overdue-sidebar item (single row,
@@ -16853,6 +16859,28 @@ function wkOnPointerDown(e){
   // always the live calendar grid, regardless of where the drag started — the overdue sidebar
   // sits outside it, so this can't be found via .closest() from there
   const bodyRow=document.querySelector("#wkBody .wk-cal-bodyrow"); if(!bodyRow) return;
+  if(cmIsMobile()){
+    const downX=e.clientX, downY=e.clientY;
+    const cancel=()=>{
+      clearTimeout(wkLongPressTimer); wkLongPressTimer=null;
+      window.removeEventListener("pointermove",moveCheck);
+      window.removeEventListener("pointerup",cancel);
+      window.removeEventListener("pointercancel",cancel);
+    };
+    const moveCheck=ev=>{ if(Math.hypot(ev.clientX-downX, ev.clientY-downY)>WK_LONG_PRESS_SLOP) cancel(); };
+    window.addEventListener("pointermove",moveCheck);
+    window.addEventListener("pointerup",cancel);
+    window.addEventListener("pointercancel",cancel);
+    wkLongPressTimer=setTimeout(()=>{
+      cancel();
+      if(navigator.vibrate) try{ navigator.vibrate(15); }catch(_){}   // tactile "you're now dragging"
+      wkBeginDrag(e,h,block,bodyRow);
+    }, WK_LONG_PRESS_MS);
+    return;
+  }
+  wkBeginDrag(e,h,block,bodyRow);
+}
+function wkBeginDrag(e,h,block,bodyRow){
   e.preventDefault();
   const rect=block.getBoundingClientRect();
   const isOverdue=block.classList.contains("wk-odsb-block");
