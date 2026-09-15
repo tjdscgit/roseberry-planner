@@ -1183,6 +1183,13 @@
   .wk-daily-day[aria-selected="true"]{background:var(--steel)}
   .wk-daily-day[aria-selected="true"] .wk-daily-day-name,
   .wk-daily-day[aria-selected="true"] .wk-daily-day-num{color:#fff}
+  /* Daily head's floating quick-add — 72px clears the 56px mobile bottom tab bar plus a margin. */
+  .wk-fab{position:fixed;right:16px;bottom:72px;width:56px;height:56px;border-radius:50%;
+    background:var(--ok);color:#fff;border:none;box-shadow:0 4px 14px rgba(0,0,0,.3);
+    display:flex;align-items:center;justify-content:center;z-index:45;cursor:pointer;padding:0}
+  .wk-fab .ico{width:24px;height:24px;stroke-width:2.2}
+  .wk-fab:active{filter:brightness(.95)}
+  .wk-fab[hidden]{display:none}
   .wk-cal-headrow{position:sticky;top:0;z-index:4;background:var(--paper)}
   .wk-cal-corner{border-bottom:1px solid var(--line)}
   /* Matches WeekCalendar.dc.html's .dayhead/.dn/.dd exactly: day name stacked above a bare date
@@ -1797,8 +1804,6 @@
      specificity (author beats UA), same issue .vw-menu[hidden] etc. already work around elsewhere
      in this file — wk-menu-daily-only rows are toggled via the hidden attribute in buildWeekPlanner. */
   .wk-menu-daily-only[hidden]{display:none}
-  .wk-tools-nav{display:flex;align-items:center;gap:.4rem}
-  .wk-tools-nav[hidden]{display:none}
   .wk-menu-divider{height:1px;background:var(--line-2);margin:.3rem 6px}
   .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
@@ -3783,16 +3788,11 @@
         </button>
       </div>
       <div class="vw-tools" id="wkToolsRow">
-        <!-- wk-tools-nav: hidden (not the whole row — the add buttons below still need to show)
-             whenever the daily head above is showing its own copy of these three actions in its
-             ⋯ menu (wkPrevIn/wkTodayIn/wkNextIn) — see buildWeekPlanner. -->
-        <span class="wk-tools-nav">
         <button class="icon-btn" id="wkPrev" title="Previous week"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M12 5l-5 5 5 5"/></svg></button>
         <span class="cm-year" id="wkRangeLabel" style="min-width:12ch">—</span>
         <button class="icon-btn" id="wkNext" title="Next week"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M8 5l5 5-5 5"/></svg></button>
         <button class="btn-ghost" id="wkToday" title="Jump to the current week" style="margin-left:.2rem">Today</button>
         <button class="icon-btn" id="wkCalFitBtn" style="display:none;margin-left:.2rem"></button>
-        </span>
         <span class="spacer"></span>
         <div class="wk-add-group">
           <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="display:flex;align-items:center;gap:.4rem;color:var(--ink-2);white-space:nowrap"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg><span class="wk-qa-label-full">From Claude chat</span><span class="wk-qa-label-short">Claude</span></button>
@@ -3822,6 +3822,10 @@
              icon), Claude-chat's quick-add lives inline on desktop (room for it there), but on a
              phone it moves in here — see the max-width:760px rules below. -->
         <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-qa-row" style="flex:1 1 auto;text-align:left">✦ From Claude chat</button></div>
+        <!-- Daily head only: Board mode still shows "+ Add planting" inline in .vw-tools (room for
+             it there), but the daily head has no tools row at all — "Add task" became the floating
+             + button instead (see wkFab), and this is the one place left for the other add action. -->
+        <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkAddPlantingIn" style="flex:1 1 auto;text-align:left">+ Add planting</button></div>
         <div class="wk-menu-mobile-only wk-menu-divider"></div>
         <div class="vw-menu-row"><span class="wk-tt-status" id="wkTtStatus"></span>
           <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button></div>
@@ -3830,6 +3834,11 @@
         <div class="vw-menu-row"><span class="wk-tt-status" id="wkOpsStatus"></span>
           <button class="icon-btn" id="wkOpsSyncBtn" title="Sync farm jobs with the Ops app now, instead of waiting for the 15-minute timer">⇄ Ops</button></div>
       </div>
+      <!-- Daily head's quick-add: fixed bottom-right, clear of the bottom tab bar. Only "Add task" —
+           "Add planting" is the rarer action and lives in the ⋯ menu instead (see wkAddPlantingIn). -->
+      <button type="button" class="wk-fab" id="wkFab" title="Add task" aria-label="Add task" hidden>
+        <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 4.2v11.6M4.2 10h11.6"/></svg>
+      </button>
       <div class="wk-content" id="wkContent">
         <aside class="wk-od-side" id="wkOdSide">
           <div class="wk-od-side-head">
@@ -15027,9 +15036,11 @@ function buildWeekPlanner(){
   const showDaily = cmIsMobile() && wkMode==="day";
   document.getElementById("wkDailyHead").hidden = !showDaily;
   document.getElementById("wkTitleRow").style.display = showDaily ? "none" : "";
-  // The add-task/add-planting buttons stay put either way — only the nav controls the daily head's
-  // own ⋯ menu now duplicates (wkPrevIn/wkTodayIn/wkNextIn) get out of the way.
-  document.getElementById("wkToolsRow").querySelector(".wk-tools-nav").hidden = showDaily;
+  // Nav controls move into the daily head's own ⋯ menu (wkPrevIn/wkTodayIn/wkNextIn); "Add task"
+  // becomes the floating + button (wkFab) and "From Claude chat"/"Add planting" move into that same
+  // ⋯ menu (wkQaRowDaily/wkAddPlantingIn) — so the whole row has nothing left to show.
+  document.getElementById("wkToolsRow").style.display = showDaily ? "none" : "";
+  document.getElementById("wkFab").hidden = !showDaily;
   if(showDaily) document.getElementById("wkDayPicker").style.display = "none";
   document.querySelectorAll(".wk-menu-daily-only").forEach(el=>el.hidden = !showDaily);
   if(showDaily) wkDrawDailyHead(start, rows);
@@ -16833,6 +16844,9 @@ function wkSetOdCollapsed(val){
   });
   const add=document.getElementById("wkAddBtn"); if(add) add.onclick=apOpen;
   const addTask=document.getElementById("wkAddTaskBtn"); if(addTask) addTask.onclick=()=>wkTaskOpen(null);
+  const fab=document.getElementById("wkFab"); if(fab) fab.onclick=()=>wkTaskOpen(null);
+  const addPlantingIn=document.getElementById("wkAddPlantingIn");
+  if(addPlantingIn) addPlantingIn.onclick=()=>{ wkCloseAllMenus(); apOpen(); };
   document.querySelectorAll("#wkQuickAddBtn, .wk-qa-row").forEach(b=>b.onclick=()=>{
     wkCloseAllMenus();
     qaOpen();
