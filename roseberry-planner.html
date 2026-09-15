@@ -1166,17 +1166,22 @@
   .wk-left{position:relative}
   .wk-daily-head{display:flex;flex-direction:column;border-bottom:1px solid var(--line)}
   .wk-daily-head[hidden]{display:none}
+  /* Right padding matches .vw-title's own reservation (see the mobile media query below) for the
+     same fixed top-right rail-utils icons (reload/settings) — without it this row's own filter/⋯
+     icons render underneath them instead of clear of them. */
   .wk-daily-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;
-    padding:.7rem .9rem .5rem}
+    padding:.7rem 82px .5rem .9rem}
   .wk-daily-titles{min-width:0}
   .wk-daily-dayname{font-size:1.5rem;font-weight:750;letter-spacing:-.01em;line-height:1.15}
   .wk-daily-stats{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;
     text-transform:uppercase;color:var(--ink-2);margin-top:.3rem}
   .wk-daily-icons{display:flex;gap:.1rem;flex:0 0 auto;margin-top:.1rem}
-  .wk-daily-picker{display:flex;gap:.3rem;padding:0 .7rem .7rem;overflow-x:auto;scrollbar-width:none}
-  .wk-daily-picker::-webkit-scrollbar{display:none}
-  .wk-daily-day{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:.2rem;
-    min-width:2.6rem;padding:.35rem .2rem;border-radius:10px;cursor:pointer;background:none;border:none}
+  /* Always exactly 7 days, so a grid of 7 equal columns stretches the strip the full width of the
+     screen instead of a flex row that hugs its own content width and leaves the rest of the row
+     blank — no horizontal scroll needed either, unlike the old cm-block-tab-based day picker. */
+  .wk-daily-picker{display:grid;grid-template-columns:repeat(7,1fr);gap:.2rem;padding:0 .5rem .7rem}
+  .wk-daily-day{display:flex;flex-direction:column;align-items:center;gap:.2rem;
+    padding:.35rem .1rem;border-radius:10px;cursor:pointer;background:none;border:none}
   .wk-daily-day-name{font-family:var(--mono);font-size:.62rem;letter-spacing:.05em;
     text-transform:uppercase;color:var(--ink-2)}
   .wk-daily-day-num{font-size:1rem;font-weight:700;color:var(--ink)}
