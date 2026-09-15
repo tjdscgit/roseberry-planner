@@ -5850,10 +5850,11 @@ function drawMap(placed, opts){
     const labX=fr.x-1.2, labY=fr.y-2.4;
     lab.setAttribute("x",labX);lab.setAttribute("y",labY);
     lab.setAttribute("font-size","3.4");lab.textContent=p.key;
-    // Same upside-down guard as the bed labels below: this text sits in rotGrp, so the block's
-    // free-angle tilt (rotDeg) rotates it too — flip it 180° once that tilt passes the readable range.
-    const blockAngle=((rotDeg%360)+360)%360;
-    if(blockAngle>FM_LABEL_FLIP_THRESHOLD && blockAngle<360-FM_LABEL_FLIP_THRESHOLD) lab.setAttribute("transform",`rotate(180 ${labX} ${labY})`);
+    // This label has no long-axis to stay aligned to (unlike the bed labels below), so rather than
+    // a 180° flip — which does nothing for a near-90° tilt, since mirrored-sideways is still
+    // sideways — counter-rotate by whichever multiple of 90° brings it closest to upright/horizontal.
+    const blockSnap=Math.round(rotDeg/90)*90;
+    if(blockSnap) lab.setAttribute("transform",`rotate(${-blockSnap} ${labX} ${labY})`);
     rotGrp.appendChild(lab);
 
     p.beds.forEach(r=>{
