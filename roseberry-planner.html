@@ -6445,15 +6445,23 @@ function sidebarNavHTML(rail){
 /* Paints the list panel for `rail`. When `rail` is the currentRail this also draws the current
    view's own filter/card extras — previewing a *different* group on hover has no view of its own
    to attach extras to, so those are skipped. */
-// Settings (#gearBtn) lives outside #sbinner's rebuilt-every-render innerHTML (see the HTML
-// comment by it — every sync service binds straight to it at page load, before the sidebar has
-// necessarily painted the "more" group even once) so appendChild moves the same node into the
-// panel instead of destroying/recreating it. Called from paintSidebar AND from the rail-tap
-// handler directly — a same-rail tap on a phone only toggles the sheet open/closed and skips
-// paintSidebar entirely (see the .railbtn[data-rail] click handler), so relying on paintSidebar
-// alone left Settings never appended the first time that shortcut path ran before any other.
+// Settings (#gearBtn) has to stay a single stable DOM node — every sync service (TickTick/Ops/
+// Google Calendar/push) binds a "refresh my status" listener straight to it at page load — so it
+// can't be recreated from an innerHTML string. It's moved into #sbinner (appendChild, so it's the
+// SAME node, listeners intact) when the "more" group is on screen, so it visually sits at the end
+// of that list. The catch: paintSidebar() does `box.innerHTML = html` on EVERY render, any rail —
+// once gearBtn had been appended inside #sbinner, that wipe detaches it from the document
+// entirely, and a fresh `document.getElementById("gearBtn")` then returns null forever after, so
+// it could never be found or re-appended again. Fix: cache the node reference once at load time
+// instead of re-querying by id — a cached reference stays usable via appendChild even after the
+// element's been detached from the document, unlike a getElementById lookup. Called from
+// paintSidebar AND from the rail-tap handler directly — a same-rail tap on a phone only toggles
+// the sheet open/closed and skips paintSidebar entirely (see the .railbtn[data-rail] click
+// handler), so relying on paintSidebar alone left Settings out of sync the first time that
+// shortcut path ran before any other.
+const GEAR_BTN_NODE = document.getElementById("gearBtn");
 function syncGearBtn(rail){
-  const gearBtn=document.getElementById("gearBtn"), box=document.getElementById("sbinner");
+  const gearBtn=GEAR_BTN_NODE, box=document.getElementById("sbinner");
   if(!gearBtn||!box) return;
   if(rail==="more"){ box.appendChild(gearBtn); gearBtn.style.display="flex"; }
   else gearBtn.style.display="none";
