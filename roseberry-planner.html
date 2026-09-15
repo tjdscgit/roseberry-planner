@@ -5842,8 +5842,13 @@ function drawMap(placed, opts){
     const lab=document.createElementNS(SVG,"text");
     lab.setAttribute("class","block-label");
     lab.dataset.block=p.key;
-    lab.setAttribute("x",fr.x-1.2);lab.setAttribute("y",fr.y-2.4);
+    const labX=fr.x-1.2, labY=fr.y-2.4;
+    lab.setAttribute("x",labX);lab.setAttribute("y",labY);
     lab.setAttribute("font-size","3.4");lab.textContent=p.key;
+    // Same upside-down guard as the bed labels below: this text sits in rotGrp, so the block's
+    // free-angle tilt (rotDeg) rotates it too — flip it 180° once that tilt passes the readable range.
+    const blockAngle=((rotDeg%360)+360)%360;
+    if(blockAngle>90 && blockAngle<270) lab.setAttribute("transform",`rotate(180 ${labX} ${labY})`);
     rotGrp.appendChild(lab);
 
     p.beds.forEach(r=>{
@@ -5903,7 +5908,16 @@ function drawMap(placed, opts){
       t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
       // font sized to the bed's short dimension so it never overflows the width
       t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.5, 2.4).toFixed(2));
-      if(tall) t.setAttribute("transform",`rotate(-90 ${cx} ${cy})`);
+      // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
+      // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
+      // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
+      // upside-down, so flip it 180° right here rather than leaving it to be deciphered on a tilt.
+      let labelAngle = (tall?-90:0) + rotDeg;
+      labelAngle = ((labelAngle%360)+360)%360;
+      const flip = labelAngle>90 && labelAngle<270;
+      const baseRot = tall ? -90 : 0;
+      const finalRot = flip ? baseRot+180 : baseRot;
+      if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
       t.textContent = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
       rotGrp.appendChild(t);
 
