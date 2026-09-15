@@ -5696,6 +5696,11 @@ let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
 // (translate-only) drag group, so dragging and tilting never fight over the same transform.
 const FM_ROT_KEY="roseberry_blockrot_v1";
 const FM_ROT_DEFAULT={"AB":82,"C":82,"I":81,"G":82,"H":82,"GH2":81,"F":82,"E":82,"D":82,"GH1":81,"GH3":81};
+// How far (in degrees) a label's on-screen angle can lean past vertical/horizontal before it flips
+// 180° to stay upright. Lower than 90 on purpose: real farm block tilts sit around 81-82°, close
+// enough to "sideways" that leaving the flip point at a strict 90° left them unflipped and awkward
+// to read, rather than only catching the truly-upside-down case.
+const FM_LABEL_FLIP_THRESHOLD=60;
 let fmBlockRotations={...FM_ROT_DEFAULT};
 (function(){ try{ const raw=localStorage.getItem(FM_ROT_KEY); if(raw) fmBlockRotations=JSON.parse(raw); }catch(e){} })();
 function fmSaveBlockRot(){
@@ -5848,7 +5853,7 @@ function drawMap(placed, opts){
     // Same upside-down guard as the bed labels below: this text sits in rotGrp, so the block's
     // free-angle tilt (rotDeg) rotates it too — flip it 180° once that tilt passes the readable range.
     const blockAngle=((rotDeg%360)+360)%360;
-    if(blockAngle>90 && blockAngle<270) lab.setAttribute("transform",`rotate(180 ${labX} ${labY})`);
+    if(blockAngle>FM_LABEL_FLIP_THRESHOLD && blockAngle<360-FM_LABEL_FLIP_THRESHOLD) lab.setAttribute("transform",`rotate(180 ${labX} ${labY})`);
     rotGrp.appendChild(lab);
 
     p.beds.forEach(r=>{
@@ -5914,7 +5919,7 @@ function drawMap(placed, opts){
       // upside-down, so flip it 180° right here rather than leaving it to be deciphered on a tilt.
       let labelAngle = (tall?-90:0) + rotDeg;
       labelAngle = ((labelAngle%360)+360)%360;
-      const flip = labelAngle>90 && labelAngle<270;
+      const flip = labelAngle>FM_LABEL_FLIP_THRESHOLD && labelAngle<360-FM_LABEL_FLIP_THRESHOLD;
       const baseRot = tall ? -90 : 0;
       const finalRot = flip ? baseRot+180 : baseRot;
       if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
