@@ -161,6 +161,9 @@
   .navrow[aria-selected="true"]{background:var(--sel);color:var(--ink);font-weight:600}
   .navrow[aria-selected="true"] .ico-s{color:var(--steel)}
   .navname{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Settings sits below More's real nav rows, set apart with its own rule rather than folded into
+     the last group — it's an app-wide destination, not one more item in "Reference". */
+  .sb-settings-row{margin-top:10px;padding-top:14px;border-top:1px solid var(--line)}
   /* Count on the right of a nav row. The artboards carry one on every row that has a number worth
      knowing before you click — it is the reason the panel is worth opening at all. */
   .navn{font-family:var(--mono);font-size:11px;color:var(--ink-2);flex:0 0 auto}
@@ -190,9 +193,11 @@
       border-right:none;border-top:1px solid var(--line);
     }
     .rail-mark,.rail-spacer{display:none}
-    /* Theme/reload/settings move into the top bar on a phone — the tab bar is for destinations
-       only, and five 44px targets already fill the width. They are NOT hidden: settings has to
-       stay reachable (the Whiteboard page tells you to open it). */
+    /* Reload is the one thing left up here on a phone — the tab bar is for destinations only, so
+       there's no room to also dock it there. Settings moved into the More tab's own sidebar
+       (#gearBtn, a static row alongside it — see paintSidebar) instead of living here permanently;
+       it's still reachable everywhere (the Whiteboard page tells you to open it), just one tap into
+       More rather than a permanent top-right icon. */
     .rail-utils{position:fixed;top:0;right:4px;height:44px;flex-direction:row;gap:0;z-index:41}
     .rail-utils .railbtn{width:36px;height:40px}
     .railbtn[data-rail]{flex:1 1 0;width:auto;height:100%;border-radius:0;
@@ -1059,7 +1064,7 @@
        Right padding reserves the corner .rail-utils floats over (fixed, top-right) — without it,
        a title row that runs all the way to the edge (Today's sort-by select, others' icon buttons)
        renders underneath those icons instead of beside them. */
-    .vw-title{gap:.45rem;padding:0 82px 0 .6rem;height:48px}
+    .vw-title{gap:.45rem;padding:0 46px 0 .6rem;height:48px}
     .vw-name{font-size:1rem}
     .vw-title .sub{display:none}
     .vw-tools{padding:.25rem .6rem;gap:.3rem;min-height:40px}
@@ -1181,10 +1186,10 @@
   .wk-daily-head{display:flex;flex-direction:column;border-bottom:1px solid var(--line)}
   .wk-daily-head[hidden]{display:none}
   /* Right padding matches .vw-title's own reservation (see the mobile media query below) for the
-     same fixed top-right rail-utils icons (reload/settings) — without it this row's own filter/⋯
-     icons render underneath them instead of clear of them. */
+     fixed top-right reload icon — without it this row's own filter/⋯ icons render underneath it
+     instead of clear of it. */
   .wk-daily-top{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;
-    padding:.7rem 82px .5rem .9rem}
+    padding:.7rem 46px .5rem .9rem}
   .wk-daily-titles{min-width:0}
   .wk-daily-dayname{font-size:1.5rem;font-weight:750;letter-spacing:-.01em;line-height:1.15}
   .wk-daily-stats{font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;
@@ -3059,9 +3064,6 @@
     <button class="railbtn" id="reloadBtn" title="Reload data" aria-label="Reload data">
       <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M16.4 10a6.4 6.4 0 10-1.9 4.5"/><path d="M16.4 4.6v4h-4"/></svg>
     </button>
-    <button class="railbtn" id="gearBtn" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 24 24" class="ico" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-    </button>
     </div>
   </nav>
 
@@ -3071,6 +3073,16 @@
        markup here is only the frame. ===== -->
   <div class="sbwrap" id="sbwrap">
     <div class="sbinner" id="sbinner"></div>
+    <!-- Settings lives here now rather than as its own always-visible top-right icon — it's a
+         static element (not part of #sbinner's rebuilt-every-render innerHTML) because every sync
+         service (TickTick/Ops/Google Calendar/push) binds a "refresh my status" listener straight
+         to #gearBtn at page load, before the sidebar has necessarily rendered the "more" group even
+         once; paintSidebar() moves this same node into the panel (appendChild, not innerHTML) and
+         shows/hides it depending on which rail group is actually on screen. -->
+    <button type="button" class="navrow sb-settings-row" id="gearBtn" title="Settings" aria-label="Settings" style="display:none">
+      <svg viewBox="0 0 24 24" class="ico-s" aria-hidden="true"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span class="navname">Settings</span>
+    </button>
   </div>
   </div>
 
@@ -6442,6 +6454,15 @@ function paintSidebar(rail){
     catch(e){ console.error("sidebar extras for "+currentView, e); }
   }
   box.innerHTML = html;
+  // Settings (#gearBtn) lives outside this innerHTML rewrite (see the HTML comment by it — every
+  // sync service binds straight to it at page load) so it survives every repaint; appendChild here
+  // moves the same node into the panel — for whichever rail is actually on screen right now,
+  // hover-previewed rail included, not just currentRail — rather than destroying and recreating it.
+  const gearBtn=document.getElementById("gearBtn");
+  if(gearBtn){
+    if(rail==="more"){ box.appendChild(gearBtn); gearBtn.style.display="flex"; }
+    else gearBtn.style.display="none";
+  }
 
   box.querySelectorAll(".navrow[data-view]").forEach(b=>b.onclick=()=>{
     showView(b.dataset.view);
@@ -6631,6 +6652,7 @@ document.getElementById("gearBtn").onclick=()=>{
   document.getElementById("modelOcrInput").value=MODEL_OCR||"claude-opus-4-8";
   document.getElementById("modelQaInput").value=MODEL_QA||"claude-sonnet-4-6";
   applyBackendFieldVisibility();
+  document.getElementById("sbwrap")?.classList.remove("open");   // same as picking any other row
   gate(true,null,"");
 };
 document.getElementById("panelClose").onclick=closePanel;
