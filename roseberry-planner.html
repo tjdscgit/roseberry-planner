@@ -550,8 +550,16 @@
   .bed.sel{stroke:var(--steel);stroke-width:.3}
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
-    text-transform:uppercase;pointer-events:none;font-weight:600;}
-  .block-frame{fill:none;stroke:var(--line-2);stroke-dasharray:2 3;stroke-width:.24}
+    text-transform:uppercase;pointer-events:auto;cursor:pointer;font-weight:600;}
+  .block-label:hover{fill:var(--steel)}
+  .block-frame{fill:none;stroke:var(--line-2);stroke-dasharray:2 3;stroke-width:.24;cursor:pointer}
+  .block-frame:hover{stroke:var(--steel)}
+  .sat-underlay{pointer-events:auto;cursor:move}
+  .sat-underlay.locked{pointer-events:none;cursor:default}
+  #mapWrap.map-move-mode .block-frame{cursor:move}
+  #mapWrap.map-move-mode .bed{cursor:move}
+  .block-group.dragging{opacity:.85}
+  .block-group.dragging .block-frame{stroke:var(--steel);stroke-width:.5;stroke-dasharray:none}
 
   /* map overlays */
   .map-ui{position:absolute;z-index:5}
@@ -604,6 +612,12 @@
   .sect-h{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
     letter-spacing:.1em;color:var(--ink-2);margin:1rem 0 .3rem}
   .empty-note{color:var(--ink-2);font-size:.82rem;padding:.6rem 0}
+  .farmblk-stats{display:flex;gap:.5rem;margin-top:.3rem}
+  .farmblk-stat{flex:1 1 0;padding:.55rem .6rem;border-radius:9px;background:var(--paper-2,var(--paper));border:1px solid var(--line)}
+  .farmblk-stat .v{font-family:var(--mono);font-size:1.05rem;font-weight:700}
+  .farmblk-stat .v .of{font-size:.7rem;color:var(--ink-2);font-weight:600}
+  .farmblk-stat .k{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-2);margin-top:.2rem}
+  .farmblk-dot{display:inline-block;width:7px;height:7px;border-radius:2px;margin-right:.4rem;vertical-align:middle}
 
   /* ---- Placeholder views ---- */
   .placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1361,6 +1375,7 @@
   .cm-iconbtn{border:none;background:none;color:var(--ink-2);padding:.3rem;border-radius:7px;
     display:inline-flex;align-items:center;cursor:pointer}
   .cm-iconbtn:hover{background:var(--hover);color:var(--ink)}
+  .cm-iconbtn[aria-pressed="true"]{background:var(--steel);color:#fff}
   .cm-pop{position:absolute;top:calc(100% + .4rem);left:0;z-index:60;min-width:190px;
     background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;
     padding:.6rem;box-shadow:0 10px 30px rgba(0,0,0,.32)}
@@ -1390,7 +1405,11 @@
 
   #cmUnassigned{flex:0 0 320px;display:flex;flex-direction:column;overflow:hidden;
     border-left:1px solid var(--line-2);background:var(--paper-2);transition:flex-basis .15s ease}
-  #cmUnassigned.collapsed{flex:0 0 40px}
+  /* Closed it takes no space at all — no more permanent 40px strip. Opening/closing now happens
+     from cmUnToggleBtn in the tools row (same line as the colour legend); the panel's own head
+     (cmUnToggle) still doubles as a close control while it's open. Mobile overrides this back to
+     a small floating pill below. */
+  #cmUnassigned.collapsed{display:none}
   #cmUnassigned.collapsed .cm-un-headtext,#cmUnassigned.collapsed .cm-un-n,
   #cmUnassigned.collapsed .cm-un-body,#cmUnassigned.collapsed .cm-un-intro,
   #cmUnassigned.collapsed .cm-un-foot{display:none}
@@ -1530,6 +1549,11 @@
   .cm-free{position:absolute;left:1px;right:1px;bottom:1px;font-family:var(--mono);
     font-size:.5rem;text-align:center;color:#2f6b3c;background:rgba(255,255,255,.72);
     border-radius:2px;pointer-events:none}
+  /* A "fits" only because BED_FIT_SLACK allowed it, not real free space — amber instead of green,
+     so it still reads as droppable but visibly different from a bed with genuine room. */
+  .cm-col.cm-fit-tight .cm-track{background-color:rgba(180,130,40,.16);
+    box-shadow:inset 0 0 0 1px rgba(180,130,40,.5)}
+  .cm-free-tight{color:#8a6d1f}
   /* red "today" line across the beds */
   .cm-today{position:absolute;left:-1px;right:-1px;top:0;height:0;
     border-top:1px solid var(--clay);z-index:3;pointer-events:none}
@@ -1594,6 +1618,9 @@
   .cm-bar{position:absolute;left:2px;right:2px;border-radius:3px;cursor:grab;color:#fff;
     padding:2px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);z-index:1}
   .cm-bar:active{cursor:grabbing}
+  /* A bed split lengthwise between two-or-more plantings (by bed-metres) — see cmDrawBlockBars.
+     The lighter edge reads as "this is a partial share of the bed", not a full-width planting. */
+  .cm-bar-shared{box-shadow:0 1px 2px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.35)}
   .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
     box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-seg{position:absolute;left:0;right:0;z-index:1}
@@ -1715,8 +1742,9 @@
   .tl-panel-crop{font-weight:700;font-size:1.08rem;line-height:1.25}
   .tl-panel-variety{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);
     text-transform:uppercase;letter-spacing:.05em;margin-top:.2rem}
-  .tl-panel-bed{flex:0 0 auto;font-family:var(--mono);font-size:.85rem;font-weight:600;
-    color:var(--ink);text-align:center;white-space:nowrap;max-width:6rem;overflow:hidden;text-overflow:ellipsis}
+  .tl-panel-bed{flex:0 0 auto;font-family:var(--mono);font-size:1.05rem;font-weight:800;
+    color:#fff;background:var(--steel);padding:.22rem .68rem;border-radius:8px;
+    letter-spacing:.02em;text-align:center;white-space:nowrap;max-width:7rem;overflow:hidden;text-overflow:ellipsis}
   .tl-panel-x{background:none;border:none;cursor:pointer;color:var(--ink-2);
     font-family:var(--mono);font-size:.95rem;padding:.1rem .2rem;flex:0 0 auto}
   .tl-panel-x:hover{color:var(--ink)}
@@ -1800,6 +1828,7 @@
   .btn-ghost{border:1px solid var(--line-2);border-radius:8px;background:var(--paper);
     color:var(--ink);font-size:.78rem;padding:.42rem .8rem;cursor:pointer}
   .btn-ghost:hover{background:var(--paper-2)}
+  .btn-ghost[aria-pressed="true"]{background:var(--sel);border-color:var(--steel);color:var(--ink)}
   .btn-danger{border:1px solid var(--clay);border-radius:8px;background:none;
     color:var(--clay);font-size:.78rem;padding:.42rem .8rem;cursor:pointer}
   .btn-danger:hover{background:var(--clay);color:#fff}
@@ -1847,6 +1876,11 @@
   .ap-succ-row{display:flex;align-items:center;gap:.5rem}
   .ap-succ-row input{width:5.4rem}
   .ap-x-lbl{font-family:var(--mono);font-size:.82rem;color:var(--ink-2)}
+  /* Bed metres: a short number field (nothing here runs past 3 digits) plus a quick-fill dropdown
+     of standard bed/greenhouse sizes, so a common length is one pick instead of typing it. */
+  .ap-bm-row{display:flex;align-items:center;gap:.5rem}
+  .ap-bm-row input{width:5.4rem;flex:0 0 auto}
+  .ap-bm-row select{flex:1 1 auto;min-width:0}
   /* Bed suggestion cards — ranked, advisory, never auto-applied (see apRenderBedSuggestions). */
   .ap-bed-suggest-head{display:flex;align-items:center;justify-content:space-between;gap:.6rem}
   .ap-bed-suggest-list{display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem}
@@ -2069,7 +2103,8 @@
       max-width:70vw;border:1px solid var(--line-2);border-radius:10px;box-shadow:var(--shadow);
       background:var(--paper-2)}
     #cmUnassigned .cm-un-body{max-height:50vh}
-    #cmUnassigned.collapsed{flex:none}
+    /* Phone keeps the small floating pill even when collapsed — display:none above is desktop-only. */
+    #cmUnassigned.collapsed{flex:none;display:flex}
     /* Every side detail panel (crop map, timeline, today, this week) becomes a full-screen dialog
        on phone instead of a squeezed sidebar shoved in beside the content — there's no room for
        both at this width, and a panel that takes over the screen reads as "you tapped a task",
@@ -3047,6 +3082,34 @@
         <span class="vw-name">Farm map</span>
         <span class="sub" id="mapSummary"></span>
         <span class="spacer"></span>
+        <button class="icon-btn cm-iconbtn" id="fmMoveBtn" type="button" title="Drag blocks to match their real field position" aria-pressed="false">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 3v14M3 10h14M6 6.4L10 3l4 3.4M6 13.6L10 17l4-3.4M6.4 6L3 10l3.4 4M13.6 6L17 10l-3.4 4"/></svg>
+        </button>
+        <div class="cm-pop-wrap">
+          <button class="icon-btn cm-iconbtn" id="fmSatBtn" type="button" title="Satellite underlay" aria-expanded="false">
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3 8.4l3.4-3.4 9 9-3.4 3.4z"/><path d="M9 2.4L3 8.4M17.6 11L11.6 17"/><path d="M13 6.4l1.6-1.6M14.6 9.6l1.6-1.6"/></svg>
+          </button>
+          <div class="cm-pop cm-pop-r" id="fmSatPop" hidden>
+            <div class="cm-pop-head">Satellite underlay</div>
+            <label class="ghost" style="display:block;text-align:center;cursor:pointer;margin-bottom:.5rem">
+              Upload image<input type="file" id="fmSatFile" accept="image/*" hidden>
+            </label>
+            <div id="fmSatControls" style="display:none">
+              <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-bottom:.4rem">
+                <input type="checkbox" id="fmSatVisible" checked> Show underlay
+              </label>
+              <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-bottom:.4rem">
+                <input type="checkbox" id="fmSatLocked"> Lock position (so dragging plots doesn't move it)
+              </label>
+              <label style="display:block;font-size:.72rem;color:var(--ink-2);margin-bottom:.2rem">Opacity</label>
+              <input type="range" id="fmSatOpacity" min="0.1" max="1" step="0.05" value="0.7" style="width:100%;margin-bottom:.5rem">
+              <label style="display:block;font-size:.72rem;color:var(--ink-2);margin-bottom:.2rem">Width (m) — stretch to match scale</label>
+              <input type="number" id="fmSatWidth" min="1" step="0.5" style="width:100%;margin-bottom:.5rem">
+              <div style="font-size:.68rem;color:var(--ink-2);margin-bottom:.5rem">Drag the image on the map to position it. Use Width to scale it until beds line up. Lock it once it's aligned.</div>
+              <button class="icon-btn" id="fmSatRemove" type="button" style="width:100%;justify-content:center">Remove image</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="mapWrap">
         <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg">
@@ -3133,20 +3196,31 @@
       </div>
       <!-- Tools row: the three things the pointer can be doing, then what the colours mean. -->
       <div class="vw-tools">
-        <!-- Order matches the design: pan, tarp, then select — select sits nearest the Filters
-             button because it is the one you come back to. -->
+        <!-- Pan/Select are the two things the pointer can be doing day-to-day, grouped together;
+             Tarp is a separate, occasional action, so it gets its own group rather than sitting
+             between them. Its icon is a hatched rectangle — the same diagonal hatch the map,
+             timeline and farm map already use to draw a tarped bed, so the tool reads as "the
+             thing that makes that pattern" rather than an arbitrary glyph. -->
         <div class="cm-toolgrp" role="group" aria-label="Tool">
           <button class="cm-tool" id="cmLockBtn" type="button" aria-pressed="false"
                   title="Pan — move around the map without moving any planting">
             <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M7 9V4.8a1.3 1.3 0 012.6 0V9m0-1.2a1.3 1.3 0 012.6 0V9m0-.6a1.3 1.3 0 012.6 0v4.2a4 4 0 01-4 4h-2a3.4 3.4 0 01-2.7-1.4L5 12.6a1.3 1.3 0 012-1.6l1.2 1.2"/></svg>
           </button>
-          <button class="cm-tool" id="cmTarpBtn" type="button" aria-pressed="false"
-                  title="Tarp — drag down a bed column to cover it for that stretch">
-            <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M3.4 14.6c3.4 0 4-2.4 4-4.6 2.6 0 5.2-1.6 5.2-5 2.4 0 4 1.6 4 4 0 4.2-3.4 7.6-7.6 7.6z"/></svg>
-          </button>
           <button class="cm-tool" id="cmToolSelect" type="button" aria-pressed="true"
                   title="Select — drag a planting onto a bed to place it">
             <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M5 3.4l10.4 6.2-4.4 1.2-1.4 4.4z"/></svg>
+          </button>
+        </div>
+        <div class="cm-toolgrp" role="group" aria-label="Tarp">
+          <button class="cm-tool" id="cmTarpBtn" type="button" aria-pressed="false"
+                  title="Tarp — drag down a bed column to cover it for that stretch">
+            <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true">
+              <defs><clipPath id="cmTarpIconClip"><rect x="3" y="5" width="14" height="10" rx="1.6"/></clipPath></defs>
+              <rect x="3" y="5" width="14" height="10" rx="1.6" fill="none"/>
+              <g clip-path="url(#cmTarpIconClip)" stroke-width="1">
+                <path d="M-3 4l9 13M2 1l9 15M7 -2l9 17M12 -4l9 18"/>
+              </g>
+            </svg>
           </button>
         </div>
         <div class="cm-pop-wrap">
@@ -3161,14 +3235,17 @@
               <button data-cmview="map" aria-pressed="false">Map</button>
             </div>
             <div class="cm-pop-head">Colour</div>
-            <div class="seg" id="cmColorToggle" role="tablist" title="Colour plantings by individual crop, or by crop type">
+            <div class="seg" id="cmColorToggle" role="tablist" title="Colour plantings by individual crop, or by crop family">
               <button data-cmcolor="crop" aria-pressed="true">By crop</button>
               <button data-cmcolor="type" aria-pressed="false">By type</button>
             </div>
           </div>
         </div>
         <span class="spacer"></span>
-        <span class="vw-legend" id="cmLegend"></span>
+        <button class="btn-ghost cm-filters" id="cmUnToggleBtn" type="button"
+                title="Show/hide the assign-plantings panel" aria-pressed="true" aria-expanded="true">
+          Assign plantings
+        </button>
       </div>
       <div class="cm-block-picker" id="cmBlockPicker"></div>
       <div id="cmViewport">
@@ -4821,7 +4898,19 @@
             </div>
           </div>
           <label class="ap-field"><span>Bed metres</span>
-            <input type="number" id="apBm" min="0" step="0.1" placeholder="e.g. 15"></label>
+            <div class="ap-bm-row">
+              <input type="number" id="apBm" min="0" step="0.1" placeholder="e.g. 15">
+              <select id="apBmPreset" title="Fill from a standard bed size" aria-label="Quick bed-metre sizes">
+                <option value="">Quick size…</option>
+                <option value="15">Short bed (15m)</option>
+                <option value="7.5">Half short bed (7.5m)</option>
+                <option value="28">Long bed (28m)</option>
+                <option value="14">Half long bed (14m)</option>
+                <option value="20">Greenhouse (20m)</option>
+                <option value="10">Half greenhouse (10m)</option>
+              </select>
+            </div>
+          </label>
           <div class="ap-field ap-succ" id="apSuccField">
             <span>Successions</span>
             <div class="ap-succ-row">
@@ -5499,7 +5588,7 @@ async function loadAll(){
 const num = PlannerShared.num;
 
 /* ---------- Layout: blocks -> beds in metres ---------- */
-function layoutAndDraw(){
+function layoutAndDraw(opts){
   usedDefaults = {size:false, coords:false};
 
   // group beds by block name
@@ -5573,7 +5662,7 @@ function layoutAndDraw(){
     });
   }
 
-  drawMap(placed);
+  drawMap(placed, opts);
   drawChips(blockKeys);
   showBanner();
 }
@@ -5584,26 +5673,165 @@ let view = {k:4, tx:40, ty:40}; // px per metre + translate
 let worldBounds = {minX:0,minY:0,maxX:100,maxY:100};
 let placedCache = [];
 
-function drawMap(placed){
+/* ---------- Satellite underlay (localStorage — per-device, not synced to Airtable) ---------- */
+const FM_SAT_KEY="roseberry_satmap_v1";
+let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
+
+// Free-angle block rotation, to eyeball-align a block with the satellite photo. This is separate
+// from the "Rotate 90°" button, which flips the REAL "beds run vertical/horizontal" field the beds
+// are actually laid out from — the Blocks table has no free-angle field, so this is visual-only,
+// per-device, and doesn't touch Airtable. It's a rotate() on a group nested inside the block's own
+// (translate-only) drag group, so dragging and tilting never fight over the same transform.
+const FM_ROT_KEY="roseberry_blockrot_v1";
+let fmBlockRotations={};
+(function(){ try{ const raw=localStorage.getItem(FM_ROT_KEY); if(raw) fmBlockRotations=JSON.parse(raw); }catch(e){} })();
+function fmSaveBlockRot(){
+  try{ localStorage.setItem(FM_ROT_KEY, JSON.stringify(fmBlockRotations)); }
+  catch(e){ console.error("Couldn't save block rotation", e); }
+}
+// Cheap update for a slider drag — moves just that block's rotate() without a full redraw.
+function fmApplyBlockRotation(key){
+  const p=placedCache.find(x=>x.key===key); if(!p) return;
+  const el=document.querySelector(`.block-rot[data-block="${CSS.escape(key)}"]`); if(!el) return;
+  const deg=fmBlockRotations[key]||0, fr=p.frame;
+  if(deg) el.setAttribute("transform",`rotate(${deg} ${fr.x+fr.w/2} ${fr.y+fr.h/2})`);
+  else el.removeAttribute("transform");
+}
+function fmSyncBlockRotUI(key){
+  const range=document.getElementById("fmBlockRotRange"), val=document.getElementById("fmBlockRotVal");
+  const deg=fmBlockRotations[key]||0;
+  if(range) range.value=deg;
+  if(val) val.textContent=deg+"°";
+}
+function fmNudgeBlockRotation(key,delta){
+  const next=Math.max(-180,Math.min(180,(fmBlockRotations[key]||0)+delta));
+  fmBlockRotations[key]=next;
+  fmApplyBlockRotation(key);
+  fmSyncBlockRotUI(key);
+  fmSaveBlockRot();
+}
+function fmResetBlockRotation(key){
+  delete fmBlockRotations[key];
+  fmApplyBlockRotation(key);
+  fmSyncBlockRotUI(key);
+  fmSaveBlockRot();
+}
+// A real, true-to-scale satellite photo of 436 Roseberry Creek Rd, fetched once (2026-09-15) from
+// ArcGIS World Imagery and saved alongside the app — 700m square, 0.875 m/px, so it's already at
+// the right SCALE to match the beds' real metres; it only needs a one-time drag to line up, since
+// there's no way to know how this address's true geography maps onto the block's arbitrary Map X/Y
+// grid. Shown automatically until a device saves its own upload/position (which then wins), or
+// until "Remove image" is used — that sets FM_SAT_DISMISS_KEY so the default doesn't keep coming back.
+const FM_SAT_DISMISS_KEY="roseberry_satmap_dismissed_v1";
+const FM_SAT_DEFAULT={dataUrl:"./satellite-default.jpg", x:-350, y:-350, w:700, h:700, opacity:0.6, visible:true};
+(function(){
+  try{
+    const raw=localStorage.getItem(FM_SAT_KEY);
+    if(raw) fmSat=JSON.parse(raw);
+    else if(!localStorage.getItem(FM_SAT_DISMISS_KEY)) fmSat={...FM_SAT_DEFAULT};
+  }catch(e){}
+})();
+function fmSaveSat(){
+  try{
+    if(fmSat) localStorage.setItem(FM_SAT_KEY, JSON.stringify(fmSat));
+    else{ localStorage.removeItem(FM_SAT_KEY); localStorage.setItem(FM_SAT_DISMISS_KEY,"1"); }
+  }
+  catch(e){ console.error("Couldn't save satellite image", e); alert("Couldn't save the satellite image — it may be too large for this browser's storage."); }
+}
+// Rebuilds just the underlay <image> (cheap: no fitView, no bed/block redraw) so opacity/visibility/
+// position tweaks don't jump the zoom the way a full drawMap() would.
+function fmSyncSatImage(){
+  const g=document.getElementById("mapG"); if(!g) return;
+  if(fmSatEl){ fmSatEl.remove(); fmSatEl=null; }
+  if(fmSat && fmSat.visible){
+    const img=document.createElementNS(SVG,"image");
+    img.setAttribute("class","sat-underlay"+(fmSat.locked?" locked":""));
+    img.setAttributeNS("http://www.w3.org/1999/xlink","href",fmSat.dataUrl);
+    img.setAttribute("href",fmSat.dataUrl);
+    img.setAttribute("x",fmSat.x);img.setAttribute("y",fmSat.y);
+    img.setAttribute("width",fmSat.w);img.setAttribute("height",fmSat.h);
+    img.setAttribute("opacity",fmSat.opacity??0.7);
+    img.setAttribute("preserveAspectRatio","none");
+    g.insertBefore(img,g.firstChild);
+    fmSatEl=img;
+  }
+}
+function fmSatSyncControls(){
+  const controls=document.getElementById("fmSatControls"); if(!controls) return;
+  controls.style.display = fmSat ? "" : "none";
+  if(fmSat){
+    document.getElementById("fmSatVisible").checked=fmSat.visible;
+    document.getElementById("fmSatLocked").checked=!!fmSat.locked;
+    document.getElementById("fmSatOpacity").value=fmSat.opacity;
+    document.getElementById("fmSatWidth").value=Math.round(fmSat.w*10)/10;
+  }
+}
+function fmLoadSatFile(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const im=new Image();
+    im.onload=()=>{
+      // downscale before storing — localStorage has a ~5-10MB budget and a phone photo can blow
+      // past that on its own.
+      const maxW=1600, scale=Math.min(1,maxW/im.width);
+      const cw=Math.round(im.width*scale), ch=Math.round(im.height*scale);
+      const canvas=document.createElement("canvas");
+      canvas.width=cw;canvas.height=ch;
+      canvas.getContext("2d").drawImage(im,0,0,cw,ch);
+      const dataUrl=canvas.toDataURL("image/jpeg",0.85);
+      const w=(worldBounds.maxX-worldBounds.minX)||100;
+      const h=w*(ch/cw);
+      fmSat={dataUrl, x:worldBounds.minX, y:worldBounds.minY, w, h, opacity:0.7, visible:true};
+      fmSaveSat();
+      fmSatSyncControls();
+      fmSyncSatImage();
+    };
+    im.src=reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function drawMap(placed, opts){
   placedCache = placed;
   const g = document.getElementById("mapG");
   g.innerHTML="";
+  fmSyncSatImage();
   let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9, whpBeds=0;
 
   placed.forEach(p=>{
+    // Each block's frame, label and beds live in one group so a drag (fmDragBlock) can move
+    // them all at once with a single transform instead of rewriting every child's coordinates.
+    // A free-angle rotation (to line the block up with the satellite photo, independent of the
+    // real "beds run vertical/horizontal" data) lives on a NESTED group instead of this one, so
+    // drag's translate() and the rotation's rotate() never fight over the same attribute — drag
+    // always happens in plain world space, on the outside, regardless of how the inside is tilted.
+    const grp=document.createElementNS(SVG,"g");
+    grp.setAttribute("class","block-group");
+    grp.dataset.block=p.key;
+    g.appendChild(grp);
+
+    const rotGrp=document.createElementNS(SVG,"g");
+    rotGrp.setAttribute("class","block-rot");
+    rotGrp.dataset.block=p.key;
+    const fr0=p.frame, rotDeg=fmBlockRotations[p.key]||0;
+    if(rotDeg) rotGrp.setAttribute("transform",`rotate(${rotDeg} ${fr0.x+fr0.w/2} ${fr0.y+fr0.h/2})`);
+    grp.appendChild(rotGrp);
+
     // block frame + label
     const fr=p.frame;
     const rect=document.createElementNS(SVG,"rect");
     rect.setAttribute("class","block-frame");
+    rect.dataset.block=p.key;
     rect.setAttribute("x",fr.x-1.2);rect.setAttribute("y",fr.y-1.2);
     rect.setAttribute("width",fr.w+2.4);rect.setAttribute("height",fr.h+2.4);
-    rect.setAttribute("rx","1");g.appendChild(rect);
+    rect.setAttribute("rx","1");rotGrp.appendChild(rect);
 
     const lab=document.createElementNS(SVG,"text");
     lab.setAttribute("class","block-label");
+    lab.dataset.block=p.key;
     lab.setAttribute("x",fr.x-1.2);lab.setAttribute("y",fr.y-2.4);
     lab.setAttribute("font-size","3.4");lab.textContent=p.key;
-    g.appendChild(lab);
+    rotGrp.appendChild(lab);
 
     p.beds.forEach(r=>{
       const b=r.bed, pl=b.planting;
@@ -5615,7 +5843,7 @@ function drawMap(placed){
       if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
       else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
       else cell.style.fill = "var(--empty-bed)";
-      g.appendChild(cell);
+      rotGrp.appendChild(cell);
 
       // "under tarp right now" overlay. The farm map is a snapshot of today, so unlike the Crop
       // Map and Timeline (which show whole date ranges) this only draws for a tarp covering today.
@@ -5630,7 +5858,7 @@ function drawMap(placed){
         ov.setAttribute("pointer-events","none");
         const ti=document.createElementNS(SVG,"title");ti.textContent=tarpTitle(tarpNow);
         ov.appendChild(ti);
-        g.appendChild(ov);
+        rotGrp.appendChild(ov);
       }
 
       // "within a spray withholding period right now" overlay. Same today-snapshot idea as the tarp
@@ -5650,7 +5878,7 @@ function drawMap(placed){
         const ti=document.createElementNS(SVG,"title");
         ti.textContent=`Within withholding until ${fmt(whpNow.safeAfter)}${prods?" · "+prods:""}`;
         ov.appendChild(ti);
-        g.appendChild(ov);
+        rotGrp.appendChild(ov);
       }
 
       // label: bed name, plus the crop currently in it, laid along the bed's long axis
@@ -5664,7 +5892,7 @@ function drawMap(placed){
       t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.5, 2.4).toFixed(2));
       if(tall) t.setAttribute("transform",`rotate(-90 ${cx} ${cy})`);
       t.textContent = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
-      g.appendChild(t);
+      rotGrp.appendChild(t);
 
       minX=Math.min(minX,r.x);minY=Math.min(minY,r.y);
       maxX=Math.max(maxX,r.x+r.w);maxY=Math.max(maxY,r.y+r.h);
@@ -5675,8 +5903,24 @@ function drawMap(placed){
   const leg=document.getElementById("whpLegend");
   if(leg){ leg.style.display = whpBeds ? "flex" : "none";
     leg.querySelector(".whp-legend-txt").textContent = `${whpBeds} bed${whpBeds===1?"":"s"} within withholding`; }
-  applyView();
-  fitView();
+  // Only the FIRST draw after opening the Farm map (or an explicit "Fit to screen") should
+  // recentre the view. Every later redraw — a block drag, a rotate, an edit elsewhere in the app,
+  // or the cross-tab sync layer's loadAll() after ANY write — used to call this with no opinion,
+  // so it always refit and yanked the user's pan/zoom out from under them mid-interaction. Now it
+  // defaults to keeping whatever view they're already looking at; opts.forceFit is the one
+  // deliberate override (used when the view is switched to, or freshly entered).
+  const shouldFit = (opts && opts.forceFit) || !fmViewInitialized;
+  if(shouldFit){
+    fmViewInitialized = true;
+    applyView();
+    fitView();
+  }else{
+    vwSetSummary("mapSummary",()=>{
+      const c=vwBedBlockCounts();
+      return c.beds ? `${c.beds} beds · ${c.blocks} block${c.blocks===1?"":"s"}` : "";
+    });
+    applyView();
+  }
 }
 
 function applyView(){
@@ -5737,6 +5981,14 @@ const CROP_TYPE_COLORS = {
   Legume:"#8F9C3C", Solanaceous:"#A44A3F", Cucurbit:"#C29B0C", Herb:"#5B8A72", Other:"#9AA39B",
 };
 function cropTypeColor(type){ return CROP_TYPE_COLORS[type] || CROP_TYPE_COLORS.Other; }
+// Crop Map's own colour choice (see cmColorMode) — used for the map bars AND the assign panel's
+// swatches, so a dot in that panel always matches the colour the planting will render as once
+// dropped, whichever of the two modes is currently picked.
+function cmSwatchColor(cropId, cropName){
+  return cmColorMode==="type"
+    ? cropTypeColor((data.cropDefs[cropId]||{}).type)
+    : cropColor(cropId||cropName);
+}
 
 /* ---------- Chips / filter ---------- */
 function drawChips(keys){
@@ -5747,7 +5999,14 @@ function drawChips(keys){
 }
 function mkChip(label,val){
   const c=document.createElement("button");c.className="chip";c.textContent=label;
-  c.dataset.val=val??"";c.addEventListener("click",()=>{activeBlock=val;filterBlocks();refreshChips();});
+  c.dataset.val=val??"";
+  c.addEventListener("click",()=>{
+    activeBlock=val;filterBlocks();refreshChips();
+    // Beds tile the entire block frame, so on the map itself a click almost always hits a bed
+    // rather than the block's own (thin, easy-to-miss) frame/label — the chip is the reliable way
+    // in to the block panel (crop mix, rotate, drag-to-reposition instructions live there).
+    if(val) selectBlock(val); else closePanel();
+  });
   return c;
 }
 function refreshChips(){
@@ -5798,6 +6057,76 @@ function selectBed(id){
 function closePanel(){document.getElementById("panel").classList.remove("open");
   document.querySelectorAll(".bed.sel").forEach(el=>el.classList.remove("sel"));selectedBed=null;}
 
+// Block-level detail panel, styled after the Farm Map artboard's right-hand rail: bed count,
+// occupancy, and the crop mix currently growing in the block. Only shows fields we can actually
+// derive from bed/planting data — no irrigation/soil/aspect yet, since those live in map_features
+// / farm_settings and aren't populated.
+function selectBlock(key){
+  selectedBed=null;
+  document.querySelectorAll(".bed.sel").forEach(el=>el.classList.remove("sel"));
+  const beds=(data.beds||[]).filter(b=>b.block===key);
+  if(!beds.length) return;
+  document.getElementById("pBlock").textContent = "Block "+key;
+  document.getElementById("pBed").textContent = beds.length+" bed"+(beds.length===1?"":"s");
+  const occupied=beds.filter(b=>b.planting && OCCUPIED.has(b.planting.status));
+  const cropCounts={};
+  occupied.forEach(b=>{ const c=b.planting.crop||"—"; cropCounts[c]=(cropCounts[c]||0)+1; });
+  const cropList=Object.entries(cropCounts).sort((a,b)=>b[1]-a[1]);
+  const body=document.getElementById("pBody");
+  let html="";
+  html+=`<div class="farmblk-stats">`
+    +`<div class="farmblk-stat"><div class="v">${occupied.length}<span class="of">/${beds.length}</span></div><div class="k">Beds full</div></div>`
+    +`<div class="farmblk-stat"><div class="v">${cropList.length}</div><div class="k">Crops growing</div></div>`
+    +`</div>`;
+  const meta=(data.blocks||[]).find(b=>String(b.name).trim()===key);
+  html+=`<button class="icon-btn" type="button" onclick="fmRotateBlock('${esc(key)}')" style="width:100%;justify-content:center;gap:.5rem;margin-top:.2rem">`
+    +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M15.4 8A5.6 5.6 0 105.6 12"/><path d="M16.4 4.4v4h-4"/></svg>`
+    +`Rotate 90° (swaps bed direction)</button>`;
+  const rotDeg=fmBlockRotations[key]||0;
+  html+=`<div style="margin-top:.6rem">`
+    +`<div style="display:flex;justify-content:space-between;align-items:baseline">`
+    +`<label for="fmBlockRotRange" style="font-size:.72rem;color:var(--ink-2)">Tilt to match satellite</label>`
+    +`<span class="mono" id="fmBlockRotVal" style="font-size:.78rem">${rotDeg}°</span></div>`
+    +`<input type="range" id="fmBlockRotRange" min="-180" max="180" step="1" value="${rotDeg}" style="width:100%"`
+    +` oninput="fmBlockRotations['${esc(key)}']=parseFloat(this.value);document.getElementById('fmBlockRotVal').textContent=this.value+'°';fmApplyBlockRotation('${esc(key)}')"`
+    +` onchange="fmSaveBlockRot()">`
+    +`<div style="display:flex;gap:.4rem;margin-top:.3rem">`
+    +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',-1)">−1°</button>`
+    +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',1)">+1°</button>`
+    +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmResetBlockRotation('${esc(key)}')">Reset</button>`
+    +`</div></div>`;
+  if(cropList.length){
+    html+=`<div class="sect-h">Crop mix</div>`;
+    html+=cropList.map(([crop,n])=>`<div class="kv"><span class="k"><span class="farmblk-dot" style="background:${cropColor(crop)}"></span>${esc(crop)}</span><span class="v">${n} bed${n===1?"":"s"}</span></div>`).join("");
+  }else{
+    html+=`<div class="sect-h">Crop mix</div><div class="empty-note">No beds currently planted in this block.</div>`;
+  }
+  body.innerHTML=html;
+  document.getElementById("panel").classList.add("open");
+}
+
+// Blocks only have two orientations on the Blocks table ("Beds run vertical" / "Beds run
+// horizontal"), which is effectively a 90° rotation of the whole block — there's no free-angle
+// field, so "rotate" toggles between the two. Same optimistic+rollback pattern as the block drag.
+async function fmRotateBlock(key){
+  const meta=(data.blocks||[]).find(b=>String(b.name).trim()===key);
+  if(!meta){ alert(`Block ${key} has no matching record in the Blocks table, so it can't be rotated.`); return; }
+  const prev=meta.orient;
+  const next = prev==="Beds run horizontal" ? "Beds run vertical" : "Beds run horizontal";
+  meta.orient=next;
+  layoutAndDraw({keepView:true});
+  selectBlock(key);
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.blocks, meta.id, {[CFG.f.blk_orient]:next});
+  }catch(e){
+    meta.orient=prev;
+    console.error(e);
+    alert("Couldn't save the block's rotation:\n"+e.message);
+    layoutAndDraw({keepView:true});
+    selectBlock(key);
+  }
+}
+
 /* ---------- Banner (default-data hints) ---------- */
 function showBanner(){
   const b=document.getElementById("mapBanner");
@@ -5809,15 +6138,43 @@ function showBanner(){
   b.innerHTML=`<button onclick="this.parentNode.style.display='none'">dismiss</button>`+msgs.join("<br>");
 }
 
-/* ---------- Pan / zoom ---------- */
+/* ---------- Pan / zoom (+ block-drag / satellite-drag in Farm map) ---------- */
+function fmScreenToWorld(clientX,clientY){
+  const wrap=document.getElementById("mapWrap");
+  const r=wrap.getBoundingClientRect();
+  return {x:(clientX-r.left-view.tx)/view.k, y:(clientY-r.top-view.ty)/view.k};
+}
 (function(){
   const wrap=document.getElementById("mapWrap");
   let dragging=false,lastX,lastY,moved=false,downTarget=null;
   const pts=new Map();let pinchD=0;
+  let dragBlockKey=null,dragBlockGroup=null,dragBlockStart=null;
+  let dragImage=false,dragImageStart=null,dragImageOrig=null;
+
+  function bedFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.bed)return el.dataset.bed;el=el.parentNode;}return null;}
+  function blockFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.block)return el.dataset.block;el=el.parentNode;}return null;}
 
   wrap.addEventListener("pointerdown",e=>{
     wrap.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===1){dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;wrap.classList.add("dragging");}
+    if(pts.size===1){
+      dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;
+      dragBlockKey=null;dragBlockGroup=null;dragImage=false;
+      if(fmMoveMode){
+        const blk=blockFrom(e.target);
+        if(blk){
+          dragBlockKey=blk;
+          dragBlockStart=fmScreenToWorld(e.clientX,e.clientY);
+          dragBlockGroup=wrap.querySelector(`.block-group[data-block="${CSS.escape(blk)}"]`);
+          if(dragBlockGroup) dragBlockGroup.classList.add("dragging");
+        }
+      }
+      if(!dragBlockKey && fmSatEl && e.target===fmSatEl){
+        dragImage=true;
+        dragImageStart=fmScreenToWorld(e.clientX,e.clientY);
+        dragImageOrig={x:fmSat.x,y:fmSat.y};
+      }
+      if(!dragBlockKey && !dragImage) wrap.classList.add("dragging");
+    }
   });
   wrap.addEventListener("pointermove",e=>{
     if(!pts.has(e.pointerId))return;
@@ -5827,17 +6184,49 @@ function showBanner(){
       if(pinchD){const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;zoomAt(cx,cy,d/pinchD);}
       pinchD=d;return;
     }
-    if(dragging){const dx=e.clientX-lastX,dy=e.clientY-lastY;
-      if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-      view.tx+=dx;view.ty+=dy;lastX=e.clientX;lastY=e.clientY;applyView();}
+    if(!dragging) return;
+    if(dragBlockKey){
+      const w=fmScreenToWorld(e.clientX,e.clientY);
+      const dx=w.x-dragBlockStart.x, dy=w.y-dragBlockStart.y;
+      if(Math.abs(dx)+Math.abs(dy)>0.02) moved=true;
+      if(dragBlockGroup) dragBlockGroup.setAttribute("transform",`translate(${dx},${dy})`);
+      return;
+    }
+    if(dragImage){
+      const w=fmScreenToWorld(e.clientX,e.clientY);
+      const dx=w.x-dragImageStart.x, dy=w.y-dragImageStart.y;
+      if(Math.abs(dx)+Math.abs(dy)>0.02) moved=true;
+      fmSat.x=dragImageOrig.x+dx; fmSat.y=dragImageOrig.y+dy;
+      if(fmSatEl){ fmSatEl.setAttribute("x",fmSat.x); fmSatEl.setAttribute("y",fmSat.y); }
+      return;
+    }
+    const dx=e.clientX-lastX,dy=e.clientY-lastY;
+    if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
+    view.tx+=dx;view.ty+=dy;lastX=e.clientX;lastY=e.clientY;applyView();
   });
-  function bedFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.bed)return el.dataset.bed;el=el.parentNode;}return null;}
   function up(e){
     const wasCancel=e.type==="pointercancel";
     pts.delete(e.pointerId);if(pts.size<2)pinchD=0;
     if(pts.size===0){
       dragging=false;wrap.classList.remove("dragging");
-      if(!moved && !wasCancel){ const id=bedFrom(downTarget); if(id) selectBed(id); else closePanel(); }
+      if(dragBlockKey){
+        const key=dragBlockKey, grp=dragBlockGroup;
+        dragBlockKey=null;dragBlockGroup=null;
+        if(grp) grp.classList.remove("dragging");
+        if(moved && !wasCancel) fmCommitBlockDrag(key,grp);
+        else if(grp) grp.removeAttribute("transform");
+        downTarget=null;return;
+      }
+      if(dragImage){
+        dragImage=false;
+        if(moved && !wasCancel) fmSaveSat();
+        downTarget=null;return;
+      }
+      if(!moved && !wasCancel){
+        const id=bedFrom(downTarget);
+        if(id) selectBed(id);
+        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else closePanel(); }
+      }
       downTarget=null;
     }
   }
@@ -5853,6 +6242,80 @@ function showBanner(){
   }
   window.zoomAt=zoomAt;window._wrap=wrap;
 })();
+
+// Persists a dragged block's new position to the Blocks table (Map X / Map Y), optimistic with
+// rollback — same pattern as cmToggleBlockType. placedCache still holds the PRE-drag frame, so the
+// drag's translate(dx,dy) plus that frame origin gives the real new world position.
+async function fmCommitBlockDrag(key,grp){
+  const p=placedCache.find(x=>x.key===key);
+  const tr=grp?grp.getAttribute("transform"):null;
+  const m=tr && /translate\(([-\d.eE]+),\s*([-\d.eE]+)\)/.exec(tr);
+  const dx=m?parseFloat(m[1]):0, dy=m?parseFloat(m[2]):0;
+  if(!p || (!dx && !dy)){ if(grp) grp.removeAttribute("transform"); return; }
+  const newX=Math.round((p.frame.x+dx)*10)/10, newY=Math.round((p.frame.y+dy)*10)/10;
+  const meta=(data.blocks||[]).find(b=>String(b.name).trim()===key);
+  if(!meta){ alert(`Block ${key} has no matching record in the Blocks table, so its position can't be saved.`); layoutAndDraw({keepView:true}); return; }
+  const prevX=meta.x, prevY=meta.y;
+  meta.x=newX; meta.y=newY;
+  layoutAndDraw({keepView:true});
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.blocks, meta.id, {[CFG.f.blk_x]:newX,[CFG.f.blk_y]:newY});
+  }catch(e){
+    meta.x=prevX; meta.y=prevY;
+    console.error(e);
+    alert("Couldn't save the block's new position:\n"+e.message);
+    layoutAndDraw({keepView:true});
+  }
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const satBtn=document.getElementById("fmSatBtn"), satPop=document.getElementById("fmSatPop");
+  if(satBtn && satPop){
+    satBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const open=satPop.hidden;
+      satPop.hidden=!open;
+      satBtn.setAttribute("aria-expanded", open?"true":"false");
+      if(open) fmSatSyncControls();
+    });
+    satPop.addEventListener("click",e=>e.stopPropagation());
+    document.addEventListener("click",()=>{ satPop.hidden=true; satBtn.setAttribute("aria-expanded","false"); });
+  }
+  const satFile=document.getElementById("fmSatFile");
+  if(satFile) satFile.addEventListener("change",e=>{ const f=e.target.files[0]; if(f) fmLoadSatFile(f); e.target.value=""; });
+  const satVisible=document.getElementById("fmSatVisible");
+  if(satVisible) satVisible.addEventListener("change",()=>{ if(!fmSat)return; fmSat.visible=satVisible.checked; fmSaveSat(); fmSyncSatImage(); });
+  const satLocked=document.getElementById("fmSatLocked");
+  if(satLocked) satLocked.addEventListener("change",()=>{ if(!fmSat)return; fmSat.locked=satLocked.checked; fmSaveSat(); fmSyncSatImage(); });
+  const satOpacity=document.getElementById("fmSatOpacity");
+  if(satOpacity) satOpacity.addEventListener("input",()=>{ if(!fmSat)return; fmSat.opacity=parseFloat(satOpacity.value); fmSaveSat(); if(fmSatEl) fmSatEl.setAttribute("opacity",fmSat.opacity); });
+  const satWidth=document.getElementById("fmSatWidth");
+  if(satWidth) satWidth.addEventListener("input",()=>{
+    if(!fmSat)return;
+    const newW=parseFloat(satWidth.value); if(!(newW>0)) return;
+    // Scale from the image's own CENTRE, not its top-left corner — anchoring at the corner made
+    // resizing look like the image was sliding diagonally, because everything except that one
+    // corner drifts away from it as w/h change. Keeping the centre fixed instead makes it read as
+    // "growing/shrinking in place", which is what you actually want while eyeballing a match.
+    const cx=fmSat.x+fmSat.w/2, cy=fmSat.y+fmSat.h/2;
+    const ratio=fmSat.h/fmSat.w;
+    const newH=newW*ratio;
+    fmSat.w=newW; fmSat.h=newH;
+    fmSat.x=cx-newW/2; fmSat.y=cy-newH/2;
+    if(fmSatEl){ fmSatEl.setAttribute("width",fmSat.w); fmSatEl.setAttribute("height",fmSat.h);
+      fmSatEl.setAttribute("x",fmSat.x); fmSatEl.setAttribute("y",fmSat.y); }
+  });
+  if(satWidth) satWidth.addEventListener("change",()=>fmSaveSat());
+  const satRemove=document.getElementById("fmSatRemove");
+  if(satRemove) satRemove.addEventListener("click",()=>{ fmSat=null; fmSaveSat(); fmSatSyncControls(); fmSyncSatImage(); });
+
+  const moveBtn=document.getElementById("fmMoveBtn");
+  if(moveBtn) moveBtn.addEventListener("click",()=>{
+    fmMoveMode=!fmMoveMode;
+    moveBtn.setAttribute("aria-pressed", fmMoveMode?"true":"false");
+    const wrap=document.getElementById("mapWrap");
+    if(wrap) wrap.classList.toggle("map-move-mode", fmMoveMode);
+  });
+});
 document.getElementById("zin").onclick=()=>{const w=document.getElementById("mapWrap").getBoundingClientRect();window.zoomAt(w.left+w.width/2,w.top+w.height/2,1.25);};
 document.getElementById("zout").onclick=()=>{const w=document.getElementById("mapWrap").getBoundingClientRect();window.zoomAt(w.left+w.width/2,w.top+w.height/2,.8);};
 document.getElementById("zfit").onclick=()=>{activeBlock=null;refreshChips();filterBlocks();};
@@ -6196,7 +6659,7 @@ let dragPendingIndex = null;   // set while dragging a bulk-auto-place PROPOSAL 
 let cmBulkState = null;        // {weights, proposals, skipped} while the Auto-place panel is open, else null
 let cmViewApplied = false;
 let cmViewMode = "map";   // the design opens on the tiled, fitted board
-let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-type colour)
+let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-family colour)
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -6349,7 +6812,7 @@ function tarpRefreshViews(){
   const id=v?v.id:"";
   if(id==="view-cropmap") buildCropMap();
   else if(id==="view-timeline") buildTimeline();
-  else if(id==="view-map") layoutAndDraw();
+  else if(id==="view-map") layoutAndDraw({forceFit:true});
   else if(id==="view-misc") trpRenderList();
   else if(id==="view-week") buildWeekPlanner();
 }
@@ -6748,6 +7211,12 @@ function cmRunsOf(indices){
   return runs;
 }
 
+// A bed's column is a fixed width regardless of the bed's real length, so two plantings that
+// each use only part of a bed (a 15m planting in a 30m bed) used to both draw at full column
+// width and sit exactly on top of each other — indistinguishable, and there was no way to see or
+// reach the free half to drop a second planting on it. bedFreeInfo() already tracks free
+// bed-metres correctly for the drag "fits" highlight; this only teaches the RENDERING the same
+// thing, splitting a bed's column width between whichever plantings actually share it.
 function cmDrawBlockBars(grid, beds, plantings){
   const layer=document.createElement("div");
   layer.className="cm-bars";
@@ -6757,92 +7226,166 @@ function cmDrawBlockBars(grid, beds, plantings){
 
   const idx=new Map(); beds.forEach((b,i)=>idx.set(b.id,i));
 
+  // Phase 1: geometry for every bar fragment (one per contiguous bed-run of each planting), with
+  // no width/position decided yet — that needs to see every fragment on a bed first.
+  const frags=[];
   plantings.forEach(p=>{
     const groundStart = p.tp || p.sow;
     const y0=cmY(groundStart), y1=cmY(p.h2||p.h1||groundStart);
     if(y0==null||y1==null) return;                      // outside the viewed year
     const top=Math.min(y0,y1), height=Math.max(6,Math.abs(y1-y0));
-
     const cols=(p.bedIds||[]).map(id=>idx.get(id)).filter(i=>i!=null);
     if(!cols.length) return;
+    const runs=cmRunsOf(cols);
+    runs.forEach((run,runIdx)=>frags.push({p,run,runIdx,first:runs[0],top,height,groundStart}));
+  });
 
-    const base = cmColorMode==="type"
-      ? cropTypeColor((data.cropDefs[p.cropId]||{}).type)
-      : cropColor(p.cropId||p.crop);
+  // Phase 2: every fragment that occupies exactly one bed column (span 1) is sized by its OWN
+  // bed-metres against the bed's length — a 15m planting in a 28m bed shows at ~54% width even
+  // when it's the only thing on that bed, so the free remainder is visible without first having
+  // to drag a second planting on top of it to "reveal" the split. Fragments that actually share a
+  // time window on the same bed are then laid out left to right instead of stacking on top of
+  // each other. A multi-bed span (run.end>run.start) always keeps the full column width per bed
+  // it crosses — a planting only carries one bed-metres figure, not one per bed it's on, so
+  // there's nothing to size a per-bed slice by.
+  const lanes=new Map();   // frag -> {leftFrac, widthFrac}
+  const byBed=new Map();   // bed column index -> single-span frags on it
+  frags.filter(f=>f.run.start===f.run.end).forEach(f=>{
+    const i=f.run.start;
+    if(!byBed.has(i)) byBed.set(i,[]);
+    byBed.get(i).push(f);
+  });
+  byBed.forEach((list,colIdx)=>{
+    const bed=beds[colIdx];
+    const bedLen=(bed && bed.len>0) ? bed.len : null;
+    // Unknown bed length, or an occupant with no stated bed-metres, has to assume it fills the
+    // bed — same "unknown ⇒ whole bed" rule bedFreeInfo() uses for the fits/free-metres check.
+    list.forEach(f=>{
+      const bm=(f.p.bm>0) ? f.p.bm : null;
+      const widthFrac = bedLen ? Math.max(.12, Math.min(1, bm!=null ? bm/bedLen : 1)) : 1;
+      lanes.set(f,{leftFrac:0, widthFrac});
+    });
+    if(list.length<2) return;                            // sole occupant: own width, no offset needed
+    // Union-find: only fragments whose time windows actually overlap get laid out side by side, so
+    // a bed used by three plantings in succession over the year doesn't squeeze them all together.
+    const parent=list.map((_,i)=>i);
+    const find=i=>{ while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; };
+    const union=(a,b)=>{ a=find(a); b=find(b); if(a!==b) parent[a]=b; };
+    for(let a=0;a<list.length;a++) for(let b=a+1;b<list.length;b++)
+      if(list[a].top < list[b].top+list[b].height && list[b].top < list[a].top+list[a].height) union(a,b);
+    const clusters=new Map();
+    list.forEach((f,i)=>{ const r=find(i); if(!clusters.has(r)) clusters.set(r,[]); clusters.get(r).push(f); });
+    clusters.forEach(cluster=>{
+      if(cluster.length<2) return;                        // no actual overlap: stays at leftFrac 0
+      cluster.sort((a,b)=>(a.groundStart||"").localeCompare(b.groundStart||"") || String(a.p.id).localeCompare(String(b.p.id)));
+      // Each fragment's widthFrac above was sized on its own — nothing yet stops a bed-mate's
+      // share (or the .12 floor on a small/unknown one) from pushing the total past 1. Left
+      // unchecked, that overflow bar starts inside its own bed but its right edge lands INSIDE
+      // THE NEXT BED'S COLUMN — with no clipping between columns, it reads as overlapping
+      // whatever's drawn there, which is the "why do these two unrelated crops overlap?" bug.
+      // Scale the whole cluster down (never up) so it always fits the one column it's actually on.
+      const total=cluster.reduce((s,f)=>s+lanes.get(f).widthFrac,0);
+      const scale = total>1 ? 1/total : 1;
+      let cursor=0;
+      cluster.forEach(f=>{
+        const lane=lanes.get(f);
+        lane.widthFrac*=scale;
+        lane.leftFrac=cursor;
+        cursor+=lane.widthFrac;
+      });
+    });
+  });
 
-    cmRunsOf(cols).forEach((run,runIdx)=>{
-      const span=run.end-run.start+1;
-      const bar=document.createElement("div"); bar.className="cm-bar";
-      bar.style.top=top+"px"; bar.style.height=height+"px";
-      bar.style.left=(run.start*(CM_COL_W+CM_GAP))+"px";
+  frags.forEach(frag=>{
+    const {p,run,runIdx,first,top,height,groundStart}=frag;
+    const span=run.end-run.start+1;
+    const lane=lanes.get(frag);
+    const colX=run.start*(CM_COL_W+CM_GAP);
+
+    const base = cmSwatchColor(p.cropId, p.crop);
+
+    const bar=document.createElement("div"); bar.className="cm-bar";
+    bar.style.top=top+"px"; bar.style.height=height+"px";
+    let w;
+    if(lane){
+      w=lane.widthFrac*CM_COL_W;
+      bar.style.left=(colX + lane.leftFrac*CM_COL_W)+"px";
+      bar.style.width=Math.max(6, w-(lane.leftFrac>0?1:0))+"px";
+      if(lane.widthFrac<1){
+        bar.classList.add("cm-bar-shared");
+        bar.title2=` · ${p.bm}m of a ${beds[run.start].len}m bed`;
+      }
+    }else{
+      w=span*CM_COL_W;
+      bar.style.left=colX+"px";
       bar.style.width=(span*CM_COL_W+(span-1)*CM_GAP)+"px";
-      bar.style.background=base;
+    }
+    bar.style.background=base;
 
-      // harvest window shaded darker on top, same convention as the timeline
-      if(p.h1 && p.h2){
-        const yH1=cmY(p.h1);
-        const hh = yH1!=null ? Math.max(0,Math.min(height,(top+height)-yH1)) : 0;
-        if(hh>0){
-          const seg=document.createElement("div"); seg.className="cm-seg";
-          seg.style.top=(height-hh)+"px"; seg.style.height=hh+"px";
-          seg.style.background=tlShade(base,.28);
-          bar.appendChild(seg);
-        }
+    // harvest window shaded darker on top, same convention as the timeline
+    if(p.h1 && p.h2){
+      const yH1=cmY(p.h1);
+      const hh = yH1!=null ? Math.max(0,Math.min(height,(top+height)-yH1)) : 0;
+      if(hh>0){
+        const seg=document.createElement("div"); seg.className="cm-seg";
+        seg.style.top=(height-hh)+"px"; seg.style.height=hh+"px";
+        seg.style.background=tlShade(base,.28);
+        bar.appendChild(seg);
       }
+    }
 
-      bar.dataset.pid=p.id;
-      const bedCount=(p.bedIds||[]).length;
-      bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
-        + (bedCount>1?`  ·  ${bedCount} beds`:"");
+    bar.dataset.pid=p.id;
+    const bedCount=(p.bedIds||[]).length;
+    bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
+      + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"");
 
-      // Only the first run is labelled: repeating the name on every fragment of one planting reads
-      // as several plantings.
-      if(runIdx===0){
-        const w=span*CM_COL_W;
-        const l=document.createElement("span");
-        l.className = w>=CM_LABEL_MIN_W ? "cm-bar-l cm-bar-l-wide" : "cm-bar-l";
-        if(w>=CM_LABEL_MIN_W){
-          const bits=[`${esc(p.crop)}${p.variety?" — "+esc(p.variety):""}`];
-          if(height>=34) bits.push(`<span class="cm-bar-sub">${esc(fmt(groundStart))} – ${esc(fmt(p.h2||p.h1))}</span>`);
-          if(height>=48 && bedCount>1) bits.push(`<span class="cm-bar-sub">${bedCount} beds</span>`);
-          l.innerHTML=bits.join("");
-        }else{
-          l.textContent=p.crop;
-        }
-        bar.appendChild(l);
-      }
-
-      if(cmIsMobile()){
-        bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
+    // Only the first run is labelled: repeating the name on every fragment of one planting reads
+    // as several plantings.
+    if(runIdx===0){
+      const l=document.createElement("span");
+      l.className = w>=CM_LABEL_MIN_W ? "cm-bar-l cm-bar-l-wide" : "cm-bar-l";
+      if(w>=CM_LABEL_MIN_W){
+        const bits=[`${esc(p.crop)}${p.variety?" — "+esc(p.variety):""}`];
+        if(height>=34) bits.push(`<span class="cm-bar-sub">${esc(fmt(groundStart))} – ${esc(fmt(p.h2||p.h1))}</span>`);
+        if(height>=48 && bedCount>1) bits.push(`<span class="cm-bar-sub">${bedCount} beds</span>`);
+        l.innerHTML=bits.join("");
       }else{
-        bar.draggable=true;
-        bar.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) cmOpenPanel(p); });
-        bar.addEventListener("dragstart",e=>{
-          if(cmLocked){e.preventDefault();return;}
-          dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";
-          try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
-        });
+        l.textContent=p.crop;
       }
-      layer.appendChild(bar);
-    });
+      bar.appendChild(l);
+    }
 
-    // Task ticks outside the occupancy window (bed prep before, tarping after) — drawn at the
-    // planting's first run, same convention as the timeline.
-    const first=cmRunsOf(cols)[0];
-    const ext=taskExtentFor(p, groundStart, p.h2||p.h1||groundStart);
-    [["pre",ext.pre],["post",ext.post]].forEach(([kind,t])=>{
-      if(!t) return;
-      const y=cmY(t.due); if(y==null) return;
-      if(kind==="pre" && y>=top) return;
-      if(kind==="post" && y<=top+height) return;
-      const el=document.createElement("div"); el.className="cm-bar-ext";
-      el.style.top=(y-1)+"px";
-      el.style.left=(first.start*(CM_COL_W+CM_GAP))+"px";
-      el.style.width=CM_COL_W+"px";
-      el.style.background=base;
-      el.title=`${taskName(t)} · ${fmt(t.due)}`;
-      layer.appendChild(el);
-    });
+    if(cmIsMobile()){
+      bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
+    }else{
+      bar.draggable=true;
+      bar.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) cmOpenPanel(p); });
+      bar.addEventListener("dragstart",e=>{
+        if(cmLocked){e.preventDefault();return;}
+        dragPid=p.id;highlightFits(p);e.dataTransfer.effectAllowed="move";
+        try{e.dataTransfer.setData("text/plain",p.id);}catch(_){}
+      });
+    }
+    layer.appendChild(bar);
+
+    // Task ticks outside the occupancy window (bed prep before, tarping after) — drawn once per
+    // planting, at its first run, same convention as the timeline.
+    if(runIdx===0){
+      const ext=taskExtentFor(p, groundStart, p.h2||p.h1||groundStart);
+      [["pre",ext.pre],["post",ext.post]].forEach(([kind,t])=>{
+        if(!t) return;
+        const y=cmY(t.due); if(y==null) return;
+        if(kind==="pre" && y>=top) return;
+        if(kind==="post" && y<=top+height) return;
+        const el=document.createElement("div"); el.className="cm-bar-ext";
+        el.style.top=(y-1)+"px";
+        el.style.left=(first.start*(CM_COL_W+CM_GAP))+"px";
+        el.style.width=CM_COL_W+"px";
+        el.style.background=base;
+        el.title=`${taskName(t)} · ${fmt(t.due)}`;
+        layer.appendChild(el);
+      });
+    }
   });
 
   grid.appendChild(layer);
@@ -6958,6 +7501,11 @@ function plantingZoneMismatches(p){
 }
 
 // how much room a bed has for the dragged planting during its date window
+// Real bed lengths are approximate (a "long" bed is meant to be ~2 short beds, but rarely exactly
+// that after farm constraints), so a metre-for-metre fit check rejects perfectly reasonable pairs
+// — two 15m plantings in a 28m bed read as "2m short" and get blocked. This slack absorbs that:
+// a drop up to BED_FIT_SLACK metres over the bed's real free space still counts as fitting.
+const BED_FIT_SLACK = 2;
 function bedFreeInfo(bed,drag,win){
   let used=0, unknownOccupant=false, anyOccupant=false;
   (data.plantingsActive||[]).forEach(p=>{
@@ -6980,13 +7528,16 @@ function bedFreeInfo(bed,drag,win){
 
   if(bed.len==null){
     // no length data yet ⇒ can only say "is this bed free in that window?"
-    return {fits:!anyOccupant, free:null};
+    return {fits:!anyOccupant, free:null, overBy:0};
   }
   const usedEff = unknownOccupant ? bed.len : used;
   const needM = (drag.bm!=null)?drag.bm:bed.len;            // unknown planting size ⇒ needs a whole free bed
   const free = Math.max(0, bed.len - usedEff - zoneHeld);
   const needEff = Math.max(0, needM - Math.min(needM, zoneCredit));
-  return {fits: free >= needEff - 0.001, free, zoneHeld, zoneCredit};
+  // overBy is 0 for a real, comfortable fit, and >0 only when the bed's actual free space falls
+  // short — up to BED_FIT_SLACK of that shortfall still counts as fitting (see BED_FIT_SLACK).
+  const overBy = Math.max(0, needEff - free);
+  return {fits: overBy <= BED_FIT_SLACK + 0.001, free, zoneHeld, zoneCredit, overBy};
 }
 function highlightFits(drag){
   clearFits();
@@ -6996,10 +7547,18 @@ function highlightFits(drag){
     const info=bedFreeInfo(bed,drag,win);
     if(!info.fits) return;
     col.classList.add("cm-fit");
+    if(info.overBy>0.001) col.classList.add("cm-fit-tight");
     const track=col.querySelector(".cm-track");
     if(info.free!=null && track){                           // show spare metres once lengths exist
       const badge=document.createElement("div");badge.className="cm-free";
-      badge.textContent=(Math.round(info.free*10)/10)+" m";
+      if(info.overBy>0.001){
+        badge.classList.add("cm-free-tight");
+        badge.textContent="tight fit";
+        badge.title=`About ${Math.round(info.overBy*10)/10}m over this bed's real free space — `
+          +`dropping here will offer to split the bed evenly instead.`;
+      }else{
+        badge.textContent=(Math.round(info.free*10)/10)+" m";
+      }
       track.appendChild(badge);
     }
     // still a valid drop target — this only warns that the window is partly under tarp
@@ -7094,18 +7653,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.addEventListener("keydown",e=>{ if(e.key==="Escape") cmClosePops(); });
 });
 
-function cmRenderLegend(){
-  const box=document.getElementById("cmLegend"); if(!box) return;
-  if(cmColorMode==="type"){
-    box.innerHTML=CROP_TYPES.map(t=>
-      `<span class="lg-item"><span class="lg-sw" style="background:${cropTypeColor(t)}"></span>${esc(t)}</span>`).join("");
-  }else{
-    box.innerHTML=`<span class="lg-item">one colour per crop</span>`;
-  }
-}
-
 function buildCropMap(){
-  cmRenderLegend();
   vwSetSummary("cmSummary",()=>{
     const c=vwBedBlockCounts();
     const n=(data.plantings||[]).filter(x=>{
@@ -7339,7 +7887,7 @@ function buildUnassigned(){
     const sub = g.waiting.length
       ? `<span class="c-sub waiting">${g.placed} of ${g.total} placed · ${g.waiting.length} waiting</span>`
       : `<span class="c-sub">${g.placed} of ${g.total} placed</span>`;
-    head.innerHTML=`<span class="cm-un-dot" style="background:${cropColor(g.cropId||g.crop)}"></span>`
+    head.innerHTML=`<span class="cm-un-dot" style="background:${cmSwatchColor(g.cropId,g.crop)}"></span>`
       +`<span class="cm-un-gname"><span>${esc(g.crop)}</span>${sub}</span>`
       +(g.waiting.length
           ? `<span class="cm-un-caret">${open?"⌃":"⌄"}</span>`
@@ -7360,7 +7908,7 @@ function buildUnassigned(){
       // How much ground it needs and roughly when — the two things you weigh when choosing a bed.
       const beds=p.bm ? `${p.bm} m` : "";
       const when=p.sow ? new Date(p.sow).toLocaleDateString("en-AU",{month:"short"}) : "no date";
-      chip.innerHTML=`<span class="cm-kid-dot" style="background:${cropColor(p.cropId||p.crop)}"></span>`
+      chip.innerHTML=`<span class="cm-kid-dot" style="background:${cmSwatchColor(p.cropId,p.crop)}"></span>`
         +`<span class="cm-kid-name">${esc(p.variety||p.crop)}</span>`
         +`<span class="c-sub">${beds?esc(beds)+" · ":""}${esc(when)}</span>`;
       if(cmIsMobile()){
@@ -7587,8 +8135,11 @@ let cmUnCollapsed=false;
 function cmSetUnCollapsed(val){
   cmUnCollapsed=val;
   const side=document.getElementById("cmUnassigned"); if(side) side.classList.toggle("collapsed",val);
+  const btn=document.getElementById("cmUnToggleBtn");
+  if(btn){ btn.setAttribute("aria-pressed", val?"false":"true"); btn.setAttribute("aria-expanded", val?"false":"true"); }
 }
 document.getElementById("cmUnToggle").addEventListener("click",()=>{ cmSetUnCollapsed(!cmUnCollapsed); saveUiState(); });
+document.getElementById("cmUnToggleBtn").addEventListener("click",()=>{ cmSetUnCollapsed(!cmUnCollapsed); saveUiState(); });
 document.getElementById("cmUnAutoBtn").addEventListener("click",e=>{ e.stopPropagation(); cmOpenBulk(); });
 
 // Right-click a placed planting to unassign it from its bed (sends it back to the
@@ -7718,14 +8269,57 @@ async function assignBed(bedId, pidOverride){
   if(!pid) return;
   const p=(data.plantings||[]).find(x=>x.id===pid); if(!p) return;
   if(p.bedIds[0]===bedId) return;                 // dropped on its own bed — no-op
+
+  // A drop that only fits because of BED_FIT_SLACK (see bedFreeInfo) gets a real choice instead
+  // of silently leaving both plantings at their original, slightly-too-big bed-metres: split the
+  // bed evenly between everything sharing it, keep the sizes as they are (they're only a couple
+  // metres over — plenty of farms would just plant it tighter), or cancel the drop outright.
+  const bed=(data.beds||[]).find(b=>b.id===bedId);
+  let splitWith=null;
+  if(bed){
+    const win=planWindow(p);
+    const info=bedFreeInfo(bed,p,win);
+    if(info.fits && info.overBy>0.001){
+      const occupants=(data.plantingsActive||[]).filter(o=>
+        o.id!==p.id && (o.bedIds||[])[0]===bedId && windowsOverlap(win, planWindow(o)));
+      if(occupants.length){
+        const names=occupants.map(o=>`${o.crop}${o.variety?" "+o.variety:""}`).join(", ");
+        const raw=prompt(`${bed.name} is about ${Math.round(info.overBy*10)/10}m short of fitting `
+          +`this alongside ${names} at their current bed-metres.\n\n`
+          +`1 = Split ${bed.len}m evenly between them and assign here\n`
+          +`2 = Assign here anyway, keep bed-metres as they are\n`
+          +`3 = Cancel — don't assign here`, "1");
+        const choice=(raw||"").trim();
+        if(raw===null || choice==="3" || choice==="") return;   // dialog dismissed, or explicit cancel
+        if(choice==="1") splitWith=occupants;
+        // choice==="2" (or anything else typed) falls through and assigns without touching bed-metres
+      }
+    }
+  }
+
   const prev=p.bedIds.slice();
+  const prevBm=p.bm;
+  const bmRestore=[];
   p.bedIds=[bedId];                               // optimistic
+  if(splitWith){
+    const share=Math.round((bed.len/(splitWith.length+1))*10)/10;
+    p.bm=share;
+    splitWith.forEach(o=>{ bmRestore.push([o,o.bm]); o.bm=share; });
+  }
   rebuildDerived(); buildCropMap();
   try{
     await atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f.pl_bed]:[bedId]});
+    if(splitWith){
+      await Promise.all([
+        atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f.pl_bm]:p.bm}),
+        ...splitWith.map(o=>atPatch(CFG.farmBase, CFG.tables.plantings, o.id, {[CFG.f.pl_bm]:o.bm})),
+      ]);
+    }
     layoutAndDraw();                              // keep the farm map in sync
   }catch(e){
-    p.bedIds=prev; rebuildDerived(); buildCropMap();   // roll back on failure
+    p.bedIds=prev; p.bm=prevBm;
+    bmRestore.forEach(([o,bm])=>{ o.bm=bm; });
+    rebuildDerived(); buildCropMap();   // roll back on failure
     alert("Couldn't move planting:\n"+e.message);
   }
 }
@@ -10024,7 +10618,10 @@ function tlRenderPanel(p, panel, closeFn, opts){
         if(a.info.fits!==b.info.fits) return a.info.fits?-1:1;
         return (a.bed.name||"").localeCompare(b.bed.name||"");
       });
-    bedPickerHtml=`<div class="sect-h">Move to bed</div><div class="tl-bedpick">`
+    // Every bed on the farm is a row here (185 of them), so — same as the other sections below —
+    // it's a collapsible accordion, default closed, rather than a wall of buttons every time the
+    // panel opens.
+    const bedRowsHtml=`<div class="tl-bedpick">`
       +rows.map(({bed,info})=>{
         const isCur=(p.bedIds||[])[0]===bed.id;
         const freeLabel=info.free!=null?`${Math.round(info.free*10)/10} m`:"";
@@ -10039,6 +10636,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
         </button>`;
       }).join("")
       +`</div>`;
+    bedPickerHtml=acc("Move to bed",bedRowsHtml,false);
   }
 
   // Dot + "type · bed · block" caption line under the title, matching the artboards (Timeline,
@@ -10047,7 +10645,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
   // down into this line instead of disappearing.
   const cropType=(data.cropDefs||{})[p.cropId]?.type;
   const bedObj=(data.beds||[]).find(b=>(p.bedIds||[]).includes(b.id));
-  const metaParts=[cropType,bedObj?.block?`Block ${bedObj.block}`:null].filter(Boolean);
+  const metaParts=[cropType,bedObj?.block?`Block ${bedObj.block}`:null,p.bm>0?`${p.bm} m`:null].filter(Boolean);
   panel.innerHTML=`
     <div class="tl-panel-head">
       <div class="tl-panel-title">
@@ -10065,7 +10663,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     ${p.failed?`<div class="tl-fail-banner">⚠ Crop failure${p.failureDate?" · "+esc(fmt(p.failureDate)):""}</div>`:""}
     <div class="sect-h">Tasks</div>
     ${tasksHtml}
-    ${acc("Planting details",detailsHtml,true)}
+    ${acc("Planting details",detailsHtml,false)}
     ${acc("Row spacing",rowsHtml,false)}
     ${acc("Nursery",nurseryHtml,false)}
     ${acc("Harvest",harvestHtml,false)}
@@ -11503,6 +12101,16 @@ $ap("apTarp").addEventListener("change",apUpdateTarpVis);
 $ap("apTarpWeeks").addEventListener("input",apUpdateTarpVis);
 $ap("apBed").addEventListener("change",apUpdateSummarySidebar);
 $ap("apBm").addEventListener("input",()=>{ apUpdateRowsSummary(); apUpdateHarvestSummary(); apScheduleSuggestBeds(); });
+// Quick-fill: picking a standard size writes it into apBm and fires the same "input" listener
+// above (real value change, not a shadow field), so rows/harvest summaries and bed suggestions
+// recompute exactly as if it had been typed. Resets back to the placeholder after — it's an
+// action, not a stored choice distinct from the bed-metres value itself.
+$ap("apBmPreset").addEventListener("change",e=>{
+  const v=e.target.value; if(v===""){ return; }
+  $ap("apBm").value=v;
+  $ap("apBm").dispatchEvent(new Event("input",{bubbles:true}));
+  e.target.value="";
+});
 $ap("apGroup").addEventListener("input",apScheduleSuggestBeds);
 $ap("apSuggestBedsBtn").addEventListener("click",apRunBedSuggestions);
 $ap("apRows").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
@@ -16864,7 +17472,8 @@ function saveUiState(){
     const state = {
       tab,
       farmMap: { k:view.k, tx:view.tx, ty:view.ty, activeBlock },
-      cropMap: { year:cmYear, mode:cmViewMode, colorMode:cmColorMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock, unassignedCollapsed:cmUnCollapsed },
+      // colorMode deliberately not saved — see the load-side comment near "cropMap" restore.
+      cropMap: { year:cmYear, mode:cmViewMode, k:cmMapState.k, tx:cmMapState.tx, ty:cmMapState.ty, locked:cmLocked, block:cmSelectedBlock, unassignedCollapsed:cmUnCollapsed },
       timeline: { year:tlYear, mode:tlGroupMode, zoomOut:tlZoomOut },
       week: { mode:wkMode, odCollapsed:wkOdCollapsed, calFit:wkCalFit },
       today: { sort:tdSort },
@@ -16903,7 +17512,11 @@ function restoreUiState(){
     if(saved.cropMap.locked) setCmLocked(true);
     if(saved.cropMap.block) cmSelectedBlock=saved.cropMap.block;   // buildCropMap() falls back to "All" if stale
     if(saved.cropMap.unassignedCollapsed) cmSetUnCollapsed(true);
-    if(saved.cropMap.colorMode==="type") setCmColorMode("type");   // independent of List/Map, so restored unconditionally
+    // Colour mode is NOT restored from saved state (unlike everything else here) — it always
+    // opens on the "type"/family default (see cmColorMode). A per-crop choice from a much older
+    // session, back when "crop" was the default, would otherwise silently override the new
+    // default forever with no way to tell that's what was happening. "By crop" is one click away
+    // in Filters for whoever wants it for the current session.
   }
   if(saved.timeline){
     if(typeof saved.timeline.year==="number") tlYear=saved.timeline.year;
