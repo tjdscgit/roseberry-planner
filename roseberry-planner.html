@@ -1839,6 +1839,10 @@
   .btn-danger:hover{background:var(--clay);color:#fff}
   .wk-qa-label-short{display:none}
   .wk-menu-mobile-only{display:none}
+  /* .vw-menu-row's own display:flex otherwise beats the [hidden] attribute's display:none at equal
+     specificity (author beats UA), same issue .vw-menu[hidden] etc. already work around elsewhere
+     in this file — wk-menu-daily-only rows are toggled via the hidden attribute in buildWeekPlanner. */
+  .wk-menu-daily-only[hidden]{display:none}
   .wk-menu-divider{height:1px;background:var(--line-2);margin:.3rem 6px}
   .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
@@ -3841,7 +3845,29 @@
       <!-- Two rows, per the redesign: what you're looking at and how you want it laid out on the
            title row; when, and what you can add, on the toolbar row. The three sync buttons moved
            behind the row's ⋯ menu — they were what made the single row unreadable. -->
-      <div class="vw-title">
+      <!-- Mobile Calendar-mode-only daily header (see the design reference this was built from):
+           big day name + a "date · jobs · timed" stats line, a filter icon for the layout switch
+           and a ⋯ for everything else, then this same day restyled as a picker strip. Shown/hidden
+           in buildWeekPlanner (JS, not pure CSS) since it depends on wkMode, not just viewport width
+           — Board mode keeps the older compact title row + its own wk-day-picker below unchanged. -->
+      <div class="wk-daily-head" id="wkDailyHead" hidden>
+        <div class="wk-daily-top">
+          <div class="wk-daily-titles">
+            <div class="wk-daily-dayname" id="wkDailyName">—</div>
+            <div class="wk-daily-stats" id="wkDailyStats"></div>
+          </div>
+          <div class="wk-daily-icons">
+            <button type="button" class="railbtn" id="wkFilterBtn" title="Layout" aria-label="Layout" aria-expanded="false">
+              <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3 5.5h14M6 10h8M9 14.5h2"/></svg>
+            </button>
+            <button type="button" class="railbtn" id="wkDailyMoreBtn" title="More" aria-label="More" aria-expanded="false">
+              <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="4.6" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.4" cy="10" r="1.3" fill="currentColor" stroke="none"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="wk-daily-picker" id="wkDailyPicker"></div>
+      </div>
+      <div class="vw-title" id="wkTitleRow">
         <span class="vw-name">This week</span>
         <span class="sub" id="wkSummary"></span>
         <span class="spacer"></span>
@@ -3854,26 +3880,8 @@
         <button class="icon-btn vw-more" id="wkMoreBtn" title="Sync and more" aria-expanded="false" aria-label="Sync and more">
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="4.6" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.4" cy="10" r="1.3" fill="currentColor" stroke="none"/></svg>
         </button>
-        <div class="vw-menu" id="wkMoreMenu" hidden>
-          <!-- Mobile only: the layout toggle and the Claude-chat quick-add live inline on desktop
-               (room for them there), but on a phone they move in here so the title row stays down
-               to just the name and this menu button — see the max-width:760px rules below. -->
-          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="board" aria-pressed="true" style="flex:1 1 auto;text-align:left">Board</button></div>
-          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="day" aria-pressed="false" style="flex:1 1 auto;text-align:left">Calendar</button></div>
-          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="bed" aria-pressed="false" style="flex:1 1 auto;text-align:left">By crop &amp; bed</button></div>
-          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="type" aria-pressed="false" style="flex:1 1 auto;text-align:left">By task type</button></div>
-          <div class="wk-menu-mobile-only wk-menu-divider"></div>
-          <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-qa-row" style="flex:1 1 auto;text-align:left">✦ From Claude chat</button></div>
-          <div class="wk-menu-mobile-only wk-menu-divider"></div>
-          <div class="vw-menu-row"><span class="wk-tt-status" id="wkTtStatus"></span>
-            <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button></div>
-          <div class="vw-menu-row"><span class="wk-tt-status" id="wkGcalStatus"></span>
-            <button class="icon-btn" id="wkGcalSyncBtn" title="Push this week's schedule to Google Calendar">📅 Google Calendar</button></div>
-          <div class="vw-menu-row"><span class="wk-tt-status" id="wkOpsStatus"></span>
-            <button class="icon-btn" id="wkOpsSyncBtn" title="Sync farm jobs with the Ops app now, instead of waiting for the 15-minute timer">⇄ Ops</button></div>
-        </div>
       </div>
-      <div class="vw-tools">
+      <div class="vw-tools" id="wkToolsRow">
         <button class="icon-btn" id="wkPrev" title="Previous week"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M12 5l-5 5 5 5"/></svg></button>
         <span class="cm-year" id="wkRangeLabel" style="min-width:12ch">—</span>
         <button class="icon-btn" id="wkNext" title="Next week"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M8 5l5 5-5 5"/></svg></button>
@@ -3887,6 +3895,44 @@
         </div>
       </div>
       <div class="wk-day-picker" id="wkDayPicker"></div>
+      <!-- Popovers live as direct children of .wk-left (position:relative) rather than nested in
+           whichever header row happens to be visible — the daily head above and the older title row
+           are mutually hidden/shown by JS, and an absolutely-positioned child of a display:none
+           parent never renders, so anchoring to a row that might itself be hidden isn't an option. -->
+      <div class="vw-menu" id="wkModeMenu" hidden>
+        <div class="vw-menu-row"><button class="icon-btn wk-mode-row" data-wkmode="board" aria-pressed="true" style="flex:1 1 auto;text-align:left">Board</button></div>
+        <div class="vw-menu-row"><button class="icon-btn wk-mode-row" data-wkmode="day" aria-pressed="false" style="flex:1 1 auto;text-align:left">Calendar</button></div>
+        <div class="vw-menu-row"><button class="icon-btn wk-mode-row" data-wkmode="bed" aria-pressed="false" style="flex:1 1 auto;text-align:left">By crop &amp; bed</button></div>
+        <div class="vw-menu-row"><button class="icon-btn wk-mode-row" data-wkmode="type" aria-pressed="false" style="flex:1 1 auto;text-align:left">By task type</button></div>
+      </div>
+      <div class="vw-menu" id="wkMoreMenu" hidden>
+        <!-- Mobile Calendar mode only: week prev/Today/next live inline in .vw-tools everywhere
+             else, but the daily head above has no room for them, so they move in here. -->
+        <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkPrevIn" style="flex:1 1 auto;text-align:left">◂ Previous week</button></div>
+        <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkTodayIn" style="flex:1 1 auto;text-align:left">Jump to today</button></div>
+        <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkNextIn" style="flex:1 1 auto;text-align:left">Next week ▸</button></div>
+        <div class="wk-menu-daily-only wk-menu-divider"></div>
+        <!-- Mobile only otherwise: the layout toggle lives in wkModeMenu now (behind the filter
+             icon), Claude-chat's quick-add lives inline on desktop (room for it there), but on a
+             phone it moves in here — see the max-width:760px rules below. -->
+        <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-qa-row" style="flex:1 1 auto;text-align:left">✦ From Claude chat</button></div>
+        <!-- Daily head only: Board mode still shows "+ Add planting" inline in .vw-tools (room for
+             it there), but the daily head has no tools row at all — "Add task" became the floating
+             + button instead (see wkFab), and this is the one place left for the other add action. -->
+        <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkAddPlantingIn" style="flex:1 1 auto;text-align:left">+ Add planting</button></div>
+        <div class="wk-menu-mobile-only wk-menu-divider"></div>
+        <div class="vw-menu-row"><span class="wk-tt-status" id="wkTtStatus"></span>
+          <button class="icon-btn" id="wkTtSyncBtn" title="Push this week to TickTick, pull back anything completed">⇄ TickTick</button></div>
+        <div class="vw-menu-row"><span class="wk-tt-status" id="wkGcalStatus"></span>
+          <button class="icon-btn" id="wkGcalSyncBtn" title="Push this week's schedule to Google Calendar">📅 Google Calendar</button></div>
+        <div class="vw-menu-row"><span class="wk-tt-status" id="wkOpsStatus"></span>
+          <button class="icon-btn" id="wkOpsSyncBtn" title="Sync farm jobs with the Ops app now, instead of waiting for the 15-minute timer">⇄ Ops</button></div>
+      </div>
+      <!-- Daily head's quick-add: fixed bottom-right, clear of the bottom tab bar. Only "Add task" —
+           "Add planting" is the rarer action and lives in the ⋯ menu instead (see wkAddPlantingIn). -->
+      <button type="button" class="wk-fab" id="wkFab" title="Add task" aria-label="Add task" hidden>
+        <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 4.2v11.6M4.2 10h11.6"/></svg>
+      </button>
       <div class="wk-content" id="wkContent">
         <aside class="wk-od-side" id="wkOdSide">
           <div class="wk-od-side-head">
@@ -15309,6 +15355,36 @@ function wkFmtRange(start){
     ? `${start.getDate()}–${end.getDate()} ${WK_MON[end.getMonth()]} ${end.getFullYear()}`
     : `${start.getDate()} ${WK_MON[start.getMonth()]} – ${end.getDate()} ${WK_MON[end.getMonth()]} ${end.getFullYear()}`;
 }
+const WK_DAYS_FULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+// Mobile Calendar mode's daily header: big day name, a "date · jobs · timed" stats line, and the
+// same seven days as wkDrawDayPicker restyled as day-name/date-number pills. "Timed" mirrors
+// tdRowHTML's own r.t.start!=null check (Today view uses the identical idea for its own header).
+function wkDrawDailyHead(start, rows){
+  const day=wkParse(wkSelectedDay||wkISO(new Date()));
+  const nameEl=document.getElementById("wkDailyName");
+  if(nameEl) nameEl.textContent=WK_DAYS_FULL[(day.getDay()+6)%7];
+  const dayRows=rows.filter(r=>r.inWeek && wkSameDay(r.due,day));
+  const timedN=dayRows.filter(r=>r.t.start!=null).length;
+  const statsEl=document.getElementById("wkDailyStats");
+  if(statsEl) statsEl.innerHTML=`${day.getDate()} ${WK_MON[day.getMonth()].toUpperCase()}`
+    + ` · ${dayRows.length} JOB${dayRows.length===1?"":"S"}`
+    + ` · ${timedN} TIMED`;
+  const picker=document.getElementById("wkDailyPicker"); if(!picker) return;
+  picker.innerHTML="";
+  let selBtn=null;
+  for(let i=0;i<7;i++){
+    const d=wkAddDays(start,i), iso=wkISO(d);
+    const btn=document.createElement("button"); btn.type="button"; btn.className="wk-daily-day";
+    const isSel=iso===wkSelectedDay;
+    btn.setAttribute("aria-selected", isSel?"true":"false");
+    btn.innerHTML=`<span class="wk-daily-day-name">${WK_DAYS[i].toUpperCase()}</span>`
+      +`<span class="wk-daily-day-num">${d.getDate()}</span>`;
+    btn.addEventListener("click",()=>{ wkSelectedDay=iso; buildWeekPlanner(); });
+    picker.appendChild(btn);
+    if(isSel) selBtn=btn;
+  }
+  if(selBtn) selBtn.scrollIntoView({inline:"center", block:"nearest"});
+}
 
 // ---- clock-grid config (By day view) ----
 const WK_T0=6*60, WK_T1=18*60;   // grid spans 6:00am–6:00pm (minutes from midnight)
@@ -15595,6 +15671,21 @@ function buildWeekPlanner(){
     }
   }
   wkDrawDayPicker(start);   // always called — it hides/clears itself when wkMode isn't "day"
+
+  // Calendar mode on a phone swaps the classic title/tools rows for the daily head (big day name +
+  // stats, see wkDrawDailyHead) — Board keeps its own compact title row and wk-day-picker as-is,
+  // and so does desktop regardless of mode, so this only ever toggles for wkMode==="day" + mobile.
+  const showDaily = cmIsMobile() && wkMode==="day";
+  document.getElementById("wkDailyHead").hidden = !showDaily;
+  document.getElementById("wkTitleRow").style.display = showDaily ? "none" : "";
+  // Nav controls move into the daily head's own ⋯ menu (wkPrevIn/wkTodayIn/wkNextIn); "Add task"
+  // becomes the floating + button (wkFab) and "From Claude chat"/"Add planting" move into that same
+  // ⋯ menu (wkQaRowDaily/wkAddPlantingIn) — so the whole row has nothing left to show.
+  document.getElementById("wkToolsRow").style.display = showDaily ? "none" : "";
+  document.getElementById("wkFab").hidden = !showDaily;
+  if(showDaily) document.getElementById("wkDayPicker").style.display = "none";
+  document.querySelectorAll(".wk-menu-daily-only").forEach(el=>el.hidden = !showDaily);
+  if(showDaily) wkDrawDailyHead(start, rows);
 
   document.getElementById("wkRangeLabel").textContent=wkFmtRange(start);
   const openWeek=rows.filter(r=>r.inWeek && !r.t.done);
@@ -17345,38 +17436,61 @@ function wkSetOdCollapsed(val){
   const odToggle=document.getElementById("wkOdToggle");
   if(odToggle) odToggle.onclick=()=>{ wkSetOdCollapsed(!wkOdCollapsed); saveUiState(); buildWeekPlanner(); };
 
-  // The ⋯ menu holding the three sync buttons. Closes on a click anywhere else, and on Escape,
-  // so it can never be left hanging over the board.
-  const moreBtn=document.getElementById("wkMoreBtn"), moreMenu=document.getElementById("wkMoreMenu");
-  if(moreBtn&&moreMenu){
-    moreBtn.onclick=e=>{ e.stopPropagation();
-      const open=moreMenu.hidden;
-      moreMenu.hidden=!open; moreBtn.setAttribute("aria-expanded",String(open)); };
-    moreMenu.addEventListener("click",e=>e.stopPropagation());
-    document.addEventListener("click",()=>{
-      if(!moreMenu.hidden){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); } });
-    document.addEventListener("keydown",e=>{
-      if(e.key==="Escape"&&!moreMenu.hidden){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); } });
+  // Two popovers now: ⋯ (sync buttons, week-nav on the daily head, Claude-chat quick-add) and the
+  // filter icon (layout switch — only visible on the daily head). Each can be opened by more than
+  // one trigger button (the daily head's icons and the classic title row's ⋯ both drive the same
+  // #wkMoreMenu), so this closes-all/opens-one helper is shared rather than duplicated per pair.
+  const wkMenus=[
+    {btns:[document.getElementById("wkMoreBtn"),document.getElementById("wkDailyMoreBtn")].filter(Boolean),
+     menu:document.getElementById("wkMoreMenu")},
+    {btns:[document.getElementById("wkFilterBtn")].filter(Boolean),
+     menu:document.getElementById("wkModeMenu")},
+  ];
+  function wkCloseAllMenus(){
+    wkMenus.forEach(({btns,menu})=>{ if(menu&&!menu.hidden){ menu.hidden=true;
+      btns.forEach(b=>b.setAttribute("aria-expanded","false")); } });
   }
+  wkMenus.forEach(({btns,menu})=>{
+    if(!menu||!btns.length) return;
+    btns.forEach(btn=>btn.onclick=e=>{ e.stopPropagation();
+      const open=menu.hidden;
+      wkCloseAllMenus();
+      menu.hidden=!open; btns.forEach(b=>b.setAttribute("aria-expanded",String(open)));
+    });
+    menu.addEventListener("click",e=>e.stopPropagation());
+  });
+  document.addEventListener("click",wkCloseAllMenus);
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") wkCloseAllMenus(); });
   const prev=document.getElementById("wkPrev"), next=document.getElementById("wkNext"), today=document.getElementById("wkToday");
-  if(prev) prev.onclick=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(wkStartISO),-7)); buildWeekPlanner(); };
-  if(next) next.onclick=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(wkStartISO),7)); buildWeekPlanner(); };
-  if(today) today.onclick=()=>{ wkStartISO=wkISO(wkMonday(new Date())); buildWeekPlanner(); };
+  const prevFn=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(wkStartISO),-7)); buildWeekPlanner(); };
+  const nextFn=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(wkStartISO),7)); buildWeekPlanner(); };
+  const todayFn=()=>{ wkStartISO=wkISO(wkMonday(new Date())); wkSelectedDay=wkISO(new Date()); buildWeekPlanner(); };
+  if(prev) prev.onclick=prevFn;
+  if(next) next.onclick=nextFn;
+  if(today) today.onclick=todayFn;
+  // Same three actions, reachable from the daily head's ⋯ menu (its title row has no room for
+  // inline prev/next/Today controls — see wk-menu-daily-only in the HTML and buildWeekPlanner).
+  const prevIn=document.getElementById("wkPrevIn"), nextIn=document.getElementById("wkNextIn"), todayIn=document.getElementById("wkTodayIn");
+  if(prevIn) prevIn.onclick=()=>{ wkCloseAllMenus(); prevFn(); };
+  if(nextIn) nextIn.onclick=()=>{ wkCloseAllMenus(); nextFn(); };
+  if(todayIn) todayIn.onclick=()=>{ wkCloseAllMenus(); todayFn(); };
   const fitBtn=document.getElementById("wkCalFitBtn");
   if(fitBtn) fitBtn.onclick=()=>{ wkCalFit=!wkCalFit; saveUiState(); buildWeekPlanner(); };
-  // [data-wkmode] rather than "#wkModeToggle button" so the duplicate rows inside the mobile ⋯
-  // menu (wk-menu-mobile-only) toggle in lockstep with the inline desktop seg — same handler,
-  // whichever copy is actually visible at the current width.
+  // [data-wkmode] rather than "#wkModeToggle button" so the row inside wkModeMenu toggles in
+  // lockstep with the inline desktop seg — same handler, whichever copy is actually visible.
   document.querySelectorAll("[data-wkmode]").forEach(b=>b.onclick=()=>{
     wkMode=b.dataset.wkmode;
     document.querySelectorAll("[data-wkmode]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.wkmode===wkMode?"true":"false"));
-    if(moreMenu){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); }
+    wkCloseAllMenus();
     buildWeekPlanner();
   });
   const add=document.getElementById("wkAddBtn"); if(add) add.onclick=apOpen;
   const addTask=document.getElementById("wkAddTaskBtn"); if(addTask) addTask.onclick=()=>wkTaskOpen(null);
+  const fab=document.getElementById("wkFab"); if(fab) fab.onclick=()=>wkTaskOpen(null);
+  const addPlantingIn=document.getElementById("wkAddPlantingIn");
+  if(addPlantingIn) addPlantingIn.onclick=()=>{ wkCloseAllMenus(); apOpen(); };
   document.querySelectorAll("#wkQuickAddBtn, .wk-qa-row").forEach(b=>b.onclick=()=>{
-    if(moreMenu){ moreMenu.hidden=true; moreBtn.setAttribute("aria-expanded","false"); }
+    wkCloseAllMenus();
     qaOpen();
   });
 })();
