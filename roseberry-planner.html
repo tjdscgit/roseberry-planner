@@ -5954,7 +5954,7 @@ function drawMap(placed, opts){
       t.setAttribute("x",cx);t.setAttribute("y",cy);
       t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
       // font sized to the bed's short dimension so it never overflows the width
-      t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.5, 2.4).toFixed(2));
+      t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.58, 2.7).toFixed(2));
       // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
       // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
       // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
