@@ -555,9 +555,11 @@
   .bed.sel{stroke:var(--steel);stroke-width:.3}
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
-    text-transform:uppercase;pointer-events:auto;cursor:pointer;font-weight:600;}
+    text-transform:uppercase;pointer-events:auto;cursor:grab;font-weight:600;}
   .block-label:hover{fill:var(--steel)}
-  .block-frame{fill:none;stroke:var(--line-2);stroke-dasharray:2 3;stroke-width:.24;cursor:pointer}
+  .block-label.locked{cursor:pointer}
+  .block-label.label-dragging{fill:var(--steel);cursor:grabbing}
+  .block-frame{fill:none;stroke:none;stroke-width:.24;cursor:pointer}
   .block-frame:hover{stroke:var(--steel)}
   .sat-underlay{pointer-events:auto;cursor:move}
   .sat-underlay.locked{pointer-events:none;cursor:default}
@@ -5734,6 +5736,43 @@ function fmResetBlockRotation(key){
   fmSyncBlockRotUI(key);
   fmSaveBlockRot();
 }
+
+// Block-name label position, draggable independently of the block itself — useful once blocks sit
+// close together and the default corner position overlaps a neighbour. Stored as a {dx,dy} offset
+// in the block's own LOCAL (pre-tilt) coordinate space, same frame as labX/labY below, so the
+// offset naturally rotates along with the block instead of needing separate math per tilt angle.
+const FM_LABELPOS_KEY="roseberry_blocklabelpos_v1";
+let fmBlockLabelPos={};
+(function(){ try{ const raw=localStorage.getItem(FM_LABELPOS_KEY); if(raw) fmBlockLabelPos=JSON.parse(raw); }catch(e){} })();
+function fmSaveLabelPos(){
+  try{ localStorage.setItem(FM_LABELPOS_KEY, JSON.stringify(fmBlockLabelPos)); }
+  catch(e){ console.error("Couldn't save label position", e); }
+}
+function fmLabelOffset(key){ const o=fmBlockLabelPos[key]; return {dx:(o&&o.dx)||0, dy:(o&&o.dy)||0}; }
+function fmLabelLocked(key){ return !!(fmBlockLabelPos[key] && fmBlockLabelPos[key].locked); }
+function fmSetLabelLock(key,locked){
+  const cur=fmBlockLabelPos[key]||{dx:0,dy:0};
+  fmBlockLabelPos[key]={...cur, locked};
+  fmSaveLabelPos();
+  layoutAndDraw({keepView:true});
+}
+function fmResetLabelPos(key){
+  delete fmBlockLabelPos[key];
+  fmSaveLabelPos();
+  layoutAndDraw({keepView:true});
+}
+// Cheap update while dragging — moves just this label's x/y (+ its upright-correction rotation)
+// without a full redraw, same pattern as fmApplyBlockRotation above.
+function fmApplyLabelOffset(key){
+  const p=placedCache.find(x=>x.key===key); if(!p) return;
+  const el=document.querySelector(`.block-label[data-block="${CSS.escape(key)}"]`); if(!el) return;
+  const fr=p.frame, off=fmLabelOffset(key);
+  const labX=fr.x-1.2+off.dx, labY=fr.y-2.4+off.dy;
+  el.setAttribute("x",labX); el.setAttribute("y",labY);
+  const rotDeg=fmBlockRotations[key]||0, blockSnap=Math.round(rotDeg/90)*90;
+  if(blockSnap) el.setAttribute("transform",`rotate(${-blockSnap} ${labX} ${labY})`);
+  else el.removeAttribute("transform");
+}
 // A real, true-to-scale satellite photo of 436 Roseberry Creek Rd, fetched once (2026-09-15) from
 // ArcGIS World Imagery and saved alongside the app — 700m square, 0.875 m/px, so it's already at
 // the right SCALE to match the beds' real metres; it only needs a one-time drag to line up, since
@@ -5845,9 +5884,11 @@ function drawMap(placed, opts){
     rect.setAttribute("rx","1");rotGrp.appendChild(rect);
 
     const lab=document.createElementNS(SVG,"text");
-    lab.setAttribute("class","block-label");
+    const labLocked=fmLabelLocked(p.key);
+    lab.setAttribute("class","block-label"+(labLocked?" locked":""));
     lab.dataset.block=p.key;
-    const labX=fr.x-1.2, labY=fr.y-2.4;
+    const labOff=fmLabelOffset(p.key);
+    const labX=fr.x-1.2+labOff.dx, labY=fr.y-2.4+labOff.dy;
     lab.setAttribute("x",labX);lab.setAttribute("y",labY);
     lab.setAttribute("font-size","3.4");lab.textContent=p.key;
     // This label has no long-axis to stay aligned to (unlike the bed labels below), so rather than
@@ -6128,6 +6169,14 @@ function selectBlock(key){
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',1)">+1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmResetBlockRotation('${esc(key)}')">Reset</button>`
     +`</div></div>`;
+  const labLocked=fmLabelLocked(key);
+  html+=`<div style="margin-top:.6rem">`
+    +`<div style="font-size:.72rem;color:var(--ink-2);margin-bottom:.3rem">Drag the block's name label on the map to move it — handy once plots sit close together.</div>`
+    +`<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">`
+    +`<label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem">`
+    +`<input type="checkbox" ${labLocked?"checked":""} onchange="fmSetLabelLock('${esc(key)}',this.checked)"> Lock label position</label>`
+    +`<button class="icon-btn" type="button" onclick="fmResetLabelPos('${esc(key)}')">Reset</button>`
+    +`</div></div>`;
   if(cropList.length){
     html+=`<div class="sect-h">Crop mix</div>`;
     html+=cropList.map(([crop,n])=>`<div class="kv"><span class="k"><span class="farmblk-dot" style="background:${cropColor(crop)}"></span>${esc(crop)}</span><span class="v">${n} bed${n===1?"":"s"}</span></div>`).join("");
@@ -6183,6 +6232,7 @@ function fmScreenToWorld(clientX,clientY){
   const pts=new Map();let pinchD=0;
   let dragBlockKey=null,dragBlockGroup=null,dragBlockStart=null;
   let dragImage=false,dragImageStart=null,dragImageOrig=null;
+  let dragLabelKey=null,dragLabelEl=null,dragLabelStart=null,dragLabelOrig=null;
 
   function bedFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.bed)return el.dataset.bed;el=el.parentNode;}return null;}
   function blockFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.block)return el.dataset.block;el=el.parentNode;}return null;}
@@ -6191,8 +6241,17 @@ function fmScreenToWorld(clientX,clientY){
     wrap.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1){
       dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;
-      dragBlockKey=null;dragBlockGroup=null;dragImage=false;
-      if(fmMoveMode){
+      dragBlockKey=null;dragBlockGroup=null;dragImage=false;dragLabelKey=null;dragLabelEl=null;
+      // Block-name label drag takes priority over whole-block drag (even in move mode) — grabbing
+      // the label itself should reposition just the label, not the whole block underneath it.
+      const lbl=e.target.closest && e.target.closest(".block-label");
+      if(lbl && lbl.dataset.block && !fmLabelLocked(lbl.dataset.block)){
+        dragLabelKey=lbl.dataset.block;
+        dragLabelEl=lbl;
+        dragLabelStart=fmScreenToWorld(e.clientX,e.clientY);
+        dragLabelOrig=fmLabelOffset(dragLabelKey);
+      }
+      if(!dragLabelKey && fmMoveMode){
         const blk=blockFrom(e.target);
         if(blk){
           dragBlockKey=blk;
@@ -6201,12 +6260,12 @@ function fmScreenToWorld(clientX,clientY){
           if(dragBlockGroup) dragBlockGroup.classList.add("dragging");
         }
       }
-      if(!dragBlockKey && fmSatEl && e.target===fmSatEl){
+      if(!dragLabelKey && !dragBlockKey && fmSatEl && e.target===fmSatEl){
         dragImage=true;
         dragImageStart=fmScreenToWorld(e.clientX,e.clientY);
         dragImageOrig={x:fmSat.x,y:fmSat.y};
       }
-      if(!dragBlockKey && !dragImage) wrap.classList.add("dragging");
+      if(!dragLabelKey && !dragBlockKey && !dragImage) wrap.classList.add("dragging");
     }
   });
   wrap.addEventListener("pointermove",e=>{
@@ -6218,6 +6277,22 @@ function fmScreenToWorld(clientX,clientY){
       pinchD=d;return;
     }
     if(!dragging) return;
+    if(dragLabelKey){
+      const w=fmScreenToWorld(e.clientX,e.clientY);
+      const dx=w.x-dragLabelStart.x, dy=w.y-dragLabelStart.y;
+      if(Math.abs(dx)+Math.abs(dy)>0.02){ moved=true; if(dragLabelEl) dragLabelEl.classList.add("label-dragging"); }
+      // The label lives inside the block's own rotated group, so a screen-space drag has to be
+      // rotated BACKWARDS by the block's tilt to find the matching offset in the block's local
+      // (pre-tilt) coordinate space — otherwise dragging "right" on a tilted block would move the
+      // label diagonally instead of following the pointer.
+      const rot=(fmBlockRotations[dragLabelKey]||0)*Math.PI/180;
+      const cos=Math.cos(rot), sin=Math.sin(rot);
+      const localDx=dx*cos+dy*sin, localDy=-dx*sin+dy*cos;
+      const cur=fmBlockLabelPos[dragLabelKey]||{};
+      fmBlockLabelPos[dragLabelKey]={...cur, dx:dragLabelOrig.dx+localDx, dy:dragLabelOrig.dy+localDy};
+      fmApplyLabelOffset(dragLabelKey);
+      return;
+    }
     if(dragBlockKey){
       const w=fmScreenToWorld(e.clientX,e.clientY);
       const dx=w.x-dragBlockStart.x, dy=w.y-dragBlockStart.y;
@@ -6242,6 +6317,14 @@ function fmScreenToWorld(clientX,clientY){
     pts.delete(e.pointerId);if(pts.size<2)pinchD=0;
     if(pts.size===0){
       dragging=false;wrap.classList.remove("dragging");
+      if(dragLabelKey){
+        const key=dragLabelKey, el=dragLabelEl;
+        dragLabelKey=null;dragLabelEl=null;
+        if(el) el.classList.remove("label-dragging");
+        if(moved && !wasCancel) fmSaveLabelPos();
+        else{ fmBlockLabelPos[key]=dragLabelOrig?{...(fmBlockLabelPos[key]||{}), ...dragLabelOrig}:fmBlockLabelPos[key]; fmApplyLabelOffset(key); selectBlock(key); }
+        downTarget=null;return;
+      }
       if(dragBlockKey){
         const key=dragBlockKey, grp=dragBlockGroup;
         dragBlockKey=null;dragBlockGroup=null;
