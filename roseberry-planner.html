@@ -550,14 +550,21 @@
   #mapWrap.dragging{cursor:grabbing}
   #mapSvg{width:100%;height:100%;display:block}
 
-  .bed{stroke:var(--line-2);stroke-width:.18;cursor:pointer;}
-  .bed:hover{stroke:var(--ink);stroke-width:.5}
-  .bed.sel{stroke:var(--steel);stroke-width:.3}
+  .bed{stroke:var(--line-2);stroke-width:.09;cursor:pointer;}
+  .bed:hover{stroke:var(--ink);stroke-width:.25}
+  .bed.sel{stroke:var(--steel);stroke-width:.15}
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
+  .bed-croplabel{pointer-events:auto;cursor:pointer}
+  .bed-croplabel:hover{text-decoration:underline}
+  .bed-behind-badge{cursor:pointer}
+  .bed-behind-badge circle{fill:#C0392B;stroke:var(--paper);stroke-width:.12}
+  .bed-behind-badge-txt{fill:#fff;font-family:var(--mono);font-weight:800;pointer-events:none}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
-    text-transform:uppercase;pointer-events:auto;cursor:pointer;font-weight:600;}
+    text-transform:uppercase;pointer-events:auto;cursor:grab;font-weight:600;}
   .block-label:hover{fill:var(--steel)}
-  .block-frame{fill:none;stroke:var(--line-2);stroke-dasharray:2 3;stroke-width:.24;cursor:pointer}
+  .block-label.locked{cursor:pointer}
+  .block-label.label-dragging{fill:var(--steel);cursor:grabbing}
+  .block-frame{fill:none;stroke:none;stroke-width:.24;cursor:pointer}
   .block-frame:hover{stroke:var(--steel)}
   .sat-underlay{pointer-events:auto;cursor:move}
   .sat-underlay.locked{pointer-events:none;cursor:default}
@@ -603,6 +610,15 @@
     transition:transform .22s ease;z-index:20;display:flex;flex-direction:column;
   }
   #panel.open{transform:none}
+  /* Same slide-in-from-the-right treatment as #panel, layered above it — clicking a bed's crop
+     text opens this (the shared tlRenderPanel planting detail) instead of the bed panel. */
+  #fmPlantingPanel{
+    position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);
+    background:var(--paper);border-left:1px solid var(--line-2);
+    box-shadow:var(--shadow);transform:translateX(105%);
+    transition:transform .22s ease;z-index:21;display:flex;flex-direction:column;overflow-y:auto;
+  }
+  #fmPlantingPanel.open{transform:none}
   .panel-head{padding:.9rem 1rem .7rem;border-bottom:1px solid var(--line)}
   .panel-head .bed-id{font-family:var(--mono);font-size:1.35rem;font-weight:700;letter-spacing:-.01em}
   .panel-head .blk{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em}
@@ -2116,6 +2132,11 @@
        the way the desktop sidebar does, instead of a sliver pinned to the edge. */
     .tl-panel.open{position:fixed;inset:0;width:100%;max-width:100%;flex-basis:auto;
       z-index:52;border-radius:0}
+    /* Farm map's planting-detail panel (tlRenderPanel reused into #fmPlantingPanel) gets the same
+       full-screen treatment — at its normal min(340px,86vw) width, the shared panel markup's head
+       row (crop name + variety + bed code + close button) doesn't fit and forces a horizontal
+       scrollbar, same reason every other tlRenderPanel host goes full-width on phone. */
+    #fmPlantingPanel.open{width:100%;max-width:100%}
     /* The rail (nav[role=tablist]) and the top bar are the phone chrome now — they become the
        bottom tab bar and the title row rather than being hidden for a hamburger. */
     .cm-block-picker{display:flex}
@@ -3162,6 +3183,10 @@
         </div>
         <div class="panel-body" id="pBody"></div>
       </aside>
+      <!-- Clicking a bed's crop-name text opens THIS (the shared planting-detail panel used by
+           Timeline/Crop map/Week planner via tlRenderPanel) instead of the bed panel above — same
+           slide-in-from-the-right treatment as #panel, just layered above it (see CSS). -->
+      <aside class="tl-panel" id="fmPlantingPanel"></aside>
     </section>
 
     <!-- CROP MAP -->
@@ -5744,6 +5769,43 @@ function fmResetBlockRotation(key){
   fmSyncBlockRotUI(key);
   fmSaveBlockRot();
 }
+
+// Block-name label position, draggable independently of the block itself — useful once blocks sit
+// close together and the default corner position overlaps a neighbour. Stored as a {dx,dy} offset
+// in the block's own LOCAL (pre-tilt) coordinate space, same frame as labX/labY below, so the
+// offset naturally rotates along with the block instead of needing separate math per tilt angle.
+const FM_LABELPOS_KEY="roseberry_blocklabelpos_v1";
+let fmBlockLabelPos={};
+(function(){ try{ const raw=localStorage.getItem(FM_LABELPOS_KEY); if(raw) fmBlockLabelPos=JSON.parse(raw); }catch(e){} })();
+function fmSaveLabelPos(){
+  try{ localStorage.setItem(FM_LABELPOS_KEY, JSON.stringify(fmBlockLabelPos)); }
+  catch(e){ console.error("Couldn't save label position", e); }
+}
+function fmLabelOffset(key){ const o=fmBlockLabelPos[key]; return {dx:(o&&o.dx)||0, dy:(o&&o.dy)||0}; }
+function fmLabelLocked(key){ return !!(fmBlockLabelPos[key] && fmBlockLabelPos[key].locked); }
+function fmSetLabelLock(key,locked){
+  const cur=fmBlockLabelPos[key]||{dx:0,dy:0};
+  fmBlockLabelPos[key]={...cur, locked};
+  fmSaveLabelPos();
+  layoutAndDraw({keepView:true});
+}
+function fmResetLabelPos(key){
+  delete fmBlockLabelPos[key];
+  fmSaveLabelPos();
+  layoutAndDraw({keepView:true});
+}
+// Cheap update while dragging — moves just this label's x/y (+ its upright-correction rotation)
+// without a full redraw, same pattern as fmApplyBlockRotation above.
+function fmApplyLabelOffset(key){
+  const p=placedCache.find(x=>x.key===key); if(!p) return;
+  const el=document.querySelector(`.block-label[data-block="${CSS.escape(key)}"]`); if(!el) return;
+  const fr=p.frame, off=fmLabelOffset(key);
+  const labX=fr.x-1.2+off.dx, labY=fr.y-2.4+off.dy;
+  el.setAttribute("x",labX); el.setAttribute("y",labY);
+  const rotDeg=fmBlockRotations[key]||0, blockSnap=Math.round(rotDeg/90)*90;
+  if(blockSnap) el.setAttribute("transform",`rotate(${-blockSnap} ${labX} ${labY})`);
+  else el.removeAttribute("transform");
+}
 // A real, true-to-scale satellite photo of 436 Roseberry Creek Rd, fetched once (2026-09-15) from
 // ArcGIS World Imagery and saved alongside the app — 700m square, 0.875 m/px, so it's already at
 // the right SCALE to match the beds' real metres; it only needs a one-time drag to line up, since
@@ -5855,9 +5917,11 @@ function drawMap(placed, opts){
     rect.setAttribute("rx","1");rotGrp.appendChild(rect);
 
     const lab=document.createElementNS(SVG,"text");
-    lab.setAttribute("class","block-label");
+    const labLocked=fmLabelLocked(p.key);
+    lab.setAttribute("class","block-label"+(labLocked?" locked":""));
     lab.dataset.block=p.key;
-    const labX=fr.x-1.2, labY=fr.y-2.4;
+    const labOff=fmLabelOffset(p.key);
+    const labX=fr.x-1.2+labOff.dx, labY=fr.y-2.4+labOff.dy;
     lab.setAttribute("x",labX);lab.setAttribute("y",labY);
     lab.setAttribute("font-size","3.4");lab.textContent=p.key;
     // This label has no long-axis to stay aligned to (unlike the bed labels below), so rather than
@@ -5915,6 +5979,13 @@ function drawMap(placed, opts){
         rotGrp.appendChild(ov);
       }
 
+      // "behind schedule" flag — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
+      // due date has passed with Status not advanced to match). Appended as a tspan INSIDE the bed
+      // label below (not a separately-positioned badge) so it automatically inherits the label's
+      // exact position and upright-correction rotation — it always sits right next to the crop
+      // name and reads the same direction as the rest of the text, at any tilt.
+      const behind = pl && typeof tlIsBehind==="function" && tlIsBehind(pl);
+
       // label: bed name, plus the crop currently in it, laid along the bed's long axis
       const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
       const cropTxt = (pl && pl.crop && pl.crop!=="—") ? pl.crop : "";
@@ -5923,7 +5994,8 @@ function drawMap(placed, opts){
       t.setAttribute("x",cx);t.setAttribute("y",cy);
       t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
       // font sized to the bed's short dimension so it never overflows the width
-      t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.5, 2.4).toFixed(2));
+      const fontSize=Math.min((tall?r.w:r.h)*0.58, 2.7);
+      t.setAttribute("font-size", fontSize.toFixed(2));
       // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
       // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
       // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
@@ -5934,8 +6006,55 @@ function drawMap(placed, opts){
       const baseRot = tall ? -90 : 0;
       const finalRot = flip ? baseRot+180 : baseRot;
       if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
-      t.textContent = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
+      if(cropTxt){
+        // Crop name is its own tspan so it (and only it) can be clicked separately from the bed
+        // name — pointer-events:auto here overrides the parent <text>'s pointer-events:none, so a
+        // click lands on this tspan specifically and opens the planting panel (see fmOpenPlantingPanel
+        // in the pointerup handler) instead of falling through to the bed panel.
+        const nameSpan=document.createElementNS(SVG,"tspan");
+        nameSpan.textContent=`${b.name} · `;
+        t.appendChild(nameSpan);
+        const cropSpan=document.createElementNS(SVG,"tspan");
+        cropSpan.setAttribute("class","bed-croplabel");
+        cropSpan.dataset.bed=b.id;
+        cropSpan.textContent=cropTxt;
+        t.appendChild(cropSpan);
+      }else{
+        t.textContent = b.name;
+      }
       rotGrp.appendChild(t);
+      if(behind){
+        // Estimated rather than measured (t.getBBox()): the map can redraw while the Farm map view
+        // itself is hidden (a background data-sync refresh, or before the user has switched to this
+        // tab), and getBBox() throws on an element inside a display:none subtree — that silently
+        // fell back to a fixed corner position every time in practice. A monospace char-count
+        // estimate has no such dependency on the view actually being visible/laid out.
+        const fullText = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
+        const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
+        const bx=cx+textHalfWidth+.5, by=cy;
+        const br=Math.min(Math.min(r.w,r.h)*0.28, 1.0);
+        const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
+        const badgeGrp=document.createElementNS(SVG,"g");
+        badgeGrp.setAttribute("class","bed-behind-badge");
+        // Stored for the tap handler below — SVG <title> only shows on mouse hover, never on
+        // touch, so a phone tapping the badge needs its own way to surface the same explanation.
+        badgeGrp.dataset.reason=reasonTxt;
+        if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
+        const dot=document.createElementNS(SVG,"circle");
+        dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
+        const ti=document.createElementNS(SVG,"title");
+        ti.textContent=reasonTxt;
+        dot.appendChild(ti);
+        badgeGrp.appendChild(dot);
+        const bt=document.createElementNS(SVG,"text");
+        bt.setAttribute("class","bed-behind-badge-txt");
+        bt.setAttribute("x",bx+br);bt.setAttribute("y",by);
+        bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
+        bt.setAttribute("font-size",(br*1.3).toFixed(2));
+        bt.textContent="!";
+        badgeGrp.appendChild(bt);
+        rotGrp.appendChild(badgeGrp);
+      }
 
       minX=Math.min(minX,r.x);minY=Math.min(minY,r.y);
       maxX=Math.max(maxX,r.x+r.w);maxY=Math.max(maxY,r.y+r.h);
@@ -6071,7 +6190,56 @@ function filterBlocks(){
 }
 
 /* ---------- Selection / panel ---------- */
+// "Snapshot" section for the bed panel — everything ELSE in the app that's already tagged to this
+// bed (Farm Info's own bedIds/cropIds link fields, Field walk observations, fertiliser applications,
+// bed prep passes), pulled together rather than duplicated. This is read-only: each source is still
+// edited from its own view — Farm Info entries link/unlink from their own edit form (see fiOpenEdit,
+// the data-fi-bedon buttons), nothing here writes back.
+function fmReferenceHTML(b, pl){
+  const bedId=b.id, cropId=pl && pl.cropId;
+  // Collapsed by default — with four sources on every bed, leaving them all expanded is exactly
+  // the "clutter" risk this was flagged for. `count` in the summary means a glance at the closed
+  // row still says whether it's worth opening, before the tap.
+  const acc=(label,count,bodyHtml)=>
+    `<details class="tl-acc"><summary>${esc(label)}${count?` (${count})`:""}</summary>${bodyHtml}</details>`;
+
+  const fiMatches=(data.farmInfo||[]).filter(e=>
+    (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
+  const fiHtml = fiMatches.length ? fiMatches.map(e=>{
+    const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
+      :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
+    return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
+      +`<span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>`
+      +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
+  }).join("") : `<div class="empty-note">Nothing tagged to this bed${cropId?" or crop":""} yet — link one from Farm Info.</div>`;
+
+  const obs=(data.walkObservations||[]).filter(o=>(o.bedIds||[]).includes(bedId))
+    .slice().sort((a,b)=>String(b.created||"").localeCompare(String(a.created||""))).slice(0,5);
+  const obsHtml = obs.length ? obs.map(o=>
+    `<div class="kv"><span class="k">${fmt(o.created)}${o.severity?" · "+esc(o.severity):""}</span>`
+    +`<span class="v">${esc(o.note||"—")}${o.resolved?" (resolved)":""}</span></div>`
+  ).join("") : `<div class="empty-note">No field walk notes logged for this bed.</div>`;
+
+  const apps=(typeof frAppsForBed==="function" ? frAppsForBed(bedId) : []).slice(0,5);
+  const appsHtml = apps.length ? apps.map(a=>{
+    const products=(a.items||[]).map(i=>i.product).filter(Boolean).join(", ");
+    return `<div class="kv"><span class="k">${fmt(a.date)}</span><span class="v">${esc(products||a.method||"—")}</span></div>`;
+  }).join("") : `<div class="empty-note">No fertiliser applications logged for this bed.</div>`;
+
+  const preps=(data.bedPrepEvents||[]).filter(e=>(e.bedIds||[]).includes(bedId))
+    .slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).slice(0,5);
+  const prepsHtml = preps.length ? preps.map(e=>
+    `<div class="kv"><span class="k">${fmt(e.date)}</span><span class="v">${esc((e.ops||[]).join(", ")||"—")}${e.by?" · "+esc(e.by):""}</span></div>`
+  ).join("") : `<div class="empty-note">No bed prep passes logged for this bed.</div>`;
+
+  return `<div class="sect-h">Reference</div>`
+    + acc("Reference docs", fiMatches.length, fiHtml)
+    + acc("Field notes", obs.length, obsHtml)
+    + acc("Fertiliser history", apps.length, appsHtml)
+    + acc("Bed prep history", preps.length, prepsHtml);
+}
 function selectBed(id){
+  fmClosePlantingPanel();
   selectedBed=id;
   document.querySelectorAll(".bed").forEach(el=>el.classList.toggle("sel",el.dataset.bed===id));
   const b=data.beds.find(x=>x.id===id);if(!b)return;
@@ -6082,9 +6250,12 @@ function selectBed(id){
   let html="";
   html+=`<div class="kv"><span class="k">Length</span><span class="v">${b.len!=null?b.len+" m":"—"}</span></div>`;
   html+=`<div class="kv"><span class="k">Width</span><span class="v">${b.wid!=null?b.wid+" m":"—"}</span></div>`;
+  if(b.soil) html+=`<div class="kv"><span class="k">Soil</span><span class="v">${esc(b.soil)}</span></div>`;
   if(pl){
     const col=cropColor(pl.cropId||pl.crop);
     html+=`<div class="sect-h">Current planting</div>`;
+    const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
+    if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
     html+=`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`;
     html+=`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status||"—")}</span></span></div>`;
     html+=`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`;
@@ -6092,19 +6263,35 @@ function selectBed(id){
     html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
     html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
   }else{
-    html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting in Airtable and it'll appear here.</div>`;
+    html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
   }
+  html+=fmReferenceHTML(b, pl);
   body.innerHTML=html;
   document.getElementById("panel").classList.add("open");
 }
 function closePanel(){document.getElementById("panel").classList.remove("open");
   document.querySelectorAll(".bed.sel").forEach(el=>el.classList.remove("sel"));selectedBed=null;}
 
+// Clicking a bed's crop-name text opens the planting-detail panel (shared with Timeline/Crop
+// map/Week planner via tlRenderPanel) instead of the bed panel a plain click on the bed opens.
+function fmOpenPlantingPanel(bedId){
+  const b=(data.beds||[]).find(x=>x.id===bedId);
+  if(!b || !b.planting) return;
+  closePanel();
+  const panel=document.getElementById("fmPlantingPanel");
+  tlRenderPanel(b.planting, panel, fmClosePlantingPanel);
+  panel.classList.add("open");
+}
+function fmClosePlantingPanel(){
+  document.getElementById("fmPlantingPanel").classList.remove("open");
+}
+
 // Block-level detail panel, styled after the Farm Map artboard's right-hand rail: bed count,
 // occupancy, and the crop mix currently growing in the block. Only shows fields we can actually
 // derive from bed/planting data — no irrigation/soil/aspect yet, since those live in map_features
 // / farm_settings and aren't populated.
 function selectBlock(key){
+  fmClosePlantingPanel();
   selectedBed=null;
   document.querySelectorAll(".bed.sel").forEach(el=>el.classList.remove("sel"));
   const beds=(data.beds||[]).filter(b=>b.block===key);
@@ -6137,6 +6324,14 @@ function selectBlock(key){
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',-1)">−1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',1)">+1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmResetBlockRotation('${esc(key)}')">Reset</button>`
+    +`</div></div>`;
+  const labLocked=fmLabelLocked(key);
+  html+=`<div style="margin-top:.6rem">`
+    +`<div style="font-size:.72rem;color:var(--ink-2);margin-bottom:.3rem">Drag the block's name label on the map to move it — handy once plots sit close together.</div>`
+    +`<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">`
+    +`<label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem">`
+    +`<input type="checkbox" ${labLocked?"checked":""} onchange="fmSetLabelLock('${esc(key)}',this.checked)"> Lock label position</label>`
+    +`<button class="icon-btn" type="button" onclick="fmResetLabelPos('${esc(key)}')">Reset</button>`
     +`</div></div>`;
   if(cropList.length){
     html+=`<div class="sect-h">Crop mix</div>`;
@@ -6193,6 +6388,7 @@ function fmScreenToWorld(clientX,clientY){
   const pts=new Map();let pinchD=0;
   let dragBlockKey=null,dragBlockGroup=null,dragBlockStart=null;
   let dragImage=false,dragImageStart=null,dragImageOrig=null;
+  let dragLabelKey=null,dragLabelEl=null,dragLabelStart=null,dragLabelOrig=null;
 
   function bedFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.bed)return el.dataset.bed;el=el.parentNode;}return null;}
   function blockFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.block)return el.dataset.block;el=el.parentNode;}return null;}
@@ -6201,8 +6397,17 @@ function fmScreenToWorld(clientX,clientY){
     wrap.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===1){
       dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;
-      dragBlockKey=null;dragBlockGroup=null;dragImage=false;
-      if(fmMoveMode){
+      dragBlockKey=null;dragBlockGroup=null;dragImage=false;dragLabelKey=null;dragLabelEl=null;
+      // Block-name label drag takes priority over whole-block drag (even in move mode) — grabbing
+      // the label itself should reposition just the label, not the whole block underneath it.
+      const lbl=e.target.closest && e.target.closest(".block-label");
+      if(lbl && lbl.dataset.block && !fmLabelLocked(lbl.dataset.block)){
+        dragLabelKey=lbl.dataset.block;
+        dragLabelEl=lbl;
+        dragLabelStart=fmScreenToWorld(e.clientX,e.clientY);
+        dragLabelOrig=fmLabelOffset(dragLabelKey);
+      }
+      if(!dragLabelKey && fmMoveMode){
         const blk=blockFrom(e.target);
         if(blk){
           dragBlockKey=blk;
@@ -6211,12 +6416,12 @@ function fmScreenToWorld(clientX,clientY){
           if(dragBlockGroup) dragBlockGroup.classList.add("dragging");
         }
       }
-      if(!dragBlockKey && fmSatEl && e.target===fmSatEl){
+      if(!dragLabelKey && !dragBlockKey && fmSatEl && e.target===fmSatEl){
         dragImage=true;
         dragImageStart=fmScreenToWorld(e.clientX,e.clientY);
         dragImageOrig={x:fmSat.x,y:fmSat.y};
       }
-      if(!dragBlockKey && !dragImage) wrap.classList.add("dragging");
+      if(!dragLabelKey && !dragBlockKey && !dragImage) wrap.classList.add("dragging");
     }
   });
   wrap.addEventListener("pointermove",e=>{
@@ -6228,6 +6433,22 @@ function fmScreenToWorld(clientX,clientY){
       pinchD=d;return;
     }
     if(!dragging) return;
+    if(dragLabelKey){
+      const w=fmScreenToWorld(e.clientX,e.clientY);
+      const dx=w.x-dragLabelStart.x, dy=w.y-dragLabelStart.y;
+      if(Math.abs(dx)+Math.abs(dy)>0.02){ moved=true; if(dragLabelEl) dragLabelEl.classList.add("label-dragging"); }
+      // The label lives inside the block's own rotated group, so a screen-space drag has to be
+      // rotated BACKWARDS by the block's tilt to find the matching offset in the block's local
+      // (pre-tilt) coordinate space — otherwise dragging "right" on a tilted block would move the
+      // label diagonally instead of following the pointer.
+      const rot=(fmBlockRotations[dragLabelKey]||0)*Math.PI/180;
+      const cos=Math.cos(rot), sin=Math.sin(rot);
+      const localDx=dx*cos+dy*sin, localDy=-dx*sin+dy*cos;
+      const cur=fmBlockLabelPos[dragLabelKey]||{};
+      fmBlockLabelPos[dragLabelKey]={...cur, dx:dragLabelOrig.dx+localDx, dy:dragLabelOrig.dy+localDy};
+      fmApplyLabelOffset(dragLabelKey);
+      return;
+    }
     if(dragBlockKey){
       const w=fmScreenToWorld(e.clientX,e.clientY);
       const dx=w.x-dragBlockStart.x, dy=w.y-dragBlockStart.y;
@@ -6252,6 +6473,14 @@ function fmScreenToWorld(clientX,clientY){
     pts.delete(e.pointerId);if(pts.size<2)pinchD=0;
     if(pts.size===0){
       dragging=false;wrap.classList.remove("dragging");
+      if(dragLabelKey){
+        const key=dragLabelKey, el=dragLabelEl;
+        dragLabelKey=null;dragLabelEl=null;
+        if(el) el.classList.remove("label-dragging");
+        if(moved && !wasCancel) fmSaveLabelPos();
+        else{ fmBlockLabelPos[key]=dragLabelOrig?{...(fmBlockLabelPos[key]||{}), ...dragLabelOrig}:fmBlockLabelPos[key]; fmApplyLabelOffset(key); selectBlock(key); }
+        downTarget=null;return;
+      }
       if(dragBlockKey){
         const key=dragBlockKey, grp=dragBlockGroup;
         dragBlockKey=null;dragBlockGroup=null;
@@ -6266,9 +6495,13 @@ function fmScreenToWorld(clientX,clientY){
         downTarget=null;return;
       }
       if(!moved && !wasCancel){
+        const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
+        const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
         const id=bedFrom(downTarget);
-        if(id) selectBed(id);
-        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else closePanel(); }
+        if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
+        else if(cropLink && id) fmOpenPlantingPanel(id);
+        else if(id) selectBed(id);
+        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
       }
       downTarget=null;
     }
@@ -10085,6 +10318,23 @@ function tlIsBehind(p){
     const due=p[t.df]; return due && String(due)<today;
   });
 }
+// Human-readable version of the tlIsBehind check above — which milestone is overdue, its due
+// date, and how many days ago — for tooltips (the Farm map badge) where a bare "Behind schedule"
+// doesn't say what to actually go check.
+function tlBehindReason(p){
+  if(p.status==="Finished") return null;
+  const lc=apLifecycle(p.tp?"transplant":"direct");
+  const today=todayISO();
+  for(const t of lc){
+    if(statusRank(p.status)>=statusRank(t.stage)) continue;   // already reached
+    const due=p[t.df];
+    if(due && String(due)<today){
+      const days=Math.round((new Date(today)-new Date(due))/86400000);
+      return `${t.label} was due ${fmt(due)}${days>0?` (${days} day${days===1?"":"s"} ago)`:""} — still ${p.status||"Planned"}`;
+    }
+  }
+  return null;
+}
 function fmtDM(d){ // compact DD/MM, matching Heirloom's date-label style
   if(!d) return "";
   const dt=new Date(d); if(isNaN(dt)) return "";
@@ -10713,6 +10963,10 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const cropType=(data.cropDefs||{})[p.cropId]?.type;
   const bedObj=(data.beds||[]).find(b=>(p.bedIds||[]).includes(b.id));
   const metaParts=[cropType,bedObj?.block?`Block ${bedObj.block}`:null,p.bm>0?`${p.bm} m`:null].filter(Boolean);
+  // Same reason the Farm map's "!" badge shows on hover/tap — surfaced here too so opening a
+  // planting's detail panel from anywhere (Farm map, Timeline, Crop map, Week planner) explains
+  // WHY it's flagged, not just that it is.
+  const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(p) : null;
   panel.innerHTML=`
     <div class="tl-panel-head">
       <div class="tl-panel-title">
@@ -10728,6 +10982,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
       <span class="pill tl-panel-status" style="background:${statusColor(p.status)}">${esc(p.status||"—")}</span>
     </div>
     ${p.failed?`<div class="tl-fail-banner">⚠ Crop failure${p.failureDate?" · "+esc(fmt(p.failureDate)):""}</div>`:""}
+    ${(!p.failed && behindReason)?`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`:""}
     <div class="sect-h">Tasks</div>
     ${tasksHtml}
     ${acc("Planting details",detailsHtml,false)}
