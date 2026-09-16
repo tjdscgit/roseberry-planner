@@ -6028,7 +6028,8 @@ function drawMap(placed, opts){
         if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
         const dot=document.createElementNS(SVG,"circle");
         dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
-        const ti=document.createElementNS(SVG,"title");ti.textContent="Behind schedule";
+        const ti=document.createElementNS(SVG,"title");
+        ti.textContent=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
         dot.appendChild(ti);
         badgeGrp.appendChild(dot);
         const bt=document.createElementNS(SVG,"text");
@@ -10248,6 +10249,23 @@ function tlIsBehind(p){
     if(statusRank(p.status)>=statusRank(t.stage)) return false;   // already reached
     const due=p[t.df]; return due && String(due)<today;
   });
+}
+// Human-readable version of the tlIsBehind check above — which milestone is overdue, its due
+// date, and how many days ago — for tooltips (the Farm map badge) where a bare "Behind schedule"
+// doesn't say what to actually go check.
+function tlBehindReason(p){
+  if(p.status==="Finished") return null;
+  const lc=apLifecycle(p.tp?"transplant":"direct");
+  const today=todayISO();
+  for(const t of lc){
+    if(statusRank(p.status)>=statusRank(t.stage)) continue;   // already reached
+    const due=p[t.df];
+    if(due && String(due)<today){
+      const days=Math.round((new Date(today)-new Date(due))/86400000);
+      return `${t.label} was due ${fmt(due)}${days>0?` (${days} day${days===1?"":"s"} ago)`:""} — still ${p.status||"Planned"}`;
+    }
+  }
+  return null;
 }
 function fmtDM(d){ // compact DD/MM, matching Heirloom's date-label style
   if(!d) return "";
