@@ -556,7 +556,7 @@
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
   .bed-croplabel{pointer-events:auto;cursor:pointer}
   .bed-croplabel:hover{text-decoration:underline}
-  .bed-behind-badge{pointer-events:none}
+  .bed-behind-badge{cursor:pointer}
   .bed-behind-badge circle{fill:#C0392B;stroke:var(--paper);stroke-width:.12}
   .bed-behind-badge-txt{fill:#fff;font-family:var(--mono);font-weight:800;pointer-events:none}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
@@ -6023,13 +6023,17 @@ function drawMap(placed, opts){
         const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
         const bx=cx+textHalfWidth+.5, by=cy;
         const br=Math.min(Math.min(r.w,r.h)*0.28, 1.0);
+        const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
         const badgeGrp=document.createElementNS(SVG,"g");
         badgeGrp.setAttribute("class","bed-behind-badge");
+        // Stored for the tap handler below — SVG <title> only shows on mouse hover, never on
+        // touch, so a phone tapping the badge needs its own way to surface the same explanation.
+        badgeGrp.dataset.reason=reasonTxt;
         if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
         const dot=document.createElementNS(SVG,"circle");
         dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
         const ti=document.createElementNS(SVG,"title");
-        ti.textContent=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
+        ti.textContent=reasonTxt;
         dot.appendChild(ti);
         badgeGrp.appendChild(dot);
         const bt=document.createElementNS(SVG,"text");
@@ -6429,9 +6433,11 @@ function fmScreenToWorld(clientX,clientY){
         downTarget=null;return;
       }
       if(!moved && !wasCancel){
+        const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
         const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
         const id=bedFrom(downTarget);
-        if(cropLink && id) fmOpenPlantingPanel(id);
+        if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
+        else if(cropLink && id) fmOpenPlantingPanel(id);
         else if(id) selectBed(id);
         else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
       }
