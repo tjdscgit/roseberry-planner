@@ -6348,11 +6348,13 @@ function selectBlock(key){
     +`<div class="farmblk-stat"><div class="v">${cropList.length}</div><div class="k">Crops growing</div></div>`
     +`</div>`;
   const meta=(data.blocks||[]).find(b=>String(b.name).trim()===key);
-  html+=`<button class="icon-btn" type="button" onclick="fmRotateBlock('${esc(key)}')" style="width:100%;justify-content:center;gap:.5rem;margin-top:.2rem">`
-    +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M15.4 8A5.6 5.6 0 105.6 12"/><path d="M16.4 4.4v4h-4"/></svg>`
-    +`Rotate 90° (swaps bed direction)</button>`;
   const rotDeg=fmBlockRotations[key]||0;
-  html+=`<div style="margin-top:.6rem">`
+  const labLocked=fmLabelLocked(key);
+  html+=`<details class="tl-acc"><summary>Rotate &amp; label position</summary>`
+    +`<button class="icon-btn" type="button" onclick="fmRotateBlock('${esc(key)}')" style="width:100%;justify-content:center;gap:.5rem;margin-top:.2rem">`
+    +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M15.4 8A5.6 5.6 0 105.6 12"/><path d="M16.4 4.4v4h-4"/></svg>`
+    +`Rotate 90° (swaps bed direction)</button>`
+    +`<div style="margin-top:.6rem">`
     +`<div style="display:flex;justify-content:space-between;align-items:baseline">`
     +`<label for="fmBlockRotRange" style="font-size:.72rem;color:var(--ink-2)">Tilt to match satellite</label>`
     +`<span class="mono" id="fmBlockRotVal" style="font-size:.78rem">${rotDeg}°</span></div>`
@@ -6363,15 +6365,15 @@ function selectBlock(key){
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',-1)">−1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',1)">+1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmResetBlockRotation('${esc(key)}')">Reset</button>`
-    +`</div></div>`;
-  const labLocked=fmLabelLocked(key);
-  html+=`<div style="margin-top:.6rem">`
+    +`</div></div>`
+    +`<div style="margin-top:.6rem">`
     +`<div style="font-size:.72rem;color:var(--ink-2);margin-bottom:.3rem">Drag the block's name label on the map to move it — handy once plots sit close together.</div>`
     +`<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">`
     +`<label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem">`
     +`<input type="checkbox" ${labLocked?"checked":""} onchange="fmSetLabelLock('${esc(key)}',this.checked)"> Lock label position</label>`
     +`<button class="icon-btn" type="button" onclick="fmResetLabelPos('${esc(key)}')">Reset</button>`
-    +`</div></div>`;
+    +`</div></div>`
+    +`</details>`;
   if(cropList.length){
     html+=`<div class="sect-h">Crop mix</div>`;
     html+=cropList.map(([crop,n])=>`<div class="kv"><span class="k"><span class="farmblk-dot" style="background:${cropColor(crop)}"></span>${esc(crop)}</span><span class="v">${n} bed${n===1?"":"s"}</span></div>`).join("");
