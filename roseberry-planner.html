@@ -2175,6 +2175,19 @@
     #view-week .wk-menu-mobile-only{display:flex}
     #view-week .wk-menu-mobile-only.wk-menu-divider{display:block}
     #view-week .wk-tt-status{white-space:normal}
+    /* The menu carries a lot more rows on mobile (mode switch + sync all live here, since there's
+       nowhere else for them) — the desktop sizing (tiny bordered buttons meant for a mouse, tight
+       row gap) read as cramped/fiddly at finger size. Full-width flat rows with real tap height,
+       like the sidebar's .navrow, instead of a stack of little boxed buttons. */
+    #view-week .vw-menu{min-width:0;width:min(320px, calc(100vw - 24px));padding:.4rem;
+      border-radius:14px;gap:.05rem}
+    #view-week .vw-menu-row{justify-content:flex-start}
+    #view-week .vw-menu-row .icon-btn{border:none;background:none;font-family:inherit;
+      font-size:.92rem;padding:.75rem .6rem;min-height:48px;display:flex;align-items:center;
+      border-radius:9px;gap:.5rem}
+    #view-week .vw-menu-row .icon-btn:active{background:var(--hover)}
+    #view-week .wk-mode-row[aria-pressed="true"]{background:var(--sel)}
+    #view-week .wk-menu-divider{margin:.4rem 4px}
     #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.4rem}
     #view-week .wk-add-group button{flex:1 1 0;font-size:.8rem;padding:.55rem .3rem;justify-content:center}
     /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
