@@ -5984,7 +5984,8 @@ function drawMap(placed, opts){
       t.setAttribute("x",cx);t.setAttribute("y",cy);
       t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
       // font sized to the bed's short dimension so it never overflows the width
-      t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.58, 2.7).toFixed(2));
+      const fontSize=Math.min((tall?r.w:r.h)*0.58, 2.7);
+      t.setAttribute("font-size", fontSize.toFixed(2));
       // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
       // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
       // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
@@ -6013,12 +6014,14 @@ function drawMap(placed, opts){
       }
       rotGrp.appendChild(t);
       if(behind){
-        // getBBox() is in the text's own LOCAL (pre-transform) space, so its right edge is always
-        // "where the last character ends" regardless of tall/flip — reusing the SAME transform for
-        // the badge keeps it pinned right after the text under any rotation, without having to
-        // reason about which local direction is "forward" for each of the four tall/flip cases.
-        let bx=r.x+r.w-.9, by=cy;
-        try{ const bb=t.getBBox(); bx=bb.x+bb.width+.5; by=bb.y+bb.height/2; }catch(e){}
+        // Estimated rather than measured (t.getBBox()): the map can redraw while the Farm map view
+        // itself is hidden (a background data-sync refresh, or before the user has switched to this
+        // tab), and getBBox() throws on an element inside a display:none subtree — that silently
+        // fell back to a fixed corner position every time in practice. A monospace char-count
+        // estimate has no such dependency on the view actually being visible/laid out.
+        const fullText = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
+        const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
+        const bx=cx+textHalfWidth+.5, by=cy;
         const br=Math.min(Math.min(r.w,r.h)*0.28, 1.0);
         const badgeGrp=document.createElementNS(SVG,"g");
         badgeGrp.setAttribute("class","bed-behind-badge");
