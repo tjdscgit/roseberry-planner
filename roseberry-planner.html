@@ -19906,9 +19906,13 @@ const SOIL_SCHEMA = {
         ph: SOIL_NUM, ec_ds_m: SOIL_NUM, organic_matter_pct: SOIL_NUM, total_n_pct: SOIL_NUM,
         mehlich_p_mg_kg: SOIL_NUM, exch_k_pct: SOIL_NUM, exch_ca_pct: SOIL_NUM, exch_mg_pct: SOIL_NUM,
         cec_cmol_kg: SOIL_NUM, ca_mg_ratio: SOIL_NUM, texture: SB_STR,
+        sulfur_mg_kg: SOIL_NUM,
+        zinc_mg_kg: SOIL_NUM, manganese_mg_kg: SOIL_NUM, iron_mg_kg: SOIL_NUM,
+        copper_mg_kg: SOIL_NUM, boron_mg_kg: SOIL_NUM,
       },
       required:["label","ph","ec_ds_m","organic_matter_pct","total_n_pct","mehlich_p_mg_kg",
-        "exch_k_pct","exch_ca_pct","exch_mg_pct","cec_cmol_kg","ca_mg_ratio","texture"],
+        "exch_k_pct","exch_ca_pct","exch_mg_pct","cec_cmol_kg","ca_mg_ratio","texture",
+        "sulfur_mg_kg","zinc_mg_kg","manganese_mg_kg","iron_mg_kg","copper_mg_kg","boron_mg_kg"],
       additionalProperties:false,
     }},
   },
@@ -19925,6 +19929,9 @@ const soilPrompt = () => `This is a soil test lab report (one column per sample)
 - Total Cation Exchange Capacity, cmol+/kg
 - Calcium/Magnesium Ratio
 - Basic Texture
+- Sulfur, mg/kg — the KCl-extractable row specifically (plant-available), NOT the total ICPMS/ICPOES row further down the report
+- Zinc, Manganese, Iron and Copper, mg/kg — the DTPA-extractable rows (plant-available), NOT the total ICPMS rows
+- Boron, mg/kg — the CaCl2-extractable row (plant-available), NOT the total ICPMS row
 
 One entry per sample column, using that column's own header (its Client Sample ID) verbatim as "label" — do not rename, expand or reinterpret it. Use the report's Sample Date for sample_date (ISO YYYY-MM-DD); if columns show different dates, use whichever is most common. Use the report's own Report ID (or equivalent lab reference number) for report_id. Use null for any figure that isn't on the report — never guess, estimate, or carry a value over from another column.`;
 
@@ -19939,6 +19946,8 @@ function fiSoilBody(s){
     `Exchangeable — K: ${fiSoilNum(s.exch_k_pct,"%")}  Ca: ${fiSoilNum(s.exch_ca_pct,"%")}  Mg: ${fiSoilNum(s.exch_mg_pct,"%")}`,
     `CEC: ${fiSoilNum(s.cec_cmol_kg," cmol+/kg")}`,
     `Ca:Mg ratio: ${fiSoilNum(s.ca_mg_ratio)}`,
+    `Sulfur: ${fiSoilNum(s.sulfur_mg_kg," mg/kg")}`,
+    `Micros — Zn: ${fiSoilNum(s.zinc_mg_kg," mg/kg")}  Mn: ${fiSoilNum(s.manganese_mg_kg," mg/kg")}  Fe: ${fiSoilNum(s.iron_mg_kg," mg/kg")}  Cu: ${fiSoilNum(s.copper_mg_kg," mg/kg")}  B: ${fiSoilNum(s.boron_mg_kg," mg/kg")}`,
     `Texture: ${s.texture||"—"}`,
   ].join("\n");
 }
