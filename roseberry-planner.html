@@ -554,6 +554,8 @@
   .bed:hover{stroke:var(--ink);stroke-width:.25}
   .bed.sel{stroke:var(--steel);stroke-width:.15}
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
+  .bed-croplabel{pointer-events:auto;cursor:pointer}
+  .bed-croplabel:hover{text-decoration:underline}
   .bed-behind-badge{fill:#C0392B;stroke:var(--paper);stroke-width:.12}
   .bed-behind-badge-txt{fill:#fff;font-family:var(--mono);font-weight:800;pointer-events:none}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
@@ -607,6 +609,15 @@
     transition:transform .22s ease;z-index:20;display:flex;flex-direction:column;
   }
   #panel.open{transform:none}
+  /* Same slide-in-from-the-right treatment as #panel, layered above it — clicking a bed's crop
+     text opens this (the shared tlRenderPanel planting detail) instead of the bed panel. */
+  #fmPlantingPanel{
+    position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);
+    background:var(--paper);border-left:1px solid var(--line-2);
+    box-shadow:var(--shadow);transform:translateX(105%);
+    transition:transform .22s ease;z-index:21;display:flex;flex-direction:column;overflow-y:auto;
+  }
+  #fmPlantingPanel.open{transform:none}
   .panel-head{padding:.9rem 1rem .7rem;border-bottom:1px solid var(--line)}
   .panel-head .bed-id{font-family:var(--mono);font-size:1.35rem;font-weight:700;letter-spacing:-.01em}
   .panel-head .blk{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em}
@@ -3166,6 +3177,10 @@
         </div>
         <div class="panel-body" id="pBody"></div>
       </aside>
+      <!-- Clicking a bed's crop-name text opens THIS (the shared planting-detail panel used by
+           Timeline/Crop map/Week planner via tlRenderPanel) instead of the bed panel above — same
+           slide-in-from-the-right treatment as #panel, just layered above it (see CSS). -->
+      <aside id="fmPlantingPanel"></aside>
     </section>
 
     <!-- CROP MAP -->
@@ -5990,7 +6005,22 @@ function drawMap(placed, opts){
       const baseRot = tall ? -90 : 0;
       const finalRot = flip ? baseRot+180 : baseRot;
       if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
-      t.textContent = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
+      if(cropTxt){
+        // Crop name is its own tspan so it (and only it) can be clicked separately from the bed
+        // name — pointer-events:auto here overrides the parent <text>'s pointer-events:none, so a
+        // click lands on this tspan specifically and opens the planting panel (see fmOpenPlantingPanel
+        // in the pointerup handler) instead of falling through to the bed panel.
+        const nameSpan=document.createElementNS(SVG,"tspan");
+        nameSpan.textContent=`${b.name} · `;
+        t.appendChild(nameSpan);
+        const cropSpan=document.createElementNS(SVG,"tspan");
+        cropSpan.setAttribute("class","bed-croplabel");
+        cropSpan.dataset.bed=b.id;
+        cropSpan.textContent=cropTxt;
+        t.appendChild(cropSpan);
+      }else{
+        t.textContent = b.name;
+      }
       rotGrp.appendChild(t);
 
       minX=Math.min(minX,r.x);minY=Math.min(minY,r.y);
@@ -6128,6 +6158,7 @@ function filterBlocks(){
 
 /* ---------- Selection / panel ---------- */
 function selectBed(id){
+  fmClosePlantingPanel();
   selectedBed=id;
   document.querySelectorAll(".bed").forEach(el=>el.classList.toggle("sel",el.dataset.bed===id));
   const b=data.beds.find(x=>x.id===id);if(!b)return;
@@ -6156,11 +6187,26 @@ function selectBed(id){
 function closePanel(){document.getElementById("panel").classList.remove("open");
   document.querySelectorAll(".bed.sel").forEach(el=>el.classList.remove("sel"));selectedBed=null;}
 
+// Clicking a bed's crop-name text opens the planting-detail panel (shared with Timeline/Crop
+// map/Week planner via tlRenderPanel) instead of the bed panel a plain click on the bed opens.
+function fmOpenPlantingPanel(bedId){
+  const b=(data.beds||[]).find(x=>x.id===bedId);
+  if(!b || !b.planting) return;
+  closePanel();
+  const panel=document.getElementById("fmPlantingPanel");
+  tlRenderPanel(b.planting, panel, fmClosePlantingPanel);
+  panel.classList.add("open");
+}
+function fmClosePlantingPanel(){
+  document.getElementById("fmPlantingPanel").classList.remove("open");
+}
+
 // Block-level detail panel, styled after the Farm Map artboard's right-hand rail: bed count,
 // occupancy, and the crop mix currently growing in the block. Only shows fields we can actually
 // derive from bed/planting data — no irrigation/soil/aspect yet, since those live in map_features
 // / farm_settings and aren't populated.
 function selectBlock(key){
+  fmClosePlantingPanel();
   selectedBed=null;
   document.querySelectorAll(".bed.sel").forEach(el=>el.classList.remove("sel"));
   const beds=(data.beds||[]).filter(b=>b.block===key);
@@ -6364,9 +6410,11 @@ function fmScreenToWorld(clientX,clientY){
         downTarget=null;return;
       }
       if(!moved && !wasCancel){
+        const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
         const id=bedFrom(downTarget);
-        if(id) selectBed(id);
-        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else closePanel(); }
+        if(cropLink && id) fmOpenPlantingPanel(id);
+        else if(id) selectBed(id);
+        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
       }
       downTarget=null;
     }
