@@ -556,8 +556,7 @@
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
   .bed-croplabel{pointer-events:auto;cursor:pointer}
   .bed-croplabel:hover{text-decoration:underline}
-  .bed-behind-badge{fill:#C0392B;stroke:var(--paper);stroke-width:.12}
-  .bed-behind-badge-txt{fill:#fff;font-family:var(--mono);font-weight:800;pointer-events:none}
+  .bed-behind-inline{fill:#E74C3C;font-weight:900;pointer-events:none}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
     text-transform:uppercase;pointer-events:auto;cursor:grab;font-weight:600;}
   .block-label:hover{fill:var(--steel)}
@@ -5968,28 +5967,12 @@ function drawMap(placed, opts){
         rotGrp.appendChild(ov);
       }
 
-      // "behind schedule" badge — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
-      // due date has passed with Status not advanced to match). Sized off the bed's own short
-      // dimension like the bed label below, so it stays legible without overpowering small beds.
-      if(pl && typeof tlIsBehind==="function" && tlIsBehind(pl)){
-        const br=Math.min(Math.min(r.w,r.h)*0.32, 1.1);
-        const bx=r.x+r.w-br-.15, by=r.y+br+.15;
-        const dot=document.createElementNS(SVG,"circle");
-        dot.setAttribute("class","bed-behind-badge");
-        dot.setAttribute("cx",bx);dot.setAttribute("cy",by);dot.setAttribute("r",br);
-        dot.setAttribute("pointer-events","none");
-        const ti=document.createElementNS(SVG,"title");ti.textContent="Behind schedule";
-        dot.appendChild(ti);
-        rotGrp.appendChild(dot);
-        const bt=document.createElementNS(SVG,"text");
-        bt.setAttribute("class","bed-behind-badge-txt");
-        bt.setAttribute("x",bx);bt.setAttribute("y",by);
-        bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
-        bt.setAttribute("font-size",(br*1.3).toFixed(2));
-        bt.setAttribute("pointer-events","none");
-        bt.textContent="!";
-        rotGrp.appendChild(bt);
-      }
+      // "behind schedule" flag — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
+      // due date has passed with Status not advanced to match). Appended as a tspan INSIDE the bed
+      // label below (not a separately-positioned badge) so it automatically inherits the label's
+      // exact position and upright-correction rotation — it always sits right next to the crop
+      // name and reads the same direction as the rest of the text, at any tilt.
+      const behind = pl && typeof tlIsBehind==="function" && tlIsBehind(pl);
 
       // label: bed name, plus the crop currently in it, laid along the bed's long axis
       const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
@@ -6025,6 +6008,14 @@ function drawMap(placed, opts){
         t.appendChild(cropSpan);
       }else{
         t.textContent = b.name;
+      }
+      if(behind){
+        const warn=document.createElementNS(SVG,"tspan");
+        warn.setAttribute("class","bed-behind-inline");
+        warn.textContent=" !";
+        const ti=document.createElementNS(SVG,"title");ti.textContent="Behind schedule";
+        warn.appendChild(ti);
+        t.appendChild(warn);
       }
       rotGrp.appendChild(t);
 
