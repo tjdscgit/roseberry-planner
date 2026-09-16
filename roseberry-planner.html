@@ -6180,6 +6180,50 @@ function filterBlocks(){
 }
 
 /* ---------- Selection / panel ---------- */
+// "Snapshot" section for the bed panel — everything ELSE in the app that's already tagged to this
+// bed (Farm Info's own bedIds/cropIds link fields, Field walk observations, fertiliser applications,
+// bed prep passes), pulled together rather than duplicated. This is read-only: each source is still
+// edited from its own view — Farm Info entries link/unlink from their own edit form (see fiOpenEdit,
+// the data-fi-bedon buttons), nothing here writes back.
+function fmReferenceHTML(b, pl){
+  const bedId=b.id, cropId=pl && pl.cropId;
+  let html="";
+
+  const fiMatches=(data.farmInfo||[]).filter(e=>
+    (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
+  html+=`<div class="sect-h">Reference docs</div>`;
+  html+= fiMatches.length ? fiMatches.map(e=>{
+    const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
+      :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
+    return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
+      +`<span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>`
+      +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
+  }).join("") : `<div class="empty-note">Nothing tagged to this bed${cropId?" or crop":""} yet — link one from Farm Info.</div>`;
+
+  const obs=(data.walkObservations||[]).filter(o=>(o.bedIds||[]).includes(bedId))
+    .slice().sort((a,b)=>String(b.created||"").localeCompare(String(a.created||""))).slice(0,5);
+  html+=`<div class="sect-h">Field notes</div>`;
+  html+= obs.length ? obs.map(o=>
+    `<div class="kv"><span class="k">${fmt(o.created)}${o.severity?" · "+esc(o.severity):""}</span>`
+    +`<span class="v">${esc(o.note||"—")}${o.resolved?" (resolved)":""}</span></div>`
+  ).join("") : `<div class="empty-note">No field walk notes logged for this bed.</div>`;
+
+  const apps=(typeof frAppsForBed==="function" ? frAppsForBed(bedId) : []).slice(0,5);
+  html+=`<div class="sect-h">Fertiliser history</div>`;
+  html+= apps.length ? apps.map(a=>{
+    const products=(a.items||[]).map(i=>i.product).filter(Boolean).join(", ");
+    return `<div class="kv"><span class="k">${fmt(a.date)}</span><span class="v">${esc(products||a.method||"—")}</span></div>`;
+  }).join("") : `<div class="empty-note">No fertiliser applications logged for this bed.</div>`;
+
+  const preps=(data.bedPrepEvents||[]).filter(e=>(e.bedIds||[]).includes(bedId))
+    .slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).slice(0,5);
+  html+=`<div class="sect-h">Bed prep history</div>`;
+  html+= preps.length ? preps.map(e=>
+    `<div class="kv"><span class="k">${fmt(e.date)}</span><span class="v">${esc((e.ops||[]).join(", ")||"—")}${e.by?" · "+esc(e.by):""}</span></div>`
+  ).join("") : `<div class="empty-note">No bed prep passes logged for this bed.</div>`;
+
+  return html;
+}
 function selectBed(id){
   fmClosePlantingPanel();
   selectedBed=id;
@@ -6192,6 +6236,7 @@ function selectBed(id){
   let html="";
   html+=`<div class="kv"><span class="k">Length</span><span class="v">${b.len!=null?b.len+" m":"—"}</span></div>`;
   html+=`<div class="kv"><span class="k">Width</span><span class="v">${b.wid!=null?b.wid+" m":"—"}</span></div>`;
+  if(b.soil) html+=`<div class="kv"><span class="k">Soil</span><span class="v">${esc(b.soil)}</span></div>`;
   if(pl){
     const col=cropColor(pl.cropId||pl.crop);
     html+=`<div class="sect-h">Current planting</div>`;
@@ -6206,6 +6251,7 @@ function selectBed(id){
   }else{
     html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
   }
+  html+=fmReferenceHTML(b, pl);
   body.innerHTML=html;
   document.getElementById("panel").classList.add("open");
 }
