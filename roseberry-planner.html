@@ -6187,12 +6187,15 @@ function filterBlocks(){
 // the data-fi-bedon buttons), nothing here writes back.
 function fmReferenceHTML(b, pl){
   const bedId=b.id, cropId=pl && pl.cropId;
-  let html="";
+  // Collapsed by default — with four sources on every bed, leaving them all expanded is exactly
+  // the "clutter" risk this was flagged for. `count` in the summary means a glance at the closed
+  // row still says whether it's worth opening, before the tap.
+  const acc=(label,count,bodyHtml)=>
+    `<details class="tl-acc"><summary>${esc(label)}${count?` (${count})`:""}</summary>${bodyHtml}</details>`;
 
   const fiMatches=(data.farmInfo||[]).filter(e=>
     (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
-  html+=`<div class="sect-h">Reference docs</div>`;
-  html+= fiMatches.length ? fiMatches.map(e=>{
+  const fiHtml = fiMatches.length ? fiMatches.map(e=>{
     const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
       :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
     return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
@@ -6202,27 +6205,28 @@ function fmReferenceHTML(b, pl){
 
   const obs=(data.walkObservations||[]).filter(o=>(o.bedIds||[]).includes(bedId))
     .slice().sort((a,b)=>String(b.created||"").localeCompare(String(a.created||""))).slice(0,5);
-  html+=`<div class="sect-h">Field notes</div>`;
-  html+= obs.length ? obs.map(o=>
+  const obsHtml = obs.length ? obs.map(o=>
     `<div class="kv"><span class="k">${fmt(o.created)}${o.severity?" · "+esc(o.severity):""}</span>`
     +`<span class="v">${esc(o.note||"—")}${o.resolved?" (resolved)":""}</span></div>`
   ).join("") : `<div class="empty-note">No field walk notes logged for this bed.</div>`;
 
   const apps=(typeof frAppsForBed==="function" ? frAppsForBed(bedId) : []).slice(0,5);
-  html+=`<div class="sect-h">Fertiliser history</div>`;
-  html+= apps.length ? apps.map(a=>{
+  const appsHtml = apps.length ? apps.map(a=>{
     const products=(a.items||[]).map(i=>i.product).filter(Boolean).join(", ");
     return `<div class="kv"><span class="k">${fmt(a.date)}</span><span class="v">${esc(products||a.method||"—")}</span></div>`;
   }).join("") : `<div class="empty-note">No fertiliser applications logged for this bed.</div>`;
 
   const preps=(data.bedPrepEvents||[]).filter(e=>(e.bedIds||[]).includes(bedId))
     .slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).slice(0,5);
-  html+=`<div class="sect-h">Bed prep history</div>`;
-  html+= preps.length ? preps.map(e=>
+  const prepsHtml = preps.length ? preps.map(e=>
     `<div class="kv"><span class="k">${fmt(e.date)}</span><span class="v">${esc((e.ops||[]).join(", ")||"—")}${e.by?" · "+esc(e.by):""}</span></div>`
   ).join("") : `<div class="empty-note">No bed prep passes logged for this bed.</div>`;
 
-  return html;
+  return `<div class="sect-h">Reference</div>`
+    + acc("Reference docs", fiMatches.length, fiHtml)
+    + acc("Field notes", obs.length, obsHtml)
+    + acc("Fertiliser history", apps.length, appsHtml)
+    + acc("Bed prep history", preps.length, prepsHtml);
 }
 function selectBed(id){
   fmClosePlantingPanel();
