@@ -2131,6 +2131,11 @@
        the way the desktop sidebar does, instead of a sliver pinned to the edge. */
     .tl-panel.open{position:fixed;inset:0;width:100%;max-width:100%;flex-basis:auto;
       z-index:52;border-radius:0}
+    /* Farm map's planting-detail panel (tlRenderPanel reused into #fmPlantingPanel) gets the same
+       full-screen treatment — at its normal min(340px,86vw) width, the shared panel markup's head
+       row (crop name + variety + bed code + close button) doesn't fit and forces a horizontal
+       scrollbar, same reason every other tlRenderPanel host goes full-width on phone. */
+    #fmPlantingPanel.open{width:100%;max-width:100%}
     /* The rail (nav[role=tablist]) and the top bar are the phone chrome now — they become the
        bottom tab bar and the title row rather than being hidden for a hamburger. */
     .cm-block-picker{display:flex}
@@ -3180,7 +3185,7 @@
       <!-- Clicking a bed's crop-name text opens THIS (the shared planting-detail panel used by
            Timeline/Crop map/Week planner via tlRenderPanel) instead of the bed panel above — same
            slide-in-from-the-right treatment as #panel, just layered above it (see CSS). -->
-      <aside id="fmPlantingPanel"></aside>
+      <aside class="tl-panel" id="fmPlantingPanel"></aside>
     </section>
 
     <!-- CROP MAP -->
