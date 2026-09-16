@@ -6228,7 +6228,8 @@ function fmReferenceHTML(b, pl){
       +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
   };
   const fiMatches=(data.farmInfo||[]).filter(e=>
-    (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
+    (e.bedIds||[]).includes(bedId) || (e.blockKeys||[]).includes(b.block)
+    || (cropId && (e.cropIds||[]).includes(cropId)));
   // Soil reports specifically get a "latest vs older" split — data.farmInfo is already sorted
   // newest-first (farmInfoSort, driven off `updated`/`created`, which soil import backdates to the
   // report's real Sample Date), so this is just partitioning that order, not re-deriving it. The
@@ -6377,8 +6378,39 @@ function selectBlock(key){
   }else{
     html+=`<div class="sect-h">Crop mix</div><div class="empty-note">No beds currently planted in this block.</div>`;
   }
+  html+=fmBlockReferenceHTML(key);
   body.innerHTML=html;
   document.getElementById("panel").classList.add("open");
+}
+
+// Plot-level Reference — Farm Info entries tagged to this WHOLE block (blockKeys), same latest-vs-
+// older soil-test treatment as fmReferenceHTML's per-bed version below. Deliberately doesn't also
+// pull in every entry tagged to an individual bed within the block — that's what opening a bed's
+// own panel is for; mixing both here would make it unclear which beds a given entry actually covers.
+function fmBlockReferenceHTML(key){
+  const fiRow=e=>{
+    const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
+      :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
+    return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
+      +`<span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>`
+      +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
+  };
+  const matches=(data.farmInfo||[]).filter(e=>(e.blockKeys||[]).includes(key));
+  const soilMatches=matches.filter(e=>e.category==="Soil report");
+  const otherMatches=matches.filter(e=>e.category!=="Soil report");
+  let html="";
+  if(soilMatches.length){
+    html+=fiRow(soilMatches[0]);
+    html+=`<div class="empty-note" style="white-space:pre-line;margin-top:-.3rem">${esc(soilMatches[0].body||"")}</div>`;
+    if(soilMatches.length>1){
+      html+=`<details class="tl-acc"><summary>${soilMatches.length-1} older soil test${soilMatches.length-1===1?"":"s"}</summary>`
+        +soilMatches.slice(1).map(fiRow).join("")+`</details>`;
+    }
+  }
+  html+=otherMatches.map(fiRow).join("");
+  if(!html) html=`<div class="empty-note">Nothing tagged to this plot yet — link one from Farm Info.</div>`;
+  return `<div class="sect-h">Reference</div>`
+    + `<details class="tl-acc"><summary>Reference docs${matches.length?` (${matches.length})`:""}</summary>${html}</details>`;
 }
 
 // Blocks only have two orientations on the Blocks table ("Beds run vertical" / "Beds run
@@ -19939,13 +19971,13 @@ async function fiSoilImportFile(file){
     alert("Couldn't read that soil test:\n"+e.message);
   }finally{ showLoading(false); }
 }
-// Best-effort match of a sample's own label against a known block name — exact, case-insensitive.
-// A miss (e.g. "Tunnels" spanning several blocks) leaves bedIds empty rather than guessing; the
-// existing bed-picker in the draft editor is exactly the UI for picking them by hand.
-function fiSoilMatchBeds(label){
+// Best-effort match of a sample's own label against a known block/plot name — exact,
+// case-insensitive. A miss (e.g. "Tunnels" spanning several blocks) leaves blockKeys empty rather
+// than guessing; the plot-picker in the draft editor is exactly the UI for picking it by hand.
+function fiSoilMatchBlock(label){
   const key=String(label||"").trim().toLowerCase();
-  const beds=(data.beds||[]).filter(b=>String(b.block||"").trim().toLowerCase()===key);
-  return beds.map(b=>b.id);
+  const hit=fiAllBlocks().find(k=>k.toLowerCase()===key);
+  return hit ? [hit] : [];
 }
 function fiOpenSoilDraft(){
   const s=fiSoilQueue[fiSoilQueueIdx];
@@ -19957,8 +19989,9 @@ function fiOpenSoilDraft(){
     tags:["Soil report"],
     body:fiSoilBody(s),
     files:[], links:[],
-    bedIds:fiSoilMatchBeds(s.label),
-    cropIds:[], pinned:false,
+    bedIds:[], cropIds:[],
+    blockKeys:fiSoilMatchBlock(s.label),
+    pinned:false,
     pending:[fiSoilQueueFile],
     // Sample date, not upload date, drives "latest first" — see farmInfoSort / fmReferenceHTML.
     soilCreated: new Date(dateStr+"T00:00:00").toISOString(),
@@ -19968,7 +20001,7 @@ function fiOpenSoilDraft(){
   const banner=document.createElement("div");
   banner.className="fi-soil-banner";
   banner.textContent=`Soil test import — sample ${fiSoilQueueIdx+1} of ${fiSoilQueue.length}: "${s.label}"`
-    +(fiDraft.bedIds.length?"":" — no block matched this label, pick its beds below.");
+    +(fiDraft.blockKeys.length?"":" — no plot matched this label, pick one below.");
   const form=$fi("fiDetail").querySelector(".fi-form");
   if(form) form.parentNode.insertBefore(banner, form);
 }
@@ -20175,7 +20208,9 @@ function fiRenderDetail(e){
   const stamp = e.updated ? `Updated ${fmt(e.updated)}` : (e.created ? `Added ${fmt(e.created)}` : "");
   const beds=e.bedIds.map(fiBedName).filter(Boolean);
   const crops=e.cropIds.map(fiCropName).filter(Boolean);
+  const plots=e.blockKeys||[];
   const meta=[];
+  if(plots.length) meta.push(`<div class="kv"><span class="k">Plots</span><span class="v">${esc(plots.join(", "))}</span></div>`);
   if(beds.length) meta.push(`<div class="kv"><span class="k">Beds</span><span class="v">${esc(beds.join(", "))}</span></div>`);
   if(crops.length) meta.push(`<div class="kv"><span class="k">Crops</span><span class="v">${esc(crops.join(", "))}</span></div>`);
 
@@ -20206,7 +20241,7 @@ function fiRenderDetail(e){
 /* ---- editor ---- */
 function fiOpenNew(){
   fiDraft={ id:null, name:"", category:"Note", tags:[], body:"", files:[], links:[],
-            bedIds:[], cropIds:[], pinned:false, pending:[] };
+            bedIds:[], cropIds:[], blockKeys:[], pinned:false, pending:[] };
   fiSelId=null;
   fiRenderEditor();
 }
@@ -20215,7 +20250,7 @@ function fiOpenEdit(e){
   // live record half-mutated the way an in-place edit would.
   fiDraft={ id:e.id, name:e.name, category:e.category, tags:e.tags.slice(), body:e.body,
             files:e.files.slice(), links:e.links.slice(), bedIds:e.bedIds.slice(),
-            cropIds:e.cropIds.slice(), pinned:e.pinned, pending:[] };
+            cropIds:e.cropIds.slice(), blockKeys:(e.blockKeys||[]).slice(), pinned:e.pinned, pending:[] };
   fiRenderEditor();
 }
 function fiCancelEdit(){
@@ -20258,7 +20293,13 @@ function fiRenderEditor(){
         <button class="btn-ghost" type="button" data-fi-linkadd>Add link</button>
       </div>
 
-      <label>Beds <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+      <label>Plots <span style="text-transform:none;letter-spacing:0">(optional — a whole block, e.g. a soil test)</span></label>
+      <div class="fi-pickwrap">
+        <div class="fi-pickchips" id="fiFBlockChips"></div>
+        <div class="fi-picklist" id="fiFBlockList" style="max-height:140px"></div>
+      </div>
+
+      <label>Beds <span style="text-transform:none;letter-spacing:0">(optional — individual beds, not whole plots)</span></label>
       <div class="fi-pickwrap">
         <div class="fi-pickchips" id="fiFBedChips"></div>
         <input class="fi-search" id="fiFBedSearch" type="text" placeholder="Search beds…" autocomplete="off">
@@ -20309,9 +20350,21 @@ function fiRenderDraftLinks(){
   ).join("") : `<span class="empty-note">No links.</span>`;
 }
 
+// Every distinct block name, in the same order blocks are drawn on the Farm map (not alphabetical
+// — AB/C/D/E/F/G/GH1-3/H/I reads as the farm's actual layout, alphabetical would scramble that).
+function fiAllBlocks(){
+  const seen=new Set(), out=[];
+  (data.blocks||[]).forEach(b=>{ const k=String(b.name||"").trim(); if(k && !seen.has(k)){ seen.add(k); out.push(k); } });
+  (data.beds||[]).forEach(b=>{ const k=String(b.block||"").trim(); if(k && !seen.has(k)){ seen.add(k); out.push(k); } });
+  return out;
+}
 function fiRenderPickers(){
   const d=fiDraft;
   const bq=($fi("fiFBedSearch")||{}).value||"", cq=($fi("fiFCropSearch")||{}).value||"";
+  $fi("fiFBlockChips").innerHTML = (d.blockKeys||[]).map(k=>
+    `<button class="fi-pickchip" type="button" data-fi-blockoff="${esc(k)}">${esc(k)} ✕</button>`).join("");
+  $fi("fiFBlockList").innerHTML = fiAllBlocks()
+    .map(k=>`<button type="button" data-fi-blockon="${esc(k)}">${(d.blockKeys||[]).includes(k)?'<span class="on">✓ </span>':""}${esc(k)}</button>`).join("");
   $fi("fiFBedChips").innerHTML = d.bedIds.map(id=>
     `<button class="fi-pickchip" type="button" data-fi-bedoff="${id}">${esc(fiBedName(id)||id)} ✕</button>`).join("");
   $fi("fiFCropChips").innerHTML = d.cropIds.map(id=>
@@ -20347,7 +20400,7 @@ async function fiSave(){
   const existing=d.id?fiEntry(d.id):null;
   const fields={
     [F.fi_name]:d.name.trim(), [F.fi_cat]:d.category, [F.fi_tags]:d.tags, [F.fi_body]:d.body,
-    [F.fi_links]:d.links, [F.fi_bed]:d.bedIds, [F.fi_crop]:d.cropIds,
+    [F.fi_links]:d.links, [F.fi_bed]:d.bedIds, [F.fi_crop]:d.cropIds, [F.fi_block]:d.blockKeys||[],
     [F.fi_pinned]:d.pinned,
     // Soil test import backdates both to the report's own Sample Date rather than upload time, so
     // farmInfoSort's existing "most-recently-touched first" naturally becomes "latest sample first"
@@ -20534,6 +20587,13 @@ function fiCloseFile(){
       fiRenderPickers(); return; }
     const coff=t.closest("[data-fi-cropoff]");
     if(coff){ fiSyncDraftFromForm(); fiDraft.cropIds=fiDraft.cropIds.filter(x=>x!==coff.dataset.fiCropoff); fiRenderPickers(); return; }
+    const blkon=t.closest("[data-fi-blockon]");
+    if(blkon){ fiSyncDraftFromForm(); const k=blkon.dataset.fiBlockon;
+      fiDraft.blockKeys=fiDraft.blockKeys||[];
+      const i=fiDraft.blockKeys.indexOf(k); if(i<0) fiDraft.blockKeys.push(k); else fiDraft.blockKeys.splice(i,1);
+      fiRenderPickers(); return; }
+    const blkoff=t.closest("[data-fi-blockoff]");
+    if(blkoff){ fiSyncDraftFromForm(); fiDraft.blockKeys=(fiDraft.blockKeys||[]).filter(x=>x!==blkoff.dataset.fiBlockoff); fiRenderPickers(); return; }
   });
 
   $fi("fiDetail").addEventListener("input",(ev)=>{

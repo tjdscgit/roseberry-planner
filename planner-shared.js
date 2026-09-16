@@ -263,7 +263,7 @@
       wli_convAt:"Converted at", wli_order:"Order",
       fwt_name:"Name", fwt_parent:"Parent",
       fi_name:"Name", fi_cat:"Category", fi_tags:"Tags", fi_body:"Body",
-      fi_files:"Files", fi_links:"Links", fi_bed:"Bed", fi_crop:"Crop",
+      fi_files:"Files", fi_links:"Links", fi_bed:"Bed", fi_crop:"Crop", fi_block:"Block",
       fi_pinned:"Pinned", fi_created:"Created at", fi_updated:"Updated at", fi_archived:"Archived",
       fp_name:"Name", fp_kind:"Kind", fp_notes:"Notes", fp_area:"Area m2", fp_order:"Order",
       fp_archived:"Archived", fp_created:"Created at", fp_updated:"Updated at",
@@ -1108,6 +1108,11 @@
       links:arr(r.fields[F.fi_links]).slice(),
       bedIds:arr(r.fields[F.fi_bed]).slice(),
       cropIds:arr(r.fields[F.fi_crop]).slice(),
+      // Block/plot NAMES (not ids) — a bed's own `block` field is already a plain name string
+      // everywhere else in the app, so this matches that rather than introducing a second way to
+      // identify a block. Covers a whole plot without enumerating its beds, and — unlike a beds
+      // snapshot — automatically includes any bed added to that block later.
+      blockKeys:arr(r.fields[F.fi_block]).slice(),
       pinned:!!r.fields[F.fi_pinned],
       created:r.fields[F.fi_created]||"",
       updated:r.fields[F.fi_updated]||"",
