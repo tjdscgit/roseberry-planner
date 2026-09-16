@@ -6184,7 +6184,7 @@ function selectBed(id){
     html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
     html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
   }else{
-    html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting in Airtable and it'll appear here.</div>`;
+    html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
   }
   body.innerHTML=html;
   document.getElementById("panel").classList.add("open");
