@@ -556,7 +556,9 @@
   .bed-label{font-family:var(--mono);fill:var(--ink);pointer-events:none;}
   .bed-croplabel{pointer-events:auto;cursor:pointer}
   .bed-croplabel:hover{text-decoration:underline}
-  .bed-behind-inline{fill:#E74C3C;font-weight:900;pointer-events:none}
+  .bed-behind-badge{pointer-events:none}
+  .bed-behind-badge circle{fill:#C0392B;stroke:var(--paper);stroke-width:.12}
+  .bed-behind-badge-txt{fill:#fff;font-family:var(--mono);font-weight:800;pointer-events:none}
   .block-label{font-family:var(--mono);fill:var(--ink-2);letter-spacing:.12em;
     text-transform:uppercase;pointer-events:auto;cursor:grab;font-weight:600;}
   .block-label:hover{fill:var(--steel)}
@@ -6009,15 +6011,32 @@ function drawMap(placed, opts){
       }else{
         t.textContent = b.name;
       }
-      if(behind){
-        const warn=document.createElementNS(SVG,"tspan");
-        warn.setAttribute("class","bed-behind-inline");
-        warn.textContent=" !";
-        const ti=document.createElementNS(SVG,"title");ti.textContent="Behind schedule";
-        warn.appendChild(ti);
-        t.appendChild(warn);
-      }
       rotGrp.appendChild(t);
+      if(behind){
+        // getBBox() is in the text's own LOCAL (pre-transform) space, so its right edge is always
+        // "where the last character ends" regardless of tall/flip — reusing the SAME transform for
+        // the badge keeps it pinned right after the text under any rotation, without having to
+        // reason about which local direction is "forward" for each of the four tall/flip cases.
+        let bx=r.x+r.w-.9, by=cy;
+        try{ const bb=t.getBBox(); bx=bb.x+bb.width+.5; by=bb.y+bb.height/2; }catch(e){}
+        const br=Math.min(Math.min(r.w,r.h)*0.28, 1.0);
+        const badgeGrp=document.createElementNS(SVG,"g");
+        badgeGrp.setAttribute("class","bed-behind-badge");
+        if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
+        const dot=document.createElementNS(SVG,"circle");
+        dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
+        const ti=document.createElementNS(SVG,"title");ti.textContent="Behind schedule";
+        dot.appendChild(ti);
+        badgeGrp.appendChild(dot);
+        const bt=document.createElementNS(SVG,"text");
+        bt.setAttribute("class","bed-behind-badge-txt");
+        bt.setAttribute("x",bx+br);bt.setAttribute("y",by);
+        bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
+        bt.setAttribute("font-size",(br*1.3).toFixed(2));
+        bt.textContent="!";
+        badgeGrp.appendChild(bt);
+        rotGrp.appendChild(badgeGrp);
+      }
 
       minX=Math.min(minX,r.x);minY=Math.min(minY,r.y);
       maxX=Math.max(maxX,r.x+r.w);maxY=Math.max(maxY,r.y+r.h);
