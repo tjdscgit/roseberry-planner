@@ -3906,15 +3906,25 @@
         <div class="vw-menu-row"><button class="icon-btn wk-mode-row" data-wkmode="type" aria-pressed="false" style="flex:1 1 auto;text-align:left">By task type</button></div>
       </div>
       <div class="vw-menu" id="wkMoreMenu" hidden>
+        <!-- Mobile only: the 4-way layout toggle (.seg#wkModeToggle) is hidden at this width — no
+             room for it inline — so it needs a way in from BOTH modes. Board mode's title row has
+             no filter icon of its own (only the daily head does, and that only shows once you're
+             already in Calendar mode) — without these rows here, switching mode from Board was a
+             dead end on a phone. Kept alongside wkModeMenu (behind the daily head's filter icon)
+             rather than replacing it, since that's still the quicker one-tap path once in Calendar. -->
+        <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="board" aria-pressed="true" style="flex:1 1 auto;text-align:left">Board</button></div>
+        <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="day" aria-pressed="false" style="flex:1 1 auto;text-align:left">Calendar</button></div>
+        <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="bed" aria-pressed="false" style="flex:1 1 auto;text-align:left">By crop &amp; bed</button></div>
+        <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-mode-row" data-wkmode="type" aria-pressed="false" style="flex:1 1 auto;text-align:left">By task type</button></div>
+        <div class="wk-menu-mobile-only wk-menu-divider"></div>
         <!-- Mobile Calendar mode only: week prev/Today/next live inline in .vw-tools everywhere
              else, but the daily head above has no room for them, so they move in here. -->
         <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkPrevIn" style="flex:1 1 auto;text-align:left">◂ Previous week</button></div>
         <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkTodayIn" style="flex:1 1 auto;text-align:left">Jump to today</button></div>
         <div class="vw-menu-row wk-menu-daily-only"><button class="icon-btn" id="wkNextIn" style="flex:1 1 auto;text-align:left">Next week ▸</button></div>
         <div class="wk-menu-daily-only wk-menu-divider"></div>
-        <!-- Mobile only otherwise: the layout toggle lives in wkModeMenu now (behind the filter
-             icon), Claude-chat's quick-add lives inline on desktop (room for it there), but on a
-             phone it moves in here — see the max-width:760px rules below. -->
+        <!-- Mobile only otherwise: Claude-chat's quick-add lives inline on desktop (room for it
+             there), but on a phone it moves in here — see the max-width:760px rules below. -->
         <div class="vw-menu-row wk-menu-mobile-only"><button class="icon-btn wk-qa-row" style="flex:1 1 auto;text-align:left">✦ From Claude chat</button></div>
         <!-- Daily head only: Board mode still shows "+ Add planting" inline in .vw-tools (room for
              it there), but the daily head has no tools row at all — "Add task" became the floating
