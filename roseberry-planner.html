@@ -1812,6 +1812,8 @@
   .tl-panel-actions .btn-primary{flex:1 1 auto}
   .tl-fail-banner{background:rgba(192,57,43,.14);border:1px solid rgba(192,57,43,.4);color:var(--clay);
     border-radius:8px;padding:.5rem .7rem;font-size:.78rem;font-weight:600;margin:.8rem 0}
+  .fi-soil-banner{background:rgba(58,138,158,.14);border:1px solid rgba(58,138,158,.4);color:var(--steel);
+    border-radius:8px;padding:.5rem .7rem;font-size:.78rem;font-weight:600;margin:0 0 .8rem}
   .tl-bedpick{display:flex;flex-direction:column;gap:.3rem;max-height:220px;overflow:auto}
   .tl-bedpick-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
     padding:.45rem .6rem;border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);
@@ -4209,6 +4211,8 @@
         <span class="sub" id="fiSummary">Notes, SOPs, reports and documents</span>
         <span class="spacer"></span>
         <span class="fi-clip" id="fiCount"></span>
+        <input type="file" id="fiSoilFileInput" accept=".csv,.txt,.pdf,image/*" style="display:none">
+        <button class="btn-ghost" id="fiSoilImportBtn" type="button" title="Read a soil test lab report (CSV, PDF or photo) with Claude and create one tagged entry per sample">🧪 Import soil test</button>
         <button class="btn-primary" id="fiNewBtn" type="button">＋ New entry</button>
       </div>
       <div class="fi-main" id="fiMain">
@@ -6216,15 +6220,36 @@ function fmReferenceHTML(b, pl){
   const acc=(label,count,bodyHtml)=>
     `<details class="tl-acc"><summary>${esc(label)}${count?` (${count})`:""}</summary>${bodyHtml}</details>`;
 
-  const fiMatches=(data.farmInfo||[]).filter(e=>
-    (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
-  const fiHtml = fiMatches.length ? fiMatches.map(e=>{
+  const fiRow=e=>{
     const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
       :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
     return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
       +`<span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>`
       +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
-  }).join("") : `<div class="empty-note">Nothing tagged to this bed${cropId?" or crop":""} yet — link one from Farm Info.</div>`;
+  };
+  const fiMatches=(data.farmInfo||[]).filter(e=>
+    (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
+  // Soil reports specifically get a "latest vs older" split — data.farmInfo is already sorted
+  // newest-first (farmInfoSort, driven off `updated`/`created`, which soil import backdates to the
+  // report's real Sample Date), so this is just partitioning that order, not re-deriving it. The
+  // point is the same one raised about the map badge: a number from 18 months ago must never look
+  // the same as this week's, so the older ones are named AND tucked behind their own toggle.
+  const soilMatches=fiMatches.filter(e=>e.category==="Soil report");
+  const otherMatches=fiMatches.filter(e=>e.category!=="Soil report");
+  let fiHtml="";
+  if(soilMatches.length){
+    fiHtml+=fiRow(soilMatches[0]);
+    // The actual numbers, inline — a link-only row defeats the point when the whole ask was
+    // "see the soil test for this plot without an extra click." Only the latest gets this; older
+    // ones stay link-only inside their own collapsed toggle below.
+    fiHtml+=`<div class="empty-note" style="white-space:pre-line;margin-top:-.3rem">${esc(soilMatches[0].body||"")}</div>`;
+    if(soilMatches.length>1){
+      fiHtml+=`<details class="tl-acc"><summary>${soilMatches.length-1} older soil test${soilMatches.length-1===1?"":"s"}</summary>`
+        +soilMatches.slice(1).map(e=>fiRow(e)).join("")+`</details>`;
+    }
+  }
+  fiHtml+=otherMatches.map(fiRow).join("");
+  if(!fiHtml) fiHtml=`<div class="empty-note">Nothing tagged to this bed${cropId?" or crop":""} yet — link one from Farm Info.</div>`;
 
   const obs=(data.walkObservations||[]).filter(o=>(o.bedIds||[]).includes(bedId))
     .slice().sort((a,b)=>String(b.created||"").localeCompare(String(a.created||""))).slice(0,5);
@@ -9002,6 +9027,19 @@ async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooL
     ],
     schema, maxTokens, tooLong,
     refusalMsg:"Claude declined to read that image.",
+    model: MODEL_OCR||undefined,
+  });
+}
+// PDF in, structured JSON out — soil test report import (Farm Info). Same shape as aiReadImage,
+// just a "document" content block instead of "image" — lab reports are usually PDFs, not photos.
+async function aiReadDocument({b64, prompt, schema, maxTokens=8000, tooLong}){
+  return aiStructuredCall({
+    content:[
+      {type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},
+      {type:"text",text:prompt},
+    ],
+    schema, maxTokens, tooLong,
+    refusalMsg:"Claude declined to read that document.",
     model: MODEL_OCR||undefined,
   });
 }
@@ -19816,6 +19854,137 @@ let fiQuery="", fiCat="", fiTag="";
 let fiSelId=null;      // the entry open in the detail pane
 let fiDraft=null;      // non-null while editing; a working copy, never the live record
 
+/* ---- soil test import ----
+   A lab report has one column per sample, each tagged with its own "Client Sample ID" (usually a
+   block name, sometimes something looser like "Tunnels" that covers several blocks at once). One
+   upload -> one Farm Info entry PER SAMPLE, each tagged only to its own beds — a block's panel must
+   never show another block's numbers mixed into the same entry. Reuses the existing draft editor
+   (fiOpenNew/fiRenderEditor/fiSave) for the actual save + bed-tagging UI rather than building a
+   second one: each sample opens as a pre-filled draft, and saving one auto-advances to the next. */
+const SOIL_NUM = {anyOf:[{type:"number"},{type:"null"}]};
+const SOIL_SCHEMA = {
+  type:"object",
+  properties:{
+    report_id: SB_STR,
+    sample_date: {...SB_STR, description:"Shared sample date for the report, ISO YYYY-MM-DD, or null."},
+    samples:{ type:"array", items:{
+      type:"object",
+      properties:{
+        label:{type:"string", description:"The column's own Client Sample ID, verbatim."},
+        ph: SOIL_NUM, ec_ds_m: SOIL_NUM, organic_matter_pct: SOIL_NUM, total_n_pct: SOIL_NUM,
+        mehlich_p_mg_kg: SOIL_NUM, exch_k_pct: SOIL_NUM, exch_ca_pct: SOIL_NUM, exch_mg_pct: SOIL_NUM,
+        cec_cmol_kg: SOIL_NUM, ca_mg_ratio: SOIL_NUM, texture: SB_STR,
+      },
+      required:["label","ph","ec_ds_m","organic_matter_pct","total_n_pct","mehlich_p_mg_kg",
+        "exch_k_pct","exch_ca_pct","exch_mg_pct","cec_cmol_kg","ca_mg_ratio","texture"],
+      additionalProperties:false,
+    }},
+  },
+  required:["report_id","sample_date","samples"],
+  additionalProperties:false,
+};
+const soilPrompt = () => `This is a soil test lab report (one column per sample). Extract ONLY these figures per sample — everything else on the report (heavy metals, ICPMS trace elements, paramagnetism, colour, silicon, sodium, etc.) is deliberately out of scope, do not include it:
+- pH (H2O)
+- Electrical Conductivity, in dS/m
+- Estimated Organic Matter, %
+- Nitrogen - Total, %
+- Mehlich Phosphorus, mg/kg
+- Exchangeable Potassium, Calcium and Magnesium as a PERCENT OF CEC (the "%" rows — often headed just "Potassium"/"Calcium"/"Magnesium" in a %-of-base-saturation block; NOT the cmol+/kg row, NOT the mg/kg row, NOT any ICPMS row)
+- Total Cation Exchange Capacity, cmol+/kg
+- Calcium/Magnesium Ratio
+- Basic Texture
+
+One entry per sample column, using that column's own header (its Client Sample ID) verbatim as "label" — do not rename, expand or reinterpret it. Use the report's Sample Date for sample_date (ISO YYYY-MM-DD); if columns show different dates, use whichever is most common. Use the report's own Report ID (or equivalent lab reference number) for report_id. Use null for any figure that isn't on the report — never guess, estimate, or carry a value over from another column.`;
+
+function fiSoilNum(v,unit){ return v==null ? "—" : `${v}${unit||""}`; }
+function fiSoilBody(s){
+  return [
+    `pH (H2O): ${fiSoilNum(s.ph)}`,
+    `EC: ${fiSoilNum(s.ec_ds_m," dS/m")}`,
+    `Organic matter: ${fiSoilNum(s.organic_matter_pct,"%")}`,
+    `Total N: ${fiSoilNum(s.total_n_pct,"%")}`,
+    `Mehlich P: ${fiSoilNum(s.mehlich_p_mg_kg," mg/kg")}`,
+    `Exchangeable — K: ${fiSoilNum(s.exch_k_pct,"%")}  Ca: ${fiSoilNum(s.exch_ca_pct,"%")}  Mg: ${fiSoilNum(s.exch_mg_pct,"%")}`,
+    `CEC: ${fiSoilNum(s.cec_cmol_kg," cmol+/kg")}`,
+    `Ca:Mg ratio: ${fiSoilNum(s.ca_mg_ratio)}`,
+    `Texture: ${s.texture||"—"}`,
+  ].join("\n");
+}
+
+let fiSoilQueue=null, fiSoilQueueIdx=0, fiSoilQueueFile=null, fiSoilQueueMeta=null;
+function fiOpenSoilImport(){ $fi("fiSoilFileInput").click(); }
+async function fiSoilImportFile(file){
+  showLoading(true);
+  try{
+    if(!AKEY) throw new Error("Add an Anthropic API key under Settings ⚙ first — soil test import reads the report with Claude.");
+    const prompt=soilPrompt();
+    let result;
+    if(/\.(csv|txt)$/i.test(file.name)){
+      const text=await file.text();
+      result=await aiReadText({prompt:`${prompt}\n\nReport (CSV):\n${text}`, schema:SOIL_SCHEMA, maxTokens:4000});
+    }else if(/\.pdf$/i.test(file.name)){
+      const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.slice(r.result.indexOf(",")+1)); r.onerror=rej; r.readAsDataURL(file); });
+      result=await aiReadDocument({b64, prompt, schema:SOIL_SCHEMA, maxTokens:4000});
+    }else if(/^image\//.test(file.type)){
+      const enc=await sbEncode(file);
+      result=await aiReadImage({b64:enc.b64, mediaType:enc.mediaType, prompt, schema:SOIL_SCHEMA, maxTokens:4000});
+    }else{
+      throw new Error("Soil test import reads CSV, PDF or photo files.");
+    }
+    if(!result.samples || !result.samples.length) throw new Error("Couldn't find any sample columns on that report.");
+    fiSoilQueue=result.samples; fiSoilQueueIdx=0; fiSoilQueueFile=file;
+    fiSoilQueueMeta={reportId:result.report_id, sampleDate:result.sample_date};
+    fiOpenSoilDraft();
+  }catch(e){
+    alert("Couldn't read that soil test:\n"+e.message);
+  }finally{ showLoading(false); }
+}
+// Best-effort match of a sample's own label against a known block name — exact, case-insensitive.
+// A miss (e.g. "Tunnels" spanning several blocks) leaves bedIds empty rather than guessing; the
+// existing bed-picker in the draft editor is exactly the UI for picking them by hand.
+function fiSoilMatchBeds(label){
+  const key=String(label||"").trim().toLowerCase();
+  const beds=(data.beds||[]).filter(b=>String(b.block||"").trim().toLowerCase()===key);
+  return beds.map(b=>b.id);
+}
+function fiOpenSoilDraft(){
+  const s=fiSoilQueue[fiSoilQueueIdx];
+  const dateStr = fiSoilQueueMeta.sampleDate || todayISO();
+  fiDraft={
+    id:null,
+    name:`${s.label} soil test — ${fmt(dateStr)}`,
+    category:"Soil report",
+    tags:["Soil report"],
+    body:fiSoilBody(s),
+    files:[], links:[],
+    bedIds:fiSoilMatchBeds(s.label),
+    cropIds:[], pinned:false,
+    pending:[fiSoilQueueFile],
+    // Sample date, not upload date, drives "latest first" — see farmInfoSort / fmReferenceHTML.
+    soilCreated: new Date(dateStr+"T00:00:00").toISOString(),
+  };
+  fiSelId=null;
+  fiRenderEditor();
+  const banner=document.createElement("div");
+  banner.className="fi-soil-banner";
+  banner.textContent=`Soil test import — sample ${fiSoilQueueIdx+1} of ${fiSoilQueue.length}: "${s.label}"`
+    +(fiDraft.bedIds.length?"":" — no block matched this label, pick its beds below.");
+  const form=$fi("fiDetail").querySelector(".fi-form");
+  if(form) form.parentNode.insertBefore(banner, form);
+}
+function fiSoilQueueAdvance(){
+  if(!fiSoilQueue) return false;
+  fiSoilQueueIdx++;
+  if(fiSoilQueueIdx>=fiSoilQueue.length){
+    const n=fiSoilQueue.length;
+    fiSoilQueue=null; fiSoilQueueIdx=0; fiSoilQueueFile=null; fiSoilQueueMeta=null;
+    alert(`Imported ${n} sample${n===1?"":"s"} from that soil test.`);
+    return false;
+  }
+  fiOpenSoilDraft();
+  return true;
+}
+
 /* ---- markdown ---- */
 // A deliberately small subset: headings, lists, bold/italic/code, links, quotes, rules, and pipe
 // tables. No images, no HTML passthrough — every feature past this is another escaping edge case
@@ -20179,8 +20348,12 @@ async function fiSave(){
   const fields={
     [F.fi_name]:d.name.trim(), [F.fi_cat]:d.category, [F.fi_tags]:d.tags, [F.fi_body]:d.body,
     [F.fi_links]:d.links, [F.fi_bed]:d.bedIds, [F.fi_crop]:d.cropIds,
-    [F.fi_pinned]:d.pinned, [F.fi_updated]:now,
-    [F.fi_created]: (existing && existing.created) || now,
+    [F.fi_pinned]:d.pinned,
+    // Soil test import backdates both to the report's own Sample Date rather than upload time, so
+    // farmInfoSort's existing "most-recently-touched first" naturally becomes "latest sample first"
+    // — see fmReferenceHTML, which relies on that ordering to never show a stale test as current.
+    [F.fi_updated]: d.soilCreated || now,
+    [F.fi_created]: d.soilCreated || (existing && existing.created) || now,
     [F.fi_files]:d.files,
   };
   showLoading(true);
@@ -20203,8 +20376,11 @@ async function fiSave(){
     }
     const parsed=PlannerShared.parseFarmInfo([{id, fields:{...fields, [F.fi_files]:d.files}}])[0];
     data.farmInfo=(data.farmInfo||[]).filter(x=>x.id!==id).concat([parsed]).sort(PlannerShared.farmInfoSort);
+    const wasSoilImport=!!d.soilCreated;
     fiDraft=null; fiSelId=id;
-    fiRenderDetail(fiEntry(id)); fiRenderChips();
+    if(!(wasSoilImport && fiSoilQueueAdvance())){
+      fiRenderDetail(fiEntry(id)); fiRenderChips();
+    }
   }catch(e){
     alert("Couldn't save this entry:\n"+e.message);
   }finally{ showLoading(false); }
@@ -20294,6 +20470,11 @@ function fiCloseFile(){
   const main=$fi("fiMain"); if(!main) return;
 
   $fi("fiNewBtn").onclick=fiOpenNew;
+  $fi("fiSoilImportBtn").onclick=fiOpenSoilImport;
+  $fi("fiSoilFileInput").addEventListener("change",e=>{
+    const f=e.target.files[0]; e.target.value="";
+    if(f) fiSoilImportFile(f);
+  });
 
   const search=$fi("fiSearch");
   search.addEventListener("input",()=>{ fiQuery=search.value; fiRenderRows(); });
