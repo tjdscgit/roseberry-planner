@@ -6195,6 +6195,8 @@ function selectBed(id){
   if(pl){
     const col=cropColor(pl.cropId||pl.crop);
     html+=`<div class="sect-h">Current planting</div>`;
+    const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
+    if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
     html+=`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`;
     html+=`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status||"—")}</span></span></div>`;
     html+=`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`;
@@ -10901,6 +10903,10 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const cropType=(data.cropDefs||{})[p.cropId]?.type;
   const bedObj=(data.beds||[]).find(b=>(p.bedIds||[]).includes(b.id));
   const metaParts=[cropType,bedObj?.block?`Block ${bedObj.block}`:null,p.bm>0?`${p.bm} m`:null].filter(Boolean);
+  // Same reason the Farm map's "!" badge shows on hover/tap — surfaced here too so opening a
+  // planting's detail panel from anywhere (Farm map, Timeline, Crop map, Week planner) explains
+  // WHY it's flagged, not just that it is.
+  const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(p) : null;
   panel.innerHTML=`
     <div class="tl-panel-head">
       <div class="tl-panel-title">
@@ -10916,6 +10922,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
       <span class="pill tl-panel-status" style="background:${statusColor(p.status)}">${esc(p.status||"—")}</span>
     </div>
     ${p.failed?`<div class="tl-fail-banner">⚠ Crop failure${p.failureDate?" · "+esc(fmt(p.failureDate)):""}</div>`:""}
+    ${(!p.failed && behindReason)?`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`:""}
     <div class="sect-h">Tasks</div>
     ${tasksHtml}
     ${acc("Planting details",detailsHtml,false)}
