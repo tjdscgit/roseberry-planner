@@ -19893,47 +19893,53 @@ let fiDraft=null;      // non-null while editing; a working copy, never the live
    never show another block's numbers mixed into the same entry. Reuses the existing draft editor
    (fiOpenNew/fiRenderEditor/fiSave) for the actual save + bed-tagging UI rather than building a
    second one: each sample opens as a pre-filled draft, and saving one auto-advances to the next. */
-const SOIL_NUM = {anyOf:[{type:"number"},{type:"null"}]};
+// Anthropic's structured-output schemas reject too many nullable/union-typed properties at once
+// ("exponential compilation" — hit at 19 with the original one-field-per-nutrient shape). Dodging
+// it entirely: `readings` is a flat list of {name,value} pairs with NO nullable fields anywhere —
+// a figure that isn't on the report is simply omitted from the array, never represented as null.
+// fiSoilImportFile flattens this back into the original per-key object shape fiSoilBody expects.
+const SOIL_READING_KEYS = ["ph","ec_ds_m","organic_matter_pct","total_n_pct","mehlich_p_mg_kg",
+  "exch_k_pct","exch_ca_pct","exch_mg_pct","cec_cmol_kg","ca_mg_ratio",
+  "sulfur_mg_kg","zinc_mg_kg","manganese_mg_kg","iron_mg_kg","copper_mg_kg","boron_mg_kg"];
 const SOIL_SCHEMA = {
   type:"object",
   properties:{
-    report_id: SB_STR,
-    sample_date: {...SB_STR, description:"Shared sample date for the report, ISO YYYY-MM-DD, or null."},
+    report_id:{type:"string", description:"The report's own reference number, or empty string if there isn't one."},
+    sample_date:{type:"string", description:"Shared ISO YYYY-MM-DD sample date for the report, or empty string if unclear."},
     samples:{ type:"array", items:{
       type:"object",
       properties:{
         label:{type:"string", description:"The column's own Client Sample ID, verbatim."},
-        ph: SOIL_NUM, ec_ds_m: SOIL_NUM, organic_matter_pct: SOIL_NUM, total_n_pct: SOIL_NUM,
-        mehlich_p_mg_kg: SOIL_NUM, exch_k_pct: SOIL_NUM, exch_ca_pct: SOIL_NUM, exch_mg_pct: SOIL_NUM,
-        cec_cmol_kg: SOIL_NUM, ca_mg_ratio: SOIL_NUM, texture: SB_STR,
-        sulfur_mg_kg: SOIL_NUM,
-        zinc_mg_kg: SOIL_NUM, manganese_mg_kg: SOIL_NUM, iron_mg_kg: SOIL_NUM,
-        copper_mg_kg: SOIL_NUM, boron_mg_kg: SOIL_NUM,
+        texture:{type:"string", description:"Basic Texture, or empty string if not on the report."},
+        readings:{ type:"array", description:"One entry per figure below that IS present on the report for this sample — omit any that aren't there, never invent or estimate a value.", items:{
+          type:"object",
+          properties:{ name:{type:"string", enum:SOIL_READING_KEYS}, value:{type:"number"} },
+          required:["name","value"], additionalProperties:false,
+        }},
       },
-      required:["label","ph","ec_ds_m","organic_matter_pct","total_n_pct","mehlich_p_mg_kg",
-        "exch_k_pct","exch_ca_pct","exch_mg_pct","cec_cmol_kg","ca_mg_ratio","texture",
-        "sulfur_mg_kg","zinc_mg_kg","manganese_mg_kg","iron_mg_kg","copper_mg_kg","boron_mg_kg"],
+      required:["label","texture","readings"],
       additionalProperties:false,
     }},
   },
   required:["report_id","sample_date","samples"],
   additionalProperties:false,
 };
-const soilPrompt = () => `This is a soil test lab report (one column per sample). Extract ONLY these figures per sample — everything else on the report (heavy metals, ICPMS trace elements, paramagnetism, colour, silicon, sodium, etc.) is deliberately out of scope, do not include it:
-- pH (H2O)
-- Electrical Conductivity, in dS/m
-- Estimated Organic Matter, %
-- Nitrogen - Total, %
-- Mehlich Phosphorus, mg/kg
-- Exchangeable Potassium, Calcium and Magnesium as a PERCENT OF CEC (the "%" rows — often headed just "Potassium"/"Calcium"/"Magnesium" in a %-of-base-saturation block; NOT the cmol+/kg row, NOT the mg/kg row, NOT any ICPMS row)
-- Total Cation Exchange Capacity, cmol+/kg
-- Calcium/Magnesium Ratio
-- Basic Texture
-- Sulfur, mg/kg — the KCl-extractable row specifically (plant-available), NOT the total ICPMS/ICPOES row further down the report
-- Zinc, Manganese, Iron and Copper, mg/kg — the DTPA-extractable rows (plant-available), NOT the total ICPMS rows
-- Boron, mg/kg — the CaCl2-extractable row (plant-available), NOT the total ICPMS row
+const soilPrompt = () => `This is a soil test lab report (one column per sample). Extract ONLY these figures per sample as "readings" entries — everything else on the report (heavy metals, ICPMS trace elements, paramagnetism, colour, silicon, sodium, etc.) is deliberately out of scope, do not include it:
+- ph — pH (H2O)
+- ec_ds_m — Electrical Conductivity, dS/m
+- organic_matter_pct — Estimated Organic Matter, %
+- total_n_pct — Nitrogen - Total, %
+- mehlich_p_mg_kg — Mehlich Phosphorus, mg/kg
+- exch_k_pct, exch_ca_pct, exch_mg_pct — Exchangeable Potassium, Calcium and Magnesium as a PERCENT OF CEC (the "%" rows — often headed just "Potassium"/"Calcium"/"Magnesium" in a %-of-base-saturation block; NOT the cmol+/kg row, NOT the mg/kg row, NOT any ICPMS row)
+- cec_cmol_kg — Total Cation Exchange Capacity, cmol+/kg
+- ca_mg_ratio — Calcium/Magnesium Ratio
+- sulfur_mg_kg — Sulfur, mg/kg, the KCl-extractable row specifically (plant-available), NOT the total ICPMS/ICPOES row further down the report
+- zinc_mg_kg, manganese_mg_kg, iron_mg_kg, copper_mg_kg — Zinc/Manganese/Iron/Copper, mg/kg, the DTPA-extractable rows (plant-available), NOT the total ICPMS rows
+- boron_mg_kg — Boron, mg/kg, the CaCl2-extractable row (plant-available), NOT the total ICPMS row
 
-One entry per sample column, using that column's own header (its Client Sample ID) verbatim as "label" — do not rename, expand or reinterpret it. Use the report's Sample Date for sample_date (ISO YYYY-MM-DD); if columns show different dates, use whichever is most common. Use the report's own Report ID (or equivalent lab reference number) for report_id. Use null for any figure that isn't on the report — never guess, estimate, or carry a value over from another column.`;
+Basic Texture is separate (its own "texture" field, a string, not a reading).
+
+One entry per sample column, using that column's own header (its Client Sample ID) verbatim as "label" — do not rename, expand or reinterpret it. Use the report's Sample Date for sample_date (ISO YYYY-MM-DD); if columns show different dates, use whichever is most common. Use the report's own Report ID (or equivalent lab reference number) for report_id, or an empty string if there isn't one. Never guess, estimate, or carry a value over from another column — omit the reading entirely instead.`;
 
 function fiSoilNum(v,unit){ return v==null ? "—" : `${v}${unit||""}`; }
 function fiSoilBody(s){
@@ -19973,8 +19979,15 @@ async function fiSoilImportFile(file){
       throw new Error("Soil test import reads CSV, PDF or photo files.");
     }
     if(!result.samples || !result.samples.length) throw new Error("Couldn't find any sample columns on that report.");
-    fiSoilQueue=result.samples; fiSoilQueueIdx=0; fiSoilQueueFile=file;
-    fiSoilQueueMeta={reportId:result.report_id, sampleDate:result.sample_date};
+    // Flatten each sample's {name,value} readings array back into the flat per-key object shape
+    // fiSoilBody/fiSoilMatchBlock expect — see SOIL_SCHEMA for why the API response is shaped
+    // this way instead of one nullable field per nutrient.
+    fiSoilQueue=result.samples.map(s=>({
+      label:s.label, texture:s.texture||null,
+      ...Object.fromEntries((s.readings||[]).map(r=>[r.name,r.value])),
+    }));
+    fiSoilQueueIdx=0; fiSoilQueueFile=file;
+    fiSoilQueueMeta={reportId:result.report_id||null, sampleDate:result.sample_date||null};
     fiOpenSoilDraft();
   }catch(e){
     alert("Couldn't read that soil test:\n"+e.message);
