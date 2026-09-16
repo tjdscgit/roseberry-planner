@@ -624,7 +624,8 @@
   .panel-head .blk{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em}
   .panel-body{padding:.4rem 1rem 1rem;overflow:auto}
   .close-x{position:absolute;top:.7rem;right:.8rem}
-  .kv{display:flex;justify-content:space-between;gap:1rem;padding:.42rem 0;border-bottom:1px solid var(--line);font-size:.86rem}
+  .kv{display:flex;justify-content:space-between;gap:1rem;padding:.42rem .6rem;
+    background:var(--paper-2);border-radius:8px;margin-bottom:.3rem;font-size:.86rem}
   .kv .k{color:var(--ink-2)}
   .kv .v{font-family:var(--mono);text-align:right}
   .tl-actual-note{display:block;font-size:.72rem;color:var(--ink-2);font-family:var(--sans,inherit)}
@@ -6243,7 +6244,7 @@ function fmReferenceHTML(b, pl){
     // The actual numbers, inline — a link-only row defeats the point when the whole ask was
     // "see the soil test for this plot without an extra click." Only the latest gets this; older
     // ones stay link-only inside their own collapsed toggle below.
-    fiHtml+=`<div class="empty-note" style="white-space:pre-line;margin-top:-.3rem">${esc(soilMatches[0].body||"")}</div>`;
+    fiHtml+=fiBodyToKvHtml(soilMatches[0].body);
     if(soilMatches.length>1){
       fiHtml+=`<details class="tl-acc"><summary>${soilMatches.length-1} older soil test${soilMatches.length-1===1?"":"s"}</summary>`
         +soilMatches.slice(1).map(e=>fiRow(e)).join("")+`</details>`;
@@ -6403,7 +6404,7 @@ function fmBlockReferenceHTML(key){
   let html="";
   if(soilMatches.length){
     html+=fiRow(soilMatches[0]);
-    html+=`<div class="empty-note" style="white-space:pre-line;margin-top:-.3rem">${esc(soilMatches[0].body||"")}</div>`;
+    html+=fiBodyToKvHtml(soilMatches[0].body);
     if(soilMatches.length>1){
       html+=`<details class="tl-acc"><summary>${soilMatches.length-1} older soil test${soilMatches.length-1===1?"":"s"}</summary>`
         +soilMatches.slice(1).map(fiRow).join("")+`</details>`;
@@ -19944,20 +19945,34 @@ Basic Texture is separate (its own "texture" field, a string, not a reading).
 One entry per sample column, using that column's own header (its Client Sample ID) verbatim as "label" — do not rename, expand or reinterpret it. Use the report's Sample Date for sample_date (ISO YYYY-MM-DD); if columns show different dates, use whichever is most common. Use the report's own Report ID (or equivalent lab reference number) for report_id, or an empty string if there isn't one. Never guess, estimate, or carry a value over from another column — omit the reading entirely instead.`;
 
 function fiSoilNum(v,unit){ return v==null ? "—" : `${v}${unit||""}`; }
+// One field list feeds both the plain-text version stored on the Farm Info entry itself (body,
+// rendered as markdown there) and the individual-card version shown inline in the bed/block panel
+// (fiSoilKvHtml) — so the two never drift apart as fields get added.
+const SOIL_FIELD_LIST = [
+  ["pH (H2O)","ph",""], ["EC","ec_ds_m"," dS/m"], ["Organic matter","organic_matter_pct","%"],
+  ["Total N","total_n_pct","%"], ["Mehlich P","mehlich_p_mg_kg"," mg/kg"],
+  ["Exch. K","exch_k_pct","%"], ["Exch. Ca","exch_ca_pct","%"], ["Exch. Mg","exch_mg_pct","%"],
+  ["CEC","cec_cmol_kg"," cmol+/kg"], ["Ca:Mg ratio","ca_mg_ratio",""],
+  ["Sulfur","sulfur_mg_kg"," mg/kg"],
+  ["Zinc","zinc_mg_kg"," mg/kg"], ["Manganese","manganese_mg_kg"," mg/kg"], ["Iron","iron_mg_kg"," mg/kg"],
+  ["Copper","copper_mg_kg"," mg/kg"], ["Boron","boron_mg_kg"," mg/kg"],
+];
 function fiSoilBody(s){
-  return [
-    `pH (H2O): ${fiSoilNum(s.ph)}`,
-    `EC: ${fiSoilNum(s.ec_ds_m," dS/m")}`,
-    `Organic matter: ${fiSoilNum(s.organic_matter_pct,"%")}`,
-    `Total N: ${fiSoilNum(s.total_n_pct,"%")}`,
-    `Mehlich P: ${fiSoilNum(s.mehlich_p_mg_kg," mg/kg")}`,
-    `Exchangeable — K: ${fiSoilNum(s.exch_k_pct,"%")}  Ca: ${fiSoilNum(s.exch_ca_pct,"%")}  Mg: ${fiSoilNum(s.exch_mg_pct,"%")}`,
-    `CEC: ${fiSoilNum(s.cec_cmol_kg," cmol+/kg")}`,
-    `Ca:Mg ratio: ${fiSoilNum(s.ca_mg_ratio)}`,
-    `Sulfur: ${fiSoilNum(s.sulfur_mg_kg," mg/kg")}`,
-    `Micros — Zn: ${fiSoilNum(s.zinc_mg_kg," mg/kg")}  Mn: ${fiSoilNum(s.manganese_mg_kg," mg/kg")}  Fe: ${fiSoilNum(s.iron_mg_kg," mg/kg")}  Cu: ${fiSoilNum(s.copper_mg_kg," mg/kg")}  B: ${fiSoilNum(s.boron_mg_kg," mg/kg")}`,
-    `Texture: ${s.texture||"—"}`,
-  ].join("\n");
+  const lines=SOIL_FIELD_LIST.map(([label,key,unit])=>`${label}: ${fiSoilNum(s[key],unit)}`);
+  lines.push(`Texture: ${s.texture||"—"}`);
+  return lines.join("\n");
+}
+// Individual shaded .kv cards, one per line — the bed/block panel's inline version of a Farm Info
+// entry's body text, vs. the plain-text original (better suited to Farm Info's own markdown-
+// rendered detail view). Works from the stored body text itself rather than needing the raw sample
+// object again — every soilPrompt/fiSoilBody line is already "Label: value", so this is just a
+// straight re-render of that same text as cards, nothing re-derived.
+function fiBodyToKvHtml(body){
+  return String(body||"").split("\n").filter(Boolean).map(line=>{
+    const i=line.indexOf(": ");
+    if(i<0) return `<div class="kv"><span class="k"></span><span class="v">${esc(line)}</span></div>`;
+    return `<div class="kv"><span class="k">${esc(line.slice(0,i))}</span><span class="v">${esc(line.slice(i+2))}</span></div>`;
+  }).join("");
 }
 
 let fiSoilQueue=null, fiSoilQueueIdx=0, fiSoilQueueFile=null, fiSoilQueueMeta=null;
