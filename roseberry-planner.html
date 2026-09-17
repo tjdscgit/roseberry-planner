@@ -3143,6 +3143,9 @@
         <button class="icon-btn cm-iconbtn" id="fmMoveBtn" type="button" title="Drag blocks to match their real field position" aria-pressed="false">
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 3v14M3 10h14M6 6.4L10 3l4 3.4M6 13.6L10 17l4-3.4M6.4 6L3 10l3.4 4M13.6 6L17 10l-3.4 4"/></svg>
         </button>
+        <button class="icon-btn cm-iconbtn" id="fmInactiveBtn" type="button" title="Grey out plantings that should be in the ground by now but haven't been marked as planted" aria-pressed="false">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="10" cy="10" r="6.4" stroke-dasharray="2.2 1.8"/><path d="M4 16l12-12"/></svg>
+        </button>
         <div class="cm-pop-wrap">
           <button class="icon-btn cm-iconbtn" id="fmSatBtn" type="button" title="Satellite underlay" aria-expanded="false">
             <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3 8.4l3.4-3.4 9 9-3.4 3.4z"/><path d="M9 2.4L3 8.4M17.6 11L11.6 17"/><path d="M13 6.4l1.6-1.6M14.6 9.6l1.6-1.6"/></svg>
@@ -3303,6 +3306,9 @@
             </div>
             <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.6rem;cursor:pointer">
               <input type="checkbox" id="cmWarnOnly"> ! Show behind-schedule warnings on bars
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.4rem;cursor:pointer">
+              <input type="checkbox" id="cmInactiveOn"> Grey out inactive plantings — should be in the ground by now, isn't
             </label>
           </div>
         </div>
@@ -5753,6 +5759,7 @@ let placedCache = [];
 /* ---------- Satellite underlay (localStorage — per-device, not synced to Airtable) ---------- */
 const FM_SAT_KEY="roseberry_satmap_v1";
 let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
+let fmInactiveOn=false;   // "Inactive" toggle — greys out beds whose planting should be in the ground by now but isn't (see plantingInactive)
 
 // Free-angle block rotation, to eyeball-align a block with the satellite photo. This is separate
 // from the "Rotate 90°" button, which flips the REAL "beds run vertical/horizontal" field the beds
@@ -5968,7 +5975,13 @@ function drawMap(placed, opts){
       cell.setAttribute("x",r.x);cell.setAttribute("y",r.y);
       cell.setAttribute("width",r.w);cell.setAttribute("height",r.h);
       cell.setAttribute("rx",".4");
-      if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
+      const inactive = fmInactiveOn && typeof plantingInactive==="function" && plantingInactive(pl);
+      if(inactive){
+        cell.setAttribute("fill","var(--ink-2)");
+        cell.style.opacity=".4";
+        cell.classList.add("bed-inactive");
+      }
+      else if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
       else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
       else cell.style.fill = "var(--empty-bed)";
       rotGrp.appendChild(cell);
@@ -6676,6 +6689,13 @@ document.addEventListener("DOMContentLoaded",()=>{
     const wrap=document.getElementById("mapWrap");
     if(wrap) wrap.classList.toggle("map-move-mode", fmMoveMode);
   });
+
+  const inactiveBtn=document.getElementById("fmInactiveBtn");
+  if(inactiveBtn) inactiveBtn.addEventListener("click",()=>{
+    fmInactiveOn=!fmInactiveOn;
+    inactiveBtn.setAttribute("aria-pressed", fmInactiveOn?"true":"false");
+    layoutAndDraw();
+  });
 });
 document.getElementById("zin").onclick=()=>{const w=document.getElementById("mapWrap").getBoundingClientRect();window.zoomAt(w.left+w.width/2,w.top+w.height/2,1.25);};
 document.getElementById("zout").onclick=()=>{const w=document.getElementById("mapWrap").getBoundingClientRect();window.zoomAt(w.left+w.width/2,w.top+w.height/2,.8);};
@@ -7046,6 +7066,7 @@ let cmViewApplied = false;
 let cmViewMode = "map";   // the design opens on the tiled, fitted board
 let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-family colour)
 let cmWarnOnly = false;   // Filters ▸ "Show behind-schedule warnings" — toggles the "!" badge on bars overdue per tlIsBehind (same rule as the Farm Map's badge)
+let cmInactiveOn = false; // Filters ▸ "Grey out inactive plantings" — same plantingInactive rule as the Farm Map's Inactive toggle
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -7707,6 +7728,14 @@ function cmDrawBlockBars(grid, beds, plantings){
       bar.style.width=(span*CM_COL_W+(span-1)*CM_GAP)+"px";
     }
     bar.style.background=base;
+    // Inactive: sow/transplant date has passed but Status never advanced to "In ground" — same
+    // plantingInactive rule as the Farm Map's Inactive toggle. Greyed instead of removed, same
+    // spirit as the Farm Map's grey fill: it still needs to be seen, just flagged as overdue.
+    if(cmInactiveOn && typeof plantingInactive==="function" && plantingInactive(p)){
+      bar.style.background="var(--ink-2)";
+      bar.style.opacity=".45";
+      bar.classList.add("cm-bar-inactive");
+    }
 
     // harvest window shaded darker on top, same convention as the timeline
     if(p.h1 && p.h2){
@@ -8423,6 +8452,8 @@ document.querySelectorAll("#cmColorToggle button").forEach(b=>b.addEventListener
 document.addEventListener("DOMContentLoaded",()=>{
   const cb=document.getElementById("cmWarnOnly");
   if(cb) cb.addEventListener("change",()=>{ cmWarnOnly=cb.checked; buildCropMap(); });
+  const icb=document.getElementById("cmInactiveOn");
+  if(icb) icb.addEventListener("change",()=>{ cmInactiveOn=icb.checked; buildCropMap(); });
 });
 
 /* Select / Pan / Tarp are one three-way choice now, so each setter only owns its own flag and
@@ -10434,6 +10465,16 @@ function tlIsBehind(p){
     if(statusRank(p.status)>=statusRank(t.stage)) return false;   // already reached
     const due=p[t.df]; return due && String(due)<today;
   });
+}
+// Narrower than tlIsBehind above (which flags ANY overdue milestone, including harvest): this is
+// specifically "the sow/transplant date has passed but Status was never ticked on to 'In ground'"
+// — i.e. it should be in the ground by now and, as far as this app knows, isn't. Drives the
+// Inactive filter on both maps.
+function plantingInactive(p){
+  if(!p || statusRank(p.status)>=statusRank("In ground")) return false;
+  const stage=apLifecycle(p.tp?"transplant":"direct").find(t=>t.stage==="In ground");
+  const due=stage && p[stage.df];
+  return !!(due && String(due)<todayISO());
 }
 // Human-readable version of the tlIsBehind check above — which milestone is overdue, its due
 // date, and how many days ago — for tooltips (the Farm map badge) where a bare "Behind schedule"
