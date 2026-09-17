@@ -1647,8 +1647,11 @@
      drag-time badges above, but shown at rest so it doesn't take picking the planting up to see.
      What the Filters ▸ Warnings-only toggle narrows the board down to. */
   .cm-bar-warn{outline:1.5px solid var(--clay);outline-offset:-1.5px}
-  .cm-bar-warnmark{position:absolute;right:1px;top:1px;font-size:.6rem;line-height:1;
-    padding:1px 2px;border-radius:2px;z-index:2;color:var(--clay);background:rgba(255,255,255,.82)}
+  /* Same round badge as the Timeline's "behind schedule" mark (.tl-bar-warn) — a plain "!", not
+     the ⚠ emoji, which renders inconsistently (and often ugly) across platform emoji fonts. */
+  .cm-bar-warnmark{position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;
+    background:#C0392B;color:#fff;font-size:.62rem;font-weight:800;font-family:var(--mono);
+    line-height:14px;text-align:center;z-index:2;box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
     box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-seg{position:absolute;left:0;right:0;z-index:1}
@@ -3299,7 +3302,7 @@
               <button data-cmcolor="type" aria-pressed="false">By type</button>
             </div>
             <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.6rem;cursor:pointer">
-              <input type="checkbox" id="cmWarnOnly"> ⚠ Warnings only — blocks with a known bed issue
+              <input type="checkbox" id="cmWarnOnly"> ! Warnings only — blocks with a known bed issue
             </label>
           </div>
         </div>
@@ -7726,7 +7729,7 @@ function cmDrawBlockBars(grid, beds, plantings){
     let warnBadge="";
     if(barIssues.length){
       bar.classList.add("cm-bar-warn");
-      warnBadge=`<span class="cm-bar-warnmark" title="${esc(issuesTitle(barIssues))}">⚠</span>`;
+      warnBadge=`<span class="cm-bar-warnmark" title="${esc(issuesTitle(barIssues))}">!</span>`;
     }
     bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
       + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"")
