@@ -1643,6 +1643,12 @@
   /* A bed split lengthwise between two-or-more plantings (by bed-metres) — see cmDrawBlockBars.
      The lighter edge reads as "this is a partial share of the bed", not a full-width planting. */
   .cm-bar-shared{box-shadow:0 1px 2px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.35)}
+  /* Persistent "this bar has a known bed-issue conflict" marker — same advisory contract as the
+     drag-time badges above, but shown at rest so it doesn't take picking the planting up to see.
+     What the Filters ▸ Warnings-only toggle narrows the board down to. */
+  .cm-bar-warn{outline:1.5px solid var(--clay);outline-offset:-1.5px}
+  .cm-bar-warnmark{position:absolute;right:1px;top:1px;font-size:.6rem;line-height:1;
+    padding:1px 2px;border-radius:2px;z-index:2;color:var(--clay);background:rgba(255,255,255,.82)}
   .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
     box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-seg{position:absolute;left:0;right:0;z-index:1}
@@ -3292,6 +3298,9 @@
               <button data-cmcolor="crop" aria-pressed="true">By crop</button>
               <button data-cmcolor="type" aria-pressed="false">By type</button>
             </div>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.6rem;cursor:pointer">
+              <input type="checkbox" id="cmWarnOnly"> ⚠ Warnings only — blocks with a known bed issue
+            </label>
           </div>
         </div>
         <span class="spacer"></span>
@@ -7033,6 +7042,7 @@ let cmBulkState = null;        // {weights, proposals, skipped} while the Auto-p
 let cmViewApplied = false;
 let cmViewMode = "map";   // the design opens on the tiled, fitted board
 let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-family colour)
+let cmWarnOnly = false;   // Filters ▸ "Warnings only" — narrows the board to blocks with a live bed-issue conflict
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -7709,8 +7719,19 @@ function cmDrawBlockBars(grid, beds, plantings){
 
     bar.dataset.pid=p.id;
     const bedCount=(p.bedIds||[]).length;
+    // Persistent warning badge — same advisory check the drag-preview badge (highlightFits) runs,
+    // but shown at rest so a known bed-issue conflict is visible without having to pick the
+    // planting up first. This is what the Filters ▸ Warnings-only toggle is narrowing down to.
+    const barIssues=bedIssuesForCrop(beds[run.start].id, p.cropId, planWindow(p));
+    let warnBadge="";
+    if(barIssues.length){
+      bar.classList.add("cm-bar-warn");
+      warnBadge=`<span class="cm-bar-warnmark" title="${esc(issuesTitle(barIssues))}">⚠</span>`;
+    }
     bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
-      + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"");
+      + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"")
+      + (barIssues.length?`\n\n${issuesTitle(barIssues)}`:"");
+    if(warnBadge) bar.insertAdjacentHTML("beforeend", warnBadge);
 
     // Only the first run is labelled: repeating the name on every fragment of one planting reads
     // as several plantings.
@@ -8045,19 +8066,25 @@ function buildCropMap(){
   if(cmSelectedBlock && !keys.includes(cmSelectedBlock)) cmSelectedBlock=null; // stale (renamed/removed) → fall back to "All"
   // mobile-only: a picked block narrows the view to just that block; desktop always sees every
   // block regardless of a stale cmSelectedBlock left over from a mobile session on this browser
-  const activeKeys = (cmSelectedBlock && cmIsMobile()) ? [cmSelectedBlock] : keys;
+  let activeKeys = (cmSelectedBlock && cmIsMobile()) ? [cmSelectedBlock] : keys;
 
   // Plantings are drawn per BLOCK, not per bed: a planting that takes four beds is one rectangle
   // four columns wide, the way it actually occupies the ground. Keying on bedIds[0] (what this
   // did before) drew it in its first bed only, so the other three read as empty.
+  // "Warnings only" (cmWarnOnly) narrows this to plantings that actually have a live bed-issue
+  // conflict on that bed — same advisory check bedIssuesForCrop already runs while dragging — so
+  // the board collapses down to just what needs a second look, same idea as the Farm Map's own
+  // block chips narrowing what's on screen.
   const perBlock={};
   (data.plantingsActive||[]).forEach(p=>{
     (p.bedIds||[]).forEach(bid=>{
       const bed=(data.beds||[]).find(b=>b.id===bid); if(!bed) return;
+      if(cmWarnOnly && !bedIssuesForCrop(bed.id, p.cropId, planWindow(p)).length) return;
       const key=bed.block||"—";
       (perBlock[key] ||= new Set()).add(p);
     });
   });
+  if(cmWarnOnly) activeKeys = activeKeys.filter(key=>(perBlock[key]||new Set()).size);
 
   // arrange blocks in a roughly square grid (same ceil(sqrt(n)) approach as the Farm Map's
   // auto-layout) so the Crop Map bunches up like the farm, instead of one long vertical list
@@ -8393,6 +8420,11 @@ function setCmColorMode(mode){
   buildCropMap();
 }
 document.querySelectorAll("#cmColorToggle button").forEach(b=>b.addEventListener("click",()=>setCmColorMode(b.dataset.cmcolor)));
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const cb=document.getElementById("cmWarnOnly");
+  if(cb) cb.addEventListener("change",()=>{ cmWarnOnly=cb.checked; buildCropMap(); });
+});
 
 /* Select / Pan / Tarp are one three-way choice now, so each setter only owns its own flag and
    cmSyncTools() decides which of the three reads as pressed. The buttons carry icons, so nothing
