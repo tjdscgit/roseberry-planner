@@ -3302,7 +3302,7 @@
               <button data-cmcolor="type" aria-pressed="false">By type</button>
             </div>
             <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.6rem;cursor:pointer">
-              <input type="checkbox" id="cmWarnOnly"> ! Show bed-issue warnings on bars
+              <input type="checkbox" id="cmWarnOnly"> ! Show behind-schedule warnings on bars
             </label>
           </div>
         </div>
@@ -7045,7 +7045,7 @@ let cmBulkState = null;        // {weights, proposals, skipped} while the Auto-p
 let cmViewApplied = false;
 let cmViewMode = "map";   // the design opens on the tiled, fitted board
 let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-family colour)
-let cmWarnOnly = false;   // Filters ▸ "Show bed-issue warnings" — toggles the "!" badge on bars with a live bed-issue conflict
+let cmWarnOnly = false;   // Filters ▸ "Show behind-schedule warnings" — toggles the "!" badge on bars overdue per tlIsBehind (same rule as the Farm Map's badge)
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -7722,19 +7722,20 @@ function cmDrawBlockBars(grid, beds, plantings){
 
     bar.dataset.pid=p.id;
     const bedCount=(p.bedIds||[]).length;
-    // Warning badge — same advisory check the drag-preview badge (highlightFits) runs, but shown
-    // at rest, on the bar itself, only once Filters ▸ Warnings-only is switched on (otherwise every
-    // bar with any recorded issue would carry the mark all the time, which is more noise than the
-    // toggle is meant to add).
-    const barIssues=cmWarnOnly ? bedIssuesForCrop(beds[run.start].id, p.cropId, planWindow(p)) : [];
+    // "Behind schedule" badge — same tlIsBehind rule the Timeline and Farm Map already use (a
+    // lifecycle milestone's due date has passed with Status not advanced to match). Farm Map shows
+    // this one unconditionally; here it's gated behind Filters ▸ "Show bed-issue warnings" since
+    // the crop map is busier and the mark would otherwise compete with the crop label on every bar.
+    const isBehind = cmWarnOnly && typeof tlIsBehind==="function" && tlIsBehind(p);
     let warnBadge="";
-    if(barIssues.length){
+    if(isBehind){
       bar.classList.add("cm-bar-warn");
-      warnBadge=`<span class="cm-bar-warnmark" title="${esc(issuesTitle(barIssues))}">!</span>`;
+      const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(p)) || "Behind schedule";
+      warnBadge=`<span class="cm-bar-warnmark" title="${esc(reasonTxt)}">!</span>`;
     }
     bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
       + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"")
-      + (barIssues.length?`\n\n${issuesTitle(barIssues)}`:"");
+      + (isBehind?`\n\nBehind schedule`:"");
     if(warnBadge) bar.insertAdjacentHTML("beforeend", warnBadge);
 
     // Only the first run is labelled: repeating the name on every fragment of one planting reads
