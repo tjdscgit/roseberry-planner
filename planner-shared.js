@@ -87,6 +87,12 @@
       weatherObs:       "tblWXobs",           // "Weather Observations" — one row per day per station
       irrigEvents:      "tblIRevents",        // "Irrigation Events"
       irrigSettings:    "tblIRsettings",      // "Irrigation Settings" — one row, id 'farm'
+      // Farm Map overlay — irrigation polylines and point markers (pumps, risers, valves, tanks,
+      // sheds, dams, ...) drawn on top of the block/bed layout. Supabase-only, placeholder id as
+      // above. `map_features` already existed (unused) from the redesign migration — Shape is
+      // "point" or "line"; Points is a jsonb array of {x,y} in the same world-metres space the
+      // bed/block frames use, so a line's on-screen length is already its real length.
+      mapFeatures:      "tblMFfeatures",      // "Map Features"
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -308,6 +314,9 @@
       is_overshoot:"Overshoot fraction", is_eff:"Efficiency",
       is_effOverhead:"Overhead efficiency", is_pumpFlow:"Pump flow L/hr",
       is_start:"Balance start", is_notes:"Notes",
+      // Map features — see CFG.tables.mapFeatures above.
+      mf_name:"Name", mf_kind:"Kind", mf_shape:"Shape", mf_points:"Points",
+      mf_label:"Label", mf_detail:"Detail", mf_colour:"Colour", mf_order:"Order", mf_notes:"Notes",
     }
   };
 
@@ -333,6 +342,7 @@
     fertProducts:"fert_products",
     weatherObs:"weather_observations", irrigEvents:"irrigation_events",
     irrigSettings:"irrigation_settings",
+    mapFeatures:"map_features",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -1851,6 +1861,32 @@
     }));
   }
 
+  // Farm Map overlay features — irrigation lines and point markers. `points` is always an array of
+  // {x,y} pairs in the same world-metres space as bed/block frames: one pair for a point marker,
+  // two-or-more for a line, so mapFeatureLength() below can sum real segment distances directly.
+  function parseMapFeatures(recs){
+    const F=CFG.f;
+    return recs.map(r=>({
+      id:r.id,
+      name:r.fields[F.mf_name]||"",
+      kind:r.fields[F.mf_kind]||"",
+      shape:r.fields[F.mf_shape]||"point",
+      points:Array.isArray(r.fields[F.mf_points]) ? r.fields[F.mf_points] : [],
+      label:r.fields[F.mf_label]||"",
+      detail:r.fields[F.mf_detail]||"",
+      colour:r.fields[F.mf_colour]||"",
+      order:num(r.fields[F.mf_order]),
+      notes:r.fields[F.mf_notes]||"",
+    }));
+  }
+  // Real length of a line feature, in the same metres its points are already in.
+  function mapFeatureLength(f){
+    const pts=f&&f.points||[];
+    let d=0;
+    for(let i=1;i<pts.length;i++) d+=Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    return d;
+  }
+
   // Does this planting count against this zone's reservation? A zone refined to a crop only claims
   // that crop; an unrefined one claims its whole type. Callers have already matched bed and window.
   function zoneMatchesPlanting(zone, planting, cropType){
@@ -3182,6 +3218,7 @@
     parseBedIssues, parseBedPrepEvents, parseBedPrepTargets, parseBedPrepPlan,
     bpOperations, bpPlanForWeek, bpBedOrder, rangesOverlap, bedConflicts,
     parseBedZones, zoneMatchesPlanting, zoneRemaining,
+    parseMapFeatures, mapFeatureLength,
     parseSprayProducts, parseSprayMixes, parseSprayMixItems, parseSprayApplications,
     parseSprayApplicationItems, attachSprayItems, mixWhp, safeAfterISO, bedWhpActive,
     parseFieldWalks, parseWalkObservations, parseWalkLists, parseWalkListItems, attachWalkItems,

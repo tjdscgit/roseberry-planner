@@ -1594,6 +1594,18 @@
   /* Withholding-period hatch — warning colour, drawn over a bed still inside a spray WHP today. */
   .whp-pattern{color:var(--clay)}
   .bed-whp{opacity:.85}
+  /* Farm Map overlay — irrigation lines + point markers. Drawn straight into <g id="mapG">
+     (world space), not inside any block's rotGrp, since they're farm-wide fixtures independent
+     of any one block's tilt. Real-world length comes straight from the points' own coordinates
+     (mapFeatureLength) — nothing here scales or transforms them beyond the map's own pan/zoom. */
+  .mf-line{fill:none;stroke:var(--steel);stroke-width:.5;stroke-linecap:round;stroke-linejoin:round;cursor:pointer}
+  .mf-line:hover{stroke-width:.8}
+  .mf-line-draft{fill:none;stroke:var(--clay);stroke-width:.4;stroke-dasharray:.8 .6;pointer-events:none}
+  .mf-line-draft-pt{fill:var(--clay);pointer-events:none}
+  .mf-point{cursor:pointer}
+  .mf-point-dot{fill:var(--steel);stroke:var(--paper);stroke-width:.2}
+  .mf-point-glyph{fill:#fff;font-weight:800;font-family:var(--mono);pointer-events:none}
+  #mapWrap.map-infra-mode{cursor:crosshair}
   #whpLegend{bottom:2.7rem;left:.7rem;display:flex;align-items:center;gap:.35rem;
     font-family:var(--mono);font-size:.6rem;color:var(--ink-2);
     background:rgba(247,245,239,.86);padding:.22rem .45rem;border-radius:6px}
@@ -1876,10 +1888,11 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal,#znModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal,#mfModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open{display:flex}
   #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
+  #mfModal{z-index:70}   /* opened from on top of the Farm Map's own bed/block panels */
   .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
     padding:.45rem .1rem;border-bottom:1px solid var(--line)}
   .zn-parked-row:last-child{border-bottom:none}
@@ -3171,6 +3184,27 @@
             </div>
           </div>
         </div>
+        <button class="icon-btn cm-iconbtn" id="fmLinesBtn" type="button" title="Show/hide irrigation lines" aria-pressed="true">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 16L16 4"/><circle cx="4" cy="16" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="4" r="1.3" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="icon-btn cm-iconbtn" id="fmPointsBtn" type="button" title="Show/hide markers (pumps, valves, sheds, ...)" aria-pressed="true">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 2.6c-2.87 0-5.2 2.2-5.2 5.2 0 3.85 5.2 9.4 5.2 9.4s5.2-5.55 5.2-9.4c0-3-2.33-5.2-5.2-5.2z"/><circle cx="10" cy="7.8" r="1.7" fill="none"/></svg>
+        </button>
+        <div class="cm-pop-wrap">
+          <button class="icon-btn cm-iconbtn" id="fmInfraAddBtn" type="button" title="Add to the map" aria-expanded="false">
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </button>
+          <div class="cm-pop cm-pop-r" id="fmInfraAddPop" hidden>
+            <div class="cm-pop-head">Add to map</div>
+            <button class="icon-btn" id="fmAddPointBtn" type="button" style="width:100%;justify-content:flex-start" aria-pressed="false">
+              📍 Add point — pump, valve, shed, dam...
+            </button>
+            <button class="icon-btn" id="fmAddLineBtn" type="button" style="width:100%;justify-content:flex-start;margin-top:.3rem" aria-pressed="false">
+              📏 Draw irrigation line
+            </button>
+            <div style="font-size:.68rem;color:var(--ink-2);margin-top:.5rem">Then tap the map. A line: tap each bend, then Finish.</div>
+          </div>
+        </div>
       </div>
       <div id="mapWrap">
         <svg id="mapSvg" xmlns="http://www.w3.org/2000/svg">
@@ -3202,6 +3236,12 @@
       <div id="northmark" class="map-ui"><div class="arr">↑</div>N</div>
       <div id="whpLegend" class="map-ui" style="display:none"><span class="whp-swatch"></span><span class="whp-legend-txt"></span></div>
       <div class="banner" id="mapBanner" style="display:none"></div>
+      <div class="banner" id="fmLineToolbar" style="display:none;align-items:center;gap:.7rem">
+        <span id="fmLineToolbarInfo" style="flex:1 1 auto"></span>
+        <button class="icon-btn" id="fmLineUndo" type="button" title="Remove last point" style="color:var(--paper)">↶ Undo point</button>
+        <button class="btn-primary" id="fmLineFinish" type="button" style="padding:.3rem .8rem" disabled>Finish</button>
+        <button class="icon-btn" id="fmLineCancel" type="button" style="color:var(--paper)">Cancel</button>
+      </div>
 
       <aside id="panel">
         <button class="icon-btn close-x" id="panelClose">✕</button>
@@ -5260,6 +5300,50 @@
   </div>
 </div>
 
+<!-- Farm Map overlay feature — an irrigation line or a point marker (pump, riser, valve, tank,
+     shed, dam, ...). One form covers both; mfKindField/mfPipeField/mfLength toggle per shape. -->
+<div id="mfModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(480px,100%)" role="dialog" aria-modal="true" aria-labelledby="mfHead">
+    <button class="ap-x" id="mfClose" title="Close">✕</button>
+    <div class="ap-head" id="mfHead">Marker</div>
+    <label class="ap-field" id="mfKindField" style="margin-top:1.05rem"><span>Kind</span>
+      <select id="mfKind">
+        <option value="pump">Pump</option>
+        <option value="riser">Riser</option>
+        <option value="valve">Valve</option>
+        <option value="tank">Tank</option>
+        <option value="shed">Shed</option>
+        <option value="dam">Dam</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <label class="ap-field" id="mfPipeField" style="margin-top:1.05rem;display:none"><span>Pipe size</span>
+      <select id="mfPipeSize">
+        <option value="">—</option>
+        <option>13mm poly</option><option>19mm poly</option><option>25mm poly</option>
+        <option>32mm poly</option><option>40mm poly</option><option>50mm poly</option>
+        <option>63mm poly</option><option>75mm poly</option><option>90mm poly</option>
+        <option value="1&quot; PVC">1&quot; PVC</option><option value="1.5&quot; PVC">1.5&quot; PVC</option>
+        <option value="2&quot; PVC">2&quot; PVC</option><option value="3&quot; PVC">3&quot; PVC</option>
+        <option value="4&quot; PVC">4&quot; PVC</option>
+      </select>
+    </label>
+    <p class="sub" id="mfLength" style="margin:.6rem 0 0;display:none"></p>
+    <label class="ap-field" style="margin-top:1.05rem"><span>Label</span>
+      <input type="text" id="mfLabel" placeholder="e.g. Shed pump">
+    </label>
+    <label class="ap-field" style="margin-top:1.05rem"><span>Notes</span>
+      <textarea id="mfNotes" rows="2"></textarea>
+    </label>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="mfSave">Save</button>
+      <button class="btn-ghost" id="mfCancel">Cancel</button>
+      <span class="spacer" style="flex:1 1 auto"></span>
+      <button class="btn-danger" id="mfDelete" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script src="planner-shared.js"></script>
 <script>
 "use strict";
@@ -5362,7 +5446,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, mapFeatures:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -5441,7 +5525,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -5479,6 +5563,7 @@ async function loadAll(){
       fwFetch(CFG.tables.weatherObs),      // no weather table ⇒ irrigation page says so, rest unaffected
       fwFetch(CFG.tables.irrigEvents),
       fwFetch(CFG.tables.irrigSettings),
+      fwFetch(CFG.tables.mapFeatures),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -5639,6 +5724,9 @@ async function loadAll(){
     // view, so nothing downstream has to remember they exist.
     data.farmInfo = PlannerShared.parseFarmInfo(farmInfo).filter(e=>!e.archived);
 
+    // Farm Map overlay — irrigation lines + point markers (pumps, valves, sheds, dams, ...).
+    data.mapFeatures = PlannerShared.parseMapFeatures(mapFeatures);
+
     // Fertiliser programs — the shed page's three levels.
     data.fertPrograms = PlannerShared.parseFertPrograms(fertPrograms);
     data.fertRounds   = PlannerShared.parseFertRounds(fertRounds);
@@ -5760,6 +5848,12 @@ let placedCache = [];
 const FM_SAT_KEY="roseberry_satmap_v1";
 let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
 let fmInactiveOn=false;   // "Inactive" toggle — greys out beds whose planting should be in the ground by now but isn't (see plantingInactive)
+// Farm Map infrastructure overlay — irrigation lines + point markers. fmInfraMode is null while
+// just browsing (click an existing feature to edit it); "point"/"line" while placing a new one,
+// during which a plain map click places/extends the feature instead of opening the bed/block panel.
+let fmLinesOn=true, fmPointsOn=true, fmInfraMode=null, fmDrawPts=[];
+let mfEditingId=null, mfPendingShape=null, mfPendingPoints=null;
+const MF_KIND_GLYPH = { pump:"P", riser:"R", valve:"V", tank:"T", shed:"S", dam:"D", other:"•" };
 
 // Free-angle block rotation, to eyeball-align a block with the satellite photo. This is separate
 // from the "Rotate 90°" button, which flips the REAL "beds run vertical/horizontal" field the beds
@@ -6103,6 +6197,7 @@ function drawMap(placed, opts){
       maxX=Math.max(maxX,r.x+r.w);maxY=Math.max(maxY,r.y+r.h);
     });
   });
+  fmDrawInfra(g);
   if(minX===1e9){minX=0;minY=0;maxX=100;maxY=100;}
   worldBounds={minX,minY,maxX,maxY};
   const leg=document.getElementById("whpLegend");
@@ -6126,6 +6221,70 @@ function drawMap(placed, opts){
     });
     applyView();
   }
+}
+
+// Farm Map overlay — irrigation lines + point markers. Appended straight into <g id="mapG">
+// (world space, NOT inside any block's rotGrp) so it inherits the map's own pan/zoom for free and
+// stays independent of any one block's tilt. Removable/re-addable on its own (fmRefreshInfraLayer)
+// so toggling a layer or placing a point never has to redraw the whole farm map.
+function fmDrawInfra(g){
+  const layer=document.createElementNS(SVG,"g");
+  layer.setAttribute("class","mf-layer");
+  (data.mapFeatures||[]).forEach(f=>{
+    if(f.shape==="line"){
+      if(!fmLinesOn || !f.points || f.points.length<2) return;
+      const poly=document.createElementNS(SVG,"polyline");
+      poly.setAttribute("class","mf-line");
+      poly.setAttribute("points", f.points.map(p=>`${p.x},${p.y}`).join(" "));
+      poly.dataset.feature=f.id;
+      const len=PlannerShared.mapFeatureLength(f);
+      const ti=document.createElementNS(SVG,"title");
+      ti.textContent=`${f.label||"Irrigation line"}${f.detail?" · "+f.detail:""} · ${len.toFixed(1)} m`;
+      poly.appendChild(ti);
+      layer.appendChild(poly);
+    }else{
+      if(!fmPointsOn) return;
+      const pt=f.points && f.points[0]; if(!pt) return;
+      const grp=document.createElementNS(SVG,"g");
+      grp.setAttribute("class","mf-point");
+      grp.dataset.feature=f.id;
+      grp.setAttribute("transform",`translate(${pt.x},${pt.y})`);
+      const dot=document.createElementNS(SVG,"circle");
+      dot.setAttribute("class","mf-point-dot"); dot.setAttribute("r","1.3");
+      grp.appendChild(dot);
+      const txt=document.createElementNS(SVG,"text");
+      txt.setAttribute("class","mf-point-glyph");
+      txt.setAttribute("text-anchor","middle"); txt.setAttribute("dominant-baseline","central");
+      txt.setAttribute("font-size","1.4"); txt.setAttribute("y",".1");
+      txt.textContent=MF_KIND_GLYPH[f.kind]||MF_KIND_GLYPH.other;
+      grp.appendChild(txt);
+      const ti=document.createElementNS(SVG,"title");
+      ti.textContent=`${f.label||f.kind||"Marker"}${f.kind?" ("+f.kind+")":""}`;
+      grp.appendChild(ti);
+      layer.appendChild(grp);
+    }
+  });
+  // Live preview of a line still being drawn — draft colour, no click target.
+  if(fmInfraMode==="line" && fmDrawPts.length){
+    const poly=document.createElementNS(SVG,"polyline");
+    poly.setAttribute("class","mf-line-draft");
+    poly.setAttribute("points", fmDrawPts.map(p=>`${p.x},${p.y}`).join(" "));
+    layer.appendChild(poly);
+    fmDrawPts.forEach(p=>{
+      const c=document.createElementNS(SVG,"circle");
+      c.setAttribute("class","mf-line-draft-pt");
+      c.setAttribute("cx",p.x);c.setAttribute("cy",p.y);c.setAttribute("r",".6");
+      layer.appendChild(c);
+    });
+  }
+  g.appendChild(layer);
+}
+// Redraws just the overlay layer — used by the layer toggles, mode changes and every point added
+// while drawing a line, none of which need the (much heavier) full block/bed relayout.
+function fmRefreshInfraLayer(){
+  const g=document.getElementById("mapG"); if(!g) return;
+  const old=g.querySelector(".mf-layer"); if(old) old.remove();
+  fmDrawInfra(g);
 }
 
 function applyView(){
@@ -6593,13 +6752,19 @@ function fmScreenToWorld(clientX,clientY){
         downTarget=null;return;
       }
       if(!moved && !wasCancel){
-        const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
-        const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
-        const id=bedFrom(downTarget);
-        if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
-        else if(cropLink && id) fmOpenPlantingPanel(id);
-        else if(id) selectBed(id);
-        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
+        const featEl=downTarget.closest && downTarget.closest("[data-feature]");
+        if(fmInfraMode==="point"){ fmPlacePoint(fmScreenToWorld(e.clientX,e.clientY)); }
+        else if(fmInfraMode==="line"){ fmAddLinePoint(fmScreenToWorld(e.clientX,e.clientY)); }
+        else if(featEl){ fmOpenFeatureEditor(featEl.dataset.feature); }
+        else{
+          const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
+          const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
+          const id=bedFrom(downTarget);
+          if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
+          else if(cropLink && id) fmOpenPlantingPanel(id);
+          else if(id) selectBed(id);
+          else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
+        }
       }
       downTarget=null;
     }
@@ -6641,6 +6806,175 @@ async function fmCommitBlockDrag(key,grp){
     layoutAndDraw({keepView:true});
   }
 }
+
+/* ---------- Farm Map infrastructure overlay: CRUD + placement + editor ---------- */
+function $mf(id){ return document.getElementById(id); }
+
+async function mfCreate(fields){
+  const [rec]=await atCreate(CFG.farmBase, CFG.tables.mapFeatures, [fields]);
+  const parsed=PlannerShared.parseMapFeatures([rec])[0];
+  data.mapFeatures=(data.mapFeatures||[]).concat([parsed]);
+  return parsed;
+}
+async function mfUpdate(id, fields){
+  const rec=await atPatch(CFG.farmBase, CFG.tables.mapFeatures, id, fields);
+  const parsed=PlannerShared.parseMapFeatures([rec])[0];
+  data.mapFeatures=(data.mapFeatures||[]).filter(x=>x.id!==id).concat([parsed]);
+}
+async function mfRemove(id){
+  await atDelete(CFG.farmBase, CFG.tables.mapFeatures, [id]);
+  data.mapFeatures=(data.mapFeatures||[]).filter(x=>x.id!==id);
+}
+
+// One tap places a point immediately (no drag needed — it's a pin, not a shape) and hands
+// straight to the editor to name it. Placement is single-shot: the mode clears itself so a second
+// tap doesn't drop a second pin by accident.
+function fmPlacePoint(pt){
+  fmInfraMode=null; fmSyncInfraButtons(); fmRefreshInfraLayer();
+  mfPendingShape="point"; mfPendingPoints=[{x:Math.round(pt.x*10)/10, y:Math.round(pt.y*10)/10}];
+  mfOpenEditor(null);
+}
+function fmAddLinePoint(pt){
+  fmDrawPts.push({x:Math.round(pt.x*10)/10, y:Math.round(pt.y*10)/10});
+  fmRefreshInfraLayer(); fmUpdateLineToolbar();
+}
+function fmUndoLinePoint(){
+  fmDrawPts.pop();
+  fmRefreshInfraLayer(); fmUpdateLineToolbar();
+}
+function fmFinishLine(){
+  if(fmDrawPts.length<2) return;
+  mfPendingShape="line"; mfPendingPoints=fmDrawPts.slice();
+  fmInfraMode=null; fmDrawPts=[]; fmSyncInfraButtons(); fmRefreshInfraLayer();
+  mfOpenEditor(null);
+}
+function fmCancelLine(){
+  fmInfraMode=null; fmDrawPts=[]; fmSyncInfraButtons(); fmRefreshInfraLayer();
+}
+function fmUpdateLineToolbar(){
+  const bar=$mf("fmLineToolbar"); if(!bar) return;
+  const on=fmInfraMode==="line";
+  bar.style.display = on ? "flex" : "none";
+  if(!on) return;
+  let len=0; for(let i=1;i<fmDrawPts.length;i++) len+=Math.hypot(fmDrawPts[i].x-fmDrawPts[i-1].x, fmDrawPts[i].y-fmDrawPts[i-1].y);
+  $mf("fmLineToolbarInfo").textContent = `Drawing irrigation line — ${fmDrawPts.length} point${fmDrawPts.length===1?"":"s"} · ${len.toFixed(1)} m so far. Tap each bend, then Finish.`;
+  $mf("fmLineFinish").disabled = fmDrawPts.length<2;
+}
+function fmSyncInfraButtons(){
+  const pinBtn=$mf("fmAddPointBtn"), lineBtn=$mf("fmAddLineBtn"), wrap=$mf("mapWrap");
+  if(pinBtn) pinBtn.setAttribute("aria-pressed", fmInfraMode==="point"?"true":"false");
+  if(lineBtn) lineBtn.setAttribute("aria-pressed", fmInfraMode==="line"?"true":"false");
+  if(wrap) wrap.classList.toggle("map-infra-mode", !!fmInfraMode);
+  fmUpdateLineToolbar();
+}
+
+// Same form for both shapes — mfPendingShape/mfPendingPoints drive it for a new feature, an
+// existing feature (passed in) drives it for editing. mfEditingId null ⇒ Save creates.
+function mfOpenEditor(existing){
+  mfEditingId = existing ? existing.id : null;
+  const isLine = existing ? existing.shape==="line" : mfPendingShape==="line";
+  $mf("mfHead").textContent = existing ? (isLine?"Edit irrigation line":"Edit marker") : (isLine?"New irrigation line":"New marker");
+  $mf("mfKindField").style.display = isLine ? "none" : "";
+  $mf("mfPipeField").style.display = isLine ? "" : "none";
+  $mf("mfLength").style.display = isLine ? "" : "none";
+  if(isLine){
+    const len=PlannerShared.mapFeatureLength({points: existing ? existing.points : mfPendingPoints});
+    $mf("mfLength").textContent = `Length on the map: ${len.toFixed(1)} m`;
+    $mf("mfPipeSize").value = existing ? (existing.detail||"") : "";
+  }else{
+    $mf("mfKind").value = existing ? (existing.kind||"other") : "pump";
+  }
+  $mf("mfLabel").value = existing ? (existing.label||"") : "";
+  $mf("mfNotes").value = existing ? (existing.notes||"") : "";
+  $mf("mfDelete").style.display = existing ? "" : "none";
+  $mf("mfModal").classList.add("open");
+  $mf("mfModal").setAttribute("aria-hidden","false");
+}
+function mfCloseEditor(){
+  $mf("mfModal").classList.remove("open");
+  $mf("mfModal").setAttribute("aria-hidden","true");
+  mfEditingId=null; mfPendingShape=null; mfPendingPoints=null;
+}
+function fmOpenFeatureEditor(id){
+  const f=(data.mapFeatures||[]).find(x=>x.id===id);
+  if(f) mfOpenEditor(f);
+}
+async function mfSaveFromForm(){
+  const existing = mfEditingId ? (data.mapFeatures||[]).find(x=>x.id===mfEditingId) : null;
+  const isLine = existing ? existing.shape==="line" : mfPendingShape==="line";
+  const F=CFG.f;
+  const fields = isLine
+    ? { [F.mf_detail]: $mf("mfPipeSize").value, [F.mf_label]: $mf("mfLabel").value.trim(), [F.mf_notes]: $mf("mfNotes").value.trim() }
+    : { [F.mf_kind]: $mf("mfKind").value, [F.mf_label]: $mf("mfLabel").value.trim(), [F.mf_notes]: $mf("mfNotes").value.trim() };
+  const btn=$mf("mfSave"); btn.disabled=true;
+  try{
+    if(mfEditingId){
+      await mfUpdate(mfEditingId, fields);
+    }else{
+      fields[F.mf_shape]=isLine?"line":"point";
+      fields[F.mf_points]=mfPendingPoints;
+      await mfCreate(fields);
+    }
+    mfCloseEditor();
+    fmRefreshInfraLayer();
+  }catch(e){
+    console.error(e); alert("Couldn't save that:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+async function mfDeleteFromForm(){
+  if(!mfEditingId) return;
+  if(!confirm("Delete this from the Farm Map? This can't be undone.")) return;
+  const btn=$mf("mfDelete"); btn.disabled=true;
+  try{
+    await mfRemove(mfEditingId);
+    mfCloseEditor();
+    fmRefreshInfraLayer();
+  }catch(e){
+    console.error(e); alert("Couldn't delete that:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const linesBtn=$mf("fmLinesBtn");
+  if(linesBtn) linesBtn.addEventListener("click",()=>{
+    fmLinesOn=!fmLinesOn; linesBtn.setAttribute("aria-pressed", fmLinesOn?"true":"false"); fmRefreshInfraLayer();
+  });
+  const pointsBtn=$mf("fmPointsBtn");
+  if(pointsBtn) pointsBtn.addEventListener("click",()=>{
+    fmPointsOn=!fmPointsOn; pointsBtn.setAttribute("aria-pressed", fmPointsOn?"true":"false"); fmRefreshInfraLayer();
+  });
+  const addBtn=$mf("fmInfraAddBtn"), addPop=$mf("fmInfraAddPop");
+  if(addBtn && addPop){
+    addBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const open=addPop.hidden;
+      addPop.hidden=!open;
+      addBtn.setAttribute("aria-expanded", open?"true":"false");
+    });
+    addPop.addEventListener("click",e=>e.stopPropagation());
+    document.addEventListener("click",()=>{ addPop.hidden=true; addBtn.setAttribute("aria-expanded","false"); });
+  }
+  const addPointBtn=$mf("fmAddPointBtn");
+  if(addPointBtn) addPointBtn.addEventListener("click",()=>{
+    fmInfraMode = fmInfraMode==="point" ? null : "point";
+    fmDrawPts=[]; if(addPop) addPop.hidden=true;
+    fmSyncInfraButtons(); fmRefreshInfraLayer();
+  });
+  const addLineBtn=$mf("fmAddLineBtn");
+  if(addLineBtn) addLineBtn.addEventListener("click",()=>{
+    fmInfraMode = fmInfraMode==="line" ? null : "line";
+    fmDrawPts=[]; if(addPop) addPop.hidden=true;
+    fmSyncInfraButtons(); fmRefreshInfraLayer();
+  });
+  const lineFinish=$mf("fmLineFinish"); if(lineFinish) lineFinish.addEventListener("click", fmFinishLine);
+  const lineUndo=$mf("fmLineUndo"); if(lineUndo) lineUndo.addEventListener("click", fmUndoLinePoint);
+  const lineCancel=$mf("fmLineCancel"); if(lineCancel) lineCancel.addEventListener("click", fmCancelLine);
+
+  const mfClose=$mf("mfClose"), mfCancel=$mf("mfCancel"), mfSave=$mf("mfSave"), mfDeleteBtn=$mf("mfDelete");
+  if(mfClose) mfClose.addEventListener("click", mfCloseEditor);
+  if(mfCancel) mfCancel.addEventListener("click", mfCloseEditor);
+  if(mfSave) mfSave.addEventListener("click", mfSaveFromForm);
+  if(mfDeleteBtn) mfDeleteBtn.addEventListener("click", mfDeleteFromForm);
+});
 document.addEventListener("DOMContentLoaded",()=>{
   const satBtn=document.getElementById("fmSatBtn"), satPop=document.getElementById("fmSatPop");
   if(satBtn && satPop){
