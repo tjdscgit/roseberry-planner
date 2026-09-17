@@ -3302,7 +3302,7 @@
               <button data-cmcolor="type" aria-pressed="false">By type</button>
             </div>
             <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.6rem;cursor:pointer">
-              <input type="checkbox" id="cmWarnOnly"> ! Warnings only — blocks with a known bed issue
+              <input type="checkbox" id="cmWarnOnly"> ! Show bed-issue warnings on bars
             </label>
           </div>
         </div>
@@ -7045,7 +7045,7 @@ let cmBulkState = null;        // {weights, proposals, skipped} while the Auto-p
 let cmViewApplied = false;
 let cmViewMode = "map";   // the design opens on the tiled, fitted board
 let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-family colour)
-let cmWarnOnly = false;   // Filters ▸ "Warnings only" — narrows the board to blocks with a live bed-issue conflict
+let cmWarnOnly = false;   // Filters ▸ "Show bed-issue warnings" — toggles the "!" badge on bars with a live bed-issue conflict
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -7722,10 +7722,11 @@ function cmDrawBlockBars(grid, beds, plantings){
 
     bar.dataset.pid=p.id;
     const bedCount=(p.bedIds||[]).length;
-    // Persistent warning badge — same advisory check the drag-preview badge (highlightFits) runs,
-    // but shown at rest so a known bed-issue conflict is visible without having to pick the
-    // planting up first. This is what the Filters ▸ Warnings-only toggle is narrowing down to.
-    const barIssues=bedIssuesForCrop(beds[run.start].id, p.cropId, planWindow(p));
+    // Warning badge — same advisory check the drag-preview badge (highlightFits) runs, but shown
+    // at rest, on the bar itself, only once Filters ▸ Warnings-only is switched on (otherwise every
+    // bar with any recorded issue would carry the mark all the time, which is more noise than the
+    // toggle is meant to add).
+    const barIssues=cmWarnOnly ? bedIssuesForCrop(beds[run.start].id, p.cropId, planWindow(p)) : [];
     let warnBadge="";
     if(barIssues.length){
       bar.classList.add("cm-bar-warn");
@@ -8069,25 +8070,19 @@ function buildCropMap(){
   if(cmSelectedBlock && !keys.includes(cmSelectedBlock)) cmSelectedBlock=null; // stale (renamed/removed) → fall back to "All"
   // mobile-only: a picked block narrows the view to just that block; desktop always sees every
   // block regardless of a stale cmSelectedBlock left over from a mobile session on this browser
-  let activeKeys = (cmSelectedBlock && cmIsMobile()) ? [cmSelectedBlock] : keys;
+  const activeKeys = (cmSelectedBlock && cmIsMobile()) ? [cmSelectedBlock] : keys;
 
   // Plantings are drawn per BLOCK, not per bed: a planting that takes four beds is one rectangle
   // four columns wide, the way it actually occupies the ground. Keying on bedIds[0] (what this
   // did before) drew it in its first bed only, so the other three read as empty.
-  // "Warnings only" (cmWarnOnly) narrows this to plantings that actually have a live bed-issue
-  // conflict on that bed — same advisory check bedIssuesForCrop already runs while dragging — so
-  // the board collapses down to just what needs a second look, same idea as the Farm Map's own
-  // block chips narrowing what's on screen.
   const perBlock={};
   (data.plantingsActive||[]).forEach(p=>{
     (p.bedIds||[]).forEach(bid=>{
       const bed=(data.beds||[]).find(b=>b.id===bid); if(!bed) return;
-      if(cmWarnOnly && !bedIssuesForCrop(bed.id, p.cropId, planWindow(p)).length) return;
       const key=bed.block||"—";
       (perBlock[key] ||= new Set()).add(p);
     });
   });
-  if(cmWarnOnly) activeKeys = activeKeys.filter(key=>(perBlock[key]||new Set()).size);
 
   // arrange blocks in a roughly square grid (same ceil(sqrt(n)) approach as the Farm Map's
   // auto-layout) so the Crop Map bunches up like the farm, instead of one long vertical list
