@@ -7195,17 +7195,12 @@ function paintSidebar(rail){
 function renderSidebar(){ paintSidebar(currentRail); }
 
 /* ---------- Views ---------- */
-function showView(view){
-  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-  const el=document.getElementById("view-"+view); if(el) el.classList.add("active");
-
-  currentView = view;
-  const rail = VIEW_RAIL[view];
-  if(rail && rail!==currentRail){ currentRail=rail; renderSidebar(); }
-  else { renderSidebar(); }                    // same rail, different row: just refresh highlights
-  document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
-    b.setAttribute("aria-selected", b.dataset.rail===currentRail ? "true":"false"));
-
+// The actual per-view rebuild, split out of showView() so anything that just changed the
+// underlying data (a save, an edit dialog closing) can re-render whichever view is CURRENTLY on
+// screen the same way navigating to it fresh would — without also re-touching the sidebar/rail
+// highlighting or (for the Farm map) re-fitting the pan/zoom, which showView() itself still does
+// on an actual navigation.
+function renderViewContent(view){
   if(view==="map") fitView();
   if(view==="cropmap") buildCropMap();
   if(view==="timeline") buildTimeline();
@@ -7231,6 +7226,19 @@ function showView(view){
   if(view==="fertcalc") buildFertCalc();
   if(view==="irrig") buildIrrig();
   if(view==="fertcost") buildFertCost();
+}
+function showView(view){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  const el=document.getElementById("view-"+view); if(el) el.classList.add("active");
+
+  currentView = view;
+  const rail = VIEW_RAIL[view];
+  if(rail && rail!==currentRail){ currentRail=rail; renderSidebar(); }
+  else { renderSidebar(); }                    // same rail, different row: just refresh highlights
+  document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
+    b.setAttribute("aria-selected", b.dataset.rail===currentRail ? "true":"false"));
+
+  renderViewContent(view);
 }
 
 /* Rail click shows that destination's FIRST view, which is also what the list panel opens on.
@@ -8593,6 +8601,10 @@ function buildCropMap(){
   // grower panned it.
   if(!cmViewApplied){ cmViewApplied=true; setCmViewMode(cmViewMode); }
   cmRenderPendingOverlay();   // no-op unless an Auto-place review is open (see cmBulkState)
+  if(cmSelectedPlantingId){
+    const fresh=(data.plantings||[]).find(x=>x.id===cmSelectedPlantingId);
+    fresh ? cmOpenPanel(fresh) : cmClosePanel();
+  }
 }
 
 /* The assign panel, grouped by crop. A flat list of every unplaced succession is unreadable at
@@ -11293,15 +11305,21 @@ function tlClosePanel(){
   tlSelectedPlantingId=null;
   document.getElementById("tlPanel").classList.remove("open");
 }
-// Crop Map's own detail panel — mobile taps a bar/chip to open this instead of dragging it
-// (see buildCropMap/buildUnassigned); reuses tlRenderPanel like Timeline/Week planner do, with
-// the bed-picker section turned on since Crop Map has no other way to reassign a bed without drag.
+// Crop Map's own detail panel — a bar/chip click opens this (see buildCropMap/buildUnassigned);
+// reuses tlRenderPanel like Timeline/Week planner do, with the bed-picker section turned on since
+// Crop Map has no other way to reassign a bed without drag. cmSelectedPlantingId mirrors
+// tlSelectedPlantingId — re-synced at the end of buildCropMap() so a save made from the panel's
+// own Edit Planting button (which reloads then rebuilds the map) doesn't leave the still-open
+// panel showing the pre-save planting.
+let cmSelectedPlantingId=null;
 function cmOpenPanel(p){
+  cmSelectedPlantingId=p.id;
   const panel=document.getElementById("cmPanel");
   tlRenderPanel(p, panel, cmClosePanel, {showBedPicker:true});
   panel.classList.add("open");
 }
 function cmClosePanel(){
+  cmSelectedPlantingId=null;
   document.getElementById("cmPanel").classList.remove("open");
 }
 function tlKv(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`; }
@@ -12719,7 +12737,7 @@ async function apDoCreate(){
     }
     apClose();
     await loadAll();
-    if(document.getElementById("view-timeline").classList.contains("active")) buildTimeline();
+    renderViewContent(currentView);
   }catch(e){
     console.error(e); msg.style.color="var(--clay)";
     msg.textContent="Couldn't create: "+e.message;
@@ -12729,7 +12747,7 @@ async function apDoCreate(){
 async function apReloadAndClose(){
   apClose();
   await loadAll();
-  if(document.getElementById("view-timeline").classList.contains("active")) buildTimeline();
+  renderViewContent(currentView);
 }
 
 async function apDoSave(){
