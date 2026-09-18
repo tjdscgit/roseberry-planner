@@ -7419,6 +7419,11 @@ function showView(view){
   document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
     b.setAttribute("aria-selected", b.dataset.rail===currentRail ? "true":"false"));
 
+  // The rail's global reload button is hidden on Today and This week specifically (design call,
+  // not a data-freshness concern — pull-to-refresh/backgrounding still reloads normally).
+  const reloadBtn=document.getElementById("reloadBtn");
+  if(reloadBtn) reloadBtn.style.display = (view==="today"||view==="week") ? "none" : "";
+
   renderViewContent(view);
 }
 
