@@ -2218,6 +2218,14 @@
     #view-week .wk-menu-divider{margin:.4rem 4px}
     #view-week .wk-add-group{display:flex;flex:1 1 100%;gap:.4rem}
     #view-week .wk-add-group button{flex:1 1 0;font-size:.8rem;padding:.55rem .3rem;justify-content:center}
+    /* Today's sort control and This week's ⋯ menu (Board mode) / filter+⋯ pair (Calendar mode)
+       move into the exact fixed top-right corner the reload icon vacated when it was hidden on
+       these two views (see showView's reloadBtn toggle) — pulling them fully out of the title row
+       rather than leaving them in place once nothing else shares that corner. */
+    #view-today .vw-title #tdSortSelect{position:fixed;top:0;right:4px;height:44px;
+      line-height:44px;padding-left:.7rem;z-index:41}
+    #view-week .vw-title #wkMoreBtn{position:fixed;top:0;right:4px;height:40px;z-index:41}
+    #view-week .wk-daily-icons{position:fixed;top:0;right:4px;height:40px;margin-top:0;z-index:41}
     /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
        @media(max-width:760px) block at the very end of this stylesheet. The field-walk base rules
        are declared after this block, so at equal specificity they would win the cascade and
