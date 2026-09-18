@@ -1591,6 +1591,9 @@
   /* Farm Map's SVG twin — the <pattern>'s stroke is currentColor, so this sets the ink */
   .tarp-pattern{color:var(--tarp-a)}
   .bed-tarp{opacity:.9}
+  /* Seam between two crops splitting one bed's pill (see drawMap) — just enough contrast to read
+     as "two things", not a border loud enough to compete with either crop's own colour. */
+  .bed-seam{stroke:rgba(0,0,0,.35);stroke-width:.15;pointer-events:none}
   /* Withholding-period hatch — warning colour, drawn over a bed still inside a spray WHP today. */
   .whp-pattern{color:var(--clay)}
   .bed-whp{opacity:.85}
@@ -6063,25 +6066,12 @@ function drawMap(placed, opts){
     rotGrp.appendChild(lab);
 
     p.beds.forEach(r=>{
-      const b=r.bed, pl=b.planting;
-      const cell=document.createElementNS(SVG,"rect");
-      cell.setAttribute("class","bed");cell.dataset.bed=b.id;
-      cell.setAttribute("x",r.x);cell.setAttribute("y",r.y);
-      cell.setAttribute("width",r.w);cell.setAttribute("height",r.h);
-      cell.setAttribute("rx",".4");
-      const inactive = fmInactiveOn && typeof plantingInactive==="function" && plantingInactive(pl);
-      if(inactive){
-        cell.setAttribute("fill","var(--ink-2)");
-        cell.style.opacity=".4";
-        cell.classList.add("bed-inactive");
-      }
-      else if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
-      else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
-      else cell.style.fill = "var(--empty-bed)";
-      rotGrp.appendChild(cell);
+      const b=r.bed, pl=b.planting, tall=r.h>r.w;
 
       // "under tarp right now" overlay. The farm map is a snapshot of today, so unlike the Crop
       // Map and Timeline (which show whole date ranges) this only draws for a tarp covering today.
+      // Drawn against the WHOLE bed regardless of how many crops are splitting its pill below —
+      // tarp/WHP status covers the ground itself, not any one occupant's share of it.
       const tarpNow = tarpOnBedAt(b.id);
       if(tarpNow){
         const ov=document.createElementNS(SVG,"rect");
@@ -6116,81 +6106,157 @@ function drawMap(placed, opts){
         rotGrp.appendChild(ov);
       }
 
-      // "behind schedule" flag — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
-      // due date has passed with Status not advanced to match). Appended as a tspan INSIDE the bed
-      // label below (not a separately-positioned badge) so it automatically inherits the label's
-      // exact position and upright-correction rotation — it always sits right next to the crop
-      // name and reads the same direction as the rest of the text, at any tilt.
-      const behind = pl && typeof tlIsBehind==="function" && tlIsBehind(pl);
-
-      // label: bed name, plus the crop currently in it, laid along the bed's long axis
-      const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
-      const cropTxt = (pl && pl.crop && pl.crop!=="—") ? pl.crop : "";
-      const t=document.createElementNS(SVG,"text");
-      t.setAttribute("class","bed-label");
-      t.setAttribute("x",cx);t.setAttribute("y",cy);
-      t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
-      // font sized to the bed's short dimension so it never overflows the width
-      const fontSize=Math.min((tall?r.w:r.h)*0.58, 2.7);
-      t.setAttribute("font-size", fontSize.toFixed(2));
-      // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
-      // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
-      // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
-      // upside-down, so flip it 180° right here rather than leaving it to be deciphered on a tilt.
-      let labelAngle = (tall?-90:0) + rotDeg;
-      labelAngle = ((labelAngle%360)+360)%360;
-      const flip = labelAngle>FM_LABEL_FLIP_THRESHOLD && labelAngle<360-FM_LABEL_FLIP_THRESHOLD;
-      const baseRot = tall ? -90 : 0;
-      const finalRot = flip ? baseRot+180 : baseRot;
-      if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
-      if(cropTxt){
-        // Crop name is its own tspan so it (and only it) can be clicked separately from the bed
-        // name — pointer-events:auto here overrides the parent <text>'s pointer-events:none, so a
-        // click lands on this tspan specifically and opens the planting panel (see fmOpenPlantingPanel
-        // in the pointerup handler) instead of falling through to the bed panel.
-        const nameSpan=document.createElementNS(SVG,"tspan");
-        nameSpan.textContent=`${b.name} · `;
-        t.appendChild(nameSpan);
-        const cropSpan=document.createElementNS(SVG,"tspan");
-        cropSpan.setAttribute("class","bed-croplabel");
-        cropSpan.dataset.bed=b.id;
-        cropSpan.textContent=cropTxt;
-        t.appendChild(cropSpan);
+      // Concurrent occupants — an outgoing crop not yet pulled alongside an incoming one already
+      // in the ground. b.plantings (rebuildDerived) lists every planting actually OCCUPIED on this
+      // bed right now; a plain single occupant (the overwhelmingly common case) skips all of this
+      // and renders exactly as before, full-width, real bed metres or not — bm only matters once
+      // there's more than one crop actually competing for the same ground to split between.
+      const multi = b.plantings && b.plantings.length>1;
+      let segs;
+      if(multi){
+        const bedLen = (tall?r.h:r.w) || 1;
+        const known=b.plantings.filter(o=>o.bm>0), unknown=b.plantings.filter(o=>!(o.bm>0));
+        const knownSum=known.reduce((s,o)=>s+o.bm,0);
+        const shareEach = unknown.length ? Math.max(0,bedLen-knownSum)/unknown.length : 0;
+        let fracs=b.plantings.map(o=>(o.bm>0?o.bm:shareEach)/bedLen);
+        // Scale down (never up) so several generously-recorded bm's can never overflow the bed's
+        // real length — same rule the Crop Map's own bed-share bars use (cmDrawBlockBars). Left
+        // under 100%, the remainder is simply left as empty ground (the base rect below it), which
+        // is the honest answer when the recorded metres don't actually add up to the whole bed.
+        const total=fracs.reduce((s,f)=>s+f,0);
+        if(total>1) fracs=fracs.map(f=>f/total);
+        let cursor=0;
+        segs=b.plantings.map((o,i)=>{
+          const frac=Math.max(0,fracs[i]);
+          const seg = tall
+            ? {x:r.x, y:r.y+cursor*r.h, w:r.w, h:frac*r.h}
+            : {x:r.x+cursor*r.w, y:r.y, w:frac*r.w, h:r.h};
+          cursor+=frac;
+          return {sr:seg, pl:o, showBedName:i===0};
+        });
       }else{
-        t.textContent = b.name;
+        segs=[{sr:r, pl, showBedName:true}];
       }
-      rotGrp.appendChild(t);
-      if(behind){
-        // Estimated rather than measured (t.getBBox()): the map can redraw while the Farm map view
-        // itself is hidden (a background data-sync refresh, or before the user has switched to this
-        // tab), and getBBox() throws on an element inside a display:none subtree — that silently
-        // fell back to a fixed corner position every time in practice. A monospace char-count
-        // estimate has no such dependency on the view actually being visible/laid out.
-        const fullText = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
-        const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
-        const bx=cx+textHalfWidth+.5, by=cy;
-        const br=Math.min(Math.min(r.w,r.h)*0.28, 1.0);
-        const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
-        const badgeGrp=document.createElementNS(SVG,"g");
-        badgeGrp.setAttribute("class","bed-behind-badge");
-        // Stored for the tap handler below — SVG <title> only shows on mouse hover, never on
-        // touch, so a phone tapping the badge needs its own way to surface the same explanation.
-        badgeGrp.dataset.reason=reasonTxt;
-        if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
-        const dot=document.createElementNS(SVG,"circle");
-        dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
-        const ti=document.createElementNS(SVG,"title");
-        ti.textContent=reasonTxt;
-        dot.appendChild(ti);
-        badgeGrp.appendChild(dot);
-        const bt=document.createElementNS(SVG,"text");
-        bt.setAttribute("class","bed-behind-badge-txt");
-        bt.setAttribute("x",bx+br);bt.setAttribute("y",by);
-        bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
-        bt.setAttribute("font-size",(br*1.3).toFixed(2));
-        bt.textContent="!";
-        badgeGrp.appendChild(bt);
-        rotGrp.appendChild(badgeGrp);
+
+      // Base rect for the whole bed — the "empty ground" colour shows through wherever a split
+      // bed's segments don't add up to the full length (see fracs above). For the single-occupant
+      // case this is simply painted over completely by that one segment, so it never shows.
+      if(multi){
+        const base=document.createElementNS(SVG,"rect");
+        base.setAttribute("class","bed");base.dataset.bed=b.id;
+        base.setAttribute("x",r.x);base.setAttribute("y",r.y);
+        base.setAttribute("width",r.w);base.setAttribute("height",r.h);
+        base.setAttribute("rx",".4");base.style.fill="var(--empty-bed)";
+        rotGrp.appendChild(base);
+      }
+
+      segs.forEach(({sr,pl,showBedName})=>{
+        const cell=document.createElementNS(SVG,"rect");
+        cell.setAttribute("class","bed");cell.dataset.bed=b.id;
+        cell.setAttribute("x",sr.x);cell.setAttribute("y",sr.y);
+        cell.setAttribute("width",sr.w);cell.setAttribute("height",sr.h);
+        cell.setAttribute("rx",".4");
+        const inactive = fmInactiveOn && typeof plantingInactive==="function" && plantingInactive(pl);
+        if(inactive){
+          cell.setAttribute("fill","var(--ink-2)");
+          cell.style.opacity=".4";
+          cell.classList.add("bed-inactive");
+        }
+        else if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
+        else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
+        else cell.style.fill = "var(--empty-bed)";
+        rotGrp.appendChild(cell);
+
+        // "behind schedule" flag — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
+        // due date has passed with Status not advanced to match). Appended as a tspan INSIDE the
+        // bed label below (not a separately-positioned badge) so it automatically inherits the
+        // label's exact position and upright-correction rotation — it always sits right next to
+        // the crop name and reads the same direction as the rest of the text, at any tilt.
+        const behind = pl && typeof tlIsBehind==="function" && tlIsBehind(pl);
+
+        // label: bed name (first segment only) plus this segment's own crop, laid along the long axis
+        const cx=sr.x+sr.w/2, cy=sr.y+sr.h/2;
+        const cropTxt = (pl && pl.crop && pl.crop!=="—") ? pl.crop : "";
+        const t=document.createElementNS(SVG,"text");
+        t.setAttribute("class","bed-label");
+        t.setAttribute("x",cx);t.setAttribute("y",cy);
+        t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
+        // font sized to the bed's short dimension so it never overflows the width
+        const fontSize=Math.min((tall?sr.w:sr.h)*0.58, 2.7);
+        t.setAttribute("font-size", fontSize.toFixed(2));
+        // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
+        // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
+        // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
+        // upside-down, so flip it 180° right here rather than leaving it to be deciphered on a tilt.
+        let labelAngle = (tall?-90:0) + rotDeg;
+        labelAngle = ((labelAngle%360)+360)%360;
+        const flip = labelAngle>FM_LABEL_FLIP_THRESHOLD && labelAngle<360-FM_LABEL_FLIP_THRESHOLD;
+        const baseRot = tall ? -90 : 0;
+        const finalRot = flip ? baseRot+180 : baseRot;
+        if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
+        if(cropTxt){
+          // Crop name is its own tspan so it (and only it) can be clicked separately from the bed
+          // name — pointer-events:auto here overrides the parent <text>'s pointer-events:none, so a
+          // click lands on this tspan specifically and opens the planting panel (see fmOpenPlantingPanel
+          // in the pointerup handler) instead of falling through to the bed panel. dataset.planting
+          // says WHICH occupant this segment is, so a split bed opens the right one, not always b.planting.
+          if(showBedName){
+            const nameSpan=document.createElementNS(SVG,"tspan");
+            nameSpan.textContent=`${b.name} · `;
+            t.appendChild(nameSpan);
+          }
+          const cropSpan=document.createElementNS(SVG,"tspan");
+          cropSpan.setAttribute("class","bed-croplabel");
+          cropSpan.dataset.bed=b.id;
+          cropSpan.dataset.planting=pl.id;
+          cropSpan.textContent=cropTxt;
+          t.appendChild(cropSpan);
+        }else{
+          t.textContent = showBedName ? b.name : "";
+        }
+        rotGrp.appendChild(t);
+        if(behind){
+          // Estimated rather than measured (t.getBBox()): the map can redraw while the Farm map view
+          // itself is hidden (a background data-sync refresh, or before the user has switched to this
+          // tab), and getBBox() throws on an element inside a display:none subtree — that silently
+          // fell back to a fixed corner position every time in practice. A monospace char-count
+          // estimate has no such dependency on the view actually being visible/laid out.
+          const fullText = (showBedName ? `${b.name} · ` : "") + cropTxt;
+          const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
+          const bx=cx+textHalfWidth+.5, by=cy;
+          const br=Math.min(Math.min(sr.w,sr.h)*0.28, 1.0);
+          const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
+          const badgeGrp=document.createElementNS(SVG,"g");
+          badgeGrp.setAttribute("class","bed-behind-badge");
+          // Stored for the tap handler below — SVG <title> only shows on mouse hover, never on
+          // touch, so a phone tapping the badge needs its own way to surface the same explanation.
+          badgeGrp.dataset.reason=reasonTxt;
+          if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
+          const dot=document.createElementNS(SVG,"circle");
+          dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
+          const ti=document.createElementNS(SVG,"title");
+          ti.textContent=reasonTxt;
+          dot.appendChild(ti);
+          badgeGrp.appendChild(dot);
+          const bt=document.createElementNS(SVG,"text");
+          bt.setAttribute("class","bed-behind-badge-txt");
+          bt.setAttribute("x",bx+br);bt.setAttribute("y",by);
+          bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
+          bt.setAttribute("font-size",(br*1.3).toFixed(2));
+          bt.textContent="!";
+          badgeGrp.appendChild(bt);
+          rotGrp.appendChild(badgeGrp);
+        }
+      });
+      // A thin seam at each internal boundary, so two adjacent segments read as distinct crops
+      // rather than one gradient-ish pill — same idea as the Crop Map's own shared-bar highlight.
+      if(multi) for(let i=1;i<segs.length;i++){
+        const s=segs[i].sr;
+        const seam=document.createElementNS(SVG,"line");
+        seam.setAttribute("class","bed-seam");
+        if(tall){ seam.setAttribute("x1",s.x);seam.setAttribute("x2",s.x+s.w);seam.setAttribute("y1",s.y);seam.setAttribute("y2",s.y); }
+        else{ seam.setAttribute("x1",s.x);seam.setAttribute("x2",s.x);seam.setAttribute("y1",s.y);seam.setAttribute("y2",s.y+s.h); }
+        rotGrp.appendChild(seam);
       }
 
       minX=Math.min(minX,r.x);minY=Math.min(minY,r.y);
@@ -6470,26 +6536,33 @@ function selectBed(id){
   document.getElementById("pBlock").textContent = b.block?("Block "+b.block):"Unassigned block";
   document.getElementById("pBed").textContent = b.name;
   const body=document.getElementById("pBody");
-  const pl=b.planting;
+  // Usually one occupant; b.plantings (rebuildDerived) lists every planting actually OCCUPIED on
+  // this bed right now, which is >1 for a relay/overlap between an outgoing and incoming crop —
+  // same case the map's own split pill (drawMap) is showing. Falls back to the single headline
+  // planting (which may not be OCCUPIED, e.g. still "Planned") so an empty/planned bed is unchanged.
+  const occupants = (b.plantings && b.plantings.length) ? b.plantings : (b.planting ? [b.planting] : []);
   let html="";
   html+=`<div class="kv"><span class="k">Length</span><span class="v">${b.len!=null?b.len+" m":"—"}</span></div>`;
   html+=`<div class="kv"><span class="k">Width</span><span class="v">${b.wid!=null?b.wid+" m":"—"}</span></div>`;
   if(b.soil) html+=`<div class="kv"><span class="k">Soil</span><span class="v">${esc(b.soil)}</span></div>`;
-  if(pl){
-    const col=cropColor(pl.cropId||pl.crop);
-    html+=`<div class="sect-h">Current planting</div>`;
-    const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
-    if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
-    html+=`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`;
-    html+=`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status||"—")}</span></span></div>`;
-    html+=`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`;
-    if(pl.tp) html+=`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`;
-    html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
-    html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
+  if(occupants.length){
+    occupants.forEach(pl=>{
+      const col=cropColor(pl.cropId||pl.crop);
+      const label = occupants.length>1 ? `Current planting${pl.bm>0?" · "+pl.bm+" m":""}` : "Current planting";
+      html+=`<div class="sect-h">${esc(label)}</div>`;
+      const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
+      if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
+      html+=`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`;
+      html+=`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status||"—")}</span></span></div>`;
+      html+=`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`;
+      if(pl.tp) html+=`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`;
+      html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
+      html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
+    });
   }else{
     html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
   }
-  html+=fmReferenceHTML(b, pl);
+  html+=fmReferenceHTML(b, b.planting||occupants[0]||null);
   body.innerHTML=html;
   document.getElementById("panel").classList.add("open");
 }
@@ -6498,12 +6571,17 @@ function closePanel(){document.getElementById("panel").classList.remove("open");
 
 // Clicking a bed's crop-name text opens the planting-detail panel (shared with Timeline/Crop
 // map/Week planner via tlRenderPanel) instead of the bed panel a plain click on the bed opens.
-function fmOpenPlantingPanel(bedId){
+// plantingId is only passed when the bed's pill is split between more than one occupant (see
+// drawMap) — the click has to say WHICH crop-name span was hit rather than falling back to the
+// bed's single "headline" planting, or every segment would open the same one.
+function fmOpenPlantingPanel(bedId, plantingId){
   const b=(data.beds||[]).find(x=>x.id===bedId);
-  if(!b || !b.planting) return;
+  if(!b) return;
+  const pl = plantingId ? (data.plantings||[]).find(x=>x.id===plantingId) : b.planting;
+  if(!pl) return;
   closePanel();
   const panel=document.getElementById("fmPlantingPanel");
-  tlRenderPanel(b.planting, panel, fmClosePlantingPanel);
+  tlRenderPanel(pl, panel, fmClosePlantingPanel);
   panel.classList.add("open");
 }
 function fmClosePlantingPanel(){
@@ -6648,6 +6726,9 @@ function fmScreenToWorld(clientX,clientY){
   let dragLabelKey=null,dragLabelEl=null,dragLabelStart=null,dragLabelOrig=null;
 
   function bedFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.bed)return el.dataset.bed;el=el.parentNode;}return null;}
+  // Which occupant's own crop-name tspan was hit, when a bed's pill is split between more than
+  // one (see drawMap) — walked separately from bedFrom since the same click target carries both.
+  function plantingFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.planting)return el.dataset.planting;el=el.parentNode;}return null;}
   function blockFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.block)return el.dataset.block;el=el.parentNode;}return null;}
 
   wrap.addEventListener("pointerdown",e=>{
@@ -6761,7 +6842,7 @@ function fmScreenToWorld(clientX,clientY){
           const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
           const id=bedFrom(downTarget);
           if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
-          else if(cropLink && id) fmOpenPlantingPanel(id);
+          else if(cropLink && id) fmOpenPlantingPanel(id, plantingFrom(downTarget));
           else if(id) selectBed(id);
           else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
         }
@@ -7446,6 +7527,7 @@ function rebuildDerived(){
   rebuildActivePlantings();          // parked plantings must not win a bed's headline slot
   const groundStart=r=>r.tp||r.sow||"";
   const byBed={};
+  const occByBed={};   // bed id -> every CURRENTLY-OCCUPIED planting on it (see b.plantings below)
   // EVERY bed the planting is on, not just bedIds[0]. A four-bed garlic occupies four beds, so all
   // four must name it as their occupant — keying on the first bed left the other three reading as
   // empty ground in drawMap, the Beds table and the spray bed picker. Same bug the crop map and
@@ -7454,13 +7536,23 @@ function rebuildDerived(){
     (rec.bedIds||[]).forEach(bid=>{
       if(!bid) return;
       const cur=byBed[bid];
-      if(!cur){byBed[bid]=rec;return;}
-      const better=OCCUPIED.has(rec.status)&&!OCCUPIED.has(cur.status);
-      const newer=groundStart(rec)>groundStart(cur);
-      if(better||(OCCUPIED.has(rec.status)===OCCUPIED.has(cur.status)&&newer)) byBed[bid]=rec;
+      if(!cur){byBed[bid]=rec;}
+      else{
+        const better=OCCUPIED.has(rec.status)&&!OCCUPIED.has(cur.status);
+        const newer=groundStart(rec)>groundStart(cur);
+        if(better||(OCCUPIED.has(rec.status)===OCCUPIED.has(cur.status)&&newer)) byBed[bid]=rec;
+      }
+      if(OCCUPIED.has(rec.status)) (occByBed[bid] ||= []).push(rec);
     });
   });
-  data.beds.forEach(b=>b.planting=byBed[b.id]||null);
+  data.beds.forEach(b=>{
+    b.planting=byBed[b.id]||null;
+    // Every planting actually in the ground on this bed right now — a relay/overlap between an
+    // outgoing and incoming crop means more than one. b.planting above stays the single "headline"
+    // occupant every OTHER view (Beds table, spray picker, etc.) already reads; this is additive,
+    // read only by the Farm Map to split a bed's pill between simultaneous occupants (drawMap).
+    b.plantings=(occByBed[b.id]||[]).slice().sort((a,c)=>groundStart(a).localeCompare(groundStart(c)));
+  });
 }
 
 // map a date string to a y-pixel within the current year's Jan1→Dec31 track (clamped)
