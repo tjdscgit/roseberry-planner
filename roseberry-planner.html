@@ -6106,19 +6106,22 @@ function drawMap(placed, opts){
         rotGrp.appendChild(ov);
       }
 
-      // Concurrent occupants — an outgoing crop not yet pulled alongside an incoming one already
-      // in the ground. b.plantings (rebuildDerived) lists every planting actually OCCUPIED on this
-      // bed right now; a plain single occupant (the overwhelmingly common case) skips all of this
-      // and renders exactly as before, full-width, real bed metres or not — bm only matters once
-      // there's more than one crop actually competing for the same ground to split between.
-      const multi = b.plantings && b.plantings.length>1;
+      // Occupant(s) — usually one, but a bed can have more than one planting actually OCCUPIED
+      // (b.plantings, from rebuildDerived) when an outgoing crop hasn't been pulled yet alongside
+      // an incoming one already in the ground. Either way, each occupant's own recorded bed metres
+      // sizes its share of the pill against the bed's real length — a 7.5m planting in a 15m bed
+      // colours half of it, whether or not anything else is sharing the other half. An occupant
+      // with no bm recorded is treated as "fills whatever's left" (shareEach below), which for the
+      // ordinary single-occupant case with no bm at all means the whole bed, same as always.
+      const occupants = (b.plantings && b.plantings.length) ? b.plantings : (pl ? [pl] : []);
+      const multi = occupants.length>1;
       let segs;
-      if(multi){
+      if(occupants.length){
         const bedLen = (tall?r.h:r.w) || 1;
-        const known=b.plantings.filter(o=>o.bm>0), unknown=b.plantings.filter(o=>!(o.bm>0));
+        const known=occupants.filter(o=>o.bm>0), unknown=occupants.filter(o=>!(o.bm>0));
         const knownSum=known.reduce((s,o)=>s+o.bm,0);
         const shareEach = unknown.length ? Math.max(0,bedLen-knownSum)/unknown.length : 0;
-        let fracs=b.plantings.map(o=>(o.bm>0?o.bm:shareEach)/bedLen);
+        let fracs=occupants.map(o=>(o.bm>0?o.bm:shareEach)/bedLen);
         // Scale down (never up) so several generously-recorded bm's can never overflow the bed's
         // real length — same rule the Crop Map's own bed-share bars use (cmDrawBlockBars). Left
         // under 100%, the remainder is simply left as empty ground (the base rect below it), which
@@ -6126,7 +6129,7 @@ function drawMap(placed, opts){
         const total=fracs.reduce((s,f)=>s+f,0);
         if(total>1) fracs=fracs.map(f=>f/total);
         let cursor=0;
-        segs=b.plantings.map((o,i)=>{
+        segs=occupants.map((o,i)=>{
           const frac=Math.max(0,fracs[i]);
           const seg = tall
             ? {x:r.x, y:r.y+cursor*r.h, w:r.w, h:frac*r.h}
@@ -6135,13 +6138,14 @@ function drawMap(placed, opts){
           return {sr:seg, pl:o, showBedName:i===0};
         });
       }else{
-        segs=[{sr:r, pl, showBedName:true}];
+        segs=[{sr:r, pl:null, showBedName:true}];
       }
 
-      // Base rect for the whole bed — the "empty ground" colour shows through wherever a split
-      // bed's segments don't add up to the full length (see fracs above). For the single-occupant
-      // case this is simply painted over completely by that one segment, so it never shows.
-      if(multi){
+      // Base rect for the whole bed — the "empty ground" colour shows through wherever the
+      // occupant(s)' recorded bm doesn't add up to the bed's full length (see fracs above). Fully
+      // painted over when it does (an unrecorded bm defaults to the whole bed, same as always), so
+      // this never shows for the ordinary case.
+      if(occupants.length){
         const base=document.createElementNS(SVG,"rect");
         base.setAttribute("class","bed");base.dataset.bed=b.id;
         base.setAttribute("x",r.x);base.setAttribute("y",r.y);
