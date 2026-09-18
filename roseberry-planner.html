@@ -3194,6 +3194,19 @@
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 2.6c-2.87 0-5.2 2.2-5.2 5.2 0 3.85 5.2 9.4 5.2 9.4s5.2-5.55 5.2-9.4c0-3-2.33-5.2-5.2-5.2z"/><circle cx="10" cy="7.8" r="1.7" fill="none"/></svg>
         </button>
         <div class="cm-pop-wrap">
+          <button class="icon-btn cm-iconbtn" id="fmColorBtn" type="button" title="Colour beds by" aria-expanded="false">
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true" fill="none"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="6.4" r="1.5" fill="currentColor" stroke="none"/><circle cx="6.4" cy="11.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="13.6" cy="11.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <div class="cm-pop cm-pop-r" id="fmColorPop" hidden>
+            <div class="cm-pop-head">Colour beds by</div>
+            <div class="seg" id="fmColorToggle" role="tablist">
+              <button data-fmcolor="crop" aria-pressed="true">Crop</button>
+              <button data-fmcolor="milestone" aria-pressed="false">Milestone</button>
+            </div>
+            <div id="fmColorLegend" style="display:none;margin-top:.6rem"></div>
+          </div>
+        </div>
+        <div class="cm-pop-wrap">
           <button class="icon-btn cm-iconbtn" id="fmInfraAddBtn" type="button" title="Add to the map" aria-expanded="false">
             <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
           </button>
@@ -5855,6 +5868,7 @@ let fmInactiveOn=false;   // "Inactive" toggle — greys out beds whose planting
 // just browsing (click an existing feature to edit it); "point"/"line" while placing a new one,
 // during which a plain map click places/extends the feature instead of opening the bed/block panel.
 let fmLinesOn=true, fmPointsOn=true, fmInfraMode=null, fmDrawPts=[];
+let fmColorMode="crop";  // "crop" (default) | "milestone" — colours every bed's pill by lifecycle stage (STATUS_COLORS) instead of by crop
 let mfEditingId=null, mfPendingShape=null, mfPendingPoints=null;
 const MF_KIND_GLYPH = { pump:"P", riser:"R", valve:"V", tank:"T", shed:"S", dam:"D", other:"•" };
 
@@ -6166,6 +6180,10 @@ function drawMap(placed, opts){
           cell.style.opacity=".4";
           cell.classList.add("bed-inactive");
         }
+        // "By milestone" colours every occupied stage distinctly (same STATUS_COLORS the status
+        // pills already use elsewhere), full-saturation regardless of OCCUPIED — the whole point is
+        // seeing Planned vs Seeded vs In ground at a glance, not just "here" vs "not here yet".
+        else if(pl && fmColorMode==="milestone") cell.setAttribute("fill", statusColor(pl.status));
         else if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
         else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
         else cell.style.fill = "var(--empty-bed)";
@@ -6404,6 +6422,17 @@ function hexToRgba(hex,alpha){ // translucent version, for washes laid *behind* 
 const STATUS_COLORS={planned:"#9AA39B",seeded:"#2F6FB0","in ground":"#3F7D46",harvesting:"#7A4FA0",finished:"#C97A2B"};
 function statusColor(status){
   return STATUS_COLORS[String(status||"").trim().toLowerCase()] || "#9AA39B";
+}
+// Farm Map's Colour-by-milestone legend — shown in the fmColorPop popover only while that mode is
+// active, since it's meaningless (and just clutter) while colouring by crop instead.
+function fmSyncColorLegend(){
+  const el=document.getElementById("fmColorLegend"); if(!el) return;
+  if(fmColorMode!=="milestone"){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="block";
+  el.innerHTML=["Planned","Seeded","In ground","Harvesting","Finished"].map(label=>
+    `<div style="display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--ink-2);margin-bottom:.2rem">`
+    +`<span style="width:.8rem;height:.8rem;border-radius:2px;flex:0 0 auto;background:${statusColor(label)}"></span>${esc(label)}</div>`
+  ).join("");
 }
 // canonical lifecycle order, used to map a status to how many tasks are done (shared, see planner-shared.js)
 const { STATUS_ORDER, statusRank } = PlannerShared;
@@ -7070,6 +7099,24 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(pointsBtn) pointsBtn.addEventListener("click",()=>{
     fmPointsOn=!fmPointsOn; pointsBtn.setAttribute("aria-pressed", fmPointsOn?"true":"false"); fmRefreshInfraLayer();
   });
+  const colorBtn=$mf("fmColorBtn"), colorPop=$mf("fmColorPop");
+  if(colorBtn && colorPop){
+    colorBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const open=colorPop.hidden;
+      colorPop.hidden=!open;
+      colorBtn.setAttribute("aria-expanded", open?"true":"false");
+    });
+    colorPop.addEventListener("click",e=>e.stopPropagation());
+    document.addEventListener("click",()=>{ colorPop.hidden=true; colorBtn.setAttribute("aria-expanded","false"); });
+  }
+  fmSyncColorLegend();
+  $mf("fmColorToggle")?.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    fmColorMode=b.dataset.fmcolor;
+    $mf("fmColorToggle").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    fmSyncColorLegend();
+    layoutAndDraw({keepView:true});
+  }));
   const addBtn=$mf("fmInfraAddBtn"), addPop=$mf("fmInfraAddPop");
   if(addBtn && addPop){
     addBtn.addEventListener("click",e=>{
