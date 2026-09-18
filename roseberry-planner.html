@@ -6562,6 +6562,9 @@ function selectBed(id){
       if(pl.tp) html+=`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`;
       html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
       html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
+      const msItems=tlMilestoneItemsHTML(pl);
+      html+=`<div class="sect-h">Milestones</div>`;
+      html+=`<div class="tl-qa fm-milestones" data-pid="${esc(pl.id)}">${msItems.map(i=>i.html).join("")}</div>`;
       html+=`<button type="button" class="btn-primary fm-edit-planting" data-pid="${esc(pl.id)}" style="width:100%;justify-content:center;margin-top:.5rem">Edit Planting</button>`;
     });
   }else{
@@ -6575,6 +6578,38 @@ function selectBed(id){
       const pl=(data.plantings||[]).find(x=>x.id===btn.dataset.pid);
       if(pl) apOpenEdit(pl);
     };
+  });
+  // Milestone checkboxes — same wkToggleMilestone stepper tlRenderPanel's own TASKS section uses.
+  // A milestone can flip a planting in/out of b.plantings (e.g. ticking "Finished" removes it from
+  // the bed's current occupants), so this redraws the map itself too, not just the sidebar text.
+  const msAssigneeField={sowAssignee:"pl_sowAssignee",tpAssignee:"pl_tpAssignee",h1Assignee:"pl_h1Assignee",h2Assignee:"pl_h2Assignee"};
+  body.querySelectorAll(".fm-milestones").forEach(box=>{
+    const pid=box.dataset.pid;
+    box.querySelectorAll("input[data-df]").forEach(cb=>{
+      cb.onclick=e=>{
+        e.preventDefault(); if(cb.disabled) return;
+        wkToggleMilestone(pid, cb.dataset.df).then(()=>{
+          rebuildDerived();
+          layoutAndDraw({keepView:true});
+          selectBed(id);
+        });
+      };
+    });
+    box.querySelectorAll("select[data-ms-assignee]").forEach(sel=>{
+      sel.onchange=async e=>{
+        const akey=sel.dataset.msAssignee;
+        let val=e.target.value;
+        if(val==="__add__"){
+          val=(prompt("New assignee name:")||"").trim();
+          if(!val){ selectBed(id); return; }
+        }
+        const pl2=(data.plantings||[]).find(x=>x.id===pid); if(!pl2) return;
+        const prev=pl2[akey]; pl2[akey]=val;
+        try{ await atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f[msAssigneeField[akey]]]: val||null}); }
+        catch(err){ pl2[akey]=prev; alert("Couldn't save assignee: "+err.message); }
+        selectBed(id);
+      };
+    });
   });
   document.getElementById("panel").classList.add("open");
 }
@@ -11427,6 +11462,33 @@ function cmClosePanel(){
   document.getElementById("cmPanel").classList.remove("open");
 }
 function tlKv(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`; }
+// Milestone checklist HTML for one planting's lifecycle steps (Sown/Transplanted/Harvest started/
+// Finished) — same stepper rule and markup tlRenderPanel's own TASKS section uses, pulled out here
+// so the Farm Map's bed sidebar (selectBed) can show the same checkboxes without needing the rest
+// of that panel's layout (custom task list, row spacing, nursery, etc.).
+function tlMilestoneItemsHTML(p){
+  const lc=apLifecycle(p.tp?"transplant":"direct");
+  const curRank=statusRank(p.status);
+  const msAssigneeKey={sow:"sowAssignee",tp:"tpAssignee",h1:"h1Assignee",h2:"h2Assignee"};
+  return lc.map(t=>{
+    const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
+    const dateStr = p[t.df] ? fmt(p[t.df]) : "";
+    const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
+    const assigneeChoices=knownAssignees();
+    if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
+    const assigneeSelect=`<select class="tl-qa-assignee-select" data-ms-assignee="${akey}" title="Assignee">`
+      +`<option value=""${!curAssignee?" selected":""}>+ Assign…</option>`
+      +assigneeChoices.map(a=>`<option value="${esc(a)}"${a===curAssignee?" selected":""}>${esc(a)}</option>`).join("")
+      +`<option value="__add__">+ Add new…</option></select>`;
+    return { date:p[t.df]||"", html:`<div class="tl-qa-row tl-qa-task-row milestone${locked?" locked":""}">`
+      +`<label class="tl-qa-check">`
+        +`<input type="checkbox" ${done?"checked":""} ${locked?"disabled":""} data-df="${t.df}">`
+        +`<span class="tl-qa-label">${esc(t.label)}${dateStr?`<span class="tl-qa-date">${esc(dateStr)}</span>`:""}</span>`
+      +`</label>`
+      +assigneeSelect
+      +`</div>` };
+  });
+}
 // Renders the read-only planting-detail summary into ANY panel element (Timeline's own #tlPanel,
 // or the weekly planner's #wkPanel — see wkOpenPlantingPanel) — so both views share one
 // implementation instead of two near-duplicates. `closeFn` lets each caller wire its own close
