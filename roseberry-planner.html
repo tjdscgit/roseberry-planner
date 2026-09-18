@@ -6558,12 +6558,20 @@ function selectBed(id){
       if(pl.tp) html+=`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`;
       html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
       html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
+      html+=`<button type="button" class="btn-primary fm-edit-planting" data-pid="${esc(pl.id)}" style="width:100%;justify-content:center;margin-top:.5rem">Edit Planting</button>`;
     });
   }else{
     html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
   }
   html+=fmReferenceHTML(b, b.planting||occupants[0]||null);
   body.innerHTML=html;
+  // Delegated rather than wired inline — innerHTML above just replaced these buttons wholesale.
+  body.querySelectorAll(".fm-edit-planting").forEach(btn=>{
+    btn.onclick=()=>{
+      const pl=(data.plantings||[]).find(x=>x.id===btn.dataset.pid);
+      if(pl) apOpenEdit(pl);
+    };
+  });
   document.getElementById("panel").classList.add("open");
 }
 function closePanel(){document.getElementById("panel").classList.remove("open");
