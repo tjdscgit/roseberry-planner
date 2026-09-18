@@ -605,7 +605,7 @@
   /* ---- Detail panel ---- */
   #panel{
     position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);
-    background:var(--paper);border-left:1px solid var(--line-2);
+    background:var(--paper-2);border-left:1px solid var(--line-2);
     box-shadow:var(--shadow);transform:translateX(105%);
     transition:transform .22s ease;z-index:20;display:flex;flex-direction:column;
   }
@@ -614,7 +614,7 @@
      text opens this (the shared tlRenderPanel planting detail) instead of the bed panel. */
   #fmPlantingPanel{
     position:absolute;top:0;right:0;bottom:0;width:min(340px,86vw);
-    background:var(--paper);border-left:1px solid var(--line-2);
+    background:var(--paper-2);border-left:1px solid var(--line-2);
     box-shadow:var(--shadow);transform:translateX(105%);
     transition:transform .22s ease;z-index:21;display:flex;flex-direction:column;overflow-y:auto;
   }
@@ -624,7 +624,8 @@
   .panel-head .blk{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em}
   .panel-body{padding:.4rem 1rem 1rem;overflow:auto}
   .close-x{position:absolute;top:.7rem;right:.8rem}
-  .kv{display:flex;justify-content:space-between;gap:1rem;padding:.42rem 0;border-bottom:1px solid var(--line);font-size:.86rem}
+  .kv{display:flex;justify-content:space-between;gap:1rem;padding:.42rem .6rem;
+    background:var(--paper);border-radius:8px;margin-bottom:.3rem;font-size:.86rem}
   .kv .k{color:var(--ink-2)}
   .kv .v{font-family:var(--mono);text-align:right}
   .tl-actual-note{display:block;font-size:.72rem;color:var(--ink-2);font-family:var(--sans,inherit)}
@@ -1590,9 +1591,24 @@
   /* Farm Map's SVG twin — the <pattern>'s stroke is currentColor, so this sets the ink */
   .tarp-pattern{color:var(--tarp-a)}
   .bed-tarp{opacity:.9}
+  /* Seam between two crops splitting one bed's pill (see drawMap) — just enough contrast to read
+     as "two things", not a border loud enough to compete with either crop's own colour. */
+  .bed-seam{stroke:rgba(0,0,0,.35);stroke-width:.15;pointer-events:none}
   /* Withholding-period hatch — warning colour, drawn over a bed still inside a spray WHP today. */
   .whp-pattern{color:var(--clay)}
   .bed-whp{opacity:.85}
+  /* Farm Map overlay — irrigation lines + point markers. Drawn straight into <g id="mapG">
+     (world space), not inside any block's rotGrp, since they're farm-wide fixtures independent
+     of any one block's tilt. Real-world length comes straight from the points' own coordinates
+     (mapFeatureLength) — nothing here scales or transforms them beyond the map's own pan/zoom. */
+  .mf-line{fill:none;stroke:var(--steel);stroke-width:.32;stroke-linecap:round;stroke-linejoin:round;cursor:pointer}
+  .mf-line:hover{stroke-width:.6}
+  .mf-line-draft{fill:none;stroke:var(--clay);stroke-width:.4;stroke-dasharray:.8 .6;pointer-events:none}
+  .mf-line-draft-pt{fill:var(--clay);pointer-events:none}
+  .mf-point{cursor:pointer}
+  .mf-point-dot{fill:var(--steel);stroke:var(--paper);stroke-width:.2}
+  .mf-point-glyph{fill:#fff;font-weight:800;font-family:var(--mono);pointer-events:none}
+  #mapWrap.map-infra-mode{cursor:crosshair}
   #whpLegend{bottom:2.7rem;left:.7rem;display:flex;align-items:center;gap:.35rem;
     font-family:var(--mono);font-size:.6rem;color:var(--ink-2);
     background:rgba(247,245,239,.86);padding:.22rem .45rem;border-radius:6px}
@@ -1642,6 +1658,15 @@
   /* A bed split lengthwise between two-or-more plantings (by bed-metres) — see cmDrawBlockBars.
      The lighter edge reads as "this is a partial share of the bed", not a full-width planting. */
   .cm-bar-shared{box-shadow:0 1px 2px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.35)}
+  /* Persistent "this bar has a known bed-issue conflict" marker — same advisory contract as the
+     drag-time badges above, but shown at rest so it doesn't take picking the planting up to see.
+     What the Filters ▸ Warnings-only toggle narrows the board down to. */
+  .cm-bar-warn{outline:1.5px solid var(--clay);outline-offset:-1.5px}
+  /* Same round badge as the Timeline's "behind schedule" mark (.tl-bar-warn) — a plain "!", not
+     the ⚠ emoji, which renders inconsistently (and often ugly) across platform emoji fonts. */
+  .cm-bar-warnmark{position:absolute;right:2px;top:2px;width:14px;height:14px;border-radius:50%;
+    background:#C0392B;color:#fff;font-size:.62rem;font-weight:800;font-family:var(--mono);
+    line-height:14px;text-align:center;z-index:2;box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
     box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-seg{position:absolute;left:0;right:0;z-index:1}
@@ -1812,6 +1837,8 @@
   .tl-panel-actions .btn-primary{flex:1 1 auto}
   .tl-fail-banner{background:rgba(192,57,43,.14);border:1px solid rgba(192,57,43,.4);color:var(--clay);
     border-radius:8px;padding:.5rem .7rem;font-size:.78rem;font-weight:600;margin:.8rem 0}
+  .fi-soil-banner{background:rgba(58,138,158,.14);border:1px solid rgba(58,138,158,.4);color:var(--steel);
+    border-radius:8px;padding:.5rem .7rem;font-size:.78rem;font-weight:600;margin:0 0 .8rem}
   .tl-bedpick{display:flex;flex-direction:column;gap:.3rem;max-height:220px;overflow:auto}
   .tl-bedpick-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;
     padding:.45rem .6rem;border:1px solid var(--line-2);border-radius:8px;background:var(--paper-2);
@@ -1864,10 +1891,11 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal,#znModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal,#mfModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open{display:flex}
   #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
+  #mfModal{z-index:70}   /* opened from on top of the Farm Map's own bed/block panels */
   .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
     padding:.45rem .1rem;border-bottom:1px solid var(--line)}
   .zn-parked-row:last-child{border-bottom:none}
@@ -3129,11 +3157,14 @@
         <span class="sub" id="mapSummary"></span>
         <span class="spacer"></span>
         <button class="icon-btn cm-iconbtn" id="fmMoveBtn" type="button" title="Drag blocks to match their real field position" aria-pressed="false">
-          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 3v14M3 10h14M6 6.4L10 3l4 3.4M6 13.6L10 17l4-3.4M6.4 6L3 10l3.4 4M13.6 6L17 10l-3.4 4"/></svg>
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M7 9V4.8a1.3 1.3 0 012.6 0V9m0-1.2a1.3 1.3 0 012.6 0V9m0-.6a1.3 1.3 0 012.6 0v4.2a4 4 0 01-4 4h-2a3.4 3.4 0 01-2.7-1.4L5 12.6a1.3 1.3 0 012-1.6l1.2 1.2"/></svg>
+        </button>
+        <button class="icon-btn cm-iconbtn" id="fmInactiveBtn" type="button" title="Grey out plantings that should be in the ground by now but haven't been marked as planted" aria-pressed="false">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><circle cx="10" cy="10" r="6.4" stroke-dasharray="2.2 1.8"/><path d="M4 16l12-12"/></svg>
         </button>
         <div class="cm-pop-wrap">
           <button class="icon-btn cm-iconbtn" id="fmSatBtn" type="button" title="Satellite underlay" aria-expanded="false">
-            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3 8.4l3.4-3.4 9 9-3.4 3.4z"/><path d="M9 2.4L3 8.4M17.6 11L11.6 17"/><path d="M13 6.4l1.6-1.6M14.6 9.6l1.6-1.6"/></svg>
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true" fill="none"><path d="M3 4.4l4.3-1.4 5.4 1.8 4.3-1.4v12.4l-4.3 1.4-5.4-1.8-4.3 1.4z" stroke-linejoin="round"/><path d="M7.3 3v12.4M12.7 4.8v12.4"/></svg>
           </button>
           <div class="cm-pop cm-pop-r" id="fmSatPop" hidden>
             <div class="cm-pop-head">Satellite underlay</div>
@@ -3154,6 +3185,40 @@
               <div style="font-size:.68rem;color:var(--ink-2);margin-bottom:.5rem">Drag the image on the map to position it. Use Width to scale it until beds line up. Lock it once it's aligned.</div>
               <button class="icon-btn" id="fmSatRemove" type="button" style="width:100%;justify-content:center">Remove image</button>
             </div>
+          </div>
+        </div>
+        <button class="icon-btn cm-iconbtn" id="fmLinesBtn" type="button" title="Show/hide irrigation lines" aria-pressed="true">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M4 16L16 4"/><circle cx="4" cy="16" r="1.3" fill="currentColor" stroke="none"/><circle cx="16" cy="4" r="1.3" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button class="icon-btn cm-iconbtn" id="fmPointsBtn" type="button" title="Show/hide markers (pumps, valves, sheds, ...)" aria-pressed="true">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 2.6c-2.87 0-5.2 2.2-5.2 5.2 0 3.85 5.2 9.4 5.2 9.4s5.2-5.55 5.2-9.4c0-3-2.33-5.2-5.2-5.2z"/><circle cx="10" cy="7.8" r="1.7" fill="none"/></svg>
+        </button>
+        <div class="cm-pop-wrap">
+          <button class="icon-btn cm-iconbtn" id="fmColorBtn" type="button" title="Colour beds by" aria-expanded="false">
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true" fill="none"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="6.4" r="1.5" fill="currentColor" stroke="none"/><circle cx="6.4" cy="11.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="13.6" cy="11.5" r="1.5" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <div class="cm-pop cm-pop-r" id="fmColorPop" hidden>
+            <div class="cm-pop-head">Colour beds by</div>
+            <div class="seg" id="fmColorToggle" role="tablist">
+              <button data-fmcolor="crop" aria-pressed="true">Crop</button>
+              <button data-fmcolor="milestone" aria-pressed="false">Milestone</button>
+            </div>
+            <div id="fmColorLegend" style="display:none;margin-top:.6rem"></div>
+          </div>
+        </div>
+        <div class="cm-pop-wrap">
+          <button class="icon-btn cm-iconbtn" id="fmInfraAddBtn" type="button" title="Add to the map" aria-expanded="false">
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+          </button>
+          <div class="cm-pop cm-pop-r" id="fmInfraAddPop" hidden>
+            <div class="cm-pop-head">Add to map</div>
+            <button class="icon-btn" id="fmAddPointBtn" type="button" style="width:100%;justify-content:flex-start" aria-pressed="false">
+              📍 Add point — pump, valve, shed, dam...
+            </button>
+            <button class="icon-btn" id="fmAddLineBtn" type="button" style="width:100%;justify-content:flex-start;margin-top:.3rem" aria-pressed="false">
+              📏 Draw irrigation line
+            </button>
+            <div style="font-size:.68rem;color:var(--ink-2);margin-top:.5rem">Then tap the map. A line: tap each bend, then Finish.</div>
           </div>
         </div>
       </div>
@@ -3187,6 +3252,12 @@
       <div id="northmark" class="map-ui"><div class="arr">↑</div>N</div>
       <div id="whpLegend" class="map-ui" style="display:none"><span class="whp-swatch"></span><span class="whp-legend-txt"></span></div>
       <div class="banner" id="mapBanner" style="display:none"></div>
+      <div class="banner" id="fmLineToolbar" style="display:none;align-items:center;gap:.7rem">
+        <span id="fmLineToolbarInfo" style="flex:1 1 auto"></span>
+        <button class="icon-btn" id="fmLineUndo" type="button" title="Remove last point" style="color:var(--paper)">↶ Undo point</button>
+        <button class="btn-primary" id="fmLineFinish" type="button" style="padding:.3rem .8rem" disabled>Finish</button>
+        <button class="icon-btn" id="fmLineCancel" type="button" style="color:var(--paper)">Cancel</button>
+      </div>
 
       <aside id="panel">
         <button class="icon-btn close-x" id="panelClose">✕</button>
@@ -3289,6 +3360,12 @@
               <button data-cmcolor="crop" aria-pressed="true">By crop</button>
               <button data-cmcolor="type" aria-pressed="false">By type</button>
             </div>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.6rem;cursor:pointer">
+              <input type="checkbox" id="cmWarnOnly"> ! Show behind-schedule warnings on bars
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.4rem;cursor:pointer">
+              <input type="checkbox" id="cmInactiveOn"> Grey out inactive plantings — should be in the ground by now, isn't
+            </label>
           </div>
         </div>
         <span class="spacer"></span>
@@ -4209,6 +4286,8 @@
         <span class="sub" id="fiSummary">Notes, SOPs, reports and documents</span>
         <span class="spacer"></span>
         <span class="fi-clip" id="fiCount"></span>
+        <input type="file" id="fiSoilFileInput" accept=".csv,.txt,.pdf,image/*" style="display:none">
+        <button class="btn-ghost" id="fiSoilImportBtn" type="button" title="Read a soil test lab report (CSV, PDF or photo) with Claude and create one tagged entry per sample">🧪 Import soil test</button>
         <button class="btn-primary" id="fiNewBtn" type="button">＋ New entry</button>
       </div>
       <div class="fi-main" id="fiMain">
@@ -5237,6 +5316,50 @@
   </div>
 </div>
 
+<!-- Farm Map overlay feature — an irrigation line or a point marker (pump, riser, valve, tank,
+     shed, dam, ...). One form covers both; mfKindField/mfPipeField/mfLength toggle per shape. -->
+<div id="mfModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(480px,100%)" role="dialog" aria-modal="true" aria-labelledby="mfHead">
+    <button class="ap-x" id="mfClose" title="Close">✕</button>
+    <div class="ap-head" id="mfHead">Marker</div>
+    <label class="ap-field" id="mfKindField" style="margin-top:1.05rem"><span>Kind</span>
+      <select id="mfKind">
+        <option value="pump">Pump</option>
+        <option value="riser">Riser</option>
+        <option value="valve">Valve</option>
+        <option value="tank">Tank</option>
+        <option value="shed">Shed</option>
+        <option value="dam">Dam</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <label class="ap-field" id="mfPipeField" style="margin-top:1.05rem;display:none"><span>Pipe size</span>
+      <select id="mfPipeSize">
+        <option value="">—</option>
+        <option>13mm poly</option><option>19mm poly</option><option>25mm poly</option>
+        <option>32mm poly</option><option>40mm poly</option><option>50mm poly</option>
+        <option>63mm poly</option><option>75mm poly</option><option>90mm poly</option>
+        <option value="1&quot; PVC">1&quot; PVC</option><option value="1.5&quot; PVC">1.5&quot; PVC</option>
+        <option value="2&quot; PVC">2&quot; PVC</option><option value="3&quot; PVC">3&quot; PVC</option>
+        <option value="4&quot; PVC">4&quot; PVC</option>
+      </select>
+    </label>
+    <p class="sub" id="mfLength" style="margin:.6rem 0 0;display:none"></p>
+    <label class="ap-field" style="margin-top:1.05rem"><span>Label</span>
+      <input type="text" id="mfLabel" placeholder="e.g. Shed pump">
+    </label>
+    <label class="ap-field" style="margin-top:1.05rem"><span>Notes</span>
+      <textarea id="mfNotes" rows="2"></textarea>
+    </label>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="mfSave">Save</button>
+      <button class="btn-ghost" id="mfCancel">Cancel</button>
+      <span class="spacer" style="flex:1 1 auto"></span>
+      <button class="btn-danger" id="mfDelete" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script src="planner-shared.js"></script>
 <script>
 "use strict";
@@ -5345,7 +5468,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, mapFeatures:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -5424,7 +5547,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -5462,6 +5585,7 @@ async function loadAll(){
       fwFetch(CFG.tables.weatherObs),      // no weather table ⇒ irrigation page says so, rest unaffected
       fwFetch(CFG.tables.irrigEvents),
       fwFetch(CFG.tables.irrigSettings),
+      fwFetch(CFG.tables.mapFeatures),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -5622,6 +5746,9 @@ async function loadAll(){
     // view, so nothing downstream has to remember they exist.
     data.farmInfo = PlannerShared.parseFarmInfo(farmInfo).filter(e=>!e.archived);
 
+    // Farm Map overlay — irrigation lines + point markers (pumps, valves, sheds, dams, ...).
+    data.mapFeatures = PlannerShared.parseMapFeatures(mapFeatures);
+
     // Fertiliser programs — the shed page's three levels.
     data.fertPrograms = PlannerShared.parseFertPrograms(fertPrograms);
     data.fertRounds   = PlannerShared.parseFertRounds(fertRounds);
@@ -5742,6 +5869,14 @@ let placedCache = [];
 /* ---------- Satellite underlay (localStorage — per-device, not synced to Airtable) ---------- */
 const FM_SAT_KEY="roseberry_satmap_v1";
 let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
+let fmInactiveOn=false;   // "Inactive" toggle — greys out beds whose planting should be in the ground by now but isn't (see plantingInactive)
+// Farm Map infrastructure overlay — irrigation lines + point markers. fmInfraMode is null while
+// just browsing (click an existing feature to edit it); "point"/"line" while placing a new one,
+// during which a plain map click places/extends the feature instead of opening the bed/block panel.
+let fmLinesOn=true, fmPointsOn=true, fmInfraMode=null, fmDrawPts=[];
+let fmColorMode="crop";  // "crop" (default) | "milestone" — colours every bed's pill by lifecycle stage (STATUS_COLORS) instead of by crop
+let mfEditingId=null, mfPendingShape=null, mfPendingPoints=null;
+const MF_KIND_GLYPH = { pump:"P", riser:"R", valve:"V", tank:"T", shed:"S", dam:"D", other:"•" };
 
 // Free-angle block rotation, to eyeball-align a block with the satellite photo. This is separate
 // from the "Rotate 90°" button, which flips the REAL "beds run vertical/horizontal" field the beds
@@ -5951,19 +6086,12 @@ function drawMap(placed, opts){
     rotGrp.appendChild(lab);
 
     p.beds.forEach(r=>{
-      const b=r.bed, pl=b.planting;
-      const cell=document.createElementNS(SVG,"rect");
-      cell.setAttribute("class","bed");cell.dataset.bed=b.id;
-      cell.setAttribute("x",r.x);cell.setAttribute("y",r.y);
-      cell.setAttribute("width",r.w);cell.setAttribute("height",r.h);
-      cell.setAttribute("rx",".4");
-      if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
-      else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
-      else cell.style.fill = "var(--empty-bed)";
-      rotGrp.appendChild(cell);
+      const b=r.bed, pl=b.planting, tall=r.h>r.w;
 
       // "under tarp right now" overlay. The farm map is a snapshot of today, so unlike the Crop
       // Map and Timeline (which show whole date ranges) this only draws for a tarp covering today.
+      // Drawn against the WHOLE bed regardless of how many crops are splitting its pill below —
+      // tarp/WHP status covers the ground itself, not any one occupant's share of it.
       const tarpNow = tarpOnBedAt(b.id);
       if(tarpNow){
         const ov=document.createElementNS(SVG,"rect");
@@ -5998,87 +6126,172 @@ function drawMap(placed, opts){
         rotGrp.appendChild(ov);
       }
 
-      // "behind schedule" flag — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
-      // due date has passed with Status not advanced to match). Appended as a tspan INSIDE the bed
-      // label below (not a separately-positioned badge) so it automatically inherits the label's
-      // exact position and upright-correction rotation — it always sits right next to the crop
-      // name and reads the same direction as the rest of the text, at any tilt.
-      const behind = pl && typeof tlIsBehind==="function" && tlIsBehind(pl);
-
-      // label: bed name, plus the crop currently in it, laid along the bed's long axis
-      const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
-      const cropTxt = (pl && pl.crop && pl.crop!=="—") ? pl.crop : "";
-      const t=document.createElementNS(SVG,"text");
-      t.setAttribute("class","bed-label");
-      t.setAttribute("x",cx);t.setAttribute("y",cy);
-      t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
-      // font sized to the bed's short dimension so it never overflows the width
-      const fontSize=Math.min((tall?r.w:r.h)*0.58, 2.7);
-      t.setAttribute("font-size", fontSize.toFixed(2));
-      // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
-      // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
-      // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
-      // upside-down, so flip it 180° right here rather than leaving it to be deciphered on a tilt.
-      let labelAngle = (tall?-90:0) + rotDeg;
-      labelAngle = ((labelAngle%360)+360)%360;
-      const flip = labelAngle>FM_LABEL_FLIP_THRESHOLD && labelAngle<360-FM_LABEL_FLIP_THRESHOLD;
-      const baseRot = tall ? -90 : 0;
-      const finalRot = flip ? baseRot+180 : baseRot;
-      if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
-      if(cropTxt){
-        // Crop name is its own tspan so it (and only it) can be clicked separately from the bed
-        // name — pointer-events:auto here overrides the parent <text>'s pointer-events:none, so a
-        // click lands on this tspan specifically and opens the planting panel (see fmOpenPlantingPanel
-        // in the pointerup handler) instead of falling through to the bed panel.
-        const nameSpan=document.createElementNS(SVG,"tspan");
-        nameSpan.textContent=`${b.name} · `;
-        t.appendChild(nameSpan);
-        const cropSpan=document.createElementNS(SVG,"tspan");
-        cropSpan.setAttribute("class","bed-croplabel");
-        cropSpan.dataset.bed=b.id;
-        cropSpan.textContent=cropTxt;
-        t.appendChild(cropSpan);
+      // Occupant(s) — usually one, but a bed can have more than one planting actually OCCUPIED
+      // (b.plantings, from rebuildDerived) when an outgoing crop hasn't been pulled yet alongside
+      // an incoming one already in the ground. Either way, each occupant's own recorded bed metres
+      // sizes its share of the pill against the bed's real length — a 7.5m planting in a 15m bed
+      // colours half of it, whether or not anything else is sharing the other half. An occupant
+      // with no bm recorded is treated as "fills whatever's left" (shareEach below), which for the
+      // ordinary single-occupant case with no bm at all means the whole bed, same as always.
+      const occupants = (b.plantings && b.plantings.length) ? b.plantings : (pl ? [pl] : []);
+      const multi = occupants.length>1;
+      let segs;
+      if(occupants.length){
+        const bedLen = (tall?r.h:r.w) || 1;
+        const known=occupants.filter(o=>o.bm>0), unknown=occupants.filter(o=>!(o.bm>0));
+        const knownSum=known.reduce((s,o)=>s+o.bm,0);
+        const shareEach = unknown.length ? Math.max(0,bedLen-knownSum)/unknown.length : 0;
+        let fracs=occupants.map(o=>(o.bm>0?o.bm:shareEach)/bedLen);
+        // Scale down (never up) so several generously-recorded bm's can never overflow the bed's
+        // real length — same rule the Crop Map's own bed-share bars use (cmDrawBlockBars). Left
+        // under 100%, the remainder is simply left as empty ground (the base rect below it), which
+        // is the honest answer when the recorded metres don't actually add up to the whole bed.
+        const total=fracs.reduce((s,f)=>s+f,0);
+        if(total>1) fracs=fracs.map(f=>f/total);
+        let cursor=0;
+        segs=occupants.map((o,i)=>{
+          const frac=Math.max(0,fracs[i]);
+          const seg = tall
+            ? {x:r.x, y:r.y+cursor*r.h, w:r.w, h:frac*r.h}
+            : {x:r.x+cursor*r.w, y:r.y, w:frac*r.w, h:r.h};
+          cursor+=frac;
+          return {sr:seg, pl:o, showBedName:i===0};
+        });
       }else{
-        t.textContent = b.name;
+        segs=[{sr:r, pl:null, showBedName:true}];
       }
-      rotGrp.appendChild(t);
-      if(behind){
-        // Estimated rather than measured (t.getBBox()): the map can redraw while the Farm map view
-        // itself is hidden (a background data-sync refresh, or before the user has switched to this
-        // tab), and getBBox() throws on an element inside a display:none subtree — that silently
-        // fell back to a fixed corner position every time in practice. A monospace char-count
-        // estimate has no such dependency on the view actually being visible/laid out.
-        const fullText = cropTxt ? `${b.name} · ${cropTxt}` : b.name;
-        const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
-        const bx=cx+textHalfWidth+.5, by=cy;
-        const br=Math.min(Math.min(r.w,r.h)*0.28, 1.0);
-        const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
-        const badgeGrp=document.createElementNS(SVG,"g");
-        badgeGrp.setAttribute("class","bed-behind-badge");
-        // Stored for the tap handler below — SVG <title> only shows on mouse hover, never on
-        // touch, so a phone tapping the badge needs its own way to surface the same explanation.
-        badgeGrp.dataset.reason=reasonTxt;
-        if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
-        const dot=document.createElementNS(SVG,"circle");
-        dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
-        const ti=document.createElementNS(SVG,"title");
-        ti.textContent=reasonTxt;
-        dot.appendChild(ti);
-        badgeGrp.appendChild(dot);
-        const bt=document.createElementNS(SVG,"text");
-        bt.setAttribute("class","bed-behind-badge-txt");
-        bt.setAttribute("x",bx+br);bt.setAttribute("y",by);
-        bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
-        bt.setAttribute("font-size",(br*1.3).toFixed(2));
-        bt.textContent="!";
-        badgeGrp.appendChild(bt);
-        rotGrp.appendChild(badgeGrp);
+
+      // Base rect for the whole bed — the "empty ground" colour shows through wherever the
+      // occupant(s)' recorded bm doesn't add up to the bed's full length (see fracs above). Fully
+      // painted over when it does (an unrecorded bm defaults to the whole bed, same as always), so
+      // this never shows for the ordinary case.
+      if(occupants.length){
+        const base=document.createElementNS(SVG,"rect");
+        base.setAttribute("class","bed");base.dataset.bed=b.id;
+        base.setAttribute("x",r.x);base.setAttribute("y",r.y);
+        base.setAttribute("width",r.w);base.setAttribute("height",r.h);
+        base.setAttribute("rx",".4");base.style.fill="var(--empty-bed)";
+        rotGrp.appendChild(base);
+      }
+
+      segs.forEach(({sr,pl,showBedName})=>{
+        const cell=document.createElementNS(SVG,"rect");
+        cell.setAttribute("class","bed");cell.dataset.bed=b.id;
+        cell.setAttribute("x",sr.x);cell.setAttribute("y",sr.y);
+        cell.setAttribute("width",sr.w);cell.setAttribute("height",sr.h);
+        cell.setAttribute("rx",".4");
+        const inactive = fmInactiveOn && typeof plantingInactive==="function" && plantingInactive(pl);
+        if(inactive){
+          cell.setAttribute("fill","var(--ink-2)");
+          cell.style.opacity=".4";
+          cell.classList.add("bed-inactive");
+        }
+        // "By milestone" colours every occupied stage distinctly (same STATUS_COLORS the status
+        // pills already use elsewhere), full-saturation regardless of OCCUPIED — the whole point is
+        // seeing Planned vs Seeded vs In ground at a glance, not just "here" vs "not here yet".
+        else if(pl && fmColorMode==="milestone") cell.setAttribute("fill", statusColor(pl.status));
+        else if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
+        else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
+        else cell.style.fill = "var(--empty-bed)";
+        rotGrp.appendChild(cell);
+
+        // "behind schedule" flag — same tlIsBehind rule the Timeline uses (a lifecycle milestone's
+        // due date has passed with Status not advanced to match). Appended as a tspan INSIDE the
+        // bed label below (not a separately-positioned badge) so it automatically inherits the
+        // label's exact position and upright-correction rotation — it always sits right next to
+        // the crop name and reads the same direction as the rest of the text, at any tilt.
+        const behind = pl && typeof tlIsBehind==="function" && tlIsBehind(pl);
+
+        // label: bed name (first segment only) plus this segment's own crop, laid along the long axis
+        const cx=sr.x+sr.w/2, cy=sr.y+sr.h/2;
+        const cropTxt = (pl && pl.crop && pl.crop!=="—") ? pl.crop : "";
+        const t=document.createElementNS(SVG,"text");
+        t.setAttribute("class","bed-label");
+        t.setAttribute("x",cx);t.setAttribute("y",cy);
+        t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
+        // font sized to the bed's short dimension so it never overflows the width
+        const fontSize=Math.min((tall?sr.w:sr.h)*0.58, 2.7);
+        t.setAttribute("font-size", fontSize.toFixed(2));
+        // Text runs along the bed's long axis (rotate -90 if tall), but this whole group also carries
+        // the block's free-angle tilt (rotDeg) — so the label's actual on-screen angle is the sum of
+        // both. Once that combined angle points "backwards" (between 90° and 270°) the text reads
+        // upside-down, so flip it 180° right here rather than leaving it to be deciphered on a tilt.
+        let labelAngle = (tall?-90:0) + rotDeg;
+        labelAngle = ((labelAngle%360)+360)%360;
+        const flip = labelAngle>FM_LABEL_FLIP_THRESHOLD && labelAngle<360-FM_LABEL_FLIP_THRESHOLD;
+        const baseRot = tall ? -90 : 0;
+        const finalRot = flip ? baseRot+180 : baseRot;
+        if(finalRot) t.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
+        if(cropTxt){
+          // Crop name is its own tspan so it (and only it) can be clicked separately from the bed
+          // name — pointer-events:auto here overrides the parent <text>'s pointer-events:none, so a
+          // click lands on this tspan specifically and opens the planting panel (see fmOpenPlantingPanel
+          // in the pointerup handler) instead of falling through to the bed panel. dataset.planting
+          // says WHICH occupant this segment is, so a split bed opens the right one, not always b.planting.
+          if(showBedName){
+            const nameSpan=document.createElementNS(SVG,"tspan");
+            nameSpan.textContent=`${b.name} · `;
+            t.appendChild(nameSpan);
+          }
+          const cropSpan=document.createElementNS(SVG,"tspan");
+          cropSpan.setAttribute("class","bed-croplabel");
+          cropSpan.dataset.bed=b.id;
+          cropSpan.dataset.planting=pl.id;
+          cropSpan.textContent=cropTxt;
+          t.appendChild(cropSpan);
+        }else{
+          t.textContent = showBedName ? b.name : "";
+        }
+        rotGrp.appendChild(t);
+        if(behind){
+          // Estimated rather than measured (t.getBBox()): the map can redraw while the Farm map view
+          // itself is hidden (a background data-sync refresh, or before the user has switched to this
+          // tab), and getBBox() throws on an element inside a display:none subtree — that silently
+          // fell back to a fixed corner position every time in practice. A monospace char-count
+          // estimate has no such dependency on the view actually being visible/laid out.
+          const fullText = (showBedName ? `${b.name} · ` : "") + cropTxt;
+          const textHalfWidth = fullText.length * fontSize * 0.31;   // ~0.62 em/char for var(--mono)
+          const bx=cx+textHalfWidth+.5, by=cy;
+          const br=Math.min(Math.min(sr.w,sr.h)*0.28, 1.0);
+          const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(pl)) || "Behind schedule";
+          const badgeGrp=document.createElementNS(SVG,"g");
+          badgeGrp.setAttribute("class","bed-behind-badge");
+          // Stored for the tap handler below — SVG <title> only shows on mouse hover, never on
+          // touch, so a phone tapping the badge needs its own way to surface the same explanation.
+          badgeGrp.dataset.reason=reasonTxt;
+          if(finalRot) badgeGrp.setAttribute("transform",`rotate(${finalRot} ${cx} ${cy})`);
+          const dot=document.createElementNS(SVG,"circle");
+          dot.setAttribute("cx",bx+br);dot.setAttribute("cy",by);dot.setAttribute("r",br);
+          const ti=document.createElementNS(SVG,"title");
+          ti.textContent=reasonTxt;
+          dot.appendChild(ti);
+          badgeGrp.appendChild(dot);
+          const bt=document.createElementNS(SVG,"text");
+          bt.setAttribute("class","bed-behind-badge-txt");
+          bt.setAttribute("x",bx+br);bt.setAttribute("y",by);
+          bt.setAttribute("text-anchor","middle");bt.setAttribute("dominant-baseline","central");
+          bt.setAttribute("font-size",(br*1.3).toFixed(2));
+          bt.textContent="!";
+          badgeGrp.appendChild(bt);
+          rotGrp.appendChild(badgeGrp);
+        }
+      });
+      // A thin seam at each internal boundary, so two adjacent segments read as distinct crops
+      // rather than one gradient-ish pill — same idea as the Crop Map's own shared-bar highlight.
+      if(multi) for(let i=1;i<segs.length;i++){
+        const s=segs[i].sr;
+        const seam=document.createElementNS(SVG,"line");
+        seam.setAttribute("class","bed-seam");
+        if(tall){ seam.setAttribute("x1",s.x);seam.setAttribute("x2",s.x+s.w);seam.setAttribute("y1",s.y);seam.setAttribute("y2",s.y); }
+        else{ seam.setAttribute("x1",s.x);seam.setAttribute("x2",s.x);seam.setAttribute("y1",s.y);seam.setAttribute("y2",s.y+s.h); }
+        rotGrp.appendChild(seam);
       }
 
       minX=Math.min(minX,r.x);minY=Math.min(minY,r.y);
       maxX=Math.max(maxX,r.x+r.w);maxY=Math.max(maxY,r.y+r.h);
     });
   });
+  fmDrawInfra(g);
   if(minX===1e9){minX=0;minY=0;maxX=100;maxY=100;}
   worldBounds={minX,minY,maxX,maxY};
   const leg=document.getElementById("whpLegend");
@@ -6102,6 +6315,70 @@ function drawMap(placed, opts){
     });
     applyView();
   }
+}
+
+// Farm Map overlay — irrigation lines + point markers. Appended straight into <g id="mapG">
+// (world space, NOT inside any block's rotGrp) so it inherits the map's own pan/zoom for free and
+// stays independent of any one block's tilt. Removable/re-addable on its own (fmRefreshInfraLayer)
+// so toggling a layer or placing a point never has to redraw the whole farm map.
+function fmDrawInfra(g){
+  const layer=document.createElementNS(SVG,"g");
+  layer.setAttribute("class","mf-layer");
+  (data.mapFeatures||[]).forEach(f=>{
+    if(f.shape==="line"){
+      if(!fmLinesOn || !f.points || f.points.length<2) return;
+      const poly=document.createElementNS(SVG,"polyline");
+      poly.setAttribute("class","mf-line");
+      poly.setAttribute("points", f.points.map(p=>`${p.x},${p.y}`).join(" "));
+      poly.dataset.feature=f.id;
+      const len=PlannerShared.mapFeatureLength(f);
+      const ti=document.createElementNS(SVG,"title");
+      ti.textContent=`${f.label||"Irrigation line"}${f.detail?" · "+f.detail:""} · ${len.toFixed(1)} m`;
+      poly.appendChild(ti);
+      layer.appendChild(poly);
+    }else{
+      if(!fmPointsOn) return;
+      const pt=f.points && f.points[0]; if(!pt) return;
+      const grp=document.createElementNS(SVG,"g");
+      grp.setAttribute("class","mf-point");
+      grp.dataset.feature=f.id;
+      grp.setAttribute("transform",`translate(${pt.x},${pt.y})`);
+      const dot=document.createElementNS(SVG,"circle");
+      dot.setAttribute("class","mf-point-dot"); dot.setAttribute("r","1.3");
+      grp.appendChild(dot);
+      const txt=document.createElementNS(SVG,"text");
+      txt.setAttribute("class","mf-point-glyph");
+      txt.setAttribute("text-anchor","middle"); txt.setAttribute("dominant-baseline","central");
+      txt.setAttribute("font-size","1.4"); txt.setAttribute("y",".1");
+      txt.textContent=MF_KIND_GLYPH[f.kind]||MF_KIND_GLYPH.other;
+      grp.appendChild(txt);
+      const ti=document.createElementNS(SVG,"title");
+      ti.textContent=`${f.label||f.kind||"Marker"}${f.kind?" ("+f.kind+")":""}`;
+      grp.appendChild(ti);
+      layer.appendChild(grp);
+    }
+  });
+  // Live preview of a line still being drawn — draft colour, no click target.
+  if(fmInfraMode==="line" && fmDrawPts.length){
+    const poly=document.createElementNS(SVG,"polyline");
+    poly.setAttribute("class","mf-line-draft");
+    poly.setAttribute("points", fmDrawPts.map(p=>`${p.x},${p.y}`).join(" "));
+    layer.appendChild(poly);
+    fmDrawPts.forEach(p=>{
+      const c=document.createElementNS(SVG,"circle");
+      c.setAttribute("class","mf-line-draft-pt");
+      c.setAttribute("cx",p.x);c.setAttribute("cy",p.y);c.setAttribute("r",".6");
+      layer.appendChild(c);
+    });
+  }
+  g.appendChild(layer);
+}
+// Redraws just the overlay layer — used by the layer toggles, mode changes and every point added
+// while drawing a line, none of which need the (much heavier) full block/bed relayout.
+function fmRefreshInfraLayer(){
+  const g=document.getElementById("mapG"); if(!g) return;
+  const old=g.querySelector(".mf-layer"); if(old) old.remove();
+  fmDrawInfra(g);
 }
 
 function applyView(){
@@ -6151,6 +6428,17 @@ function hexToRgba(hex,alpha){ // translucent version, for washes laid *behind* 
 const STATUS_COLORS={planned:"#9AA39B",seeded:"#2F6FB0","in ground":"#3F7D46",harvesting:"#7A4FA0",finished:"#C97A2B"};
 function statusColor(status){
   return STATUS_COLORS[String(status||"").trim().toLowerCase()] || "#9AA39B";
+}
+// Farm Map's Colour-by-milestone legend — shown in the fmColorPop popover only while that mode is
+// active, since it's meaningless (and just clutter) while colouring by crop instead.
+function fmSyncColorLegend(){
+  const el=document.getElementById("fmColorLegend"); if(!el) return;
+  if(fmColorMode!=="milestone"){ el.style.display="none"; el.innerHTML=""; return; }
+  el.style.display="block";
+  el.innerHTML=["Planned","Seeded","In ground","Harvesting","Finished"].map(label=>
+    `<div style="display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--ink-2);margin-bottom:.2rem">`
+    +`<span style="width:.8rem;height:.8rem;border-radius:2px;flex:0 0 auto;background:${statusColor(label)}"></span>${esc(label)}</div>`
+  ).join("");
 }
 // canonical lifecycle order, used to map a status to how many tasks are done (shared, see planner-shared.js)
 const { STATUS_ORDER, statusRank } = PlannerShared;
@@ -6222,15 +6510,37 @@ function fmReferenceHTML(b, pl){
   const acc=(label,count,bodyHtml)=>
     `<details class="tl-acc"><summary>${esc(label)}${count?` (${count})`:""}</summary>${bodyHtml}</details>`;
 
-  const fiMatches=(data.farmInfo||[]).filter(e=>
-    (e.bedIds||[]).includes(bedId) || (cropId && (e.cropIds||[]).includes(cropId)));
-  const fiHtml = fiMatches.length ? fiMatches.map(e=>{
+  const fiRow=e=>{
     const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
       :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
     return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
       +`<span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>`
       +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
-  }).join("") : `<div class="empty-note">Nothing tagged to this bed${cropId?" or crop":""} yet — link one from Farm Info.</div>`;
+  };
+  const fiMatches=(data.farmInfo||[]).filter(e=>
+    (e.bedIds||[]).includes(bedId) || (e.blockKeys||[]).includes(b.block)
+    || (cropId && (e.cropIds||[]).includes(cropId)));
+  // Soil reports specifically get a "latest vs older" split — data.farmInfo is already sorted
+  // newest-first (farmInfoSort, driven off `updated`/`created`, which soil import backdates to the
+  // report's real Sample Date), so this is just partitioning that order, not re-deriving it. The
+  // point is the same one raised about the map badge: a number from 18 months ago must never look
+  // the same as this week's, so the older ones are named AND tucked behind their own toggle.
+  const soilMatches=fiMatches.filter(e=>e.category==="Soil report");
+  const otherMatches=fiMatches.filter(e=>e.category!=="Soil report");
+  let fiHtml="";
+  if(soilMatches.length){
+    fiHtml+=fiRow(soilMatches[0]);
+    // The actual numbers, inline — a link-only row defeats the point when the whole ask was
+    // "see the soil test for this plot without an extra click." Only the latest gets this; older
+    // ones stay link-only inside their own collapsed toggle below.
+    fiHtml+=fiBodyToKvHtml(soilMatches[0].body);
+    if(soilMatches.length>1){
+      fiHtml+=`<details class="tl-acc"><summary>${soilMatches.length-1} older soil test${soilMatches.length-1===1?"":"s"}</summary>`
+        +soilMatches.slice(1).map(e=>fiRow(e)).join("")+`</details>`;
+    }
+  }
+  fiHtml+=otherMatches.map(fiRow).join("");
+  if(!fiHtml) fiHtml=`<div class="empty-note">Nothing tagged to this bed${cropId?" or crop":""} yet — link one from Farm Info.</div>`;
 
   const obs=(data.walkObservations||[]).filter(o=>(o.bedIds||[]).includes(bedId))
     .slice().sort((a,b)=>String(b.created||"").localeCompare(String(a.created||""))).slice(0,5);
@@ -6265,27 +6575,77 @@ function selectBed(id){
   document.getElementById("pBlock").textContent = b.block?("Block "+b.block):"Unassigned block";
   document.getElementById("pBed").textContent = b.name;
   const body=document.getElementById("pBody");
-  const pl=b.planting;
+  // Usually one occupant; b.plantings (rebuildDerived) lists every planting actually OCCUPIED on
+  // this bed right now, which is >1 for a relay/overlap between an outgoing and incoming crop —
+  // same case the map's own split pill (drawMap) is showing. Falls back to the single headline
+  // planting (which may not be OCCUPIED, e.g. still "Planned") so an empty/planned bed is unchanged.
+  const occupants = (b.plantings && b.plantings.length) ? b.plantings : (b.planting ? [b.planting] : []);
   let html="";
   html+=`<div class="kv"><span class="k">Length</span><span class="v">${b.len!=null?b.len+" m":"—"}</span></div>`;
   html+=`<div class="kv"><span class="k">Width</span><span class="v">${b.wid!=null?b.wid+" m":"—"}</span></div>`;
   if(b.soil) html+=`<div class="kv"><span class="k">Soil</span><span class="v">${esc(b.soil)}</span></div>`;
-  if(pl){
-    const col=cropColor(pl.cropId||pl.crop);
-    html+=`<div class="sect-h">Current planting</div>`;
-    const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
-    if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
-    html+=`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`;
-    html+=`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status||"—")}</span></span></div>`;
-    html+=`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`;
-    if(pl.tp) html+=`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`;
-    html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
-    html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
+  if(occupants.length){
+    occupants.forEach(pl=>{
+      const col=cropColor(pl.cropId||pl.crop);
+      const label = occupants.length>1 ? `Current planting${pl.bm>0?" · "+pl.bm+" m":""}` : "Current planting";
+      html+=`<div class="sect-h">${esc(label)}</div>`;
+      const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
+      if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
+      html+=`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`;
+      html+=`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status||"—")}</span></span></div>`;
+      html+=`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`;
+      if(pl.tp) html+=`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`;
+      html+=`<div class="kv"><span class="k">First harvest</span><span class="v">${fmt(pl.h1)}</span></div>`;
+      html+=`<div class="kv"><span class="k">Last harvest</span><span class="v">${fmt(pl.h2)}</span></div>`;
+      const msItems=tlMilestoneItemsHTML(pl);
+      html+=`<div class="sect-h">Milestones</div>`;
+      html+=`<div class="tl-qa fm-milestones" data-pid="${esc(pl.id)}">${msItems.map(i=>i.html).join("")}</div>`;
+      html+=`<button type="button" class="btn-primary fm-edit-planting" data-pid="${esc(pl.id)}" style="width:100%;justify-content:center;margin-top:.5rem">Edit Planting</button>`;
+    });
   }else{
     html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
   }
-  html+=fmReferenceHTML(b, pl);
+  html+=fmReferenceHTML(b, b.planting||occupants[0]||null);
   body.innerHTML=html;
+  // Delegated rather than wired inline — innerHTML above just replaced these buttons wholesale.
+  body.querySelectorAll(".fm-edit-planting").forEach(btn=>{
+    btn.onclick=()=>{
+      const pl=(data.plantings||[]).find(x=>x.id===btn.dataset.pid);
+      if(pl) apOpenEdit(pl);
+    };
+  });
+  // Milestone checkboxes — same wkToggleMilestone stepper tlRenderPanel's own TASKS section uses.
+  // A milestone can flip a planting in/out of b.plantings (e.g. ticking "Finished" removes it from
+  // the bed's current occupants), so this redraws the map itself too, not just the sidebar text.
+  const msAssigneeField={sowAssignee:"pl_sowAssignee",tpAssignee:"pl_tpAssignee",h1Assignee:"pl_h1Assignee",h2Assignee:"pl_h2Assignee"};
+  body.querySelectorAll(".fm-milestones").forEach(box=>{
+    const pid=box.dataset.pid;
+    box.querySelectorAll("input[data-df]").forEach(cb=>{
+      cb.onclick=e=>{
+        e.preventDefault(); if(cb.disabled) return;
+        wkToggleMilestone(pid, cb.dataset.df).then(()=>{
+          rebuildDerived();
+          layoutAndDraw({keepView:true});
+          selectBed(id);
+        });
+      };
+    });
+    box.querySelectorAll("select[data-ms-assignee]").forEach(sel=>{
+      sel.onchange=async e=>{
+        const akey=sel.dataset.msAssignee;
+        let val=e.target.value;
+        if(val==="__add__"){
+          val=(prompt("New assignee name:")||"").trim();
+          if(!val){ selectBed(id); return; }
+        }
+        const pl2=(data.plantings||[]).find(x=>x.id===pid); if(!pl2) return;
+        const prev=pl2[akey]; pl2[akey]=val;
+        try{ await atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f[msAssigneeField[akey]]]: val||null}); }
+        catch(err){ pl2[akey]=prev; alert("Couldn't save assignee: "+err.message); }
+        selectBed(id);
+      };
+    });
+  });
   document.getElementById("panel").classList.add("open");
 }
 function closePanel(){document.getElementById("panel").classList.remove("open");
@@ -6293,12 +6653,17 @@ function closePanel(){document.getElementById("panel").classList.remove("open");
 
 // Clicking a bed's crop-name text opens the planting-detail panel (shared with Timeline/Crop
 // map/Week planner via tlRenderPanel) instead of the bed panel a plain click on the bed opens.
-function fmOpenPlantingPanel(bedId){
+// plantingId is only passed when the bed's pill is split between more than one occupant (see
+// drawMap) — the click has to say WHICH crop-name span was hit rather than falling back to the
+// bed's single "headline" planting, or every segment would open the same one.
+function fmOpenPlantingPanel(bedId, plantingId){
   const b=(data.beds||[]).find(x=>x.id===bedId);
-  if(!b || !b.planting) return;
+  if(!b) return;
+  const pl = plantingId ? (data.plantings||[]).find(x=>x.id===plantingId) : b.planting;
+  if(!pl) return;
   closePanel();
   const panel=document.getElementById("fmPlantingPanel");
-  tlRenderPanel(b.planting, panel, fmClosePlantingPanel);
+  tlRenderPanel(pl, panel, fmClosePlantingPanel);
   panel.classList.add("open");
 }
 function fmClosePlantingPanel(){
@@ -6328,11 +6693,13 @@ function selectBlock(key){
     +`<div class="farmblk-stat"><div class="v">${cropList.length}</div><div class="k">Crops growing</div></div>`
     +`</div>`;
   const meta=(data.blocks||[]).find(b=>String(b.name).trim()===key);
-  html+=`<button class="icon-btn" type="button" onclick="fmRotateBlock('${esc(key)}')" style="width:100%;justify-content:center;gap:.5rem;margin-top:.2rem">`
-    +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M15.4 8A5.6 5.6 0 105.6 12"/><path d="M16.4 4.4v4h-4"/></svg>`
-    +`Rotate 90° (swaps bed direction)</button>`;
   const rotDeg=fmBlockRotations[key]||0;
-  html+=`<div style="margin-top:.6rem">`
+  const labLocked=fmLabelLocked(key);
+  html+=`<details class="tl-acc"><summary>Rotate &amp; label position</summary>`
+    +`<button class="icon-btn" type="button" onclick="fmRotateBlock('${esc(key)}')" style="width:100%;justify-content:center;gap:.5rem;margin-top:.2rem">`
+    +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M15.4 8A5.6 5.6 0 105.6 12"/><path d="M16.4 4.4v4h-4"/></svg>`
+    +`Rotate 90° (swaps bed direction)</button>`
+    +`<div style="margin-top:.6rem">`
     +`<div style="display:flex;justify-content:space-between;align-items:baseline">`
     +`<label for="fmBlockRotRange" style="font-size:.72rem;color:var(--ink-2)">Tilt to match satellite</label>`
     +`<span class="mono" id="fmBlockRotVal" style="font-size:.78rem">${rotDeg}°</span></div>`
@@ -6343,23 +6710,54 @@ function selectBlock(key){
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',-1)">−1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',1)">+1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmResetBlockRotation('${esc(key)}')">Reset</button>`
-    +`</div></div>`;
-  const labLocked=fmLabelLocked(key);
-  html+=`<div style="margin-top:.6rem">`
+    +`</div></div>`
+    +`<div style="margin-top:.6rem">`
     +`<div style="font-size:.72rem;color:var(--ink-2);margin-bottom:.3rem">Drag the block's name label on the map to move it — handy once plots sit close together.</div>`
     +`<div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem">`
     +`<label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem">`
     +`<input type="checkbox" ${labLocked?"checked":""} onchange="fmSetLabelLock('${esc(key)}',this.checked)"> Lock label position</label>`
     +`<button class="icon-btn" type="button" onclick="fmResetLabelPos('${esc(key)}')">Reset</button>`
-    +`</div></div>`;
+    +`</div></div>`
+    +`</details>`;
   if(cropList.length){
     html+=`<div class="sect-h">Crop mix</div>`;
     html+=cropList.map(([crop,n])=>`<div class="kv"><span class="k"><span class="farmblk-dot" style="background:${cropColor(crop)}"></span>${esc(crop)}</span><span class="v">${n} bed${n===1?"":"s"}</span></div>`).join("");
   }else{
     html+=`<div class="sect-h">Crop mix</div><div class="empty-note">No beds currently planted in this block.</div>`;
   }
+  html+=fmBlockReferenceHTML(key);
   body.innerHTML=html;
   document.getElementById("panel").classList.add("open");
+}
+
+// Plot-level Reference — Farm Info entries tagged to this WHOLE block (blockKeys), same latest-vs-
+// older soil-test treatment as fmReferenceHTML's per-bed version below. Deliberately doesn't also
+// pull in every entry tagged to an individual bed within the block — that's what opening a bed's
+// own panel is for; mixing both here would make it unclear which beds a given entry actually covers.
+function fmBlockReferenceHTML(key){
+  const fiRow=e=>{
+    const kind=e.files.length?`${e.files.length} file${e.files.length===1?"":"s"}`
+      :(e.links.length?`${e.links.length} link${e.links.length===1?"":"s"}`:"note");
+    return `<button type="button" class="fi-row" onclick="fiSelId='${esc(e.id)}';showView('farminfo')">`
+      +`<span class="fi-row-title">${e.pinned?"📌 ":""}${esc(e.name||"Untitled")}</span>`
+      +`<span class="fi-row-meta">${esc(e.category||"Note")} · ${esc(kind)}</span></button>`;
+  };
+  const matches=(data.farmInfo||[]).filter(e=>(e.blockKeys||[]).includes(key));
+  const soilMatches=matches.filter(e=>e.category==="Soil report");
+  const otherMatches=matches.filter(e=>e.category!=="Soil report");
+  let html="";
+  if(soilMatches.length){
+    html+=fiRow(soilMatches[0]);
+    html+=fiBodyToKvHtml(soilMatches[0].body);
+    if(soilMatches.length>1){
+      html+=`<details class="tl-acc"><summary>${soilMatches.length-1} older soil test${soilMatches.length-1===1?"":"s"}</summary>`
+        +soilMatches.slice(1).map(fiRow).join("")+`</details>`;
+    }
+  }
+  html+=otherMatches.map(fiRow).join("");
+  if(!html) html=`<div class="empty-note">Nothing tagged to this plot yet — link one from Farm Info.</div>`;
+  return `<div class="sect-h">Reference</div>`
+    + `<details class="tl-acc"><summary>Reference docs${matches.length?` (${matches.length})`:""}</summary>${html}</details>`;
 }
 
 // Blocks only have two orientations on the Blocks table ("Beds run vertical" / "Beds run
@@ -6410,6 +6808,9 @@ function fmScreenToWorld(clientX,clientY){
   let dragLabelKey=null,dragLabelEl=null,dragLabelStart=null,dragLabelOrig=null;
 
   function bedFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.bed)return el.dataset.bed;el=el.parentNode;}return null;}
+  // Which occupant's own crop-name tspan was hit, when a bed's pill is split between more than
+  // one (see drawMap) — walked separately from bedFrom since the same click target carries both.
+  function plantingFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.planting)return el.dataset.planting;el=el.parentNode;}return null;}
   function blockFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.block)return el.dataset.block;el=el.parentNode;}return null;}
 
   wrap.addEventListener("pointerdown",e=>{
@@ -6514,13 +6915,19 @@ function fmScreenToWorld(clientX,clientY){
         downTarget=null;return;
       }
       if(!moved && !wasCancel){
-        const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
-        const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
-        const id=bedFrom(downTarget);
-        if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
-        else if(cropLink && id) fmOpenPlantingPanel(id);
-        else if(id) selectBed(id);
-        else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
+        const featEl=downTarget.closest && downTarget.closest("[data-feature]");
+        if(fmInfraMode==="point"){ fmPlacePoint(fmScreenToWorld(e.clientX,e.clientY)); }
+        else if(fmInfraMode==="line"){ fmAddLinePoint(fmScreenToWorld(e.clientX,e.clientY)); }
+        else if(featEl){ fmOpenFeatureEditor(featEl.dataset.feature); }
+        else{
+          const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
+          const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
+          const id=bedFrom(downTarget);
+          if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
+          else if(cropLink && id) fmOpenPlantingPanel(id, plantingFrom(downTarget));
+          else if(id) selectBed(id);
+          else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
+        }
       }
       downTarget=null;
     }
@@ -6562,6 +6969,193 @@ async function fmCommitBlockDrag(key,grp){
     layoutAndDraw({keepView:true});
   }
 }
+
+/* ---------- Farm Map infrastructure overlay: CRUD + placement + editor ---------- */
+function $mf(id){ return document.getElementById(id); }
+
+async function mfCreate(fields){
+  const [rec]=await atCreate(CFG.farmBase, CFG.tables.mapFeatures, [fields]);
+  const parsed=PlannerShared.parseMapFeatures([rec])[0];
+  data.mapFeatures=(data.mapFeatures||[]).concat([parsed]);
+  return parsed;
+}
+async function mfUpdate(id, fields){
+  const rec=await atPatch(CFG.farmBase, CFG.tables.mapFeatures, id, fields);
+  const parsed=PlannerShared.parseMapFeatures([rec])[0];
+  data.mapFeatures=(data.mapFeatures||[]).filter(x=>x.id!==id).concat([parsed]);
+}
+async function mfRemove(id){
+  await atDelete(CFG.farmBase, CFG.tables.mapFeatures, [id]);
+  data.mapFeatures=(data.mapFeatures||[]).filter(x=>x.id!==id);
+}
+
+// One tap places a point immediately (no drag needed — it's a pin, not a shape) and hands
+// straight to the editor to name it. Placement is single-shot: the mode clears itself so a second
+// tap doesn't drop a second pin by accident.
+function fmPlacePoint(pt){
+  fmInfraMode=null; fmSyncInfraButtons(); fmRefreshInfraLayer();
+  mfPendingShape="point"; mfPendingPoints=[{x:Math.round(pt.x*10)/10, y:Math.round(pt.y*10)/10}];
+  mfOpenEditor(null);
+}
+function fmAddLinePoint(pt){
+  fmDrawPts.push({x:Math.round(pt.x*10)/10, y:Math.round(pt.y*10)/10});
+  fmRefreshInfraLayer(); fmUpdateLineToolbar();
+}
+function fmUndoLinePoint(){
+  fmDrawPts.pop();
+  fmRefreshInfraLayer(); fmUpdateLineToolbar();
+}
+function fmFinishLine(){
+  if(fmDrawPts.length<2) return;
+  mfPendingShape="line"; mfPendingPoints=fmDrawPts.slice();
+  fmInfraMode=null; fmDrawPts=[]; fmSyncInfraButtons(); fmRefreshInfraLayer();
+  mfOpenEditor(null);
+}
+function fmCancelLine(){
+  fmInfraMode=null; fmDrawPts=[]; fmSyncInfraButtons(); fmRefreshInfraLayer();
+}
+function fmUpdateLineToolbar(){
+  const bar=$mf("fmLineToolbar"); if(!bar) return;
+  const on=fmInfraMode==="line";
+  bar.style.display = on ? "flex" : "none";
+  if(!on) return;
+  let len=0; for(let i=1;i<fmDrawPts.length;i++) len+=Math.hypot(fmDrawPts[i].x-fmDrawPts[i-1].x, fmDrawPts[i].y-fmDrawPts[i-1].y);
+  $mf("fmLineToolbarInfo").textContent = `Drawing irrigation line — ${fmDrawPts.length} point${fmDrawPts.length===1?"":"s"} · ${len.toFixed(1)} m so far. Tap each bend, then Finish.`;
+  $mf("fmLineFinish").disabled = fmDrawPts.length<2;
+}
+function fmSyncInfraButtons(){
+  const pinBtn=$mf("fmAddPointBtn"), lineBtn=$mf("fmAddLineBtn"), wrap=$mf("mapWrap");
+  if(pinBtn) pinBtn.setAttribute("aria-pressed", fmInfraMode==="point"?"true":"false");
+  if(lineBtn) lineBtn.setAttribute("aria-pressed", fmInfraMode==="line"?"true":"false");
+  if(wrap) wrap.classList.toggle("map-infra-mode", !!fmInfraMode);
+  fmUpdateLineToolbar();
+}
+
+// Same form for both shapes — mfPendingShape/mfPendingPoints drive it for a new feature, an
+// existing feature (passed in) drives it for editing. mfEditingId null ⇒ Save creates.
+function mfOpenEditor(existing){
+  mfEditingId = existing ? existing.id : null;
+  const isLine = existing ? existing.shape==="line" : mfPendingShape==="line";
+  $mf("mfHead").textContent = existing ? (isLine?"Edit irrigation line":"Edit marker") : (isLine?"New irrigation line":"New marker");
+  $mf("mfKindField").style.display = isLine ? "none" : "";
+  $mf("mfPipeField").style.display = isLine ? "" : "none";
+  $mf("mfLength").style.display = isLine ? "" : "none";
+  if(isLine){
+    const len=PlannerShared.mapFeatureLength({points: existing ? existing.points : mfPendingPoints});
+    $mf("mfLength").textContent = `Length on the map: ${len.toFixed(1)} m`;
+    $mf("mfPipeSize").value = existing ? (existing.detail||"") : "";
+  }else{
+    $mf("mfKind").value = existing ? (existing.kind||"other") : "pump";
+  }
+  $mf("mfLabel").value = existing ? (existing.label||"") : "";
+  $mf("mfNotes").value = existing ? (existing.notes||"") : "";
+  $mf("mfDelete").style.display = existing ? "" : "none";
+  $mf("mfModal").classList.add("open");
+  $mf("mfModal").setAttribute("aria-hidden","false");
+}
+function mfCloseEditor(){
+  $mf("mfModal").classList.remove("open");
+  $mf("mfModal").setAttribute("aria-hidden","true");
+  mfEditingId=null; mfPendingShape=null; mfPendingPoints=null;
+}
+function fmOpenFeatureEditor(id){
+  const f=(data.mapFeatures||[]).find(x=>x.id===id);
+  if(f) mfOpenEditor(f);
+}
+async function mfSaveFromForm(){
+  const existing = mfEditingId ? (data.mapFeatures||[]).find(x=>x.id===mfEditingId) : null;
+  const isLine = existing ? existing.shape==="line" : mfPendingShape==="line";
+  const F=CFG.f;
+  const fields = isLine
+    ? { [F.mf_detail]: $mf("mfPipeSize").value, [F.mf_label]: $mf("mfLabel").value.trim(), [F.mf_notes]: $mf("mfNotes").value.trim() }
+    : { [F.mf_kind]: $mf("mfKind").value, [F.mf_label]: $mf("mfLabel").value.trim(), [F.mf_notes]: $mf("mfNotes").value.trim() };
+  const btn=$mf("mfSave"); btn.disabled=true;
+  try{
+    if(mfEditingId){
+      await mfUpdate(mfEditingId, fields);
+    }else{
+      fields[F.mf_shape]=isLine?"line":"point";
+      fields[F.mf_points]=mfPendingPoints;
+      await mfCreate(fields);
+    }
+    mfCloseEditor();
+    fmRefreshInfraLayer();
+  }catch(e){
+    console.error(e); alert("Couldn't save that:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+async function mfDeleteFromForm(){
+  if(!mfEditingId) return;
+  if(!confirm("Delete this from the Farm Map? This can't be undone.")) return;
+  const btn=$mf("mfDelete"); btn.disabled=true;
+  try{
+    await mfRemove(mfEditingId);
+    mfCloseEditor();
+    fmRefreshInfraLayer();
+  }catch(e){
+    console.error(e); alert("Couldn't delete that:\n"+e.message);
+  }finally{ btn.disabled=false; }
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const linesBtn=$mf("fmLinesBtn");
+  if(linesBtn) linesBtn.addEventListener("click",()=>{
+    fmLinesOn=!fmLinesOn; linesBtn.setAttribute("aria-pressed", fmLinesOn?"true":"false"); fmRefreshInfraLayer();
+  });
+  const pointsBtn=$mf("fmPointsBtn");
+  if(pointsBtn) pointsBtn.addEventListener("click",()=>{
+    fmPointsOn=!fmPointsOn; pointsBtn.setAttribute("aria-pressed", fmPointsOn?"true":"false"); fmRefreshInfraLayer();
+  });
+  const colorBtn=$mf("fmColorBtn"), colorPop=$mf("fmColorPop");
+  if(colorBtn && colorPop){
+    colorBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const open=colorPop.hidden;
+      colorPop.hidden=!open;
+      colorBtn.setAttribute("aria-expanded", open?"true":"false");
+    });
+    colorPop.addEventListener("click",e=>e.stopPropagation());
+    document.addEventListener("click",()=>{ colorPop.hidden=true; colorBtn.setAttribute("aria-expanded","false"); });
+  }
+  fmSyncColorLegend();
+  $mf("fmColorToggle")?.querySelectorAll("button").forEach(b=>b.addEventListener("click",()=>{
+    fmColorMode=b.dataset.fmcolor;
+    $mf("fmColorToggle").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+    fmSyncColorLegend();
+    layoutAndDraw({keepView:true});
+  }));
+  const addBtn=$mf("fmInfraAddBtn"), addPop=$mf("fmInfraAddPop");
+  if(addBtn && addPop){
+    addBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      const open=addPop.hidden;
+      addPop.hidden=!open;
+      addBtn.setAttribute("aria-expanded", open?"true":"false");
+    });
+    addPop.addEventListener("click",e=>e.stopPropagation());
+    document.addEventListener("click",()=>{ addPop.hidden=true; addBtn.setAttribute("aria-expanded","false"); });
+  }
+  const addPointBtn=$mf("fmAddPointBtn");
+  if(addPointBtn) addPointBtn.addEventListener("click",()=>{
+    fmInfraMode = fmInfraMode==="point" ? null : "point";
+    fmDrawPts=[]; if(addPop) addPop.hidden=true;
+    fmSyncInfraButtons(); fmRefreshInfraLayer();
+  });
+  const addLineBtn=$mf("fmAddLineBtn");
+  if(addLineBtn) addLineBtn.addEventListener("click",()=>{
+    fmInfraMode = fmInfraMode==="line" ? null : "line";
+    fmDrawPts=[]; if(addPop) addPop.hidden=true;
+    fmSyncInfraButtons(); fmRefreshInfraLayer();
+  });
+  const lineFinish=$mf("fmLineFinish"); if(lineFinish) lineFinish.addEventListener("click", fmFinishLine);
+  const lineUndo=$mf("fmLineUndo"); if(lineUndo) lineUndo.addEventListener("click", fmUndoLinePoint);
+  const lineCancel=$mf("fmLineCancel"); if(lineCancel) lineCancel.addEventListener("click", fmCancelLine);
+
+  const mfClose=$mf("mfClose"), mfCancel=$mf("mfCancel"), mfSave=$mf("mfSave"), mfDeleteBtn=$mf("mfDelete");
+  if(mfClose) mfClose.addEventListener("click", mfCloseEditor);
+  if(mfCancel) mfCancel.addEventListener("click", mfCloseEditor);
+  if(mfSave) mfSave.addEventListener("click", mfSaveFromForm);
+  if(mfDeleteBtn) mfDeleteBtn.addEventListener("click", mfDeleteFromForm);
+});
 document.addEventListener("DOMContentLoaded",()=>{
   const satBtn=document.getElementById("fmSatBtn"), satPop=document.getElementById("fmSatPop");
   if(satBtn && satPop){
@@ -6609,6 +7203,13 @@ document.addEventListener("DOMContentLoaded",()=>{
     moveBtn.setAttribute("aria-pressed", fmMoveMode?"true":"false");
     const wrap=document.getElementById("mapWrap");
     if(wrap) wrap.classList.toggle("map-move-mode", fmMoveMode);
+  });
+
+  const inactiveBtn=document.getElementById("fmInactiveBtn");
+  if(inactiveBtn) inactiveBtn.addEventListener("click",()=>{
+    fmInactiveOn=!fmInactiveOn;
+    inactiveBtn.setAttribute("aria-pressed", fmInactiveOn?"true":"false");
+    layoutAndDraw();
   });
 });
 document.getElementById("zin").onclick=()=>{const w=document.getElementById("mapWrap").getBoundingClientRect();window.zoomAt(w.left+w.width/2,w.top+w.height/2,1.25);};
@@ -6775,17 +7376,12 @@ function paintSidebar(rail){
 function renderSidebar(){ paintSidebar(currentRail); }
 
 /* ---------- Views ---------- */
-function showView(view){
-  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-  const el=document.getElementById("view-"+view); if(el) el.classList.add("active");
-
-  currentView = view;
-  const rail = VIEW_RAIL[view];
-  if(rail && rail!==currentRail){ currentRail=rail; renderSidebar(); }
-  else { renderSidebar(); }                    // same rail, different row: just refresh highlights
-  document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
-    b.setAttribute("aria-selected", b.dataset.rail===currentRail ? "true":"false"));
-
+// The actual per-view rebuild, split out of showView() so anything that just changed the
+// underlying data (a save, an edit dialog closing) can re-render whichever view is CURRENTLY on
+// screen the same way navigating to it fresh would — without also re-touching the sidebar/rail
+// highlighting or (for the Farm map) re-fitting the pan/zoom, which showView() itself still does
+// on an actual navigation.
+function renderViewContent(view){
   if(view==="map") fitView();
   if(view==="cropmap") buildCropMap();
   if(view==="timeline") buildTimeline();
@@ -6811,6 +7407,19 @@ function showView(view){
   if(view==="fertcalc") buildFertCalc();
   if(view==="irrig") buildIrrig();
   if(view==="fertcost") buildFertCost();
+}
+function showView(view){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  const el=document.getElementById("view-"+view); if(el) el.classList.add("active");
+
+  currentView = view;
+  const rail = VIEW_RAIL[view];
+  if(rail && rail!==currentRail){ currentRail=rail; renderSidebar(); }
+  else { renderSidebar(); }                    // same rail, different row: just refresh highlights
+  document.querySelectorAll(".railbtn[data-rail]").forEach(b=>
+    b.setAttribute("aria-selected", b.dataset.rail===currentRail ? "true":"false"));
+
+  renderViewContent(view);
 }
 
 /* Rail click shows that destination's FIRST view, which is also what the list panel opens on.
@@ -6979,6 +7588,8 @@ let cmBulkState = null;        // {weights, proposals, skipped} while the Auto-p
 let cmViewApplied = false;
 let cmViewMode = "map";   // the design opens on the tiled, fitted board
 let cmColorMode = "crop"; // "crop" (default, per-crop hash colour) | "type" (fixed crop-family colour)
+let cmWarnOnly = false;   // Filters ▸ "Show behind-schedule warnings" — toggles the "!" badge on bars overdue per tlIsBehind (same rule as the Farm Map's badge)
+let cmInactiveOn = false; // Filters ▸ "Grey out inactive plantings" — same plantingInactive rule as the Farm Map's Inactive toggle
 let cmMapState = {k:1, tx:0, ty:0};
 let cmLocked = false;
 let cmSelectedBlock = null;        // mobile-only block picker; null = all blocks (desktop always behaves as if null)
@@ -7016,6 +7627,7 @@ function rebuildDerived(){
   rebuildActivePlantings();          // parked plantings must not win a bed's headline slot
   const groundStart=r=>r.tp||r.sow||"";
   const byBed={};
+  const occByBed={};   // bed id -> every CURRENTLY-OCCUPIED planting on it (see b.plantings below)
   // EVERY bed the planting is on, not just bedIds[0]. A four-bed garlic occupies four beds, so all
   // four must name it as their occupant — keying on the first bed left the other three reading as
   // empty ground in drawMap, the Beds table and the spray bed picker. Same bug the crop map and
@@ -7024,13 +7636,23 @@ function rebuildDerived(){
     (rec.bedIds||[]).forEach(bid=>{
       if(!bid) return;
       const cur=byBed[bid];
-      if(!cur){byBed[bid]=rec;return;}
-      const better=OCCUPIED.has(rec.status)&&!OCCUPIED.has(cur.status);
-      const newer=groundStart(rec)>groundStart(cur);
-      if(better||(OCCUPIED.has(rec.status)===OCCUPIED.has(cur.status)&&newer)) byBed[bid]=rec;
+      if(!cur){byBed[bid]=rec;}
+      else{
+        const better=OCCUPIED.has(rec.status)&&!OCCUPIED.has(cur.status);
+        const newer=groundStart(rec)>groundStart(cur);
+        if(better||(OCCUPIED.has(rec.status)===OCCUPIED.has(cur.status)&&newer)) byBed[bid]=rec;
+      }
+      if(OCCUPIED.has(rec.status)) (occByBed[bid] ||= []).push(rec);
     });
   });
-  data.beds.forEach(b=>b.planting=byBed[b.id]||null);
+  data.beds.forEach(b=>{
+    b.planting=byBed[b.id]||null;
+    // Every planting actually in the ground on this bed right now — a relay/overlap between an
+    // outgoing and incoming crop means more than one. b.planting above stays the single "headline"
+    // occupant every OTHER view (Beds table, spray picker, etc.) already reads; this is additive,
+    // read only by the Farm Map to split a bed's pill between simultaneous occupants (drawMap).
+    b.plantings=(occByBed[b.id]||[]).slice().sort((a,c)=>groundStart(a).localeCompare(groundStart(c)));
+  });
 }
 
 // map a date string to a y-pixel within the current year's Jan1→Dec31 track (clamped)
@@ -7640,6 +8262,14 @@ function cmDrawBlockBars(grid, beds, plantings){
       bar.style.width=(span*CM_COL_W+(span-1)*CM_GAP)+"px";
     }
     bar.style.background=base;
+    // Inactive: sow/transplant date has passed but Status never advanced to "In ground" — same
+    // plantingInactive rule as the Farm Map's Inactive toggle. Greyed instead of removed, same
+    // spirit as the Farm Map's grey fill: it still needs to be seen, just flagged as overdue.
+    if(cmInactiveOn && typeof plantingInactive==="function" && plantingInactive(p)){
+      bar.style.background="var(--ink-2)";
+      bar.style.opacity=".45";
+      bar.classList.add("cm-bar-inactive");
+    }
 
     // harvest window shaded darker on top, same convention as the timeline
     if(p.h1 && p.h2){
@@ -7655,8 +8285,21 @@ function cmDrawBlockBars(grid, beds, plantings){
 
     bar.dataset.pid=p.id;
     const bedCount=(p.bedIds||[]).length;
+    // "Behind schedule" badge — same tlIsBehind rule the Timeline and Farm Map already use (a
+    // lifecycle milestone's due date has passed with Status not advanced to match). Farm Map shows
+    // this one unconditionally; here it's gated behind Filters ▸ "Show bed-issue warnings" since
+    // the crop map is busier and the mark would otherwise compete with the crop label on every bar.
+    const isBehind = cmWarnOnly && typeof tlIsBehind==="function" && tlIsBehind(p);
+    let warnBadge="";
+    if(isBehind){
+      bar.classList.add("cm-bar-warn");
+      const reasonTxt=(typeof tlBehindReason==="function" && tlBehindReason(p)) || "Behind schedule";
+      warnBadge=`<span class="cm-bar-warnmark" title="${esc(reasonTxt)}">!</span>`;
+    }
     bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
-      + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"");
+      + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"")
+      + (isBehind?`\n\nBehind schedule`:"");
+    if(warnBadge) bar.insertAdjacentHTML("beforeend", warnBadge);
 
     // Only the first run is labelled: repeating the name on every fragment of one planting reads
     // as several plantings.
@@ -8150,6 +8793,10 @@ function buildCropMap(){
   // grower panned it.
   if(!cmViewApplied){ cmViewApplied=true; setCmViewMode(cmViewMode); }
   cmRenderPendingOverlay();   // no-op unless an Auto-place review is open (see cmBulkState)
+  if(cmSelectedPlantingId){
+    const fresh=(data.plantings||[]).find(x=>x.id===cmSelectedPlantingId);
+    fresh ? cmOpenPanel(fresh) : cmClosePanel();
+  }
 }
 
 /* The assign panel, grouped by crop. A flat list of every unplaced succession is unreadable at
@@ -8339,6 +8986,13 @@ function setCmColorMode(mode){
   buildCropMap();
 }
 document.querySelectorAll("#cmColorToggle button").forEach(b=>b.addEventListener("click",()=>setCmColorMode(b.dataset.cmcolor)));
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const cb=document.getElementById("cmWarnOnly");
+  if(cb) cb.addEventListener("change",()=>{ cmWarnOnly=cb.checked; buildCropMap(); });
+  const icb=document.getElementById("cmInactiveOn");
+  if(icb) icb.addEventListener("change",()=>{ cmInactiveOn=icb.checked; buildCropMap(); });
+});
 
 /* Select / Pan / Tarp are one three-way choice now, so each setter only owns its own flag and
    cmSyncTools() decides which of the three reads as pressed. The buttons carry icons, so nothing
@@ -9008,6 +9662,19 @@ async function aiReadImage({b64, mediaType, prompt, schema, maxTokens=8000, tooL
     ],
     schema, maxTokens, tooLong,
     refusalMsg:"Claude declined to read that image.",
+    model: MODEL_OCR||undefined,
+  });
+}
+// PDF in, structured JSON out — soil test report import (Farm Info). Same shape as aiReadImage,
+// just a "document" content block instead of "image" — lab reports are usually PDFs, not photos.
+async function aiReadDocument({b64, prompt, schema, maxTokens=8000, tooLong}){
+  return aiStructuredCall({
+    content:[
+      {type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},
+      {type:"text",text:prompt},
+    ],
+    schema, maxTokens, tooLong,
+    refusalMsg:"Claude declined to read that document.",
     model: MODEL_OCR||undefined,
   });
 }
@@ -10337,6 +11004,16 @@ function tlIsBehind(p){
     const due=p[t.df]; return due && String(due)<today;
   });
 }
+// Narrower than tlIsBehind above (which flags ANY overdue milestone, including harvest): this is
+// specifically "the sow/transplant date has passed but Status was never ticked on to 'In ground'"
+// — i.e. it should be in the ground by now and, as far as this app knows, isn't. Drives the
+// Inactive filter on both maps.
+function plantingInactive(p){
+  if(!p || statusRank(p.status)>=statusRank("In ground")) return false;
+  const stage=apLifecycle(p.tp?"transplant":"direct").find(t=>t.stage==="In ground");
+  const due=stage && p[stage.df];
+  return !!(due && String(due)<todayISO());
+}
 // Human-readable version of the tlIsBehind check above — which milestone is overdue, its due
 // date, and how many days ago — for tooltips (the Farm map badge) where a bare "Behind schedule"
 // doesn't say what to actually go check.
@@ -10820,18 +11497,51 @@ function tlClosePanel(){
   tlSelectedPlantingId=null;
   document.getElementById("tlPanel").classList.remove("open");
 }
-// Crop Map's own detail panel — mobile taps a bar/chip to open this instead of dragging it
-// (see buildCropMap/buildUnassigned); reuses tlRenderPanel like Timeline/Week planner do, with
-// the bed-picker section turned on since Crop Map has no other way to reassign a bed without drag.
+// Crop Map's own detail panel — a bar/chip click opens this (see buildCropMap/buildUnassigned);
+// reuses tlRenderPanel like Timeline/Week planner do, with the bed-picker section turned on since
+// Crop Map has no other way to reassign a bed without drag. cmSelectedPlantingId mirrors
+// tlSelectedPlantingId — re-synced at the end of buildCropMap() so a save made from the panel's
+// own Edit Planting button (which reloads then rebuilds the map) doesn't leave the still-open
+// panel showing the pre-save planting.
+let cmSelectedPlantingId=null;
 function cmOpenPanel(p){
+  cmSelectedPlantingId=p.id;
   const panel=document.getElementById("cmPanel");
   tlRenderPanel(p, panel, cmClosePanel, {showBedPicker:true});
   panel.classList.add("open");
 }
 function cmClosePanel(){
+  cmSelectedPlantingId=null;
   document.getElementById("cmPanel").classList.remove("open");
 }
 function tlKv(k,v){ return `<div class="kv"><span class="k">${esc(k)}</span><span class="v">${v}</span></div>`; }
+// Milestone checklist HTML for one planting's lifecycle steps (Sown/Transplanted/Harvest started/
+// Finished) — same stepper rule and markup tlRenderPanel's own TASKS section uses, pulled out here
+// so the Farm Map's bed sidebar (selectBed) can show the same checkboxes without needing the rest
+// of that panel's layout (custom task list, row spacing, nursery, etc.).
+function tlMilestoneItemsHTML(p){
+  const lc=apLifecycle(p.tp?"transplant":"direct");
+  const curRank=statusRank(p.status);
+  const msAssigneeKey={sow:"sowAssignee",tp:"tpAssignee",h1:"h1Assignee",h2:"h2Assignee"};
+  return lc.map(t=>{
+    const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
+    const dateStr = p[t.df] ? fmt(p[t.df]) : "";
+    const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
+    const assigneeChoices=knownAssignees();
+    if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
+    const assigneeSelect=`<select class="tl-qa-assignee-select" data-ms-assignee="${akey}" title="Assignee">`
+      +`<option value=""${!curAssignee?" selected":""}>+ Assign…</option>`
+      +assigneeChoices.map(a=>`<option value="${esc(a)}"${a===curAssignee?" selected":""}>${esc(a)}</option>`).join("")
+      +`<option value="__add__">+ Add new…</option></select>`;
+    return { date:p[t.df]||"", html:`<div class="tl-qa-row tl-qa-task-row milestone${locked?" locked":""}">`
+      +`<label class="tl-qa-check">`
+        +`<input type="checkbox" ${done?"checked":""} ${locked?"disabled":""} data-df="${t.df}">`
+        +`<span class="tl-qa-label">${esc(t.label)}${dateStr?`<span class="tl-qa-date">${esc(dateStr)}</span>`:""}</span>`
+      +`</label>`
+      +assigneeSelect
+      +`</div>` };
+  });
+}
 // Renders the read-only planting-detail summary into ANY panel element (Timeline's own #tlPanel,
 // or the weekly planner's #wkPanel — see wkOpenPlantingPanel) — so both views share one
 // implementation instead of two near-duplicates. `closeFn` lets each caller wire its own close
@@ -12246,7 +12956,7 @@ async function apDoCreate(){
     }
     apClose();
     await loadAll();
-    if(document.getElementById("view-timeline").classList.contains("active")) buildTimeline();
+    renderViewContent(currentView);
   }catch(e){
     console.error(e); msg.style.color="var(--clay)";
     msg.textContent="Couldn't create: "+e.message;
@@ -12256,7 +12966,7 @@ async function apDoCreate(){
 async function apReloadAndClose(){
   apClose();
   await loadAll();
-  if(document.getElementById("view-timeline").classList.contains("active")) buildTimeline();
+  renderViewContent(currentView);
 }
 
 async function apDoSave(){
@@ -19822,6 +20532,174 @@ let fiQuery="", fiCat="", fiTag="";
 let fiSelId=null;      // the entry open in the detail pane
 let fiDraft=null;      // non-null while editing; a working copy, never the live record
 
+/* ---- soil test import ----
+   A lab report has one column per sample, each tagged with its own "Client Sample ID" (usually a
+   block name, sometimes something looser like "Tunnels" that covers several blocks at once). One
+   upload -> one Farm Info entry PER SAMPLE, each tagged only to its own beds — a block's panel must
+   never show another block's numbers mixed into the same entry. Reuses the existing draft editor
+   (fiOpenNew/fiRenderEditor/fiSave) for the actual save + bed-tagging UI rather than building a
+   second one: each sample opens as a pre-filled draft, and saving one auto-advances to the next. */
+// Anthropic's structured-output schemas reject too many nullable/union-typed properties at once
+// ("exponential compilation" — hit at 19 with the original one-field-per-nutrient shape). Dodging
+// it entirely: `readings` is a flat list of {name,value} pairs with NO nullable fields anywhere —
+// a figure that isn't on the report is simply omitted from the array, never represented as null.
+// fiSoilImportFile flattens this back into the original per-key object shape fiSoilBody expects.
+const SOIL_READING_KEYS = ["ph","ec_ds_m","organic_matter_pct","total_n_pct","mehlich_p_mg_kg",
+  "exch_k_pct","exch_ca_pct","exch_mg_pct","cec_cmol_kg","ca_mg_ratio",
+  "sulfur_mg_kg","zinc_mg_kg","manganese_mg_kg","iron_mg_kg","copper_mg_kg","boron_mg_kg"];
+const SOIL_SCHEMA = {
+  type:"object",
+  properties:{
+    report_id:{type:"string", description:"The report's own reference number, or empty string if there isn't one."},
+    sample_date:{type:"string", description:"Shared ISO YYYY-MM-DD sample date for the report, or empty string if unclear."},
+    samples:{ type:"array", items:{
+      type:"object",
+      properties:{
+        label:{type:"string", description:"The column's own Client Sample ID, verbatim."},
+        texture:{type:"string", description:"Basic Texture, or empty string if not on the report."},
+        readings:{ type:"array", description:"One entry per figure below that IS present on the report for this sample — omit any that aren't there, never invent or estimate a value.", items:{
+          type:"object",
+          properties:{ name:{type:"string", enum:SOIL_READING_KEYS}, value:{type:"number"} },
+          required:["name","value"], additionalProperties:false,
+        }},
+      },
+      required:["label","texture","readings"],
+      additionalProperties:false,
+    }},
+  },
+  required:["report_id","sample_date","samples"],
+  additionalProperties:false,
+};
+const soilPrompt = () => `This is a soil test lab report (one column per sample). Extract ONLY these figures per sample as "readings" entries — everything else on the report (heavy metals, ICPMS trace elements, paramagnetism, colour, silicon, sodium, etc.) is deliberately out of scope, do not include it:
+- ph — pH (H2O)
+- ec_ds_m — Electrical Conductivity, dS/m
+- organic_matter_pct — Estimated Organic Matter, %
+- total_n_pct — Nitrogen - Total, %
+- mehlich_p_mg_kg — Mehlich Phosphorus, mg/kg
+- exch_k_pct, exch_ca_pct, exch_mg_pct — Exchangeable Potassium, Calcium and Magnesium as a PERCENT OF CEC (the "%" rows — often headed just "Potassium"/"Calcium"/"Magnesium" in a %-of-base-saturation block; NOT the cmol+/kg row, NOT the mg/kg row, NOT any ICPMS row)
+- cec_cmol_kg — Total Cation Exchange Capacity, cmol+/kg
+- ca_mg_ratio — Calcium/Magnesium Ratio
+- sulfur_mg_kg — Sulfur, mg/kg, the KCl-extractable row specifically (plant-available), NOT the total ICPMS/ICPOES row further down the report
+- zinc_mg_kg, manganese_mg_kg, iron_mg_kg, copper_mg_kg — Zinc/Manganese/Iron/Copper, mg/kg, the DTPA-extractable rows (plant-available), NOT the total ICPMS rows
+- boron_mg_kg — Boron, mg/kg, the CaCl2-extractable row (plant-available), NOT the total ICPMS row
+
+Basic Texture is separate (its own "texture" field, a string, not a reading).
+
+One entry per sample column, using that column's own header (its Client Sample ID) verbatim as "label" — do not rename, expand or reinterpret it. Use the report's Sample Date for sample_date (ISO YYYY-MM-DD); if columns show different dates, use whichever is most common. Use the report's own Report ID (or equivalent lab reference number) for report_id, or an empty string if there isn't one. Never guess, estimate, or carry a value over from another column — omit the reading entirely instead.`;
+
+function fiSoilNum(v,unit){ return v==null ? "—" : `${v}${unit||""}`; }
+// One field list feeds both the plain-text version stored on the Farm Info entry itself (body,
+// rendered as markdown there) and the individual-card version shown inline in the bed/block panel
+// (fiSoilKvHtml) — so the two never drift apart as fields get added.
+const SOIL_FIELD_LIST = [
+  ["pH (H2O)","ph",""], ["EC","ec_ds_m"," dS/m"], ["Organic matter","organic_matter_pct","%"],
+  ["Total N","total_n_pct","%"], ["Mehlich P","mehlich_p_mg_kg"," mg/kg"],
+  ["Exch. K","exch_k_pct","%"], ["Exch. Ca","exch_ca_pct","%"], ["Exch. Mg","exch_mg_pct","%"],
+  ["CEC","cec_cmol_kg"," cmol+/kg"], ["Ca:Mg ratio","ca_mg_ratio",""],
+  ["Sulfur","sulfur_mg_kg"," mg/kg"],
+  ["Zinc","zinc_mg_kg"," mg/kg"], ["Manganese","manganese_mg_kg"," mg/kg"], ["Iron","iron_mg_kg"," mg/kg"],
+  ["Copper","copper_mg_kg"," mg/kg"], ["Boron","boron_mg_kg"," mg/kg"],
+];
+function fiSoilBody(s){
+  const lines=SOIL_FIELD_LIST.map(([label,key,unit])=>`${label}: ${fiSoilNum(s[key],unit)}`);
+  lines.push(`Texture: ${s.texture||"—"}`);
+  return lines.join("\n");
+}
+// Individual shaded .kv cards, one per line — the bed/block panel's inline version of a Farm Info
+// entry's body text, vs. the plain-text original (better suited to Farm Info's own markdown-
+// rendered detail view). Works from the stored body text itself rather than needing the raw sample
+// object again — every soilPrompt/fiSoilBody line is already "Label: value", so this is just a
+// straight re-render of that same text as cards, nothing re-derived.
+function fiBodyToKvHtml(body){
+  return String(body||"").split("\n").filter(Boolean).map(line=>{
+    const i=line.indexOf(": ");
+    if(i<0) return `<div class="kv"><span class="k"></span><span class="v">${esc(line)}</span></div>`;
+    return `<div class="kv"><span class="k">${esc(line.slice(0,i))}</span><span class="v">${esc(line.slice(i+2))}</span></div>`;
+  }).join("");
+}
+
+let fiSoilQueue=null, fiSoilQueueIdx=0, fiSoilQueueFile=null, fiSoilQueueMeta=null;
+function fiOpenSoilImport(){ $fi("fiSoilFileInput").click(); }
+async function fiSoilImportFile(file){
+  showLoading(true);
+  try{
+    if(!AKEY) throw new Error("Add an Anthropic API key under Settings ⚙ first — soil test import reads the report with Claude.");
+    const prompt=soilPrompt();
+    let result;
+    if(/\.(csv|txt)$/i.test(file.name)){
+      const text=await file.text();
+      result=await aiReadText({prompt:`${prompt}\n\nReport (CSV):\n${text}`, schema:SOIL_SCHEMA, maxTokens:4000});
+    }else if(/\.pdf$/i.test(file.name)){
+      const b64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.slice(r.result.indexOf(",")+1)); r.onerror=rej; r.readAsDataURL(file); });
+      result=await aiReadDocument({b64, prompt, schema:SOIL_SCHEMA, maxTokens:4000});
+    }else if(/^image\//.test(file.type)){
+      const enc=await sbEncode(file);
+      result=await aiReadImage({b64:enc.b64, mediaType:enc.mediaType, prompt, schema:SOIL_SCHEMA, maxTokens:4000});
+    }else{
+      throw new Error("Soil test import reads CSV, PDF or photo files.");
+    }
+    if(!result.samples || !result.samples.length) throw new Error("Couldn't find any sample columns on that report.");
+    // Flatten each sample's {name,value} readings array back into the flat per-key object shape
+    // fiSoilBody/fiSoilMatchBlock expect — see SOIL_SCHEMA for why the API response is shaped
+    // this way instead of one nullable field per nutrient.
+    fiSoilQueue=result.samples.map(s=>({
+      label:s.label, texture:s.texture||null,
+      ...Object.fromEntries((s.readings||[]).map(r=>[r.name,r.value])),
+    }));
+    fiSoilQueueIdx=0; fiSoilQueueFile=file;
+    fiSoilQueueMeta={reportId:result.report_id||null, sampleDate:result.sample_date||null};
+    fiOpenSoilDraft();
+  }catch(e){
+    alert("Couldn't read that soil test:\n"+e.message);
+  }finally{ showLoading(false); }
+}
+// Best-effort match of a sample's own label against a known block/plot name — exact,
+// case-insensitive. A miss (e.g. "Tunnels" spanning several blocks) leaves blockKeys empty rather
+// than guessing; the plot-picker in the draft editor is exactly the UI for picking it by hand.
+function fiSoilMatchBlock(label){
+  const key=String(label||"").trim().toLowerCase();
+  const hit=fiAllBlocks().find(k=>k.toLowerCase()===key);
+  return hit ? [hit] : [];
+}
+function fiOpenSoilDraft(){
+  const s=fiSoilQueue[fiSoilQueueIdx];
+  const dateStr = fiSoilQueueMeta.sampleDate || todayISO();
+  fiDraft={
+    id:null,
+    name:`${s.label} soil test — ${fmt(dateStr)}`,
+    category:"Soil report",
+    tags:["Soil report"],
+    body:fiSoilBody(s),
+    files:[], links:[],
+    bedIds:[], cropIds:[],
+    blockKeys:fiSoilMatchBlock(s.label),
+    pinned:false,
+    pending:[fiSoilQueueFile],
+    // Sample date, not upload date, drives "latest first" — see farmInfoSort / fmReferenceHTML.
+    soilCreated: new Date(dateStr+"T00:00:00").toISOString(),
+  };
+  fiSelId=null;
+  fiRenderEditor();
+  const banner=document.createElement("div");
+  banner.className="fi-soil-banner";
+  banner.textContent=`Soil test import — sample ${fiSoilQueueIdx+1} of ${fiSoilQueue.length}: "${s.label}"`
+    +(fiDraft.blockKeys.length?"":" — no plot matched this label, pick one below.");
+  const form=$fi("fiDetail").querySelector(".fi-form");
+  if(form) form.parentNode.insertBefore(banner, form);
+}
+function fiSoilQueueAdvance(){
+  if(!fiSoilQueue) return false;
+  fiSoilQueueIdx++;
+  if(fiSoilQueueIdx>=fiSoilQueue.length){
+    const n=fiSoilQueue.length;
+    fiSoilQueue=null; fiSoilQueueIdx=0; fiSoilQueueFile=null; fiSoilQueueMeta=null;
+    alert(`Imported ${n} sample${n===1?"":"s"} from that soil test.`);
+    return false;
+  }
+  fiOpenSoilDraft();
+  return true;
+}
+
 /* ---- markdown ---- */
 // A deliberately small subset: headings, lists, bold/italic/code, links, quotes, rules, and pipe
 // tables. No images, no HTML passthrough — every feature past this is another escaping edge case
@@ -20012,7 +20890,9 @@ function fiRenderDetail(e){
   const stamp = e.updated ? `Updated ${fmt(e.updated)}` : (e.created ? `Added ${fmt(e.created)}` : "");
   const beds=e.bedIds.map(fiBedName).filter(Boolean);
   const crops=e.cropIds.map(fiCropName).filter(Boolean);
+  const plots=e.blockKeys||[];
   const meta=[];
+  if(plots.length) meta.push(`<div class="kv"><span class="k">Plots</span><span class="v">${esc(plots.join(", "))}</span></div>`);
   if(beds.length) meta.push(`<div class="kv"><span class="k">Beds</span><span class="v">${esc(beds.join(", "))}</span></div>`);
   if(crops.length) meta.push(`<div class="kv"><span class="k">Crops</span><span class="v">${esc(crops.join(", "))}</span></div>`);
 
@@ -20043,7 +20923,7 @@ function fiRenderDetail(e){
 /* ---- editor ---- */
 function fiOpenNew(){
   fiDraft={ id:null, name:"", category:"Note", tags:[], body:"", files:[], links:[],
-            bedIds:[], cropIds:[], pinned:false, pending:[] };
+            bedIds:[], cropIds:[], blockKeys:[], pinned:false, pending:[] };
   fiSelId=null;
   fiRenderEditor();
 }
@@ -20052,7 +20932,7 @@ function fiOpenEdit(e){
   // live record half-mutated the way an in-place edit would.
   fiDraft={ id:e.id, name:e.name, category:e.category, tags:e.tags.slice(), body:e.body,
             files:e.files.slice(), links:e.links.slice(), bedIds:e.bedIds.slice(),
-            cropIds:e.cropIds.slice(), pinned:e.pinned, pending:[] };
+            cropIds:e.cropIds.slice(), blockKeys:(e.blockKeys||[]).slice(), pinned:e.pinned, pending:[] };
   fiRenderEditor();
 }
 function fiCancelEdit(){
@@ -20095,7 +20975,13 @@ function fiRenderEditor(){
         <button class="btn-ghost" type="button" data-fi-linkadd>Add link</button>
       </div>
 
-      <label>Beds <span style="text-transform:none;letter-spacing:0">(optional)</span></label>
+      <label>Plots <span style="text-transform:none;letter-spacing:0">(optional — a whole block, e.g. a soil test)</span></label>
+      <div class="fi-pickwrap">
+        <div class="fi-pickchips" id="fiFBlockChips"></div>
+        <div class="fi-picklist" id="fiFBlockList" style="max-height:140px"></div>
+      </div>
+
+      <label>Beds <span style="text-transform:none;letter-spacing:0">(optional — individual beds, not whole plots)</span></label>
       <div class="fi-pickwrap">
         <div class="fi-pickchips" id="fiFBedChips"></div>
         <input class="fi-search" id="fiFBedSearch" type="text" placeholder="Search beds…" autocomplete="off">
@@ -20146,9 +21032,21 @@ function fiRenderDraftLinks(){
   ).join("") : `<span class="empty-note">No links.</span>`;
 }
 
+// Every distinct block name, in the same order blocks are drawn on the Farm map (not alphabetical
+// — AB/C/D/E/F/G/GH1-3/H/I reads as the farm's actual layout, alphabetical would scramble that).
+function fiAllBlocks(){
+  const seen=new Set(), out=[];
+  (data.blocks||[]).forEach(b=>{ const k=String(b.name||"").trim(); if(k && !seen.has(k)){ seen.add(k); out.push(k); } });
+  (data.beds||[]).forEach(b=>{ const k=String(b.block||"").trim(); if(k && !seen.has(k)){ seen.add(k); out.push(k); } });
+  return out;
+}
 function fiRenderPickers(){
   const d=fiDraft;
   const bq=($fi("fiFBedSearch")||{}).value||"", cq=($fi("fiFCropSearch")||{}).value||"";
+  $fi("fiFBlockChips").innerHTML = (d.blockKeys||[]).map(k=>
+    `<button class="fi-pickchip" type="button" data-fi-blockoff="${esc(k)}">${esc(k)} ✕</button>`).join("");
+  $fi("fiFBlockList").innerHTML = fiAllBlocks()
+    .map(k=>`<button type="button" data-fi-blockon="${esc(k)}">${(d.blockKeys||[]).includes(k)?'<span class="on">✓ </span>':""}${esc(k)}</button>`).join("");
   $fi("fiFBedChips").innerHTML = d.bedIds.map(id=>
     `<button class="fi-pickchip" type="button" data-fi-bedoff="${id}">${esc(fiBedName(id)||id)} ✕</button>`).join("");
   $fi("fiFCropChips").innerHTML = d.cropIds.map(id=>
@@ -20184,9 +21082,13 @@ async function fiSave(){
   const existing=d.id?fiEntry(d.id):null;
   const fields={
     [F.fi_name]:d.name.trim(), [F.fi_cat]:d.category, [F.fi_tags]:d.tags, [F.fi_body]:d.body,
-    [F.fi_links]:d.links, [F.fi_bed]:d.bedIds, [F.fi_crop]:d.cropIds,
-    [F.fi_pinned]:d.pinned, [F.fi_updated]:now,
-    [F.fi_created]: (existing && existing.created) || now,
+    [F.fi_links]:d.links, [F.fi_bed]:d.bedIds, [F.fi_crop]:d.cropIds, [F.fi_block]:d.blockKeys||[],
+    [F.fi_pinned]:d.pinned,
+    // Soil test import backdates both to the report's own Sample Date rather than upload time, so
+    // farmInfoSort's existing "most-recently-touched first" naturally becomes "latest sample first"
+    // — see fmReferenceHTML, which relies on that ordering to never show a stale test as current.
+    [F.fi_updated]: d.soilCreated || now,
+    [F.fi_created]: d.soilCreated || (existing && existing.created) || now,
     [F.fi_files]:d.files,
   };
   showLoading(true);
@@ -20209,8 +21111,11 @@ async function fiSave(){
     }
     const parsed=PlannerShared.parseFarmInfo([{id, fields:{...fields, [F.fi_files]:d.files}}])[0];
     data.farmInfo=(data.farmInfo||[]).filter(x=>x.id!==id).concat([parsed]).sort(PlannerShared.farmInfoSort);
+    const wasSoilImport=!!d.soilCreated;
     fiDraft=null; fiSelId=id;
-    fiRenderDetail(fiEntry(id)); fiRenderChips();
+    if(!(wasSoilImport && fiSoilQueueAdvance())){
+      fiRenderDetail(fiEntry(id)); fiRenderChips();
+    }
   }catch(e){
     alert("Couldn't save this entry:\n"+e.message);
   }finally{ showLoading(false); }
@@ -20300,6 +21205,11 @@ function fiCloseFile(){
   const main=$fi("fiMain"); if(!main) return;
 
   $fi("fiNewBtn").onclick=fiOpenNew;
+  $fi("fiSoilImportBtn").onclick=fiOpenSoilImport;
+  $fi("fiSoilFileInput").addEventListener("change",e=>{
+    const f=e.target.files[0]; e.target.value="";
+    if(f) fiSoilImportFile(f);
+  });
 
   const search=$fi("fiSearch");
   search.addEventListener("input",()=>{ fiQuery=search.value; fiRenderRows(); });
@@ -20359,6 +21269,13 @@ function fiCloseFile(){
       fiRenderPickers(); return; }
     const coff=t.closest("[data-fi-cropoff]");
     if(coff){ fiSyncDraftFromForm(); fiDraft.cropIds=fiDraft.cropIds.filter(x=>x!==coff.dataset.fiCropoff); fiRenderPickers(); return; }
+    const blkon=t.closest("[data-fi-blockon]");
+    if(blkon){ fiSyncDraftFromForm(); const k=blkon.dataset.fiBlockon;
+      fiDraft.blockKeys=fiDraft.blockKeys||[];
+      const i=fiDraft.blockKeys.indexOf(k); if(i<0) fiDraft.blockKeys.push(k); else fiDraft.blockKeys.splice(i,1);
+      fiRenderPickers(); return; }
+    const blkoff=t.closest("[data-fi-blockoff]");
+    if(blkoff){ fiSyncDraftFromForm(); fiDraft.blockKeys=(fiDraft.blockKeys||[]).filter(x=>x!==blkoff.dataset.fiBlockoff); fiRenderPickers(); return; }
   });
 
   $fi("fiDetail").addEventListener("input",(ev)=>{
