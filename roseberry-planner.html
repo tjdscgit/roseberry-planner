@@ -3625,6 +3625,10 @@
         <span class="vw-name">Beds</span>
         <span class="sub" id="bdSummary"></span>
         <span class="spacer"></span>
+        <div class="tl-search vw-search">
+          <input type="text" id="bdSearch" placeholder="Search bed or crop…" autocomplete="off" spellcheck="false">
+          <button type="button" id="bdSearchClear" title="Clear search">✕</button>
+        </div>
         <div class="seg" id="bdStatusToggle">
           <button type="button" data-bdst="all" aria-pressed="true">Any status</button>
           <button type="button" data-bdst="crop" aria-pressed="false">In crop</button>
@@ -3634,16 +3638,12 @@
         <button class="btn-ghost" id="bdExportBtn" type="button">Export</button>
       </div>
       <div class="vw-tools">
-        <div class="tl-search vw-search">
-          <input type="text" id="bdSearch" placeholder="Search bed or crop…" autocomplete="off" spellcheck="false">
-          <button type="button" id="bdSearchClear" title="Clear search">✕</button>
-        </div>
-        <span class="spacer"></span>
         <span class="lbl-inline">Sort</span>
         <div class="seg" id="bdSortToggle">
           <button type="button" data-bdsort="free" aria-pressed="true">Free from</button>
           <button type="button" data-bdsort="bed" aria-pressed="false">Bed</button>
         </div>
+        <span class="spacer"></span>
         <span class="sub">config saves automatically</span>
       </div>
       <div class="bd-split">
