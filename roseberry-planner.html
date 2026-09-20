@@ -3655,6 +3655,7 @@
         <span class="sub" id="bsSummary"></span>
         <span class="spacer"></span>
         <span class="sub">config saves automatically</span>
+        <button class="btn-ghost" id="bdAddBedBtn" type="button">＋ Add bed</button>
       </div>
       <div class="cr-wrap">
         <p class="sub" style="max-width:66ch;margin:0 0 .8rem">
@@ -3673,6 +3674,7 @@
               <th title="Position of this bed within its block, lowest first — sets left-to-right/top-to-bottom order on the Farm map. Blank falls back to sorting by bed name">Order</th>
               <th>Notes</th>
               <th title="Issues flagged against this bed (nutrition, weeds, disease, etc.) that rule out certain crops — advisory, never blocks a planting">Issues</th>
+              <th></th>
             </tr>
           </thead>
           <tbody id="bdBody"></tbody>
@@ -13895,12 +13897,12 @@ function buildBedSetupTab(){
   const body=document.getElementById("bdBody"); body.innerHTML="";
   const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
   if(!keys.length){
-    body.innerHTML=`<tr><td colspan="8"><div class="cr-empty">No beds yet.</div></td></tr>`;
+    body.innerHTML=`<tr><td colspan="9"><div class="cr-empty">No beds yet.</div></td></tr>`;
     return;
   }
   keys.forEach(blk=>{
     const hd=document.createElement("tr"); hd.className="bd-blockrow";
-    hd.innerHTML=`<td colspan="8">Block ${esc(blk)}</td>`;
+    hd.innerHTML=`<td colspan="9">Block ${esc(blk)}</td>`;
     body.appendChild(hd);
     groups[blk].forEach(bed=>{
       body.appendChild(bdBedRow(bed));
@@ -13934,7 +13936,8 @@ function bdBedRow(bed){
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></td>`
    +`<td><input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></td>`
    +`<td><input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></td>`
-   +`<td><button type="button" class="bd-expand">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`;
+   +`<td><button type="button" class="bd-expand">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`
+   +`<td><button type="button" class="icon-btn bd-delete" title="Delete bed">🗑</button></td>`;
   tr.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
   tr.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
   tr.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
@@ -13945,13 +13948,14 @@ function bdBedRow(bed){
     bdExpanded.has(bed.id) ? bdExpanded.delete(bed.id) : bdExpanded.add(bed.id);
     buildBedSetupTab();
   };
+  tr.querySelector(".bd-delete").onclick=()=>bdDeleteBed(bed);
   return tr;
 }
 
 // The expanded panel under a bed: one block per issue, plus an add button.
 function bdIssuesRow(bed){
   const tr=document.createElement("tr"); tr.className="bd-issuerow";
-  const td=document.createElement("td"); td.colSpan=8;
+  const td=document.createElement("td"); td.colSpan=9;
   const wrap=document.createElement("div"); wrap.className="bd-issues";
   const issues=bedIssuesOn(bed.id);
   if(!issues.length){
@@ -14177,6 +14181,54 @@ async function bdDeleteIssue(i,bed){
   }catch(e){
     console.error(e);
     alert("Couldn't delete bed issue:\n"+e.message);
+  }
+}
+
+// New beds start blank everywhere except name and (optionally) block — same "+ name, then edit
+// inline" pattern as tray types / task library / sales outlets elsewhere in the app. Block is asked
+// up front because nothing in this table can set it afterward, and it's what has to match an
+// existing block for the bed to draw on the Farm map at all.
+async function bdAddBed(){
+  const name=(prompt('New bed name (e.g. "F16"):')||"").trim();
+  if(!name) return;
+  const block=(prompt("Block this bed belongs to (must match a block name already on the Farm map to appear there — leave blank to set later):")||"").trim();
+  const fields={[CFG.f.bed_name]:name};
+  if(block) fields[CFG.f.bed_block]=block;
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.beds, [fields]);
+    data.beds.push({id:created[0].id, name, block, len:null, wid:null, order:null,
+      category:"", tunnel:false, notes:"", method:"", precipRate:null,
+      emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
+    rebuildDerived();
+    buildBedSetupTab();
+    layoutAndDraw();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't add bed:\n"+e.message);
+  }
+}
+
+async function bdDeleteBed(bed){
+  const occ=bdPlantingsOn(bed.id).length;
+  const issues=bedIssuesOn(bed.id).length;
+  const prep=(data.bedPrepEvents||[]).filter(e=>(e.bedIds||[]).includes(bed.id)).length;
+  const warn=[];
+  if(occ) warn.push(`${occ} planting${occ===1?"":"s"} referencing it`);
+  if(issues) warn.push(`${issues} issue${issues===1?"":"s"} recorded against it`);
+  if(prep) warn.push(`${prep} prep record${prep===1?"":"s"} logged against it`);
+  const detail=warn.length
+    ? `\n\nThis bed still has ${warn.join(" and ")} — they'll keep pointing at a bed that no longer exists.`
+    : "";
+  if(!confirm(`Delete bed "${bed.name}"?\n\nThis permanently removes it from Airtable.${detail}`)) return;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.beds, [bed.id]);
+    data.beds=data.beds.filter(b=>b.id!==bed.id);
+    rebuildDerived();
+    buildBedSetupTab();
+    layoutAndDraw();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't delete bed:\n"+e.message);
   }
 }
 
@@ -14663,6 +14715,8 @@ async function bpSaveLog(){
 }
 
 function bpWire(){
+  const addBedBtn=document.getElementById("bdAddBedBtn");
+  if(addBedBtn) addBedBtn.onclick=bdAddBed;
   const modal=document.getElementById("bpModal"); if(!modal) return;
   document.getElementById("bpLogBtn").onclick=()=>bpOpenLog({});
   document.getElementById("bpTargetsBtn").onclick=()=>{
@@ -15118,8 +15172,10 @@ function bdBuildMobile(){
     <div class="ap-sect">Issues</div>
     <div id="bdMobIssues"></div>
     <div class="ap-sect">Prep</div>
-    <div id="bdMobPrep"></div>`;
+    <div id="bdMobPrep"></div>
+    <button type="button" class="btn-danger" id="bdMobDelete" style="width:100%;margin-top:1rem">Delete bed</button>`;
   box.querySelector(".bd-mob-back").onclick=()=>{ bdMobileBed=null; bdBuildMobile(); };
+  box.querySelector("#bdMobDelete").onclick=()=>bdDeleteBed(bed);
   box.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
   box.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
   box.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
