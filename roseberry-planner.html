@@ -234,7 +234,7 @@
      scrollbar to reach it. EVERY view built on .cm-top + .cr-wrap belongs in this list — five of
      them were missing for a long time and only looked fine because their content happened to be
      short enough to fit. If you add a view using .cr-wrap, add it here too. */
-  #view-crops.active,#view-beds.active,#view-seedbook.active,#view-outlets.active,
+  #view-crops.active,#view-beds.active,#view-bedsetup.active,#view-seedbook.active,#view-outlets.active,
   #view-whiteboard.active,
   #view-misc.active,#view-tasklib.active,#view-croptasks.active,
   #view-farminfo.active,#view-fertprog.active,#view-fertrec.active,
@@ -967,15 +967,10 @@
   .hv-daychips{display:inline-flex;gap:.2rem}
   .hv-empty{padding:1.4rem 1rem;color:var(--ink-2);font-size:.82rem}
 
-  /* ---- Beds: what is in each one and when it frees up. The bed's own configuration (size, order,
-     category, issues) moved to the panel — it is set once and read rarely, where this is read daily. */
+  /* ---- Beds: what is in each one and when it frees up. Setup/issues/prep history moved to their
+     own Bed setup view — this page is read daily, that one is set once and read rarely. */
   .bd-split{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}
-  /* .cr-wrap (shared, see the Beds/crops/etc list above) owns the scroll itself via its own
-     flex:1 1 auto + overflow:auto — that only works if ITS parent is a bounded-height flex column.
-     Without display:flex/min-height:0 here, .bd-listwrap's overflow:auto never gets used (.cr-wrap
-     just grows to its content height) and .cr-wrap's own overscroll-behavior:contain then traps the
-     wheel/touch scroll instead of chaining it up — net effect: nothing scrolls at all. */
-  .bd-listwrap{flex:1 1 auto;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  .bd-listwrap{flex:1 1 auto;min-width:0;overflow:auto}
   .bd-row{display:grid;grid-template-columns:80px 90px minmax(0,1fr) 84px 90px 96px 96px;
     align-items:center;gap:.7rem;padding:.55rem 1rem;border-bottom:1px solid var(--line);cursor:pointer}
   .bd-row:hover{background:var(--hover)}
@@ -3644,15 +3639,25 @@
           <button type="button" data-bdsort="bed" aria-pressed="false">Bed</button>
         </div>
         <span class="spacer"></span>
-        <span class="sub">config saves automatically</span>
       </div>
       <div class="bd-split">
       <div class="bd-listwrap">
-      <div class="cr-wrap">
         <div id="bdStateList"></div>
+      </div>
+      <aside class="bd-panel" id="bdPanel" hidden></aside>
+      </div>
+    </section>
 
-        <div class="ap-sect">Bed setup</div>
-        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+    <!-- BED SETUP -->
+    <section class="view" id="view-bedsetup">
+      <div class="vw-title">
+        <span class="vw-name">Bed setup</span>
+        <span class="sub" id="bsSummary"></span>
+        <span class="spacer"></span>
+        <span class="sub">config saves automatically</span>
+      </div>
+      <div class="cr-wrap">
+        <p class="sub" style="max-width:66ch;margin:0 0 .8rem">
           Size, order and category per bed — set once, and what the farm map draws from. Add an
           issue to record a problem with a bed: name the crops it rules out and any planting that
           lands there is flagged. Advisory, never blocking.
@@ -3695,9 +3700,6 @@
         </div>
         <div id="bpTargets" hidden></div>
         <div id="bpBody"></div>
-      </div>
-      </div>
-      <aside class="bd-panel" id="bdPanel" hidden></aside>
       </div>
     </section>
 
@@ -7252,7 +7254,7 @@ const RAIL_GROUPS = {
   ]},
   field: { label:"Field", groups:[
     { name:"Maps",   views:[["map","Farm map"],["cropmap","Crop map"],["timeline","Timeline"]] },
-    { name:"Ground", views:[["beds","Beds"],["fieldwalk","Field walk"]] },
+    { name:"Ground", views:[["beds","Beds"],["bedsetup","Bed setup"],["fieldwalk","Field walk"]] },
   ]},
   crops: { label:"Crops", groups:[
     { name:"Planting", views:[["crops","Crop defaults"],["croptasks","Crop tasks"],["tasklib","Task library"]] },
@@ -7290,6 +7292,7 @@ const SIDEBAR_COUNT = {
   seedbook:  ()=>(data.plantings||[]).length,
   misc:      ()=>(data.trayTypes||[]).length,
   beds:      ()=>(data.beds||[]).length,
+  bedsetup:  ()=>(data.bedIssues||[]).length,
   sprayrec:  ()=>(data.sprayApplications||[]).length,
   spraymix:  ()=>(data.sprayMixes||[]).length,
   fertrec:   ()=>(data.fertApps||[]).length,
@@ -7400,6 +7403,7 @@ function renderViewContent(view){
   if(view==="timeline") buildTimeline();
   if(view==="crops") buildCropsTab();
   if(view==="beds") buildBedsTab();
+  if(view==="bedsetup") buildBedSetupTab();
   if(view==="bedprep") bppBuild();
   if(view==="seedbook") buildSeedbook();
   if(view==="misc") buildMiscTab();
@@ -13867,6 +13871,15 @@ function buildBedsTab(){
   bdRenderPanel();
   vwSetSummary("bdSummary",()=>{
     const c=vwBedBlockCounts();
+    return c.beds ? `${c.beds} beds · ${c.blocks} blocks` : "";
+  });
+}
+
+// The bed setup table, its issues, flagged plantings and prep history — set once, read rarely,
+// split out of the daily-read Beds state table into its own view.
+function buildBedSetupTab(){
+  vwSetSummary("bsSummary",()=>{
+    const c=vwBedBlockCounts();
     const flagged=new Set((data.bedIssues||[]).map(i=>i.bedId).filter(Boolean));
     const issues=flagged.size;
     return c.beds ? `${c.beds} beds \u00b7 ${c.blocks} blocks${issues?` \u00b7 ${issues} with issues`:""}` : "";
@@ -13930,7 +13943,7 @@ function bdBedRow(bed){
   });
   tr.querySelector(".bd-expand").onclick=()=>{
     bdExpanded.has(bed.id) ? bdExpanded.delete(bed.id) : bdExpanded.add(bed.id);
-    buildBedsTab();
+    buildBedSetupTab();
   };
   return tr;
 }
@@ -13949,7 +13962,7 @@ function bdIssuesRow(bed){
   issues.forEach(i=>wrap.appendChild(bdIssueCard(bed,i)));
   const add=document.createElement("button");
   add.type="button"; add.className="cr-add-variety"; add.textContent="+ Add issue…";
-  add.onclick=async()=>{ if(await bdAddIssue(bed)) buildBedsTab(); };
+  add.onclick=async()=>{ if(await bdAddIssue(bed)) buildBedSetupTab(); };
   wrap.appendChild(add);
   wrap.appendChild(bdIrrigCard(bed));
   td.appendChild(wrap); tr.appendChild(td);
@@ -14037,7 +14050,7 @@ function bdIrrigCard(bed){
       const v = BD_IRRIG_STRING_KEYS.has(k) ? (e.target.value||"")
                                             : (e.target.value===""?null:(+e.target.value));
       await saveBed(bed.id,k,v);
-      buildBedsTab();   // the derived line above is now stale whichever way the write went, and a
+      buildBedSetupTab();   // the derived line above is now stale whichever way the write went, and a
                          // method switch changes which fields this card even shows
     };
   });
@@ -14114,7 +14127,7 @@ async function saveBed(id,key,val){
     bed[key]=prev;   // rollback
     console.error(e);
     alert("Couldn't save bed:\n"+e.message);
-    buildBedsTab();
+    buildBedSetupTab();
   }
 }
 
@@ -14124,7 +14137,7 @@ async function saveBedIssue(id,key,val){
   const iss=(data.bedIssues||[]).find(x=>x.id===id); if(!iss) return;
   const prev=iss[key];
   iss[key]=val;   // optimistic
-  buildBedsTab();
+  buildBedSetupTab();
   try{
     await atPatch(CFG.farmBase, CFG.tables.bedIssues, id, {[CFG.f[BD_ISSUE_FIELDS[key]]]:val});
     layoutAndDraw();   // a changed exclusion can add or clear flags on the bed views
@@ -14132,7 +14145,7 @@ async function saveBedIssue(id,key,val){
     iss[key]=prev;   // rollback
     console.error(e);
     alert("Couldn't save bed issue:\n"+e.message);
-    buildBedsTab();
+    buildBedSetupTab();
   }
 }
 
@@ -14160,7 +14173,7 @@ async function bdDeleteIssue(i,bed){
   try{
     await atDelete(CFG.farmBase, CFG.tables.bedIssues, [i.id]);
     data.bedIssues=data.bedIssues.filter(x=>x.id!==i.id);
-    buildBedsTab(); layoutAndDraw();
+    buildBedSetupTab(); layoutAndDraw();
   }catch(e){
     console.error(e);
     alert("Couldn't delete bed issue:\n"+e.message);
@@ -14642,7 +14655,7 @@ async function bpSaveLog(){
     const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepEvents, [fields]);
     data.bedPrepEvents.push({id:created[0].id, date, bedIds:beds, ops, by:"", notes, taskId});
     bpCloseLog();
-    buildBedsTab();
+    buildBedSetupTab();
   }catch(e){
     console.error(e);
     alert("Couldn't save that prep record:\n"+e.message);
