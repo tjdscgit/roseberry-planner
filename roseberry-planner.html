@@ -970,7 +970,12 @@
   /* ---- Beds: what is in each one and when it frees up. The bed's own configuration (size, order,
      category, issues) moved to the panel — it is set once and read rarely, where this is read daily. */
   .bd-split{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}
-  .bd-listwrap{flex:1 1 auto;min-width:0;overflow:auto}
+  /* .cr-wrap (shared, see the Beds/crops/etc list above) owns the scroll itself via its own
+     flex:1 1 auto + overflow:auto — that only works if ITS parent is a bounded-height flex column.
+     Without display:flex/min-height:0 here, .bd-listwrap's overflow:auto never gets used (.cr-wrap
+     just grows to its content height) and .cr-wrap's own overscroll-behavior:contain then traps the
+     wheel/touch scroll instead of chaining it up — net effect: nothing scrolls at all. */
+  .bd-listwrap{flex:1 1 auto;min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .bd-row{display:grid;grid-template-columns:80px 90px minmax(0,1fr) 84px 90px 96px 96px;
     align-items:center;gap:.7rem;padding:.55rem 1rem;border-bottom:1px solid var(--line);cursor:pointer}
   .bd-row:hover{background:var(--hover)}
