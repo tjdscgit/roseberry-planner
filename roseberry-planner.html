@@ -3659,7 +3659,16 @@
         <button class="btn-ghost" id="bdAddBedBtn" type="button">＋ Add bed</button>
       </div>
       <div class="cr-wrap">
-        <p class="sub" style="max-width:66ch;margin:0 0 .8rem">
+        <div class="ap-sect" style="margin-top:0">Blocks</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+          Name, preferred crop types and irrigation defaults per block — position, rotation and
+          label placement are set on the Farm map instead, where you can see them move. Beds match
+          a block by name, so renaming one here also updates every bed currently in it.
+        </p>
+        <div id="bkList"></div>
+
+        <div class="ap-sect">Bed setup</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
           Size, order and category per bed — set once, and what the farm map draws from. Add an
           issue to record a problem with a bed: name the crops it rules out and any planting that
           lands there is flagged. Advisory, never blocking.
@@ -13929,6 +13938,7 @@ function buildBedSetupTab(){
     const issues=flagged.size;
     return c.beds ? `${c.beds} beds \u00b7 ${c.blocks} blocks${issues?` \u00b7 ${issues} with issues`:""}` : "";
   });
+  bkRenderBlocks();
   bdRenderConflicts();
   bpRenderHistory();   // before the mobile early return — the prep cards render on phones too
   const table=document.getElementById("bdTable"), mob=document.getElementById("bdMobile");
@@ -13957,6 +13967,133 @@ function buildBedSetupTab(){
 function bdSelectHTML(options, val, blank){
   return `<option value="">${esc(blank)}</option>`
     + options.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
+}
+
+/* ---- Blocks: name, preferred crop types, irrigation defaults. Position, rotation, tilt and
+   label placement are already editable on the Farm map (drag/rotate/lock) — this only covers the
+   fields nothing else lets you touch. One card per block, same visual language as a bed issue
+   card. ---- */
+const BK_BLOCK_FIELDS={ method:"blk_method", precipRate:"blk_precip",
+                        emitSpacing:"blk_emitSpacing", emitFlow:"blk_emitFlow",
+                        lines:"blk_lines", wetWidth:"blk_wetWidth", soil:"blk_soil",
+                        irrigNotes:"blk_irrigNotes" };
+async function saveBlock(id,key,val){
+  const blk=(data.blocks||[]).find(b=>b.id===id); if(!blk) return;
+  const prev=blk[key];
+  blk[key]=val;   // optimistic
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.blocks, id, {[CFG.f[BK_BLOCK_FIELDS[key]]]:val});
+  }catch(e){
+    blk[key]=prev;   // rollback
+    console.error(e);
+    alert("Couldn't save block:\n"+e.message);
+    bkRenderBlocks();
+  }
+}
+
+// Beds point at a block by matching its NAME (free text — see bedGroups/selectBlock), not a link,
+// so renaming one here has to rewrite every bed currently in it or they'd silently stop drawing on
+// the Farm map and stop grouping under their block.
+async function bkRenameBlock(blk, name){
+  name=name.trim();
+  if(!name || name===blk.name){ bkRenderBlocks(); return; }
+  const affected=(data.beds||[]).filter(b=>b.block===blk.name);
+  if(affected.length && !confirm(`Rename block "${blk.name}" to "${name}"?\n\n`
+      +`This also updates ${affected.length} bed${affected.length===1?"":"s"} currently in it to match.`)){
+    bkRenderBlocks(); return;
+  }
+  const prevName=blk.name;
+  blk.name=name;
+  affected.forEach(b=>b.block=name);
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.blocks, blk.id, {[CFG.f.blk_name]:name});
+    await Promise.all(affected.map(b=>atPatch(CFG.farmBase, CFG.tables.beds, b.id, {[CFG.f.bed_block]:name})));
+    rebuildDerived();
+    buildBedSetupTab();
+    layoutAndDraw();
+  }catch(e){
+    blk.name=prevName;
+    affected.forEach(b=>b.block=prevName);
+    console.error(e);
+    alert("Couldn't rename block:\n"+e.message);
+    bkRenderBlocks();
+  }
+}
+
+function bkBlockCardHTML(blk){
+  const set=data.irrigSettings||{};
+  const numCell=(k,label,step,val,shown)=>
+    `<label class="bd-irrig-f"><span>${esc(label)}</span>`
+   +`<input class="cr-num" type="number" min="0" step="${step}" data-bk="${k}" value="${val??""}"`
+   +` placeholder="${esc(String(shown??"—"))} (from farm)"></label>`;
+  const method=(blk.method||set.method||"drip").toLowerCase()==="overhead" ? "overhead" : "drip";
+  const soils=Object.keys(PlannerShared.SOIL_TYPES);
+
+  const methodField=
+    `<label class="bd-irrig-f"><span>Irrigation method</span><select data-bk="method">`
+   +`<option value="">— ${method==="overhead"?"Overhead":"Drip"} (from farm)</option>`
+   +`<option value="Drip"${blk.method==="Drip"?" selected":""}>Drip</option>`
+   +`<option value="Overhead"${blk.method==="Overhead"?" selected":""}>Overhead</option>`
+   +`</select></label>`;
+  const soilField=
+    `<label class="bd-irrig-f"><span>Soil type</span><select data-bk="soil">`
+   +`<option value="">— ${esc(set.soil||"")} (from farm)</option>`
+   +soils.map(o=>`<option${o===blk.soil?" selected":""}>${esc(o)}</option>`).join("")
+   +`</select></label>`;
+  const fields = method==="overhead"
+    ? methodField + soilField + numCell("precipRate","Precipitation rate mm/hr","0.1",blk.precipRate,set.precipRate)
+    : methodField + soilField
+      + numCell("emitSpacing","Emitter spacing cm","1",blk.emitSpacing,set.emitSpacing)
+      + numCell("emitFlow","Emitter flow L/hr","0.1",blk.emitFlow,set.emitFlow)
+      + numCell("lines","Driplines per bed","1",blk.lines,set.lines)
+      + numCell("wetWidth","Wetted width m","0.05",blk.wetWidth,set.wetWidth);
+
+  const beds=(data.beds||[]).filter(b=>b.block===blk.name);
+  const typeChips=CROP_TYPES.map(t=>{
+    const on=(blk.preferredCropTypes||[]).includes(t);
+    return `<button type="button" class="cm-type-chip${on?" on":""}" data-bktype="${esc(t)}"
+              style="border-left-color:${cropTypeColor(t)}">${on?"✓ ":""}${esc(t)}</button>`;
+  }).join("");
+
+  return `<div class="bd-issue bd-block-card" data-blk="${esc(blk.id)}">`
+   +`<div class="bd-issue-line">`
+     +`<label class="bd-grow">Name<input type="text" data-bkname value="${esc(blk.name)}"></label>`
+     +`<span class="sub" style="align-self:center">${beds.length} bed${beds.length===1?"":"s"}</span>`
+   +`</div>`
+   +`<div class="bd-issue-excl">`
+     +`<div class="bd-excl-label" title="Crops of these types slot into this block's empty beds first when placing on the Crop map">Preferred crop types</div>`
+     +`<div class="bd-chips">${typeChips}</div>`
+   +`</div>`
+   +`<div class="bd-irrig-hd">${method==="overhead"?"Overhead":"Dripline"} &amp; soil`
+     +`<span class="bd-irrig-sub">blank = inherit the farm default</span></div>`
+   +`<div class="bd-irrig-grid">${fields}</div>`
+   +`<label class="bd-irrig-f" style="margin-top:.5rem"><span>Irrigation notes</span>`
+     +`<input type="text" data-bk="irrigNotes" value="${esc(blk.irrigNotes||"")}" placeholder="—"></label>`
+  +`</div>`;
+}
+
+function bkRenderBlocks(){
+  const box=document.getElementById("bkList"); if(!box) return;
+  const blocks=(data.blocks||[]).slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),undefined,{numeric:true}));
+  if(!blocks.length){
+    box.innerHTML=`<div class="cr-empty">No blocks yet — blocks are what the Farm map positions; add one there first.</div>`;
+    return;
+  }
+  box.innerHTML=blocks.map(bkBlockCardHTML).join("");
+  box.querySelectorAll(".bd-block-card").forEach(card=>{
+    const blk=blocks.find(b=>b.id===card.dataset.blk); if(!blk) return;
+    card.querySelector("[data-bkname]").onchange=e=>bkRenameBlock(blk, e.target.value);
+    card.querySelectorAll("[data-bk]").forEach(el=>{
+      el.onchange=e=>{
+        const k=el.dataset.bk;
+        const v = (k==="method"||k==="soil"||k==="irrigNotes") ? (e.target.value||"")
+                                                                : (e.target.value===""?null:(+e.target.value));
+        saveBlock(blk.id,k,v).then(bkRenderBlocks);
+      };
+    });
+    card.querySelectorAll("[data-bktype]").forEach(b=>b.onclick=()=>
+      cmToggleBlockType(blk.id, b.dataset.bktype).then(bkRenderBlocks));
+  });
 }
 
 function bdBedRow(bed){
