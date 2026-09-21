@@ -1891,9 +1891,9 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal,#znModal,#mfModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open{display:flex}
   #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
   #mfModal{z-index:70}   /* opened from on top of the Farm Map's own bed/block panels */
   .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
@@ -3655,6 +3655,7 @@
         <span class="sub" id="bsSummary"></span>
         <span class="spacer"></span>
         <span class="sub">config saves automatically</span>
+        <button class="btn-ghost" id="bbOpenBtn" type="button">＋ Add block of beds</button>
         <button class="btn-ghost" id="bdAddBedBtn" type="button">＋ Add bed</button>
       </div>
       <div class="cr-wrap">
@@ -5373,6 +5374,48 @@
       <button class="btn-ghost" id="mfCancel">Cancel</button>
       <span class="spacer" style="flex:1 1 auto"></span>
       <button class="btn-danger" id="mfDelete" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="bbModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(480px,100%)" role="dialog" aria-modal="true" aria-labelledby="bbHead">
+    <button class="ap-x" id="bbClose" title="Close">✕</button>
+    <div class="ap-head" id="bbHead">Add a block of beds</div>
+    <label class="ap-field" style="margin-top:1.05rem"><span>Block name</span>
+      <input type="text" id="bbBlock" placeholder="e.g. F">
+    </label>
+    <div style="display:flex;gap:.7rem;margin-top:1.05rem">
+      <label class="ap-field" style="flex:1 1 0"><span>Name prefix</span>
+        <input type="text" id="bbPrefix" placeholder="e.g. F">
+      </label>
+      <label class="ap-field" style="flex:1 1 0"><span>Start number</span>
+        <input class="cr-num" type="number" id="bbStart" min="1" step="1" value="1">
+      </label>
+      <label class="ap-field" style="flex:1 1 0"><span>How many</span>
+        <input class="cr-num" type="number" id="bbCount" min="1" step="1" value="6">
+      </label>
+    </div>
+    <p class="sub" id="bbPreview" style="margin:.6rem 0 0"></p>
+    <div style="display:flex;gap:.7rem;margin-top:1.05rem">
+      <label class="ap-field" style="flex:1 1 0"><span>Length m</span>
+        <input class="cr-num" type="number" id="bbLen" min="0" step="0.1">
+      </label>
+      <label class="ap-field" style="flex:1 1 0"><span>Width m</span>
+        <input class="cr-num" type="number" id="bbWid" min="0" step="0.1">
+      </label>
+    </div>
+    <div style="display:flex;gap:.7rem;margin-top:1.05rem;align-items:flex-end">
+      <label class="ap-field" style="flex:1 1 0"><span>Category</span>
+        <select id="bbCategory"></select>
+      </label>
+      <label class="ap-field" style="flex:0 0 auto;flex-direction:row;align-items:center;gap:.4rem">
+        <input type="checkbox" id="bbTunnel"><span>Under tunnel</span>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="bbSave">Create beds</button>
+      <button class="btn-ghost" id="bbCancel">Cancel</button>
     </div>
   </div>
 </div>
@@ -14232,6 +14275,84 @@ async function bdDeleteBed(bed){
   }
 }
 
+/* ---- Bulk add: a whole new block of beds in one go (F1..F12, say) rather than "+ Add bed" N
+   times. Block name and per-bed name are asked separately — block groups/matches the Farm map,
+   name prefix + running number is just what most farms actually call a run of beds — but they
+   default to the same text so the common case is still two fields, not four. ---- */
+function bbUpdatePreview(){
+  const prefix=document.getElementById("bbPrefix").value.trim();
+  const start=parseInt(document.getElementById("bbStart").value,10)||1;
+  const count=Math.max(1,Math.min(200,parseInt(document.getElementById("bbCount").value,10)||1));
+  const names=[]; for(let i=0;i<Math.min(count,4);i++) names.push(`${prefix||"?"}${start+i}`);
+  document.getElementById("bbPreview").textContent = count>4
+    ? `Creates: ${names.join(", ")}, … (${count} beds)`
+    : `Creates: ${names.join(", ")}`;
+}
+function bbOpen(){
+  document.getElementById("bbBlock").value="";
+  document.getElementById("bbPrefix").value="";
+  document.getElementById("bbStart").value="1";
+  document.getElementById("bbCount").value="6";
+  document.getElementById("bbLen").value="";
+  document.getElementById("bbWid").value="";
+  document.getElementById("bbCategory").innerHTML=bdSelectHTML(BD_CATEGORIES,"","—");
+  document.getElementById("bbTunnel").checked=false;
+  bbUpdatePreview();
+  document.getElementById("bbModal").classList.add("open");
+  document.getElementById("bbModal").setAttribute("aria-hidden","false");
+}
+function bbClose(){
+  document.getElementById("bbModal").classList.remove("open");
+  document.getElementById("bbModal").setAttribute("aria-hidden","true");
+}
+async function bbSave(){
+  const block=document.getElementById("bbBlock").value.trim();
+  const prefix=document.getElementById("bbPrefix").value.trim();
+  const start=parseInt(document.getElementById("bbStart").value,10)||1;
+  const count=Math.max(0,Math.min(200,parseInt(document.getElementById("bbCount").value,10)||0));
+  if(!block){ alert("Give the block a name — it's what the Farm map matches beds against."); return; }
+  if(!prefix){ alert("Give the beds a name prefix, e.g. \"F\" for F1, F2…"); return; }
+  if(!count){ alert("How many beds?"); return; }
+  const len=document.getElementById("bbLen").value===""?null:+document.getElementById("bbLen").value;
+  const wid=document.getElementById("bbWid").value===""?null:+document.getElementById("bbWid").value;
+  const category=document.getElementById("bbCategory").value;
+  const tunnel=document.getElementById("bbTunnel").checked;
+
+  const specs=[];
+  for(let i=0;i<count;i++){
+    const n=start+i, name=`${prefix}${n}`;
+    const fields={[CFG.f.bed_name]:name, [CFG.f.bed_block]:block, [CFG.f.bed_order]:n};
+    if(len!=null) fields[CFG.f.bed_len]=len;
+    if(wid!=null) fields[CFG.f.bed_wid]=wid;
+    if(category) fields[CFG.f.bed_category]=category;
+    if(tunnel) fields[CFG.f.bed_tunnel]=true;
+    specs.push({name, order:n, fields});
+  }
+  const existing=new Set((data.beds||[]).map(b=>b.name));
+  const dupes=specs.filter(s=>existing.has(s.name)).map(s=>s.name);
+  if(dupes.length && !confirm(`${dupes.length} of these names already exist (${dupes.join(", ")}). Create anyway?`)) return;
+
+  const saveBtn=document.getElementById("bbSave"); saveBtn.disabled=true;
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.beds, specs.map(s=>s.fields));
+    created.forEach((rec,i)=>{
+      const s=specs[i];
+      data.beds.push({id:rec.id, name:s.name, block, len, wid, order:s.order,
+        category, tunnel, notes:"", method:"", precipRate:null,
+        emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
+    });
+    bbClose();
+    rebuildDerived();
+    buildBedSetupTab();
+    layoutAndDraw();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't create beds:\n"+e.message);
+  }finally{
+    saveBtn.disabled=false;
+  }
+}
+
 /* ---- Flagged plantings: existing plantings that violate a bed issue, or sit inside a bed zone
    reserved for a different crop. Both are advisory — this card reports, it never rewrites. ---- */
 function bdRenderConflicts(){
@@ -14717,6 +14838,17 @@ async function bpSaveLog(){
 function bpWire(){
   const addBedBtn=document.getElementById("bdAddBedBtn");
   if(addBedBtn) addBedBtn.onclick=bdAddBed;
+  const bbOpenBtn=document.getElementById("bbOpenBtn");
+  if(bbOpenBtn) bbOpenBtn.onclick=bbOpen;
+  const bbModal=document.getElementById("bbModal");
+  if(bbModal){
+    document.getElementById("bbClose").onclick=bbClose;
+    document.getElementById("bbCancel").onclick=bbClose;
+    document.getElementById("bbSave").onclick=bbSave;
+    ["bbPrefix","bbStart","bbCount"].forEach(id=>
+      document.getElementById(id).oninput=bbUpdatePreview);
+    bbModal.onclick=e=>{ if(e.target===bbModal) bbClose(); };
+  }
   const modal=document.getElementById("bpModal"); if(!modal) return;
   document.getElementById("bpLogBtn").onclick=()=>bpOpenLog({});
   document.getElementById("bpTargetsBtn").onclick=()=>{
