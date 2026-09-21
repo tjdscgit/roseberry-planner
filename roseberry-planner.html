@@ -14072,14 +14072,42 @@ function bkBlockCardHTML(blk){
   +`</div>`;
 }
 
+// Beds sometimes carry a block name with no matching Blocks row (typed by hand before this page
+// existed, or a rename elsewhere) — those beds are invisible to this editor and can't be
+// repositioned on the Farm map ("no matching record" error). Surface them here with a one-click fix.
+function bkOrphanBlockNames(){
+  const known=new Set((data.blocks||[]).map(b=>String(b.name||"").trim()));
+  const names=new Set();
+  (data.beds||[]).forEach(b=>{ const n=String(b.block||"").trim(); if(n && !known.has(n)) names.add(n); });
+  return Array.from(names).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
+function bkOrphanCardHTML(name){
+  const count=(data.beds||[]).filter(b=>String(b.block||"").trim()===name).length;
+  return `<div class="bd-issue bd-block-orphan" data-orphan="${esc(name)}" style="border-style:dashed">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;flex-wrap:wrap">
+      <div><strong>${esc(name)}</strong> <span class="sub">— ${count} bed${count===1?"":"s"} reference this block, but it has no record yet, so it can't be positioned on the Farm map.</span></div>
+      <button class="btn-ghost bk-fix-orphan" type="button">Create block record</button>
+    </div>
+  </div>`;
+}
 function bkRenderBlocks(){
   const box=document.getElementById("bkList"); if(!box) return;
   const blocks=(data.blocks||[]).slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),undefined,{numeric:true}));
-  if(!blocks.length){
+  const orphans=bkOrphanBlockNames();
+  if(!blocks.length && !orphans.length){
     box.innerHTML=`<div class="cr-empty">No blocks yet — blocks are what the Farm map positions; add one there first.</div>`;
     return;
   }
-  box.innerHTML=blocks.map(bkBlockCardHTML).join("");
+  box.innerHTML=orphans.map(bkOrphanCardHTML).join("") + blocks.map(bkBlockCardHTML).join("");
+  box.querySelectorAll(".bk-fix-orphan").forEach(btn=>{
+    btn.onclick=async ()=>{
+      const name=btn.closest("[data-orphan]").dataset.orphan;
+      btn.disabled=true;
+      await bkEnsureBlock(name);
+      bkRenderBlocks();
+      layoutAndDraw();
+    };
+  });
   box.querySelectorAll(".bd-block-card").forEach(card=>{
     const blk=blocks.find(b=>b.id===card.dataset.blk); if(!blk) return;
     card.querySelector("[data-bkname]").onchange=e=>bkRenameBlock(blk, e.target.value);
@@ -14368,10 +14396,31 @@ async function bdDeleteIssue(i,bed){
 // inline" pattern as tray types / task library / sales outlets elsewhere in the app. Block is asked
 // up front because nothing in this table can set it afterward, and it's what has to match an
 // existing block for the bed to draw on the Farm map at all.
+// Beds reference a block by NAME (not a link field), but the Farm map can only place/drag a block
+// once it has an actual row in the Blocks table. Typing a new block name into "add bed" used to
+// leave it stranded — visible on the map via auto-layout, but erroring on drag with "no matching
+// record". This creates that row (Name only, position left blank so auto-layout still places it)
+// whenever the typed name doesn't already match one, so new blocks are draggable immediately.
+async function bkEnsureBlock(name){
+  name=(name||"").trim();
+  if(!name) return;
+  const exists=(data.blocks||[]).some(b=>String(b.name||"").trim()===name);
+  if(exists) return;
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.blocks, [{[CFG.f.blk_name]:name}]);
+    data.blocks=(data.blocks||[]).concat([{id:rec.id, name, x:null, y:null, orient:"Beds run vertical",
+      preferredCropTypes:[], method:"", precipRate:null, emitSpacing:null, emitFlow:null,
+      lines:null, wetWidth:null, soil:"", irrigNotes:""}]);
+  }catch(e){
+    console.error(e);
+    alert(`Bed(s) saved, but couldn't create a Blocks record for "${name}":\n${e.message}\n\nIt'll show on the Farm map but can't be repositioned until that's fixed.`);
+  }
+}
+
 async function bdAddBed(){
   const name=(prompt('New bed name (e.g. "F16"):')||"").trim();
   if(!name) return;
-  const block=(prompt("Block this bed belongs to (must match a block name already on the Farm map to appear there — leave blank to set later):")||"").trim();
+  const block=(prompt("Block this bed belongs to (a new name here also creates that block so it can be positioned on the Farm map — leave blank to set later):")||"").trim();
   const fields={[CFG.f.bed_name]:name};
   if(block) fields[CFG.f.bed_block]=block;
   try{
@@ -14379,6 +14428,7 @@ async function bdAddBed(){
     data.beds.push({id:created[0].id, name, block, len:null, wid:null, order:null,
       category:"", tunnel:false, notes:"", method:"", precipRate:null,
       emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
+    if(block) await bkEnsureBlock(block);
     rebuildDerived();
     buildBedSetupTab();
     layoutAndDraw();
@@ -14478,6 +14528,7 @@ async function bbSave(){
         category, tunnel, notes:"", method:"", precipRate:null,
         emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
     });
+    await bkEnsureBlock(block);
     bbClose();
     rebuildDerived();
     buildBedSetupTab();
