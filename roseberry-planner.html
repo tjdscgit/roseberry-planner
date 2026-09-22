@@ -333,6 +333,8 @@
   /* ---- Blocks: edited inline in the Bed setup table, right where each block's beds live, rather
      than in a modal that yanked focus to the top of a long scroll. The group header row becomes
      a clickable summary; a row directly beneath it expands to the full editor. ---- */
+  .bd-subtoggle[aria-expanded="true"]{background:var(--steel);color:#fff;border-color:var(--steel)}
+  .bd-subpanel{border:1px solid var(--line);border-radius:.5rem;margin:.6rem 0;background:var(--paper-2)}
   .bd-blockrow{cursor:pointer}
   .bd-blockrow:hover td{background:var(--paper-2)}
   .bd-blockrow-inner{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
@@ -3642,6 +3644,8 @@
           <button type="button" data-bdst="turn" aria-pressed="false">Turnaround</button>
           <button type="button" data-bdst="free" aria-pressed="false">Free</button>
         </div>
+        <button class="btn-ghost bd-subtoggle" id="bdFlaggedBtn" type="button" aria-expanded="false">Flagged</button>
+        <button class="btn-ghost bd-subtoggle" id="bdPrepBtn" type="button" aria-expanded="false">Prep</button>
         <button class="btn-ghost" id="bdExportBtn" type="button">Export</button>
       </div>
       <div class="vw-tools">
@@ -3652,35 +3656,39 @@
         </div>
         <span class="spacer"></span>
       </div>
+
+      <div class="bd-subpanel" id="bdFlaggedPanel" hidden>
+        <div class="cr-wrap" style="padding-top:.8rem">
+          <p class="sub" style="max-width:66ch;margin:0 0 .8rem">
+            Plantings already sitting on a bed with an issue against that crop. Click one to open it.
+          </p>
+          <div id="bdConflicts"></div>
+        </div>
+      </div>
+      <div class="bd-subpanel" id="bdPrepPanel" hidden>
+        <div class="cr-wrap" style="padding-top:.8rem">
+          <p class="sub" style="max-width:66ch;margin:0 0 .8rem">
+            What cultivation has been done to each bed, and when. Under <b>Operations…</b> you set
+            what the passes are, their order, which implement each one hangs off and how long a bed
+            takes — that list drives the Bed prep page. Give an operation a target interval there and
+            any bed past it is flagged here. Renaming one carries its existing records with it.
+            Advisory only — nothing on this list blocks a planting.
+          </p>
+          <div class="bp-controls">
+            <button class="btn" id="bpLogBtn">+ Log prep…</button>
+            <button type="button" class="cr-add-variety" id="bpTargetsBtn">Operations…</button>
+            <label class="bp-showall"><input type="checkbox" id="bpShowAll"> Show all beds</label>
+          </div>
+          <div id="bpTargets" hidden></div>
+          <div id="bpBody"></div>
+        </div>
+      </div>
+
       <div class="bd-split">
       <div class="bd-listwrap">
         <div id="bdStateList"></div>
       </div>
       <aside class="bd-panel" id="bdPanel" hidden></aside>
-      </div>
-
-      <div class="cr-wrap">
-        <div class="ap-sect">Flagged plantings</div>
-        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
-          Plantings already sitting on a bed with an issue against that crop. Click one to open it.
-        </p>
-        <div id="bdConflicts"></div>
-
-        <div class="ap-sect">Bed prep history</div>
-        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
-          What cultivation has been done to each bed, and when. Under <b>Operations…</b> you set
-          what the passes are, their order, which implement each one hangs off and how long a bed
-          takes — that list drives the Bed prep page. Give an operation a target interval there and
-          any bed past it is flagged here. Renaming one carries its existing records with it.
-          Advisory only — nothing on this list blocks a planting.
-        </p>
-        <div class="bp-controls">
-          <button class="btn" id="bpLogBtn">+ Log prep…</button>
-          <button type="button" class="cr-add-variety" id="bpTargetsBtn">Operations…</button>
-          <label class="bp-showall"><input type="checkbox" id="bpShowAll"> Show all beds</label>
-        </div>
-        <div id="bpTargets" hidden></div>
-        <div id="bpBody"></div>
       </div>
     </section>
 
@@ -13911,6 +13919,18 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(q) q.oninput=()=>{ bdQuery=q.value.trim(); bdRenderState(); };
   const qc=document.getElementById("bdSearchClear");
   if(qc) qc.onclick=()=>{ if(q){ q.value=""; } bdQuery=""; bdRenderState(); };
+  const flaggedBtn=document.getElementById("bdFlaggedBtn"), flaggedPanel=document.getElementById("bdFlaggedPanel");
+  if(flaggedBtn) flaggedBtn.onclick=()=>{
+    const opening=flaggedPanel.hidden;
+    flaggedPanel.hidden=!opening;
+    flaggedBtn.setAttribute("aria-expanded", opening?"true":"false");
+  };
+  const prepBtn=document.getElementById("bdPrepBtn"), prepPanel=document.getElementById("bdPrepPanel");
+  if(prepBtn) prepBtn.onclick=()=>{
+    const opening=prepPanel.hidden;
+    prepPanel.hidden=!opening;
+    prepBtn.setAttribute("aria-expanded", opening?"true":"false");
+  };
   const ex=document.getElementById("bdExportBtn");
   if(ex) ex.onclick=()=>{
     const NEWLINE=String.fromCharCode(10);   // written out rather than escaped, so the source stays one line
@@ -14681,6 +14701,8 @@ function bdRenderConflicts(){
     const zm=plantingZoneMismatches(p);
     if(cf.length||zm.length) hits.push({p,cf,zm});
   });
+  const flaggedBtn=document.getElementById("bdFlaggedBtn");
+  if(flaggedBtn) flaggedBtn.textContent = hits.length ? `Flagged (${hits.length})` : "Flagged";
   if(!hits.length){
     box.innerHTML=`<div class="cr-empty">No plantings are currently flagged.</div>`;
     return;
@@ -14768,6 +14790,9 @@ function bpRenderHistory(){
   const box=document.getElementById("bpBody"); if(!box) return;
   const map=bpLastDone(), iv=bpIntervals();
   const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const overdueCount=(data.beds||[]).filter(b=>bpOverdueOps(b.id,map,iv).length).length;
+  const prepBtn=document.getElementById("bdPrepBtn");
+  if(prepBtn) prepBtn.textContent = overdueCount ? `Prep (${overdueCount})` : "Prep";
   const rows=[];
   keys.forEach(blk=>{
     const beds=groups[blk].filter(b=>bpShowAll || bpOverdueOps(b.id,map,iv).length);
