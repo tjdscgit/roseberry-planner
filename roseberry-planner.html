@@ -3658,6 +3658,30 @@
       </div>
       <aside class="bd-panel" id="bdPanel" hidden></aside>
       </div>
+
+      <div class="cr-wrap">
+        <div class="ap-sect">Flagged plantings</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+          Plantings already sitting on a bed with an issue against that crop. Click one to open it.
+        </p>
+        <div id="bdConflicts"></div>
+
+        <div class="ap-sect">Bed prep history</div>
+        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
+          What cultivation has been done to each bed, and when. Under <b>Operations…</b> you set
+          what the passes are, their order, which implement each one hangs off and how long a bed
+          takes — that list drives the Bed prep page. Give an operation a target interval there and
+          any bed past it is flagged here. Renaming one carries its existing records with it.
+          Advisory only — nothing on this list blocks a planting.
+        </p>
+        <div class="bp-controls">
+          <button class="btn" id="bpLogBtn">+ Log prep…</button>
+          <button type="button" class="cr-add-variety" id="bpTargetsBtn">Operations…</button>
+          <label class="bp-showall"><input type="checkbox" id="bpShowAll"> Show all beds</label>
+        </div>
+        <div id="bpTargets" hidden></div>
+        <div id="bpBody"></div>
+      </div>
     </section>
 
     <!-- BED SETUP -->
@@ -3696,28 +3720,6 @@
           <tbody id="bdBody"></tbody>
         </table>
         <div id="bdMobile" class="bd-mobile" hidden></div>
-
-        <div class="ap-sect">Flagged plantings</div>
-        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
-          Plantings already sitting on a bed with an issue against that crop. Click one to open it.
-        </p>
-        <div id="bdConflicts"></div>
-
-        <div class="ap-sect">Bed prep history</div>
-        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
-          What cultivation has been done to each bed, and when. Under <b>Operations…</b> you set
-          what the passes are, their order, which implement each one hangs off and how long a bed
-          takes — that list drives the Bed prep page. Give an operation a target interval there and
-          any bed past it is flagged here. Renaming one carries its existing records with it.
-          Advisory only — nothing on this list blocks a planting.
-        </p>
-        <div class="bp-controls">
-          <button class="btn" id="bpLogBtn">+ Log prep…</button>
-          <button type="button" class="cr-add-variety" id="bpTargetsBtn">Operations…</button>
-          <label class="bp-showall"><input type="checkbox" id="bpShowAll"> Show all beds</label>
-        </div>
-        <div id="bpTargets" hidden></div>
-        <div id="bpBody"></div>
       </div>
     </section>
 
@@ -7462,7 +7464,7 @@ function renderViewContent(view){
   if(view==="cropmap") buildCropMap();
   if(view==="timeline") buildTimeline();
   if(view==="crops") buildCropsTab();
-  if(view==="beds") buildBedsTab();
+  if(view==="beds"){ buildBedsTab(); bdRenderConflicts(); bpRenderHistory(); }
   if(view==="bedsetup") buildBedSetupTab();
   if(view==="bedprep") bppBuild();
   if(view==="seedbook") buildSeedbook();
@@ -13944,8 +13946,6 @@ function buildBedSetupTab(){
     const issues=flagged.size;
     return c.beds ? `${c.beds} beds \u00b7 ${c.blocks} blocks${issues?` \u00b7 ${issues} with issues`:""}` : "";
   });
-  bdRenderConflicts();
-  bpRenderHistory();   // before the mobile early return — the prep cards render on phones too
   const table=document.getElementById("bdTable"), mob=document.getElementById("bdMobile");
   if(!table||!mob) return;
   const mobile=cmIsMobile();
@@ -15146,7 +15146,7 @@ async function bpSaveLog(){
     const created=await atCreate(CFG.farmBase, CFG.tables.bedPrepEvents, [fields]);
     data.bedPrepEvents.push({id:created[0].id, date, bedIds:beds, ops, by:"", notes, taskId});
     bpCloseLog();
-    buildBedSetupTab();
+    bpRenderHistory();
   }catch(e){
     console.error(e);
     alert("Couldn't save that prep record:\n"+e.message);
