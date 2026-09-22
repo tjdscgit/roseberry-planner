@@ -330,17 +330,15 @@
   .bd-chips .cm-type-chip:hover{border-color:var(--steel)}
   .bd-chips .bd-cropchip{border-left-color:var(--clay)}
   .cr-wrap .bd-chips select.bd-addcrop{width:auto;min-width:11rem;font-size:.8rem;padding:.3rem .5rem}
-  /* ---- Blocks section: a compact summary row per block (name, bed count, one-line irrigation
-     summary) rather than every field expanded inline — the full editor lives in #bkModal instead,
-     so the list stays scannable even with a dozen blocks. ---- */
-  .bk-list{display:flex;flex-direction:column;gap:.4rem}
-  .bk-row{border:1px solid var(--line-2);border-radius:10px;padding:.55rem .8rem;background:var(--paper);
-    display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;cursor:pointer}
-  .bk-row:hover{border-color:var(--steel)}
-  .bk-row-name{font-weight:600;min-width:5rem}
-  .bk-row-meta{color:var(--ink-2);font-size:.82rem;flex:1 1 auto}
-  .bk-row-edit{flex:0 0 auto}
-  .bk-orphan-row{border-style:dashed;cursor:default}
+  /* ---- Blocks: edited inline in the Bed setup table, right where each block's beds live, rather
+     than in a modal that yanked focus to the top of a long scroll. The group header row becomes
+     a clickable summary; a row directly beneath it expands to the full editor. ---- */
+  .bd-blockrow{cursor:pointer}
+  .bd-blockrow:hover td{background:var(--paper-2)}
+  .bd-blockrow-inner{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+  .bd-blockrow-meta{color:var(--ink-2);font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;flex:1 1 auto}
+  .bd-blockeditrow td{background:var(--paper-2);padding:.8rem .9rem 1rem}
+  .bd-blockedit{display:flex;flex-direction:column;gap:.7rem}
   /* ---- Bed prep planner (view-bedprep) ----
      Two renderers over one derivation (PlannerShared.bpPlanForWeek): By bed is the planning
      surface — a chip grid you thumb through while walking the field — and By pass is the doing
@@ -1902,9 +1900,9 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal,#bkModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open,#bkModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open{display:flex}
   #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
   #mfModal{z-index:70}   /* opened from on top of the Farm Map's own bed/block panels */
   .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
@@ -3670,19 +3668,13 @@
         <button class="btn-ghost" id="bdAddBedBtn" type="button">＋ Add bed</button>
       </div>
       <div class="cr-wrap">
-        <div class="ap-sect" style="margin-top:0">Blocks</div>
-        <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
-          Name, preferred crop types and irrigation defaults per block — position, rotation and
-          label placement are set on the Farm map instead, where you can see them move. Beds match
-          a block by name, so renaming one here also updates every bed currently in it.
-        </p>
-        <div id="bkList"></div>
-
-        <div class="ap-sect">Bed setup</div>
+        <div class="ap-sect" style="margin-top:0">Bed setup</div>
         <p class="sub" style="max-width:66ch;margin:-.3rem 0 .8rem">
           Size, order and category per bed — set once, and what the farm map draws from. Add an
           issue to record a problem with a bed: name the crops it rules out and any planting that
-          lands there is flagged. Advisory, never blocking.
+          lands there is flagged. Advisory, never blocking. Click a block's row to edit its name,
+          preferred crop types, irrigation defaults, or how many beds it has — position, rotation
+          and label placement stay on the Farm map, where you can see them move.
         </p>
         <table class="cr-table" id="bdTable">
           <thead>
@@ -5436,49 +5428,6 @@
     <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
       <button class="btn-primary" id="bbSave">Create beds</button>
       <button class="btn-ghost" id="bbCancel">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<div id="bkModal" aria-hidden="true">
-  <div class="ap-card" style="width:min(560px,100%)" role="dialog" aria-modal="true" aria-labelledby="bkHead">
-    <button class="ap-x" id="bkClose" title="Close">✕</button>
-    <div class="ap-head" id="bkHead">Edit block</div>
-    <label class="ap-field" style="margin-top:1.05rem"><span>Name</span>
-      <input type="text" id="bkfName">
-    </label>
-    <p class="sub" id="bkfCascadeNote" style="margin:.35rem 0 0"></p>
-
-    <div class="ap-sect" style="margin-top:1.2rem">Beds in this block</div>
-    <p class="sub" style="margin:-.2rem 0 .6rem">Change how many beds this block has, or resize every bed in it at once. Existing per-bed edits (in Bed setup below) aren't touched unless you set a value here.</p>
-    <div style="display:flex;gap:.7rem;flex-wrap:wrap">
-      <label class="ap-field" style="flex:1 1 110px"><span>Number of beds</span>
-        <input class="cr-num" type="number" id="bkfCount" min="0" step="1">
-      </label>
-      <label class="ap-field" style="flex:1 1 110px"><span>Length m</span>
-        <input class="cr-num" type="number" id="bkfLen" min="0" step="0.1" placeholder="mixed">
-      </label>
-      <label class="ap-field" style="flex:1 1 110px"><span>Width m</span>
-        <input class="cr-num" type="number" id="bkfWid" min="0" step="0.1" placeholder="mixed">
-      </label>
-    </div>
-    <p class="sub" id="bkfResizeNote" style="margin:.5rem 0 0"></p>
-    <div style="display:flex;gap:8px;margin-top:.6rem">
-      <button class="btn-ghost" id="bkfApply" type="button">Apply</button>
-    </div>
-
-    <div class="ap-sect" style="margin-top:1.2rem">Preferred crop types</div>
-    <div class="bd-chips" id="bkfTypes"></div>
-
-    <div class="ap-sect" id="bkfIrrigHd" style="margin-top:1.2rem">Irrigation &amp; soil</div>
-    <p class="sub" style="margin:-.2rem 0 .6rem">Blank = inherit the farm default.</p>
-    <div class="bd-irrig-grid" id="bkfIrrigGrid"></div>
-    <label class="ap-field" style="margin-top:.8rem"><span>Irrigation notes</span>
-      <input type="text" id="bkfNotes">
-    </label>
-
-    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
-      <button class="btn-ghost" id="bkfDone" type="button">Done</button>
     </div>
   </div>
 </div>
@@ -13992,7 +13941,6 @@ function buildBedSetupTab(){
     const issues=flagged.size;
     return c.beds ? `${c.beds} beds \u00b7 ${c.blocks} blocks${issues?` \u00b7 ${issues} with issues`:""}` : "";
   });
-  bkRenderBlocks();
   bdRenderConflicts();
   bpRenderHistory();   // before the mobile early return — the prep cards render on phones too
   const table=document.getElementById("bdTable"), mob=document.getElementById("bdMobile");
@@ -14002,16 +13950,50 @@ function buildBedSetupTab(){
   if(mobile){ bdBuildMobile(); return; }
 
   const body=document.getElementById("bdBody"); body.innerHTML="";
-  const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const groups=bedGroups();
+  // Every known block gets a header — including one with zero beds yet — so it's always reachable
+  // to edit or grow from here, not just blocks that already have beds grouping them into view.
+  const blockNames=new Set(Object.keys(groups));
+  (data.blocks||[]).forEach(b=>{ const n=String(b.name||"").trim(); if(n) blockNames.add(n); });
+  const keys=Array.from(blockNames).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
   if(!keys.length){
     body.innerHTML=`<tr><td colspan="9"><div class="cr-empty">No beds yet.</div></td></tr>`;
     return;
   }
-  keys.forEach(blk=>{
+  keys.forEach(blkName=>{
+    const beds=groups[blkName]||[];
+    const blockRec=(data.blocks||[]).find(b=>String(b.name||"").trim()===blkName);
+    const key=blockRec?blockRec.id:("orphan:"+blkName);
+    const expanded=bkExpanded.has(key);
     const hd=document.createElement("tr"); hd.className="bd-blockrow";
-    hd.innerHTML=`<td colspan="9">Block ${esc(blk)}</td>`;
+    hd.innerHTML=`<td colspan="9"><div class="bd-blockrow-inner">`
+     +`<span>Block ${esc(blkName)}</span>`
+     +`<span class="bd-blockrow-meta">${bkRowMetaHTML(blockRec, beds)}</span>`
+     +`<button class="btn-ghost" type="button">${blockRec ? (expanded?"Close":"Edit") : "Create block record"}</button>`
+    +`</div></td>`;
+    hd.onclick=async ()=>{
+      if(!blockRec){
+        await bkEnsureBlock(blkName);
+        const fresh=(data.blocks||[]).find(b=>String(b.name||"").trim()===blkName);
+        if(fresh) bkExpanded.add(fresh.id);
+        rebuildDerived();
+        buildBedSetupTab();
+        layoutAndDraw();
+        return;
+      }
+      if(expanded) bkExpanded.delete(key); else bkExpanded.add(key);
+      buildBedSetupTab();
+    };
     body.appendChild(hd);
-    groups[blk].forEach(bed=>{
+    if(expanded && blockRec){
+      const er=document.createElement("tr"); er.className="bd-blockeditrow";
+      const td=document.createElement("td"); td.colSpan=9;
+      td.innerHTML=bkBlockEditInlineHTML(blockRec, beds);
+      er.appendChild(td);
+      body.appendChild(er);
+      bkWireBlockEditInline(td, blockRec);
+    }
+    beds.forEach(bed=>{
       body.appendChild(bdBedRow(bed));
       if(bdExpanded.has(bed.id)) body.appendChild(bdIssuesRow(bed));
     });
@@ -14041,7 +14023,7 @@ async function saveBlock(id,key,val){
     blk[key]=prev;   // rollback
     console.error(e);
     alert("Couldn't save block:\n"+e.message);
-    bkRenderBlocks();
+    buildBedSetupTab();
   }
 }
 
@@ -14050,11 +14032,11 @@ async function saveBlock(id,key,val){
 // the Farm map and stop grouping under their block.
 async function bkRenameBlock(blk, name){
   name=name.trim();
-  if(!name || name===blk.name){ bkRenderBlocks(); return; }
+  if(!name || name===blk.name){ buildBedSetupTab(); return; }
   const affected=(data.beds||[]).filter(b=>b.block===blk.name);
   if(affected.length && !confirm(`Rename block "${blk.name}" to "${name}"?\n\n`
       +`This also updates ${affected.length} bed${affected.length===1?"":"s"} currently in it to match.`)){
-    bkRenderBlocks(); return;
+    buildBedSetupTab(); return;
   }
   const prevName=blk.name;
   blk.name=name;
@@ -14070,13 +14052,14 @@ async function bkRenameBlock(blk, name){
     affected.forEach(b=>b.block=prevName);
     console.error(e);
     alert("Couldn't rename block:\n"+e.message);
-    bkRenderBlocks();
+    buildBedSetupTab();
   }
 }
 
-// ---- Blocks: a compact one-line-per-block list. Click a row (or its Edit button) to open the
-// full editor in #bkModal — keeping the list itself scannable, since a farm with a dozen blocks
-// made the old always-expanded cards unreadable. ----
+// ---- Blocks: edited inline, right where each block's beds already live in the Bed setup table —
+// clicking a "Block X" group header expands an editor directly beneath it, in place, rather than
+// pulling focus to a modal at the top of what can be a long scrolled list. ----
+const bkExpanded = new Set();   // block ids (or "orphan:<name>") currently expanded in the table
 function bkIrrigSummary(blk){
   const set=data.irrigSettings||{};
   const method=(blk.method||set.method||"drip").toLowerCase()==="overhead" ? "Overhead" : "Drip";
@@ -14093,66 +14076,19 @@ function bkBedSizeSummary(beds){
   if(len!=null && wid!=null) return `${len}×${wid}m`;
   return len!=null ? `${len}m long` : `${wid}m wide`;
 }
-function bkSummaryRowHTML(blk){
-  const beds=(data.beds||[]).filter(b=>b.block===blk.name);
+function bkRowMetaHTML(blk, beds){
+  if(!blk) return `${beds.length} bed${beds.length===1?"":"s"} · not on the Farm map yet`;
   const size=bkBedSizeSummary(beds);
   const parts=[`${beds.length} bed${beds.length===1?"":"s"}`, bkIrrigSummary(blk)];
   if(size) parts.push(size);
   if((blk.preferredCropTypes||[]).length) parts.push(blk.preferredCropTypes.join(", "));
-  return `<div class="bk-row" data-blk="${esc(blk.id)}">`
-   +`<span class="bk-row-name">${esc(blk.name)}</span>`
-   +`<span class="bk-row-meta">${parts.map(esc).join(" · ")}</span>`
-   +`<button class="btn-ghost bk-row-edit" type="button">Edit</button>`
-  +`</div>`;
+  return esc(parts.join(" · "));
 }
 
-// Beds sometimes carry a block name with no matching Blocks row (typed by hand before this page
-// existed, or a rename elsewhere) — those beds are invisible to this editor and can't be
-// repositioned on the Farm map ("no matching record" error). Surface them here with a one-click fix.
-function bkOrphanBlockNames(){
-  const known=new Set((data.blocks||[]).map(b=>String(b.name||"").trim()));
-  const names=new Set();
-  (data.beds||[]).forEach(b=>{ const n=String(b.block||"").trim(); if(n && !known.has(n)) names.add(n); });
-  return Array.from(names).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
-}
-function bkOrphanRowHTML(name){
-  const count=(data.beds||[]).filter(b=>String(b.block||"").trim()===name).length;
-  return `<div class="bk-row bk-orphan-row" data-orphan="${esc(name)}">`
-   +`<span class="bk-row-name">${esc(name)}</span>`
-   +`<span class="bk-row-meta">${count} bed${count===1?"":"s"} reference this block, but it has no record yet — it can't be positioned on the Farm map.</span>`
-   +`<button class="btn-ghost bk-fix-orphan" type="button">Create block record</button>`
-  +`</div>`;
-}
-function bkRenderBlocks(){
-  const box=document.getElementById("bkList"); if(!box) return;
-  const blocks=(data.blocks||[]).slice().sort((a,b)=>String(a.name||"").localeCompare(String(b.name||""),undefined,{numeric:true}));
-  const orphans=bkOrphanBlockNames();
-  if(!blocks.length && !orphans.length){
-    box.innerHTML=`<div class="cr-empty">No blocks yet — blocks are what the Farm map positions; add one there first.</div>`;
-    return;
-  }
-  box.className="bk-list";
-  box.innerHTML=orphans.map(bkOrphanRowHTML).join("") + blocks.map(bkSummaryRowHTML).join("");
-  box.querySelectorAll(".bk-fix-orphan").forEach(btn=>{
-    btn.onclick=async (e)=>{
-      e.stopPropagation();
-      const name=btn.closest("[data-orphan]").dataset.orphan;
-      btn.disabled=true;
-      await bkEnsureBlock(name);
-      bkRenderBlocks();
-      layoutAndDraw();
-    };
-  });
-  box.querySelectorAll(".bk-row[data-blk]").forEach(row=>{
-    const blk=blocks.find(b=>b.id===row.dataset.blk); if(!blk) return;
-    row.onclick=()=>bkOpenEdit(blk.id);
-  });
-}
-
-/* ---- Block editor modal: name/rename, preferred crop types, irrigation defaults (all save
-   on change, same as before) plus bulk bed-count and bed-size controls, which is the part the
-   inline cards never had — resizing or growing/shrinking a block used to mean editing beds
-   one at a time. ---- */
+/* ---- Inline block editor: name/rename, preferred crop types, irrigation defaults (save on
+   change, same as before) plus bulk bed-count and bed-size controls — resizing or growing/
+   shrinking a block used to mean editing beds one at a time. Fields are scoped by class within
+   the containing <td> (not ids), since several of these can be open in the table at once. ---- */
 function bkfIrrigFieldsHTML(blk){
   const set=data.irrigSettings||{};
   const numCell=(k,label,step,val,shown)=>
@@ -14180,69 +14116,52 @@ function bkfIrrigFieldsHTML(blk){
       + numCell("lines","Driplines per bed","1",blk.lines,set.lines)
       + numCell("wetWidth","Wetted width m","0.05",blk.wetWidth,set.wetWidth);
 }
-let bkEditingId=null;
-function bkOpenEdit(blkId){
-  const blk=(data.blocks||[]).find(b=>b.id===blkId); if(!blk) return;
-  bkEditingId=blkId;
-  bkFillModal(blk);
-  document.getElementById("bkModal").classList.add("open");
-  document.getElementById("bkModal").setAttribute("aria-hidden","false");
-}
-function bkCloseEdit(){
-  bkEditingId=null;
-  document.getElementById("bkModal").classList.remove("open");
-  document.getElementById("bkModal").setAttribute("aria-hidden","true");
-  bkRenderBlocks();
-}
-function bkFillModal(blk){
-  const beds=(data.beds||[]).filter(b=>b.block===blk.name);
-  document.getElementById("bkHead").textContent=`Edit block — ${blk.name}`;
-  document.getElementById("bkfName").value=blk.name;
-  document.getElementById("bkfCascadeNote").textContent=
-    `Beds match this block by name — changing it also updates ${beds.length} bed${beds.length===1?"":"s"} currently in it.`;
-  document.getElementById("bkfCount").value=beds.length;
+function bkBlockEditInlineHTML(blk, beds){
   const size=bkBedSizeSummary(beds);
-  document.getElementById("bkfLen").value="";
-  document.getElementById("bkfWid").value="";
-  document.getElementById("bkfResizeNote").textContent = beds.length
-    ? (size ? `All ${beds.length} beds are currently ${size}.` : "Beds in this block currently have mixed lengths/widths.")
+  const resizeNote = beds.length
+    ? (size ? `All ${beds.length} beds are currently ${esc(size)}.` : "Beds in this block currently have mixed lengths/widths.")
     : "This block has no beds yet.";
-
-  const typeBox=document.getElementById("bkfTypes");
-  typeBox.innerHTML=CROP_TYPES.map(t=>{
+  const typeChips=CROP_TYPES.map(t=>{
     const on=(blk.preferredCropTypes||[]).includes(t);
     return `<button type="button" class="cm-type-chip${on?" on":""}" data-bktype="${esc(t)}"
               style="border-left-color:${cropTypeColor(t)}">${on?"✓ ":""}${esc(t)}</button>`;
   }).join("");
-  typeBox.querySelectorAll("[data-bktype]").forEach(b=>b.onclick=()=>
-    cmToggleBlockType(blk.id, b.dataset.bktype).then(()=>bkFillModal(blk)));
+  const irrigHd=((blk.method||(data.irrigSettings||{}).method||"drip").toLowerCase()==="overhead" ? "Overhead" : "Dripline") + " & soil";
+  return `<div class="bd-blockedit">`
+   +`<label class="ap-field"><span>Name</span><input type="text" class="bkf-name" value="${esc(blk.name)}"></label>`
+   +`<p class="sub" style="margin:-.3rem 0 0">Beds match this block by name — changing it also updates ${beds.length} bed${beds.length===1?"":"s"} currently in it.</p>`
 
-  document.getElementById("bkfIrrigHd").textContent=
-    ((blk.method||(data.irrigSettings||{}).method||"drip").toLowerCase()==="overhead" ? "Overhead" : "Dripline") + " & soil";
-  document.getElementById("bkfIrrigGrid").innerHTML=bkfIrrigFieldsHTML(blk);
-  document.getElementById("bkfIrrigGrid").querySelectorAll("[data-bk]").forEach(el=>{
+   +`<div class="ap-sect" style="margin-top:.3rem">Beds in this block</div>`
+   +`<p class="sub" style="margin:-.2rem 0 .2rem">Change how many beds this block has, or resize every bed in it at once. Existing per-bed edits (in the table below) aren't touched unless you set a value here.</p>`
+   +`<div style="display:flex;gap:.7rem;flex-wrap:wrap">`
+     +`<label class="ap-field" style="flex:1 1 110px"><span>Number of beds</span><input class="cr-num bkf-count" type="number" min="0" step="1" value="${beds.length}"></label>`
+     +`<label class="ap-field" style="flex:1 1 110px"><span>Length m</span><input class="cr-num bkf-len" type="number" min="0" step="0.1" placeholder="mixed"></label>`
+     +`<label class="ap-field" style="flex:1 1 110px"><span>Width m</span><input class="cr-num bkf-wid" type="number" min="0" step="0.1" placeholder="mixed"></label>`
+   +`</div>`
+   +`<p class="sub bkf-resize-note" style="margin:0">${resizeNote}</p>`
+   +`<div><button class="btn-ghost bkf-apply" type="button">Apply</button></div>`
+
+   +`<div class="ap-sect" style="margin-top:.3rem">Preferred crop types</div>`
+   +`<div class="bd-chips">${typeChips}</div>`
+
+   +`<div class="ap-sect" style="margin-top:.3rem">${esc(irrigHd)} &amp; soil<span class="bd-irrig-sub" style="margin-left:.5rem">blank = inherit the farm default</span></div>`
+   +`<div class="bd-irrig-grid">${bkfIrrigFieldsHTML(blk)}</div>`
+   +`<label class="ap-field" style="margin-top:.2rem"><span>Irrigation notes</span><input type="text" class="bkf-notes" value="${esc(blk.irrigNotes||"")}"></label>`
+  +`</div>`;
+}
+function bkWireBlockEditInline(td, blk){
+  td.querySelector(".bkf-name").onchange=e=>bkRenameBlock(blk, e.target.value);
+  td.querySelector(".bkf-notes").onchange=e=>saveBlock(blk.id,"irrigNotes",e.target.value||"").then(buildBedSetupTab);
+  td.querySelectorAll("[data-bktype]").forEach(b=>b.onclick=()=>
+    cmToggleBlockType(blk.id, b.dataset.bktype).then(buildBedSetupTab));
+  td.querySelectorAll("[data-bk]").forEach(el=>{
     el.onchange=e=>{
       const k=el.dataset.bk;
       const v = (k==="method"||k==="soil") ? (e.target.value||"") : (e.target.value===""?null:(+e.target.value));
-      saveBlock(blk.id,k,v).then(()=>{ const fresh=(data.blocks||[]).find(b=>b.id===blk.id); if(fresh) bkFillModal(fresh); });
+      saveBlock(blk.id,k,v).then(buildBedSetupTab);
     };
   });
-  document.getElementById("bkfNotes").value=blk.irrigNotes||"";
-}
-function bkWireModal(){
-  const nameEl=document.getElementById("bkfName");
-  nameEl.onchange=e=>{
-    const blk=(data.blocks||[]).find(b=>b.id===bkEditingId); if(!blk) return;
-    bkRenameBlock(blk, e.target.value).then(()=>{ const fresh=(data.blocks||[]).find(b=>b.id===bkEditingId); if(fresh) bkFillModal(fresh); });
-  };
-  document.getElementById("bkfNotes").onchange=e=>{
-    const blk=(data.blocks||[]).find(b=>b.id===bkEditingId); if(!blk) return;
-    saveBlock(blk.id,"irrigNotes",e.target.value||"");
-  };
-  document.getElementById("bkfApply").onclick=()=>bkApplyResize();
-  document.getElementById("bkClose").onclick=bkCloseEdit;
-  document.getElementById("bkfDone").onclick=bkCloseEdit;
-  document.getElementById("bkModal").addEventListener("click",e=>{ if(e.target.id==="bkModal") bkCloseEdit(); });
+  td.querySelector(".bkf-apply").onclick=()=>bkApplyResize(blk, td);
 }
 
 // Bulk bed-count / bed-size control. Growing extends the existing F1,F2… naming pattern (or falls
@@ -14258,13 +14177,13 @@ function bkBedNamePattern(beds){
   const nums=parsed.filter(p=>p.prefix===prefix).map(p=>p.num);
   return {prefix, max:Math.max(...nums)};
 }
-async function bkApplyResize(){
-  const blk=(data.blocks||[]).find(b=>b.id===bkEditingId); if(!blk) return;
+async function bkApplyResize(blk, td){
   const beds=(data.beds||[]).filter(b=>b.block===blk.name);
-  const targetCount=document.getElementById("bkfCount").value===""?beds.length:Math.max(0,parseInt(document.getElementById("bkfCount").value,10)||0);
-  const len=document.getElementById("bkfLen").value===""?null:+document.getElementById("bkfLen").value;
-  const wid=document.getElementById("bkfWid").value===""?null:+document.getElementById("bkfWid").value;
-  const applyBtn=document.getElementById("bkfApply"); applyBtn.disabled=true;
+  const countEl=td.querySelector(".bkf-count"), lenEl=td.querySelector(".bkf-len"), widEl=td.querySelector(".bkf-wid");
+  const targetCount=countEl.value===""?beds.length:Math.max(0,parseInt(countEl.value,10)||0);
+  const len=lenEl.value===""?null:+lenEl.value;
+  const wid=widEl.value===""?null:+widEl.value;
+  const applyBtn=td.querySelector(".bkf-apply"); applyBtn.disabled=true;
   try{
     if(targetCount>beds.length){
       const need=targetCount-beds.length;
@@ -14317,11 +14236,9 @@ async function bkApplyResize(){
     rebuildDerived();
     buildBedSetupTab();
     layoutAndDraw();
-    bkFillModal(blk);
   }catch(e){
     console.error(e);
     alert("Couldn't resize block:\n"+e.message);
-  }finally{
     applyBtn.disabled=false;
   }
 }
@@ -15239,7 +15156,6 @@ function bpWire(){
       document.getElementById(id).oninput=bbUpdatePreview);
     bbModal.onclick=e=>{ if(e.target===bbModal) bbClose(); };
   }
-  if(document.getElementById("bkModal")) bkWireModal();
   const modal=document.getElementById("bpModal"); if(!modal) return;
   document.getElementById("bpLogBtn").onclick=()=>bpOpenLog({});
   document.getElementById("bpTargetsBtn").onclick=()=>{
