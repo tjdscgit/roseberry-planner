@@ -336,6 +336,8 @@
   .bd-blockrow{cursor:pointer}
   .bd-blockrow:hover td{background:var(--paper-2)}
   .bd-blockrow-inner{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+  .bd-blockrow-chevron{display:inline-block;color:var(--ink-2);font-size:.7rem;transition:transform .12s;transform:rotate(0deg)}
+  .bd-blockrow-chevron.is-collapsed{transform:rotate(-90deg)}
   .bd-blockrow-label{font-weight:700;font-size:.8rem;line-height:1}
   .bd-blockrow-meta{color:var(--ink-2);font-weight:400;text-transform:none;letter-spacing:0;font-size:.8rem;line-height:1;flex:1 1 auto}
   .bd-blockeditrow td{background:var(--paper-2);padding:.8rem .9rem 1rem}
@@ -13966,13 +13968,16 @@ function buildBedSetupTab(){
     const blockRec=(data.blocks||[]).find(b=>String(b.name||"").trim()===blkName);
     const key=blockRec?blockRec.id:("orphan:"+blkName);
     const expanded=bkExpanded.has(key);
+    const collapsed=bdBlockCollapsed.has(key);
     const hd=document.createElement("tr"); hd.className="bd-blockrow";
     hd.innerHTML=`<td colspan="9"><div class="bd-blockrow-inner">`
+     +`<span class="bd-blockrow-chevron${collapsed?" is-collapsed":""}">▾</span>`
      +`<span class="bd-blockrow-label">Block ${esc(blkName)}</span>`
      +`<span class="bd-blockrow-meta">${bkRowMetaHTML(blockRec, beds)}</span>`
-     +`<button class="btn-ghost" type="button">${blockRec ? (expanded?"Close":"Edit") : "Create block record"}</button>`
+     +`<button class="btn-ghost bd-blockrow-editbtn" type="button">${blockRec ? (expanded?"Close":"Edit") : "Create block record"}</button>`
     +`</div></td>`;
-    hd.onclick=async ()=>{
+    hd.querySelector(".bd-blockrow-editbtn").onclick=async (e)=>{
+      e.stopPropagation();
       if(!blockRec){
         await bkEnsureBlock(blkName);
         const fresh=(data.blocks||[]).find(b=>String(b.name||"").trim()===blkName);
@@ -13985,6 +13990,10 @@ function buildBedSetupTab(){
       if(expanded) bkExpanded.delete(key); else bkExpanded.add(key);
       buildBedSetupTab();
     };
+    hd.onclick=()=>{
+      if(collapsed) bdBlockCollapsed.delete(key); else bdBlockCollapsed.add(key);
+      buildBedSetupTab();
+    };
     body.appendChild(hd);
     if(expanded && blockRec){
       const er=document.createElement("tr"); er.className="bd-blockeditrow";
@@ -13994,7 +14003,7 @@ function buildBedSetupTab(){
       body.appendChild(er);
       bkWireBlockEditInline(td, blockRec);
     }
-    beds.forEach(bed=>{
+    if(!collapsed) beds.forEach(bed=>{
       body.appendChild(bdBedRow(bed));
       if(bdExpanded.has(bed.id)) body.appendChild(bdIssuesRow(bed));
     });
@@ -14061,6 +14070,7 @@ async function bkRenameBlock(blk, name){
 // clicking a "Block X" group header expands an editor directly beneath it, in place, rather than
 // pulling focus to a modal at the top of what can be a long scrolled list. ----
 const bkExpanded = new Set();   // block ids (or "orphan:<name>") currently expanded in the table
+const bdBlockCollapsed = new Set();   // block ids (or "orphan:<name>") whose bed rows are hidden
 function bkIrrigSummary(blk){
   const set=data.irrigSettings||{};
   const method=(blk.method||set.method||"drip").toLowerCase()==="overhead" ? "Overhead" : "Drip";
