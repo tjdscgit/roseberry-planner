@@ -336,6 +336,7 @@
   .bd-blockrow{cursor:pointer}
   .bd-blockrow:hover td{background:var(--paper-2)}
   .bd-blockrow-inner{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+  .bd-blockrow-label{font-weight:700;font-size:.8rem}
   .bd-blockrow-meta{color:var(--ink-2);font-weight:400;text-transform:none;letter-spacing:0;font-size:.85rem;flex:1 1 auto}
   .bd-blockeditrow td{background:var(--paper-2);padding:.8rem .9rem 1rem}
   .bd-blockedit{display:flex;flex-direction:column;gap:.7rem}
@@ -13967,7 +13968,7 @@ function buildBedSetupTab(){
     const expanded=bkExpanded.has(key);
     const hd=document.createElement("tr"); hd.className="bd-blockrow";
     hd.innerHTML=`<td colspan="9"><div class="bd-blockrow-inner">`
-     +`<span>Block ${esc(blkName)}</span>`
+     +`<span class="bd-blockrow-label">Block ${esc(blkName)}</span>`
      +`<span class="bd-blockrow-meta">${bkRowMetaHTML(blockRec, beds)}</span>`
      +`<button class="btn-ghost" type="button">${blockRec ? (expanded?"Close":"Edit") : "Create block record"}</button>`
     +`</div></td>`;
