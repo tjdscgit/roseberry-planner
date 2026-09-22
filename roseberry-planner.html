@@ -2985,7 +2985,8 @@
 
   /* ---------- Field walk ---------- */
   .fw-top{flex-wrap:wrap;row-gap:.5rem}
-  #fwWalkers{width:11rem;flex:0 1 auto}
+  #fwWalkers{width:11rem;flex:0 1 auto;border:1px solid var(--line-2);border-radius:999px;
+    background:transparent;padding:.35rem .8rem;font-size:.82rem}
   .fw-warn{margin:.6rem .8rem 0;padding:.5rem .7rem;border:1px solid var(--clay);border-radius:9px;
     background:color-mix(in srgb,var(--clay) 7%,transparent);color:var(--clay);font-size:.86rem}
 /* Sync badge. Four states, colour-coded, because the only thing worse than an unsynced note is
@@ -3017,12 +3018,16 @@
   #fwWalkPane{min-width:0}
   #fwListsPane{min-width:0}
 
-  .fw-quick{position:relative;padding-bottom:.5rem}
-  #fwQuickText{width:100%;resize:vertical;min-height:3.2rem}
-  .fw-quick-row{display:flex;align-items:center;gap:.6rem;margin-top:.45rem}
+  .fw-quick{position:relative;padding:.8rem .9rem 1rem;border:1px solid var(--line-2);border-radius:12px;
+    background:var(--paper-2);margin-bottom:.7rem}
+  #fwQuickText{width:100%;resize:vertical;min-height:3rem;border:none;background:transparent;padding:0;
+    font-size:.95rem}
+  #fwQuickText:focus{outline:none}
+  .fw-quick-row{display:flex;align-items:center;gap:.6rem;margin-top:.5rem}
   .fw-tags{display:flex;gap:.35rem;flex:1;min-width:0;flex-wrap:wrap}
-  .fw-tag{padding:.3rem .6rem;border:1px solid var(--line-2);border-radius:999px;background:var(--paper-2);
-    color:var(--ink-2);font-family:inherit;font-size:.78rem;cursor:pointer;white-space:nowrap}
+  .fw-tag{padding:.3rem .65rem;border:1px solid var(--line-2);border-radius:999px;background:transparent;
+    color:var(--ink-2);font-family:var(--mono);font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;
+    cursor:pointer;white-space:nowrap}
   .fw-tag.on{background:var(--steel);border-color:var(--steel);color:#fff}
   /* Sub-pills sit indented under the parent row and read quieter, so the two tiers are obviously
      a hierarchy rather than fourteen equal-weight options. */
@@ -3042,28 +3047,34 @@
   #fwSuggest button[aria-selected="true"]{background:var(--paper)}
   #fwSuggest .kind{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;opacity:.55;margin-left:.4rem}
 
-  .fw-obs-card{border:1px solid var(--line);border-radius:10px;padding:.6rem .75rem;margin-bottom:.55rem}
-  .fw-obs-head{display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;flex-wrap:wrap}
+  .fw-obs-card{border:1px solid var(--line);border-radius:11px;padding:.75rem .9rem;margin-bottom:.6rem;
+    background:var(--paper-2)}
+  /* The most recent note in the feed carries the same steel accent + tint the design uses for
+     "this is the one you're looking at" — a plain visual anchor at the top of a feed that otherwise
+     reads as a flat list of equally-weighted cards. */
+  .fw-obs-card:first-child{box-shadow:inset 2px 0 0 var(--steel);background:var(--sel)}
+  .fw-obs-head{display:flex;align-items:center;gap:.4rem;margin-bottom:.5rem;flex-wrap:wrap}
   .fw-obs-spacer{flex:1 1 auto}
   .fw-bedchip{font-family:var(--mono);font-size:.62rem;font-weight:700;color:#fff;
-    border-radius:5px;padding:.15rem .4rem;white-space:nowrap}
+    border-radius:5px;padding:.18rem .45rem;white-space:nowrap}
   .fw-bedchip-more{background:var(--line-2)!important;color:var(--ink-2)}
   .fw-obs-when{font-family:var(--mono);font-size:.64rem;color:var(--ink-2);white-space:nowrap}
   .fw-obs-tag-urgent{border-color:var(--clay);color:var(--clay)}
-  .fw-obs-card.fw-unsynced{border-style:dashed;border-color:var(--line-2)}
-  .fw-obs-text{white-space:pre-wrap;line-height:1.45}
+  .fw-obs-card.fw-unsynced{border-style:dashed;border-color:var(--line-2);background:var(--paper)}
+  .fw-obs-text{white-space:pre-wrap;line-height:1.5;font-size:.9rem}
   .fw-chip{background:var(--paper-2);border:1px solid var(--line-2);border-radius:6px;
     padding:.05rem .35rem;font-family:var(--mono);font-size:.85em}
   .fw-chip-crop{color:var(--ink-2);font-size:.85em}
-  .fw-obs-meta{display:flex;align-items:center;gap:.5rem;margin-top:.45rem;font-size:.78rem;color:var(--ink-2);flex-wrap:wrap}
-  .fw-obs-meta .fw-obs-tag{border:1px solid var(--line-2);border-radius:999px;padding:.05rem .45rem}
-  .fw-obs-meta .fw-obs-task{border:1px solid var(--ok,var(--steel));color:var(--ok,var(--steel));
-    border-radius:999px;padding:.05rem .45rem;cursor:pointer;background:none;font-family:inherit;font-size:1em}
+  .fw-obs-meta{display:flex;align-items:center;gap:.45rem;margin-top:.5rem;font-size:.78rem;color:var(--ink-2);flex-wrap:wrap}
+  .fw-obs-meta .fw-obs-tag{font-family:var(--mono);font-size:.65rem;letter-spacing:.05em;text-transform:uppercase;
+    border:1px solid var(--line-2);border-radius:999px;padding:.15rem .5rem}
+  .fw-obs-meta .fw-obs-task{font-family:var(--mono);font-size:.68rem;color:var(--ok);
+    border:none;background:none;cursor:pointer;padding:.1rem 0}
   .fw-obs-meta .fw-obs-noted{border:1px solid var(--line-2);border-radius:999px;padding:.05rem .45rem}
-  .fw-obs-actions{margin-left:auto;display:flex;gap:.35rem}
-  .fw-obs-actions button{border:none;background:none;cursor:pointer;color:var(--ink-2);
-    font-family:inherit;font-size:.78rem;padding:.15rem .3rem}
-  .fw-obs-actions button:hover{color:var(--clay)}
+  .fw-obs-actions{margin-left:auto;display:flex;gap:.4rem}
+  .fw-obs-actions button{border:1px solid var(--line-2);background:transparent;border-radius:6px;cursor:pointer;
+    color:var(--ink);font-family:inherit;font-size:.72rem;padding:.3rem .6rem;white-space:nowrap}
+  .fw-obs-actions button:hover{border-color:var(--clay);color:var(--clay)}
   .fw-obs-edit{width:100%;resize:vertical}
   .fw-obs-empty{color:var(--ink-2);font-size:.9rem;padding:1.2rem .2rem;text-align:center}
 
