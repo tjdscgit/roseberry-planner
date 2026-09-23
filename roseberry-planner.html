@@ -18620,7 +18620,7 @@ async function wkResizeCommitOne(r, newMin){
   if(r.kind==="spray"){
     const a=r.app, prev=a.durationMin;
     a.durationMin=newMin;
-    try{ await atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_duration]:newMin}); }
+    try{ await atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_duration||"Duration min"]:newMin}); }
     catch(err){ a.durationMin=prev; throw err; }
     return;
   }
@@ -18779,7 +18779,7 @@ function wkMoveOneRow(r, toDayISO, startMin){
   if(r.kind==="spray"){
     const a=r.app, prevDate=a.date, prevStart=a.startMin;
     a.date=toDayISO; a.startMin=startMin;
-    return { patch: atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_date]:toDayISO,[CFG.f.sap_start]:startMin}),
+    return { patch: atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_date]:toDayISO,[CFG.f.sap_start||"Start minute"]:startMin}),
              rollback:()=>{ a.date=prevDate; a.startMin=prevStart; } };
   }
   const t=r.t, prevDue=t.due, prevStart=t.start;
