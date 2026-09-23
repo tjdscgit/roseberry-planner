@@ -154,6 +154,7 @@
       pt_assignee:"Assignee", pt_ttid:"TickTick Task ID", pt_gcalid:"Google Cal Event ID",
       // Ops app mirror id — same per-record external-id pattern as pt_ttid/pt_gcalid above.
       pt_opsid:"Ops Task ID",
+      pt_block:"Block",   // optional block a task attaches to (whole-block job)
       pt_bed:"Bed",   // optional bed a task attaches to when it isn't tied to a planting
       pl_crop:"Crop", pl_bed:"Bed", pl_var:"Variety", pl_status:"Status", pl_bm:"Bed metres", pl_notes:"Notes",
       pl_sow:"Sow date", pl_tp:"Transplant date", pl_h1:"First harvest", pl_h2:"Last harvest",
@@ -628,7 +629,10 @@
       if(manual){
         // A manual task may still name a Bed (added via the enhanced Add-task dialog) — carry it on
         // the synthetic planting so bedNameOf() and the By-bed grouping give it real context.
-        p={id:`manual:${t.id}`, crop:t.label||"Task", variety:"", bedIds:t.bedId?[t.bedId]:[], bm:0, cropId:null};
+        // A block task covers every bed in that block (beds link to blocks by name).
+        const blk=t.blockId?(data.blocks||[]).find(b=>b.id===t.blockId):null;
+        const blkBeds=blk?(data.beds||[]).filter(b=>String(b.block||"").trim()===String(blk.name).trim()).map(b=>b.id):null;
+        p={id:`manual:${t.id}`, crop:t.label||"Task", variety:blk?`Block ${blk.name}`:"", bedIds:blkBeds||(t.bedId?[t.bedId]:[]), bm:0, cropId:null};
       }else{
         p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
       }
@@ -812,6 +816,7 @@
       gcalId:r.fields[F.pt_gcalid] || "",
       opsId:r.fields[F.pt_opsid] || "",
       bedId:(r.fields[F.pt_bed]||[])[0] || null,
+      blockId:(r.fields[F.pt_block]||[])[0] || null,
     };
   }
 

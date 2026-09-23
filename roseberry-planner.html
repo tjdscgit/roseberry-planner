@@ -3158,10 +3158,24 @@
     #view-map #fmPlantingPanel.open{position:absolute;inset:auto 0 0 0;width:100%;max-width:100%;
       max-height:70%;border-left:none;border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
       z-index:21;transform:none;box-shadow:var(--shadow)}
-    #view-map #fmPlantingPanel .tl-panel-head{position:relative;padding-top:.6rem}
+    /* The panel is a flex column capped at 70% — without flex-shrink:0 every section squashes to
+       fit instead of the sheet scrolling (the notes box ended up one line tall). The head sticks, so
+       the crop name and ✕ stay in reach however far down you scroll. */
+    #view-map #fmPlantingPanel > *{flex-shrink:0}
+    #view-map #fmPlantingPanel .tl-panel-head{position:sticky;top:0;z-index:2;background:var(--paper-2);padding-top:.6rem}
     #view-map #fmPlantingPanel .tl-panel-head::before{content:"";position:absolute;top:.45rem;left:50%;
       width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line-2)}
     #view-map #fmPlantingPanel .tl-panel-x{width:44px;height:44px;font-size:1.1rem}
+    /* Detail panels on phone (every .tl-panel host, plus the Farm map bed sheet): section rows
+       are finger-sized with a proper chevron, and the notes box is big enough to actually write in.
+       16px text also stops iOS zooming the page when the box takes focus. */
+    .tl-panel .tl-acc summary,#panel .tl-acc summary{min-height:52px;display:flex;align-items:center;
+      justify-content:space-between;font-size:.78rem}
+    .tl-panel .tl-acc summary::after,#panel .tl-acc summary::after{content:"";width:11px;height:11px;
+      margin-right:6px;border-right:2.5px solid currentColor;border-bottom:2.5px solid currentColor;
+      transform:rotate(-45deg);transition:transform .15s}
+    .tl-panel .tl-acc[open] summary::after,#panel .tl-acc[open] summary::after{transform:rotate(45deg)}
+    .tl-panel .tl-notes{min-height:9rem;font-size:16px;line-height:1.45}
   }
   @media(max-width:760px){
     #view-map .vw-title .cm-iconbtn,#view-map .vw-title .cm-pop-wrap{display:none}
@@ -4698,6 +4712,7 @@
               <option value="">Nothing</option>
               <option value="planting">A planting</option>
               <option value="bed">A bed</option>
+              <option value="block">A block</option>
             </select></label>
           <label class="ap-trow-f" id="wkTaskLinkField" style="display:none"><span id="wkTaskLinkLbl">Planting</span>
             <select id="wkTaskLinkSelect"></select></label>
@@ -18126,14 +18141,14 @@ function wkTaskOpen(id, opts){
   wkTaskDueManual = !!t || !!opts.due;
   // opts.label/assignee/duration/linkType+linkId let a fresh (non-editing) task be pre-filled —
   // used by Quick add, which never touches an existing task, so these are ignored whenever t is set.
-  wkTaskLinkPre = t ? { plantingId: t.plantingId, bedId: t.bedId }
-    : { plantingId: opts.linkType==="planting" ? opts.linkId : null, bedId: opts.linkType==="bed" ? opts.linkId : null };
+  wkTaskLinkPre = t ? { plantingId: t.plantingId, bedId: t.bedId, blockId: t.blockId }
+    : { plantingId: opts.linkType==="planting" ? opts.linkId : null, bedId: opts.linkType==="bed" ? opts.linkId : null, blockId: opts.linkType==="block" ? opts.linkId : null };
   wkTaskStartPre = (!t && opts.startMin!=null) ? opts.startMin : null;
   document.getElementById("wkTaskTitle").textContent = t ? "Edit task" : "Add task";
   document.getElementById("wkTaskTypeSeg").style.display = t ? "none" : "";   // type toggle is for new tasks only
   document.getElementById("wkTaskLabel").value = t ? (t.label||"") : (opts.label||"");
   wkFillTaskLibrary(t ? t.taskId : null);
-  document.getElementById("wkTaskLinkType").value = t ? (t.plantingId?"planting":t.bedId?"bed":"") : (opts.linkType||"");
+  document.getElementById("wkTaskLinkType").value = t ? (t.plantingId?"planting":t.bedId?"bed":t.blockId?"block":"") : (opts.linkType||"");
   document.getElementById("wkTaskDue").value = t ? (t.due||"") : (opts.due || wkSelectedDay || wkStartISO || wkISO(new Date()));
   document.getElementById("wkTaskDuration").value = (t && t.duration!=null) ? t.duration : (opts.duration!=null ? opts.duration : "");
   const curAssignee = t ? (t.assignee||"") : (opts.assignee||"");
@@ -18276,6 +18291,11 @@ function wkFillTaskLink(){
   if(!type){ field.style.display="none"; sel.innerHTML=""; wkTaskAutoDue(); return; }
   field.style.display="";
   if(type==="bed"){ lbl.textContent="Bed"; trpFillBedSelect(sel, wkTaskLinkPre.bedId); }
+  else if(type==="block"){
+    lbl.textContent="Block";
+    sel.innerHTML=(data.blocks||[]).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}))
+      .map(b=>`<option value="${esc(b.id)}"${b.id===wkTaskLinkPre.blockId?" selected":""}>Block ${esc(b.name)}</option>`).join("");
+  }
   else {
     lbl.textContent="Planting"; sel.innerHTML="";
     const byCrop={};
@@ -18327,6 +18347,7 @@ async function wkTaskSave(){
   const linkId=document.getElementById("wkTaskLinkSelect").value;
   const plantingId = linkType==="planting" ? (linkId||null) : null;
   const bedId = linkType==="bed" ? (linkId||null) : null;
+  const blockId = linkType==="block" ? (linkId||null) : null;
   let taskId=null, label;
   if(wkTaskType==="library"){
     taskId=document.getElementById("wkTaskLibSelect").value;
@@ -18348,10 +18369,10 @@ async function wkTaskSave(){
     if(wkTaskEditId){
       // editing: explicit []/null clears a link/field the user just cleared.
       const fields={ [F.pt_label]:label, [F.pt_due]:due, [F.pt_assignee]:assignee||null, [F.pt_duration]:duration,
-        [F.pt_task]: taskId?[taskId]:[], [F.pt_planting]: plantingId?[plantingId]:[], [F.pt_bed]: bedId?[bedId]:[] };
+        [F.pt_task]: taskId?[taskId]:[], [F.pt_planting]: plantingId?[plantingId]:[], [F.pt_bed]: bedId?[bedId]:[], [F.pt_block]: blockId?[blockId]:[] };
       await atPatch(CFG.farmBase, CFG.tables.plantingTasks, wkTaskEditId, fields);
       const t=(data.plantingTasks||[]).find(x=>x.id===wkTaskEditId);
-      if(t) Object.assign(t, {label, due, assignee, duration, taskId:taskId||null, plantingId:plantingId||null, bedId:bedId||null});
+      if(t) Object.assign(t, {label, due, assignee, duration, taskId:taskId||null, plantingId:plantingId||null, bedId:bedId||null, blockId:blockId||null});
     }else{
       const fields={ [F.pt_label]:label, [F.pt_due]:due };
       if(assignee) fields[F.pt_assignee]=assignee;
@@ -18359,6 +18380,7 @@ async function wkTaskSave(){
       if(taskId) fields[F.pt_task]=[taskId];
       if(plantingId) fields[F.pt_planting]=[plantingId];
       if(bedId) fields[F.pt_bed]=[bedId];
+      if(blockId) fields[F.pt_block]=[blockId];
       // Right-clicked onto a specific time in the day-grid — pin the new block there instead of
       // leaving it to wkPackDay's default (greedy, top-of-day) placement.
       if(wkTaskStartPre!=null) fields[F.pt_start]=wkTaskStartPre;
@@ -18371,7 +18393,7 @@ async function wkTaskSave(){
         ? fwEnqueue("create","plantingTasks",fields)
         : (await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [fields]))[0].id;
       data.plantingTasks.push({id:newId, plantingId:plantingId||null, taskId:taskId||null, label, anchor:"", offset:null,
-        due, done:false, start:wkTaskStartPre, repeat:null, until:"", duration, assignee, ttId:"", gcalId:"", bedId:bedId||null});
+        due, done:false, start:wkTaskStartPre, repeat:null, until:"", duration, assignee, ttId:"", gcalId:"", bedId:bedId||null, blockId:blockId||null});
       if(viaQueue) fwLinkTaskToObs(fwTaskLinkObsId, newId);
     }
     wkTaskClose(); buildWeekPlanner();
@@ -25307,7 +25329,19 @@ function fwOpenTaskForObs(obs){
   }
   const plantingId=(obs.plantingIds||[])[0]||null;
   const bedId=(obs.bedIds||[])[0]||null;
-  if(plantingId || bedId){
+  // A note that tags a whole block (@H) can become ONE task for that block instead of a task on
+  // just its first bed — asked only when a block was actually tagged and has a Blocks record.
+  const noteTokens=(String(obs.note||"").match(/@[A-Za-z0-9_\-]+/g)||[]).map(t=>t.slice(1).toLowerCase());
+  const taggedBlock=fwIndex.filter(e=>e.kind==="block" && noteTokens.includes(e.label.toLowerCase()))
+    .map(e=>({e, rec:(data.blocks||[]).find(b=>String(b.name).trim()===e.label)})).find(x=>x.rec);
+  if(taggedBlock && confirm(`This note tags Block ${taggedBlock.e.label} (${taggedBlock.e.beds.length} beds).
+
+OK = one task for the whole block
+Cancel = a task on just the first bed`)){
+    wkTaskLinkPre={plantingId:null, bedId:null, blockId:taggedBlock.rec.id};
+    document.getElementById("wkTaskLinkType").value="block";
+    wkFillTaskLink();
+  }else if(plantingId || bedId){
     wkTaskLinkPre={plantingId, bedId};
     document.getElementById("wkTaskLinkType").value = plantingId ? "planting" : "bed";
     wkFillTaskLink();
