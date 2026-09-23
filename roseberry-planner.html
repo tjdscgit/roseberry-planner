@@ -25566,8 +25566,13 @@ function fwRenderFeed(){
     // Severity, not the tag name, decides the colour: "Pest" is only alarming when someone marked
     // it so. A plain observation stays quiet.
     const urgent=String(o.severity||"").trim().toLowerCase()==="act now";
-    const tags=(o.tags||[]).map(x=>
-      `<span class="fw-obs-tag${urgent?" fw-obs-tag-urgent":""}">${esc(x)}</span>`).join("");
+    // Parent tag (bold) then its sub-tag(s) after a hyphen, so "Nutrition Side-dress" can't read
+    // as two unrelated labels. Tags not in FW_TAGS as a parent are treated as subs.
+    const parentNames=new Set(FW_TAGS.map(t=>t.name));
+    const parentTags=(o.tags||[]).filter(x=>parentNames.has(x));
+    const subTags=(o.tags||[]).filter(x=>!parentNames.has(x));
+    const tagText=[parentTags.map(x=>`<b>${esc(x)}</b>`).join(", "), subTags.map(esc).join(", ")].filter(Boolean).join(" – ");
+    const tags=tagText ? `<span class="fw-obs-tag${urgent?" fw-obs-tag-urgent":""}">${tagText}</span>` : "";
     // A note that became a job shows what it became and when it's due; one that didn't offers to
     // become one, so a note taken earlier in the walk can be promoted without retyping it. Same
     // idea for a note linked to a spray plan instead — the two are mutually exclusive (fwOpenTaskForObs
