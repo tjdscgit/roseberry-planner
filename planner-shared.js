@@ -102,6 +102,9 @@
       blk_emitSpacing:"Emitter spacing cm", blk_emitFlow:"Emitter flow L/hr",
       blk_lines:"Dripline count", blk_wetWidth:"Wetted width m", blk_soil:"Soil type",
       blk_irrigNotes:"Irrigation notes",
+      // Farm map's free-angle tilt (degrees) and the block-name label's {dx,dy,locked} offset. Both
+      // used to live in each device's localStorage, so a phone never saw the tilt set on the desktop.
+      blk_rot:"Map rotation", blk_label:"Map label",
       bed_name:"Bed", bed_block:"Block", bed_len:"Length m", bed_wid:"Width m", bed_order:"Order in block",
       bed_category:"Bed category", bed_tunnel:"Under tunnel", bed_notes:"Bed notes",
       // Irrigation — the dripline lying on this bed, and what the soil under it holds. Every one of
@@ -856,6 +859,7 @@
       emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
       lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
       soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
+      rot:num(b.fields[F.blk_rot]), label:b.fields[F.blk_label]||null,
     }));
   }
 

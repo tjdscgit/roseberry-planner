@@ -3128,6 +3128,78 @@
     .fw-top #fwWalkers{order:5;flex:1 1 8rem;width:auto;min-width:0}
     .fw-top #fwSyncBadge{order:6;margin-left:0;flex:0 0 auto}
   }
+
+  /* ---- Farm map — phone (2026-09-24). A field tool, not an editor: one "View" button and a block
+     picker replace the eight title-row icons and the wrapping chip rows; bed details slide up from
+     the bottom so the map stays visible above them. Every tap target is >=44px. ---- */
+  .fm-phone-only{display:none}
+  #fmSheet[hidden],#fmSheetScrim[hidden]{display:none}
+  @media(max-width:760px){
+    #view-map .vw-title .cm-iconbtn,#view-map .vw-title .cm-pop-wrap{display:none}
+    #view-map .vw-title{padding-right:48px}   /* clear of the fixed reload button (.rail-utils) */
+    #view-map .vw-title .sub{display:none}
+    .fm-phone-only{display:inline-flex}
+    .fm-menu-btn{align-items:center;gap:.45rem;height:44px;padding:0 1rem;border-radius:12px;
+      border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink);
+      font:600 .95rem var(--sans);cursor:pointer}
+    .fm-menu-btn .ico{width:19px;height:19px}
+    #chips{display:none}
+    #fmBlockPill{top:calc(var(--vw-title-h) + .7rem);left:.7rem;align-items:center;gap:.4rem;
+      height:44px;padding:0 .9rem 0 1.1rem;border-radius:999px;border:1px solid var(--line-2);
+      background:var(--paper);color:var(--ink);font:600 .95rem var(--sans);box-shadow:var(--shadow);cursor:pointer}
+    #fmBlockPill[data-active]{background:var(--steel);border-color:var(--steel);color:#fff}
+    #zoombar{top:auto;bottom:.8rem;right:.8rem}
+    #zin,#zout{display:none}
+    #zoombar #zfit{width:48px;height:48px;font-size:1.3rem;border-radius:14px;background:var(--paper);
+      border:1px solid var(--line-2);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
+    #northmark{bottom:auto;top:calc(var(--vw-title-h) + .8rem);right:.9rem}
+    #scalebar{bottom:.8rem}
+    #whpLegend{bottom:3.4rem}
+    /* Bed / block details: bottom sheet instead of a side panel. */
+    #panel{top:auto;left:0;right:0;bottom:0;width:100%;max-height:62%;border-left:none;
+      border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;transform:translateY(105%)}
+    #panel.open{transform:none}
+    #panel .panel-head{padding:1.4rem 1.1rem .8rem}
+    #panel .panel-head::before{content:"";position:absolute;top:.5rem;left:50%;width:40px;height:4px;
+      margin-left:-20px;border-radius:2px;background:var(--line-2)}
+    #panel .close-x{width:44px;height:44px;top:.5rem;right:.5rem;font-size:1.1rem}
+    #panel .kv{padding:.6rem .6rem;font-size:.95rem}
+    #panel .tl-acc summary{min-height:44px;display:flex;align-items:center}
+    #panel .fm-edit-only{display:none}
+    /* The sheet: blocks list or view options. */
+    #fmSheetScrim{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.35);display:block}
+    #fmSheetScrim[hidden]{display:none}
+    #fmSheet{position:absolute;left:0;right:0;bottom:0;z-index:31;max-height:78%;overflow:auto;
+      background:var(--paper-2);border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
+      box-shadow:var(--shadow);padding:.5rem 0 1rem;display:block}
+  }
+  .fm-sh-grip{width:40px;height:4px;border-radius:2px;background:var(--line-2);margin:0 auto .5rem}
+  .fm-sh-head{display:flex;align-items:center;gap:.5rem;padding:0 .6rem 0 1.1rem;min-height:48px}
+  .fm-sh-head h3{margin:0;font-size:1.15rem;font-weight:650;flex:1 1 auto}
+  .fm-sh-close{width:44px;height:44px;border:none;background:none;color:var(--ink-2);font-size:1.1rem;cursor:pointer}
+  .fm-sh-lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--ink-2);padding:.9rem 1.1rem .4rem}
+  .fm-sh-row{display:flex;align-items:center;gap:.8rem;width:100%;min-height:56px;padding:.4rem 1.1rem;
+    border:none;border-top:1px solid var(--line);background:none;color:var(--ink);text-align:left;
+    font:inherit;cursor:pointer}
+  .fm-sh-row:first-of-type{border-top:none}
+  .fm-sh-row[aria-pressed="true"]{background:var(--sel);box-shadow:inset 3px 0 0 var(--steel)}
+  .fm-sh-row .nm{font-size:1rem;font-weight:600}
+  .fm-sh-row .mt{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);margin-top:.2rem}
+  .fm-sh-row .grow{flex:1 1 auto;min-width:0}
+  .fm-sh-row .sw{width:46px;height:26px}
+  .fm-sh-row .sw i::after{width:22px;height:22px}
+  .fm-sh-row .sw input:checked + i::after{transform:translateX(20px)}
+  .fm-sh-bar{width:100%;height:4px;border-radius:2px;background:var(--line);margin-top:.45rem;overflow:hidden}
+  .fm-sh-bar span{display:block;height:100%;background:var(--ok)}
+  .fm-sh-seg{display:flex;gap:.4rem;padding:0 1.1rem .4rem}
+  .fm-sh-seg button{flex:1 1 0;height:44px;border-radius:10px;border:1px solid var(--line-2);
+    background:var(--paper);color:var(--ink);font:600 .92rem var(--sans);cursor:pointer}
+  .fm-sh-seg button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff}
+  .fm-sh-range{padding:.2rem 1.1rem .6rem}
+  .fm-sh-range input{width:100%;height:32px}
+  .fm-sh-legend{display:flex;flex-wrap:wrap;gap:.35rem .9rem;padding:.3rem 1.1rem .2rem;font-size:.8rem;color:var(--ink-2)}
+  .fm-sh-legend i{display:inline-block;width:.8rem;height:.8rem;border-radius:2px;margin-right:.35rem;vertical-align:-1px}
 </style>
 </head>
 <body>
@@ -3194,6 +3266,12 @@
         <span class="vw-name">Farm map</span>
         <span class="sub" id="mapSummary"></span>
         <span class="spacer"></span>
+        <!-- Phone only: every map option below collapses into this one button and a bottom sheet.
+             The edit tools (move, add, satellite upload) are desktop-only on purpose. -->
+        <button class="fm-phone-only fm-menu-btn" id="fmMenuBtn" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M10 3l7 3.6-7 3.6-7-3.6z"/><path d="M3 10.2l7 3.6 7-3.6M3 13.8l7 3.6 7-3.6"/></svg>
+          View
+        </button>
         <button class="icon-btn cm-iconbtn" id="fmMoveBtn" type="button" title="Drag blocks to match their real field position" aria-pressed="false">
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M7 9V4.8a1.3 1.3 0 012.6 0V9m0-1.2a1.3 1.3 0 012.6 0V9m0-.6a1.3 1.3 0 012.6 0v4.2a4 4 0 01-4 4h-2a3.4 3.4 0 01-2.7-1.4L5 12.6a1.3 1.3 0 012-1.6l1.2 1.2"/></svg>
         </button>
@@ -3281,6 +3359,12 @@
         </svg>
       </div>
       <div id="chips" class="map-ui"></div>
+      <button id="fmBlockPill" class="map-ui fm-phone-only" type="button" aria-haspopup="dialog">
+        <span id="fmBlockPillTxt">All blocks</span>
+        <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg>
+      </button>
+      <div id="fmSheetScrim" class="fm-phone-only" hidden></div>
+      <div id="fmSheet" role="dialog" aria-modal="true" aria-labelledby="fmSheetTitle" hidden></div>
       <div id="zoombar" class="map-ui">
         <button class="icon-btn" id="zin">+</button>
         <button class="icon-btn" id="zout">−</button>
@@ -6618,7 +6702,117 @@ function refreshChips(){
   document.querySelectorAll(".chip").forEach(c=>{
     const v=c.dataset.val||null;c.setAttribute("aria-pressed", (v===activeBlock)?"true":"false");
   });
+  const pill=document.getElementById("fmBlockPill"), txt=document.getElementById("fmBlockPillTxt");
+  if(pill && txt){
+    txt.textContent = activeBlock ? fmBlockTitle(activeBlock) : "All blocks";
+    if(activeBlock) pill.setAttribute("data-active",""); else pill.removeAttribute("data-active");
+  }
 }
+// "C" reads better as "Block C"; "Back Paddock A" already says what it is.
+function fmBlockTitle(key){ return /^[A-Z0-9]{1,3}$/i.test(key) ? "Block "+key : key; }
+
+/* ---------- Farm map — phone sheet (blocks list / view options) ---------- */
+// The phone is for looking, not arranging: map-layout edits (move/tilt blocks, drag labels, drag
+// the satellite photo, add pumps and lines) are all switched off below 760px — see fmIsPhone's
+// callers in the pan/zoom handler. Recording things (milestones, Edit Planting) stays.
+function fmIsPhone(){ return window.matchMedia("(max-width:760px)").matches; }
+let fmSheetMode=null;
+function fmOpenSheet(mode){
+  fmSheetMode=mode;
+  closePanel(); fmClosePlantingPanel();
+  fmRenderSheet();
+  document.getElementById("fmSheet").hidden=false;
+  document.getElementById("fmSheetScrim").hidden=false;
+}
+function fmCloseSheet(){
+  fmSheetMode=null;
+  const sh=document.getElementById("fmSheet"), sc=document.getElementById("fmSheetScrim");
+  if(sh) sh.hidden=true;
+  if(sc) sc.hidden=true;
+}
+function fmSheetHead(title){
+  return `<div class="fm-sh-grip"></div><div class="fm-sh-head"><h3 id="fmSheetTitle">${esc(title)}</h3>`
+    +`<button class="fm-sh-close" type="button" data-fmsh="close" aria-label="Close">✕</button></div>`;
+}
+function fmSwitchRow(act, name, meta, on){
+  return `<label class="fm-sh-row"><span class="grow"><div class="nm">${esc(name)}</div>${meta?`<div class="mt">${esc(meta)}</div>`:""}</span>`
+    +`<span class="sw"><input type="checkbox" data-fmsh="${act}" ${on?"checked":""}><i></i></span></label>`;
+}
+function fmRenderSheet(){
+  const sh=document.getElementById("fmSheet"); if(!sh) return;
+  let html="";
+  if(fmSheetMode==="blocks"){
+    html+=fmSheetHead("Go to block");
+    const allBeds=data.beds||[];
+    const row=(key,name,beds)=>{
+      const full=beds.filter(b=>b.planting && OCCUPIED.has(b.planting.status)).length;
+      const pct=beds.length?Math.round(full/beds.length*100):0;
+      return `<button class="fm-sh-row" type="button" data-fmsh="block" data-key="${esc(key||"")}" aria-pressed="${(key||null)===activeBlock}">`
+        +`<span class="grow"><div class="nm">${esc(name)}</div>`
+        +`<div class="mt">${beds.length} bed${beds.length===1?"":"s"} · ${full} planted</div>`
+        +`<div class="fm-sh-bar"><span style="width:${pct}%"></span></div></span>`
+        +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M8 5l5 5-5 5"/></svg></button>`;
+    };
+    html+=row(null,"Whole farm",allBeds);
+    placedCache.map(p=>p.key).forEach(k=>{ html+=row(k, fmBlockTitle(k), allBeds.filter(b=>b.block===k)); });
+  }else if(fmSheetMode==="view"){
+    html+=fmSheetHead("Map view");
+    html+=`<div class="fm-sh-lbl">Colour beds by</div><div class="fm-sh-seg">`
+      +`<button type="button" data-fmsh="color" data-val="crop" aria-pressed="${fmColorMode==="crop"}">Crop</button>`
+      +`<button type="button" data-fmsh="color" data-val="milestone" aria-pressed="${fmColorMode==="milestone"}">Milestone</button></div>`;
+    if(fmColorMode==="milestone"){
+      html+=`<div class="fm-sh-legend">`+["Planned","Seeded","In ground","Harvesting","Finished"].map(l=>
+        `<span><i style="background:${statusColor(l)}"></i>${esc(l)}</span>`).join("")+`</div>`;
+    }
+    html+=`<div class="fm-sh-lbl">Show on map</div>`;
+    if(fmSat) html+=fmSwitchRow("sat","Satellite photo","",fmSat.visible);
+    if(fmSat && fmSat.visible){
+      html+=`<div class="fm-sh-range"><input type="range" data-fmsh="satop" min="0.1" max="1" step="0.05" value="${fmSat.opacity??0.7}" aria-label="Satellite photo strength"></div>`;
+    }
+    html+=fmSwitchRow("lines","Irrigation lines","",fmLinesOn);
+    html+=fmSwitchRow("points","Markers","Pumps, valves, sheds",fmPointsOn);
+    html+=fmSwitchRow("inactive","Grey out late plantings","Due in the ground but not marked planted",fmInactiveOn);
+  }
+  sh.innerHTML=html;
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const sh=document.getElementById("fmSheet"); if(!sh) return;
+  document.getElementById("fmMenuBtn").addEventListener("click",()=>fmOpenSheet("view"));
+  document.getElementById("fmBlockPill").addEventListener("click",()=>fmOpenSheet("blocks"));
+  document.getElementById("fmSheetScrim").addEventListener("click",fmCloseSheet);
+  // Every option drives the SAME handler the desktop control uses (click the hidden button),
+  // so there is one code path per setting, not two.
+  sh.addEventListener("click",e=>{
+    const t=e.target.closest("[data-fmsh]"); if(!t) return;
+    const act=t.dataset.fmsh;
+    if(act==="close") fmCloseSheet();
+    else if(act==="block"){
+      activeBlock=t.dataset.key||null; fmCloseSheet(); filterBlocks(); refreshChips();
+    }else if(act==="color"){
+      const b=document.querySelector(`#fmColorToggle [data-fmcolor="${t.dataset.val}"]`);
+      if(b) b.click();
+      fmRenderSheet();
+    }
+  });
+  sh.addEventListener("change",e=>{
+    const t=e.target.closest("[data-fmsh]"); if(!t) return;
+    const act=t.dataset.fmsh;
+    if(act==="lines") document.getElementById("fmLinesBtn").click();
+    else if(act==="points") document.getElementById("fmPointsBtn").click();
+    else if(act==="inactive") document.getElementById("fmInactiveBtn").click();
+    else if(act==="sat" && fmSat){ fmSat.visible=t.checked; fmSaveSat(); fmSyncSatImage(); fmRenderSheet(); }
+  });
+  sh.addEventListener("input",e=>{
+    const t=e.target; if(t.dataset.fmsh!=="satop" || !fmSat) return;
+    fmSat.opacity=parseFloat(t.value); fmSaveSat(); if(fmSatEl) fmSatEl.setAttribute("opacity",fmSat.opacity);
+  });
+  // Narrowing to phone width mid-edit must not leave a move/add mode running with its controls hidden.
+  window.matchMedia("(max-width:760px)").addEventListener("change",ev=>{
+    if(!ev.matches){ fmCloseSheet(); return; }
+    if(fmMoveMode) document.getElementById("fmMoveBtn").click();
+    if(fmInfraMode){ fmInfraMode=null; fmDrawPts=[]; fmSyncInfraButtons(); fmRefreshInfraLayer(); }
+  });
+});
 function filterBlocks(){
   // refit to active block (or full farm)
   if(activeBlock){
@@ -6831,7 +7025,7 @@ function selectBlock(key){
   const meta=(data.blocks||[]).find(b=>String(b.name).trim()===key);
   const rotDeg=fmBlockRotations[key]||0;
   const labLocked=fmLabelLocked(key);
-  html+=`<details class="tl-acc"><summary>Rotate &amp; label position</summary>`
+  html+=`<details class="tl-acc fm-edit-only"><summary>Rotate &amp; label position</summary>`
     +`<button class="icon-btn" type="button" onclick="fmRotateBlock('${esc(key)}')" style="width:100%;justify-content:center;gap:.5rem;margin-top:.2rem">`
     +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M15.4 8A5.6 5.6 0 105.6 12"/><path d="M16.4 4.4v4h-4"/></svg>`
     +`Rotate 90° (swaps bed direction)</button>`
@@ -6956,14 +7150,15 @@ function fmScreenToWorld(clientX,clientY){
       dragBlockKey=null;dragBlockGroup=null;dragImage=false;dragLabelKey=null;dragLabelEl=null;
       // Block-name label drag takes priority over whole-block drag (even in move mode) — grabbing
       // the label itself should reposition just the label, not the whole block underneath it.
-      const lbl=e.target.closest && e.target.closest(".block-label");
+      const phone=fmIsPhone();
+      const lbl=!phone && e.target.closest && e.target.closest(".block-label");
       if(lbl && lbl.dataset.block && !fmLabelLocked(lbl.dataset.block)){
         dragLabelKey=lbl.dataset.block;
         dragLabelEl=lbl;
         dragLabelStart=fmScreenToWorld(e.clientX,e.clientY);
         dragLabelOrig=fmLabelOffset(dragLabelKey);
       }
-      if(!dragLabelKey && fmMoveMode){
+      if(!dragLabelKey && fmMoveMode && !phone){
         const blk=blockFrom(e.target);
         if(blk){
           dragBlockKey=blk;
@@ -6972,7 +7167,7 @@ function fmScreenToWorld(clientX,clientY){
           if(dragBlockGroup) dragBlockGroup.classList.add("dragging");
         }
       }
-      if(!dragLabelKey && !dragBlockKey && fmSatEl && e.target===fmSatEl){
+      if(!dragLabelKey && !dragBlockKey && !phone && fmSatEl && e.target===fmSatEl){
         dragImage=true;
         dragImageStart=fmScreenToWorld(e.clientX,e.clientY);
         dragImageOrig={x:fmSat.x,y:fmSat.y};
@@ -7054,7 +7249,7 @@ function fmScreenToWorld(clientX,clientY){
         const featEl=downTarget.closest && downTarget.closest("[data-feature]");
         if(fmInfraMode==="point"){ fmPlacePoint(fmScreenToWorld(e.clientX,e.clientY)); }
         else if(fmInfraMode==="line"){ fmAddLinePoint(fmScreenToWorld(e.clientX,e.clientY)); }
-        else if(featEl){ fmOpenFeatureEditor(featEl.dataset.feature); }
+        else if(featEl && !fmIsPhone()){ fmOpenFeatureEditor(featEl.dataset.feature); }
         else{
           const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
           const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
