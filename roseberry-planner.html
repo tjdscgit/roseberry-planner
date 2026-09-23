@@ -7525,6 +7525,11 @@ function showView(view){
   if(reloadBtn) reloadBtn.style.display = (view==="today"||view==="week") ? "none" : "";
 
   renderViewContent(view);
+  // Persist the tab on every switch, not just on beforeunload/visibilitychange/pagehide — those
+  // don't fire reliably on every refresh path (pull-to-refresh, a TWA/PWA getting killed outright),
+  // which is what made the app land back on Farm map after a refresh even though you'd navigated
+  // away from it. Calling this here means the localStorage copy is never more than one tap stale.
+  saveUiState();
 }
 
 /* Rail click shows that destination's FIRST view, which is also what the list panel opens on.
