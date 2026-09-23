@@ -25824,7 +25824,15 @@ applyBackendFieldVisibility();
 // silently keeping the old shell — this is what was serving an old page with no Spray log tab.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).catch((e) => console.error('SW registration failed:', e));
+    navigator.serviceWorker.register('sw.js', {updateViaCache:'none'}).then((reg) => {
+      // A window left open never re-checks on its own, so it kept running the old page after a
+      // deploy (a second window still had the pre-fix code). Check whenever it's brought back into
+      // view, and every 10 min while visible; a new worker takes over and controllerchange reloads.
+      const check = () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); };
+      document.addEventListener('visibilitychange', check);
+      window.addEventListener('focus', check);
+      setInterval(check, 10 * 60 * 1000);
+    }).catch((e) => console.error('SW registration failed:', e));
   });
   let swReloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
