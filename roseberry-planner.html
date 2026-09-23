@@ -3140,15 +3140,15 @@
   #backToast.show{opacity:1;transform:translate(-50%,0)}
   .cm-sheet[hidden],.cm-sheet-scrim[hidden]{display:none}
   .cm-phone-inline{display:none}
+  .cm-picker-row{display:flex;align-items:center;flex:0 0 auto}
   @media(max-width:760px){ .cm-phone-inline{display:inline} .cm-desk-only{display:none} }
   /* ---- Crop map — phone (2026-09-24), from CropMapPhone.dc.html ---- */
   @media(max-width:760px){
-    #view-cropmap .vw-title{height:auto;min-height:60px;padding-top:.5rem;padding-bottom:.5rem;
-      flex-wrap:wrap;row-gap:0}
-    #view-cropmap .vw-title .vw-name{font-size:1.35rem}
-    #view-cropmap .vw-title .cm-pop-wrap,#view-cropmap .vw-title .cm-iconbtn{display:none}
-    .cm-phone-cap{order:5;flex:1 0 100%;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
-      text-transform:uppercase;color:var(--ink-2);margin-top:-2px}
+    #view-cropmap .vw-title{display:none}
+    .cm-picker-row{border-bottom:1px solid var(--line)}
+    #view-cropmap .cm-block-picker{flex:1 1 auto;min-width:0;border-bottom:none;padding-right:.4rem}
+    .cm-view-btn{flex:0 0 auto;align-items:center;justify-content:center;width:44px;height:44px;margin-right:.7rem;
+      border-radius:12px;border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink);cursor:pointer}
     #view-cropmap .vw-tools{display:none}
     /* Block pills — finger-sized, one row that scrolls sideways. */
     #view-cropmap .cm-block-picker{gap:7px;padding:.7rem .8rem;border-bottom:1px solid var(--line);
@@ -3520,14 +3520,7 @@
       <div class="vw-title">
         <span class="vw-name">Crop map</span>
         <span class="sub" id="cmSummary"></span>
-        <span class="cm-phone-cap fm-phone-only" id="cmPhoneCap"></span>
         <span class="spacer"></span>
-        <!-- Phone only: season, colour and filters collapse into this one button + a bottom sheet
-             (same pattern as the Farm map). -->
-        <button class="fm-phone-only fm-menu-btn" id="cmMenuBtn" type="button" aria-haspopup="dialog">
-          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.6 5.6h12.8M5.8 10h8.4M8.2 14.4h3.6"/></svg>
-          View
-        </button>
         <div class="cm-pop-wrap">
           <button class="btn-ghost cm-season" id="cmSeasonBtn" type="button" aria-expanded="false">
             <span>Season <b id="cmYearLabel">—</b></span>
@@ -3614,7 +3607,14 @@
           Assign plantings
         </button>
       </div>
-      <div class="cm-block-picker" id="cmBlockPicker"></div>
+      <!-- Phone: the title row is hidden, so the pills row IS the top strip — the View button
+           (season, colour, filters, assign) is pinned at its right end, outside the scroll. -->
+      <div class="cm-picker-row">
+        <div class="cm-block-picker" id="cmBlockPicker"></div>
+        <button class="fm-phone-only cm-view-btn" id="cmMenuBtn" type="button" aria-haspopup="dialog" aria-label="View options">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.6 5.6h12.8M5.8 10h8.4M8.2 14.4h3.6"/></svg>
+        </button>
+      </div>
       <div class="cm-phone-head fm-phone-only" id="cmPhoneHead"></div>
       <div id="cmViewport">
         <div id="cmBlocks"></div>
@@ -9063,7 +9063,10 @@ function cmDrawBlockChips(allKeys){
       box.appendChild(c);
     });
     const on=box.querySelector('[aria-selected="true"]');
-    if(on) requestAnimationFrame(()=>on.scrollIntoView({block:"nearest",inline:"center"}));
+    // Centre the picked pill by scrolling THIS row only — scrollIntoView also scrolls every
+    // overflow:hidden ancestor, which shoved the whole view sideways and hid the month axis.
+    if(on) requestAnimationFrame(()=>{ const r=on.getBoundingClientRect(), br=box.getBoundingClientRect();
+      box.scrollLeft+=(r.left+r.width/2)-(br.left+br.width/2); });
     return;
   }
   const mk=(label,val)=>{
@@ -9656,13 +9659,11 @@ function cmPhoneRender(key, groups, perBlock){
   const meta=cmBlockByName(key), pref=(meta&&meta.preferredCropTypes)||[];
   const dot = pref.length ? cropTypeColor(pref[0]) : "var(--steel)";
   const title = /^[A-Z0-9]{1,3}$/i.test(key) ? "Block "+key : key;
-  const cap=document.getElementById("cmPhoneCap");
-  if(cap) cap.textContent=`Season ${cmYear}`;
   const head=document.getElementById("cmPhoneHead");
   if(head){
     head.innerHTML=`<span class="cm-ph-dot" style="background:${dot}"></span>`
       +`<span class="cm-ph-name">${esc(title)}</span>`
-      +`<span class="cm-ph-meta">${beds.length} bed${beds.length===1?"":"s"} · ${planted} planted</span>`
+      +`<span class="cm-ph-meta">${cmYear} · ${beds.length} bed${beds.length===1?"":"s"} · ${planted} planted</span>`
       +`<span class="spacer"></span><span class="cm-ph-swipe" id="cmPhSwipe">swipe for more beds</span>`;
     const vp=document.getElementById("cmViewport");
     requestAnimationFrame(()=>{ const sw=document.getElementById("cmPhSwipe");
