@@ -93,6 +93,7 @@
       // "point" or "line"; Points is a jsonb array of {x,y} in the same world-metres space the
       // bed/block frames use, so a line's on-screen length is already its real length.
       mapFeatures:      "tblMFfeatures",      // "Map Features"
+      farmSettings:     "tblFSsettings",      // "Farm Settings" — one row, id 'farm
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -318,6 +319,9 @@
       is_overshoot:"Overshoot fraction", is_eff:"Efficiency",
       is_effOverhead:"Overhead efficiency", is_pumpFlow:"Pump flow L/hr",
       is_start:"Balance start", is_notes:"Notes",
+      // Farm settings — the Farm map's satellite underlay {url,x,y,w,h,locked}, shared by every
+      // device (opacity/visibility stay per-device, they're a viewing preference).
+      fs_sat:"Satellite map",
       // Map features — see CFG.tables.mapFeatures above.
       mf_name:"Name", mf_kind:"Kind", mf_shape:"Shape", mf_points:"Points",
       mf_label:"Label", mf_detail:"Detail", mf_colour:"Colour", mf_order:"Order", mf_notes:"Notes",
@@ -346,7 +350,7 @@
     fertProducts:"fert_products",
     weatherObs:"weather_observations", irrigEvents:"irrigation_events",
     irrigSettings:"irrigation_settings",
-    mapFeatures:"map_features",
+    mapFeatures:"map_features", farmSettings:"farm_settings",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])

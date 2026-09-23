@@ -5732,7 +5732,7 @@ async function loadAll(){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -5771,6 +5771,7 @@ async function loadAll(){
       fwFetch(CFG.tables.irrigEvents),
       fwFetch(CFG.tables.irrigSettings),
       fwFetch(CFG.tables.mapFeatures),
+      fwFetch(CFG.tables.farmSettings),
     ]);
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
@@ -5951,6 +5952,7 @@ async function loadAll(){
     data.weatherByDate = PlannerShared.indexWeatherByDate(data.weatherObs);
     data.irrigEvents   = PlannerShared.parseIrrigationEvents(irrigEvents);
     data.irrigSettings = PlannerShared.parseIrrigSettings(irrigSettings);
+    fmSyncSatShared(farmSettings);
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -6201,6 +6203,59 @@ function fmSaveSat(){
     else{ localStorage.removeItem(FM_SAT_KEY); localStorage.setItem(FM_SAT_DISMISS_KEY,"1"); }
   }
   catch(e){ console.error("Couldn't save satellite image", e); alert("Couldn't save the satellite image — it may be too large for this browser's storage."); }
+  fmQueueSatShared();
+}
+
+// The image and where it sits are shared through farm_settings."Satellite map" (since 2026-09-24 —
+// before that an uploaded photo lived only in the uploading device's localStorage, so the phone kept
+// showing the old default photo). The file itself goes to the farm-docs bucket; only its URL is
+// stored. Opacity and show/hide stay per-device.
+let fmSatSharedKey=null, fmSatSharedTimer=null;
+function fmSatGeom(s){ return s ? {url:s.dataUrl, x:s.x, y:s.y, w:s.w, h:s.h, locked:!!s.locked} : null; }
+function fmQueueSatShared(){
+  const g=fmSatGeom(fmSat), key=JSON.stringify(g && g.url && g.url.startsWith("data:") ? {...g,url:"pending"} : g);
+  if(fmSatSharedKey===null) return;  // shared value not loaded yet (offline?) — don't overwrite it blind
+  if(key===fmSatSharedKey) return;   // only opacity/visibility changed — nothing shared to write
+  clearTimeout(fmSatSharedTimer);
+  fmSatSharedTimer=setTimeout(fmPushSatShared, 800);
+}
+async function fmUploadSatImage(dataUrl){
+  const blob=await (await fetch(dataUrl)).blob();
+  const path=`farm-map/satellite-${Date.now()}.jpg`;
+  const r=await fetch(`${SB_URL}/storage/v1/object/${FI_BUCKET}/${path}`,{
+    method:"POST", headers:sbHeaders({"Content-Type":"image/jpeg"}), body:blob });
+  if(!r.ok){ const t=await r.text().catch(()=>""); throw new Error(`${r.status} ${t.slice(0,90)}`); }
+  return `${SB_URL}/storage/v1/object/public/${FI_BUCKET}/${path}`;
+}
+async function fmPushSatShared(){
+  try{
+    if(fmSat && String(fmSat.dataUrl).startsWith("data:")){
+      fmSat.dataUrl=await fmUploadSatImage(fmSat.dataUrl);
+      try{ localStorage.setItem(FM_SAT_KEY, JSON.stringify(fmSat)); }catch(e){}
+    }
+    const g=fmSatGeom(fmSat);
+    await atPatch(CFG.farmBase, CFG.tables.farmSettings, "farm", {[CFG.f.fs_sat]:g});
+    fmSatSharedKey=JSON.stringify(g);
+  }catch(e){ console.error("Couldn't share the satellite image", e); }
+}
+// Runs in loadAll. The shared value wins. When nothing is shared yet, a device holding its own
+// UPLOADED photo (a data: URL) seeds everyone else — a device still on the bundled default doesn't,
+// so an out-of-date phone can't get in first.
+function fmSyncSatShared(records){
+  const row=(records||[]).find(r=>r.id==="farm");
+  const g=row && row.fields ? row.fields[CFG.f.fs_sat] : null;
+  if(g && g.url){
+    const prev=fmSat||{};
+    fmSat={dataUrl:g.url, x:g.x, y:g.y, w:g.w, h:g.h, locked:!!g.locked,
+      opacity:prev.opacity??FM_SAT_DEFAULT.opacity, visible:prev.visible??true};
+    fmSatSharedKey=JSON.stringify(fmSatGeom(fmSat));
+    try{ localStorage.setItem(FM_SAT_KEY, JSON.stringify(fmSat)); }catch(e){}
+    fmSyncSatImage(); fmSatSyncControls();
+  }else if(row && fmSat && String(fmSat.dataUrl).startsWith("data:")){
+    fmPushSatShared();
+  }else if(row){
+    fmSatSharedKey=JSON.stringify(fmSatGeom(fmSat));   // nothing to seed; don't write on a mere opacity change
+  }
 }
 // Rebuilds just the underlay <image> (cheap: no fitView, no bed/block redraw) so opacity/visibility/
 // position tweaks don't jump the zoom the way a full drawMap() would.
