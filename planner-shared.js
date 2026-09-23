@@ -261,7 +261,7 @@
       ob_name:"Name", ob_walk:"Walk", ob_bed:"Bed", ob_planting:"Planting", ob_crop:"Crop",
       ob_note:"Note", ob_tags:"Tags", ob_severity:"Severity", ob_photos:"Photos",
       ob_created:"Created at", ob_resolved:"Resolved", ob_issue:"Bed issue",
-      ob_task:"Task", ob_noted:"Noted at",
+      ob_task:"Task", ob_spray:"Spray", ob_noted:"Noted at",
       wl_name:"Name", wl_kind:"Kind", wl_task:"Task", wl_order:"Order", wl_active:"Active",
       wli_name:"Name", wli_list:"List", wli_bed:"Bed", wli_planting:"Planting", wli_note:"Note",
       wli_walk:"Added on walk", wli_added:"Added at", wli_obs:"Observation",
@@ -1048,6 +1048,7 @@
       resolved:!!r.fields[F.ob_resolved],
       issueId:(r.fields[F.ob_issue]||[])[0] || null,
       taskId:(r.fields[F.ob_task]||[])[0] || null,
+      sprayId:(r.fields[F.ob_spray]||[])[0] || null,
       notedAt:r.fields[F.ob_noted]||"",
     })).sort((a,b)=>String(a.created).localeCompare(String(b.created)));
   }

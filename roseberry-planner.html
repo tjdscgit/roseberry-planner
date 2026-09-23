@@ -20316,7 +20316,7 @@ function sprayOpenLogFromPlan(id){
   $s("sprayDate").value = sprayToday();   // the actual application happens today
   sprayFinishOpen(false);
 }
-function sprayClose(){ $s("sprayModal").classList.remove("open"); spray=null; fwSprayFromWalk=false; }
+function sprayClose(){ $s("sprayModal").classList.remove("open"); spray=null; fwSprayFromWalk=false; fwSprayLinkObsId=null; }
 
 // Deletes a spray/fert application record (scheduled or logged) and its product-item rows — there's
 // no FK cascade on spray_application_items, so both deletes are explicit here.
@@ -20537,8 +20537,12 @@ async function sprayCreateFollowups(mainAppId){
     if(itemFields.length) await atCreate(CFG.farmBase, CFG.tables.sprayApplicationItems, itemFields);
   }
 }
-function sprayAfterSaveView(){
-  if(fwSprayFromWalk){ fwSprayFromWalk=false; showView("fieldwalk"); return; }
+// Takes the walk-origin flag as an argument rather than reading fwSprayFromWalk itself — the
+// callers below call sprayClose() first (to hide the modal), and sprayClose() resets that flag,
+// so by the time this ran it always read false and the walk redirect never fired. Capture it
+// before sprayClose() and pass it through instead.
+function sprayAfterSaveView(fromWalk){
+  if(fromWalk){ showView("fieldwalk"); return; }
   const active=document.querySelector(".view.active");
   if(active && active.id==="view-week") buildWeekPlanner();
   else showView("sprayrec");
@@ -20573,9 +20577,12 @@ async function spraySaveRecord(){
     if(spray.mode!=="plan" && typeof sprayUploadPhotos==="function") await sprayUploadPhotos(appId);  // no photos of a future plan
     if(!spray.editId) await sprayCreateFollowups(appId);
     if(by) localStorage.setItem(SPRAY_BY_KEY, by);
+    // Captured before sprayClose(), which resets both — see sprayAfterSaveView and fwLinkSprayToObs.
+    const cameFromWalk=fwSprayFromWalk, linkObsId=fwSprayLinkObsId;
     sprayClose();
     await loadAll();
-    sprayAfterSaveView();
+    if(linkObsId) fwLinkSprayToObs(linkObsId, appId);
+    sprayAfterSaveView(cameFromWalk);
   }catch(e){
     sprayShowErr("Couldn't save: "+e.message);
   }finally{ btn.disabled=false; btn.textContent=origLabel; }
@@ -20586,7 +20593,8 @@ async function sprayLogAsPlanned(){
   const btn=$s("sprayLogAsPlannedBtn"); btn.disabled=true; const o=btn.textContent; btn.textContent="Logging…";
   try{
     await atPatch(CFG.farmBase, CFG.tables.sprayApplications, spray.editId, {[CFG.f.sap_status]:"Logged"});
-    sprayClose(); await loadAll(); sprayAfterSaveView();
+    const cameFromWalk=fwSprayFromWalk;
+    sprayClose(); await loadAll(); sprayAfterSaveView(cameFromWalk);
   }catch(e){ sprayShowErr("Couldn't log: "+e.message); btn.disabled=false; btn.textContent=o; }
 }
 // Follow-up date list: interval × count from the main date, each editable; edits survive regen.
@@ -24728,10 +24736,15 @@ function fwRenderTaskHint(){
 // — a note taken on a walk is a job still to do, and only a Planned spray shows up in This week's
 // calendar. `fwSprayFromWalk` routes the post-save redirect back to the Field walk tab instead of
 // the Spray log's Records list, mirroring how `fwTaskLinkObsId` routes ＋ Task's save.
+// `fwSprayLinkObsId` is the spray-side equivalent of `fwTaskLinkObsId` — spraySaveRecord writes the
+// new application's id back onto this note once it has one, so the card can show it's linked and
+// "Link to spray plan" won't be offered again (see fwLinkSprayToObs).
 let fwSprayFromWalk = false;
+let fwSprayLinkObsId = null;
 function fwOpenSprayForObs(obs, sub){
   if(!obs || typeof sprayOpenPlan!=="function") return;
   fwSprayFromWalk = true;
+  fwSprayLinkObsId = obs.id;
   sprayOpenPlan(null);
   const method=FW_SPRAY_SUBS[sub];
   if(method) setSprayMethod(method);
@@ -24825,6 +24838,16 @@ function fwLinkTaskToObs(obsId, taskId){
   const obs=(data.walkObservations||[]).find(o=>o.id===obsId); if(!obs) return;
   obs.taskId=taskId;
   fwEnqueue("patch","walkObservations",{[CFG.f.ob_task]:[taskId]},{recId:obsId});
+  fwRenderFeed(); fwRenderBadge();
+}
+
+// Same as fwLinkTaskToObs, for "Link to spray plan" — written from spraySaveRecord once the spray
+// application itself has an id. Goes through a live patch, not the offline queue: unlike a job
+// raised from a dead spot, a spray save already requires a live connection to have got this far.
+function fwLinkSprayToObs(obsId, sprayId){
+  const obs=(data.walkObservations||[]).find(o=>o.id===obsId); if(!obs) return;
+  obs.sprayId=sprayId;
+  atPatch(CFG.farmBase, CFG.tables.walkObservations, obsId, {[CFG.f.ob_spray]:[sprayId]}).catch(()=>{});
   fwRenderFeed(); fwRenderBadge();
 }
 
@@ -25018,10 +25041,16 @@ function fwRenderFeed(){
     const tags=(o.tags||[]).map(x=>
       `<span class="fw-obs-tag${urgent?" fw-obs-tag-urgent":""}">${esc(x)}</span>`).join("");
     // A note that became a job shows what it became and when it's due; one that didn't offers to
-    // become one, so a note taken earlier in the walk can be promoted without retyping it.
-    const linked=o.taskId ? (data.plantingTasks||[]).find(t=>t.id===o.taskId) : null;
-    const taskBit=linked
-      ? `<button type="button" class="fw-obs-task" data-obs-opentask="${esc(o.taskId)}" title="Open this task">→ ${esc(fwTaskName(linked))}${linked.due?" · "+esc(fmt(linked.due)):""}</button>`
+    // become one, so a note taken earlier in the walk can be promoted without retyping it. Same
+    // idea for a note linked to a spray plan instead — the two are mutually exclusive (fwOpenTaskForObs
+    // picks one or the other) but rendered the same way once linked.
+    const linkedTask=o.taskId ? (data.plantingTasks||[]).find(t=>t.id===o.taskId) : null;
+    const linkedSpray=o.sprayId ? (data.sprayApplications||[]).find(a=>a.id===o.sprayId) : null;
+    const linked=linkedTask||linkedSpray;
+    const taskBit=linkedTask
+      ? `<button type="button" class="fw-obs-task" data-obs-opentask="${esc(o.taskId)}" title="Open this task">→ ${esc(fwTaskName(linkedTask))}${linkedTask.due?" · "+esc(fmt(linkedTask.due)):""}</button>`
+      : linkedSpray
+      ? `<button type="button" class="fw-obs-task" data-obs-openspray="${esc(o.sprayId)}" title="Open this spray plan">→ Spray ${esc((linkedSpray.status||"").toLowerCase())}${linkedSpray.date?" · "+esc(fmt(linkedSpray.date)):""}</button>`
       : "";
     const target=fwObsNoteTarget(o);
     const notedBit=o.notedAt
@@ -25077,7 +25106,7 @@ function fwCommitNote(){
   const obs={
     id, walkId, bedIds:links.beds, plantingIds:links.plantings, cropIds:links.crops,
     note:text, tags, severity:"", photos:[], created, resolved:false, issueId:null,
-    taskId:null, notedAt:"",
+    taskId:null, sprayId:null, notedAt:"",
   };
   data.walkObservations.push(obs);
   el.value=""; fwQuickTags.clear(); fwQuickSubs.clear();
@@ -25342,6 +25371,9 @@ function fwDeleteItem(id){
     if(mk){ fwOpenTaskForObs((data.walkObservations||[]).find(o=>o.id===mk.dataset.obsTask)); return; }
     const nt=e.target.closest("[data-obs-note]"); if(nt){ fwObsToNote(nt.dataset.obsNote); return; }
     const op=e.target.closest("[data-obs-opentask]"); if(op){ wkTaskOpen(op.dataset.obsOpentask); return; }
+    // Reopening an already-linked spray from its card should also land back here on save, same as
+    // creating it did — otherwise editing it bounces you to the Spray log same as the original bug.
+    const os=e.target.closest("[data-obs-openspray]"); if(os){ fwSprayFromWalk=true; sprayOpenPlan(os.dataset.obsOpenspray); return; }
   });
   const lists=document.getElementById("fwLists");
   lists?.addEventListener("click", e=>{
