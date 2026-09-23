@@ -5748,7 +5748,9 @@ async function loadAll(){
       emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
       lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
       soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
+      rot:num(b.fields[F.blk_rot]), label:b.fields[F.blk_label]||null,
     }));
+    fmSyncBlockMapPrefs();
 
     data.beds = beds.map(b => ({
       id:b.id, name:b.fields[F.bed_name] ?? "?",
@@ -5981,8 +5983,9 @@ const MF_KIND_GLYPH = { pump:"P", riser:"R", valve:"V", tank:"T", shed:"S", dam:
 
 // Free-angle block rotation, to eyeball-align a block with the satellite photo. This is separate
 // from the "Rotate 90°" button, which flips the REAL "beds run vertical/horizontal" field the beds
-// are actually laid out from — the Blocks table has no free-angle field, so this is visual-only,
-// per-device, and doesn't touch Airtable. It's a rotate() on a group nested inside the block's own
+// are actually laid out from. Stored on the Blocks table ("Map rotation") since 2026-09-24 — it
+// used to be per-device localStorage, which is why the phone drew Back Paddock untilted while the
+// desktop had it lined up with the satellite photo. It's a rotate() on a group nested inside the block's own
 // (translate-only) drag group, so dragging and tilting never fight over the same transform.
 const FM_ROT_KEY="roseberry_blockrot_v1";
 const FM_ROT_DEFAULT={"AB":82,"C":82,"I":81,"G":82,"H":82,"GH2":81,"F":82,"E":82,"D":82,"GH1":81,"GH3":81};
@@ -5992,10 +5995,41 @@ const FM_ROT_DEFAULT={"AB":82,"C":82,"I":81,"G":82,"H":82,"GH2":81,"F":82,"E":82
 // to read, rather than only catching the truly-upside-down case.
 const FM_LABEL_FLIP_THRESHOLD=60;
 let fmBlockRotations={...FM_ROT_DEFAULT};
-(function(){ try{ const raw=localStorage.getItem(FM_ROT_KEY); if(raw) fmBlockRotations=JSON.parse(raw); }catch(e){} })();
-function fmSaveBlockRot(){
-  try{ localStorage.setItem(FM_ROT_KEY, JSON.stringify(fmBlockRotations)); }
-  catch(e){ console.error("Couldn't save block rotation", e); }
+// What this device had saved locally before the move to the Blocks table — read once, only to hand
+// it up to the database for any block that has no value there yet (see fmSyncBlockMapPrefs).
+let fmLocalRot=null, fmLocalLabel=null;
+(function(){ try{ const raw=localStorage.getItem(FM_ROT_KEY); if(raw){ fmLocalRot=JSON.parse(raw); fmBlockRotations={...FM_ROT_DEFAULT,...fmLocalRot}; } }catch(e){} })();
+function fmBlockMeta(key){ return (data.blocks||[]).find(b=>String(b.name).trim()===key); }
+async function fmPatchBlock(key, fields){
+  const meta=fmBlockMeta(key); if(!meta) return;
+  try{ await atPatch(CFG.farmBase, CFG.tables.blocks, meta.id, fields); }
+  catch(e){ console.error("Couldn't save block map setting", e); }
+}
+function fmSaveBlockRot(key){
+  const meta=fmBlockMeta(key); if(!meta) return;
+  meta.rot=fmBlockRotations[key]||0;
+  fmPatchBlock(key, {[CFG.f.blk_rot]:meta.rot});
+}
+// Called after every loadAll: the database wins; a block with nothing stored falls back to this
+// device's old local value, then the baked-in default. A local value that differs from the default
+// is uploaded once, so whichever device the tilts were actually set on seeds everyone else.
+function fmSyncBlockMapPrefs(){
+  const ups=[];
+  (data.blocks||[]).forEach(m=>{
+    const key=String(m.name).trim(), fields={};
+    if(m.rot!=null) fmBlockRotations[key]=m.rot;
+    else{
+      const loc=fmLocalRot && fmLocalRot[key];
+      if(loc && loc!==FM_ROT_DEFAULT[key]){ fields[CFG.f.blk_rot]=loc; m.rot=loc; }
+      const v=loc!=null?loc:FM_ROT_DEFAULT[key];
+      if(v) fmBlockRotations[key]=v; else delete fmBlockRotations[key];
+    }
+    if(m.label) fmBlockLabelPos[key]=m.label;
+    else if(fmLocalLabel && fmLocalLabel[key]){ fmBlockLabelPos[key]=fmLocalLabel[key]; fields[CFG.f.blk_label]=fmLocalLabel[key]; m.label=fmLocalLabel[key]; }
+    else delete fmBlockLabelPos[key];
+    if(Object.keys(fields).length) ups.push(fmPatchBlock(key, fields));
+  });
+  return Promise.all(ups);
 }
 // Cheap update for a slider drag — moves just that block's rotate() without a full redraw.
 function fmApplyBlockRotation(key){
@@ -6016,13 +6050,13 @@ function fmNudgeBlockRotation(key,delta){
   fmBlockRotations[key]=next;
   fmApplyBlockRotation(key);
   fmSyncBlockRotUI(key);
-  fmSaveBlockRot();
+  fmSaveBlockRot(key);
 }
 function fmResetBlockRotation(key){
-  delete fmBlockRotations[key];
+  fmBlockRotations[key]=0;
   fmApplyBlockRotation(key);
   fmSyncBlockRotUI(key);
-  fmSaveBlockRot();
+  fmSaveBlockRot(key);
 }
 
 // Block-name label position, draggable independently of the block itself — useful once blocks sit
@@ -6031,22 +6065,23 @@ function fmResetBlockRotation(key){
 // offset naturally rotates along with the block instead of needing separate math per tilt angle.
 const FM_LABELPOS_KEY="roseberry_blocklabelpos_v1";
 let fmBlockLabelPos={};
-(function(){ try{ const raw=localStorage.getItem(FM_LABELPOS_KEY); if(raw) fmBlockLabelPos=JSON.parse(raw); }catch(e){} })();
-function fmSaveLabelPos(){
-  try{ localStorage.setItem(FM_LABELPOS_KEY, JSON.stringify(fmBlockLabelPos)); }
-  catch(e){ console.error("Couldn't save label position", e); }
+(function(){ try{ const raw=localStorage.getItem(FM_LABELPOS_KEY); if(raw){ fmLocalLabel=JSON.parse(raw); fmBlockLabelPos={...fmLocalLabel}; } }catch(e){} })();
+function fmSaveLabelPos(key){
+  const meta=fmBlockMeta(key); if(!meta) return;
+  meta.label=fmBlockLabelPos[key]||{dx:0,dy:0};
+  fmPatchBlock(key, {[CFG.f.blk_label]:meta.label});
 }
 function fmLabelOffset(key){ const o=fmBlockLabelPos[key]; return {dx:(o&&o.dx)||0, dy:(o&&o.dy)||0}; }
 function fmLabelLocked(key){ return !!(fmBlockLabelPos[key] && fmBlockLabelPos[key].locked); }
 function fmSetLabelLock(key,locked){
   const cur=fmBlockLabelPos[key]||{dx:0,dy:0};
   fmBlockLabelPos[key]={...cur, locked};
-  fmSaveLabelPos();
+  fmSaveLabelPos(key);
   layoutAndDraw({keepView:true});
 }
 function fmResetLabelPos(key){
-  delete fmBlockLabelPos[key];
-  fmSaveLabelPos();
+  fmBlockLabelPos[key]={dx:0,dy:0};
+  fmSaveLabelPos(key);
   layoutAndDraw({keepView:true});
 }
 // Cheap update while dragging — moves just this label's x/y (+ its upright-correction rotation)
@@ -6806,7 +6841,7 @@ function selectBlock(key){
     +`<span class="mono" id="fmBlockRotVal" style="font-size:.78rem">${rotDeg}°</span></div>`
     +`<input type="range" id="fmBlockRotRange" min="-180" max="180" step="1" value="${rotDeg}" style="width:100%"`
     +` oninput="fmBlockRotations['${esc(key)}']=parseFloat(this.value);document.getElementById('fmBlockRotVal').textContent=this.value+'°';fmApplyBlockRotation('${esc(key)}')"`
-    +` onchange="fmSaveBlockRot()">`
+    +` onchange="fmSaveBlockRot('${esc(key)}')">`
     +`<div style="display:flex;gap:.4rem;margin-top:.3rem">`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',-1)">−1°</button>`
     +`<button class="icon-btn" type="button" style="flex:1;justify-content:center" onclick="fmNudgeBlockRotation('${esc(key)}',1)">+1°</button>`
@@ -6998,7 +7033,7 @@ function fmScreenToWorld(clientX,clientY){
         const key=dragLabelKey, el=dragLabelEl;
         dragLabelKey=null;dragLabelEl=null;
         if(el) el.classList.remove("label-dragging");
-        if(moved && !wasCancel) fmSaveLabelPos();
+        if(moved && !wasCancel) fmSaveLabelPos(key);
         else{ fmBlockLabelPos[key]=dragLabelOrig?{...(fmBlockLabelPos[key]||{}), ...dragLabelOrig}:fmBlockLabelPos[key]; fmApplyLabelOffset(key); selectBlock(key); }
         downTarget=null;return;
       }
@@ -18276,8 +18311,16 @@ function wkOpenJobPanel(r){
           `<option value="${esc(b.id)}"${bed&&bed.id===b.id?" selected":""}>${esc(b.name)}</option>`).join("")}</optgroup>`).join("")
       + `</select>`);
 
-  const infoRows = bedRowHTML
+  const sp = r.kind==="spray" ? r.app : null;
+  const spItems = sp ? (sp.items||[]).filter(it=>it.productId) : [];
+  const spTime = sp && sp.startMin!=null
+    ? wkClock(sp.startMin)+(sp.durationMin?" · "+wkFmtMins(sp.durationMin):"")
+    : (sp && sp.durationMin ? wkFmtMins(sp.durationMin) : "");
+  const infoRows = (sp ? tlKv("Beds", esc(sprayBedsLabel(sp.bedIds)||sp.locationNote||"—")) : bedRowHTML)
     + tlKv("Due", esc(fmt(r.due)))
+    + (spTime ? tlKv("Time", esc(spTime)) : "")
+    + (sp && sp.method ? tlKv("Method", esc(sp.method)) : "")
+    + (sp && sp.whp!=null ? tlKv("WHP", `${sp.whp} days`) : "")
     + (r.t.assignee ? tlKv("Assignee", esc(r.t.assignee)) : "")
     + (r.task.category ? tlKv("Category", esc(r.task.category)) : "")
     + (r.t.repeat ? tlKv("Repeats", `every ${r.t.repeat}d`) : "")
@@ -18291,18 +18334,12 @@ function wkOpenJobPanel(r){
     <div class="kv" style="border-bottom:none;padding-bottom:0"><span class="k">${esc(r.p.status)}</span><span class="v"></span></div>
     <div class="wk-job-bar"><div class="wk-job-bar-fill" style="width:${statusPct}%"></div></div>`;
 
-  const {rows}=wkCollect();
-  const weekRows=rows.filter(x=>x.inWeek).sort((a,b)=>a.due-b.due);
-  const weekHTML = !weekRows.length ? "" : `
-    <div class="sect-h">This week</div>
-    <div>${weekRows.map(x=>{
-      const isThis=x.id===r.id;
-      const dayAbbr=WK_DAYS[(x.due.getDay()+6)%7];
-      const who = x.manual ? "" : (bedNameOf(x.p)?` — ${esc(bedNameOf(x.p))}`:"");
-      return `<div class="wk-job-week-row${isThis?" wk-job-week-cur":""}">`
-        +`<span class="mono wk-job-week-day">${dayAbbr}</span>`
-        +`<span class="wk-job-week-name">${esc(x.task.name)}${who}</span></div>`;
-    }).join("")}</div>`;
+  const sprayHTML = !sp ? "" : (spItems.length ? `
+    <div class="sect-h">Products</div>
+    <div>${spItems.map(it=>tlKv(esc(sprayProductName(it.productId)),
+      esc(it.rate!=null&&it.rate!==""?`${it.rate} ${it.unit||""}`.trim():"—"))).join("")}</div>` : "")
+    + (sp.reason ? `<div class="sect-h">Target</div><div class="kv" style="display:block;padding-top:0"><span class="v" style="font-family:var(--sans);text-align:left;color:var(--ink-2);font-size:.82rem;line-height:1.5">${esc(sp.reason)}</span></div>` : "")
+    + (sp.notes ? `<div class="sect-h">Notes</div><div class="kv" style="display:block;padding-top:0"><span class="v" style="font-family:var(--sans);text-align:left;color:var(--ink-2);font-size:.82rem;line-height:1.5;white-space:pre-wrap">${esc(sp.notes)}</span></div>` : "");
 
   // Notes live on the Planting record (same field the Planting panel edits) — there's no notes
   // field on a bare Planting Task, so a manual task genuinely has none to show or edit here.
@@ -18321,11 +18358,11 @@ function wkOpenJobPanel(r){
     </div>
     ${infoRows}
     ${statusHTML}
-    ${weekHTML}
+    ${sprayHTML}
     ${notesHTML}
     <div class="tl-panel-actions">
       <button type="button" class="btn-primary" id="wkJobMarkDone">${r.t.done?"Mark not done":"Mark done"}</button>
-      <button type="button" class="btn-ghost" id="wkJobReschedule">Reschedule</button>
+      <button type="button" class="btn-ghost" id="wkJobReschedule">${sp?"Edit spray":"Reschedule"}</button>
     </div>`;
   panel.classList.add("open");
   panel.querySelector(".tl-panel-x").onclick=wkClosePlantingPanel;
@@ -18376,6 +18413,7 @@ function wkOpenJobPanel(r){
       return;
     }
     wkClosePlantingPanel();
+    if(sp){ sprayOpenPlan(sp.id); return; }
     wkTaskOpen(r.t.id, {due:wkISO(r.due)});
   };
   wkRerenderSelectionMarkup();
