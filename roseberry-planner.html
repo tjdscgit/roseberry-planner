@@ -2987,6 +2987,9 @@
   /* .vw-tools' min-height centers short rows fine, but this row's buttons/pills are taller than
      that minimum, so it was hugging the border-bottom with no breathing room above/below. */
   .fw-top{flex-wrap:wrap;row-gap:.5rem;padding-top:.5rem;padding-bottom:.5rem}
+  /* .view is position:absolute; inset:0 with no overflow of its own, so a long feed ran off the
+     bottom with nothing to scroll it. */
+  #view-fieldwalk{overflow-y:auto;-webkit-overflow-scrolling:touch}
   #fwWalkers{width:11rem;flex:0 1 auto;border:1px solid var(--line-2);border-radius:999px;
     background:transparent;padding:.35rem .8rem;font-size:.82rem}
   .fw-warn{margin:.6rem .8rem 0;padding:.5rem .7rem;border:1px solid var(--clay);border-radius:9px;
