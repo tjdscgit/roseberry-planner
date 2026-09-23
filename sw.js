@@ -1,4 +1,4 @@
-const CACHE_NAME = "roseberry-shell-v64";
+const CACHE_NAME = "roseberry-shell-v65";
 const SHELL_FILES = [
   "./roseberry-planner.html",
   "./planner-shared.js",
