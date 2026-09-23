@@ -3138,6 +3138,74 @@
     background:var(--ink);color:var(--paper);padding:.6rem 1rem;border-radius:999px;font-size:.88rem;
     white-space:nowrap;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
   #backToast.show{opacity:1;transform:translate(-50%,0)}
+  .cm-sheet[hidden],.cm-sheet-scrim[hidden]{display:none}
+  .cm-phone-inline{display:none}
+  @media(max-width:760px){ .cm-phone-inline{display:inline} .cm-desk-only{display:none} }
+  /* ---- Crop map — phone (2026-09-24), from CropMapPhone.dc.html ---- */
+  @media(max-width:760px){
+    #view-cropmap .vw-title{height:auto;min-height:60px;padding-top:.5rem;padding-bottom:.5rem;
+      flex-wrap:wrap;row-gap:0}
+    #view-cropmap .vw-title .vw-name{font-size:1.35rem}
+    #view-cropmap .vw-title .cm-pop-wrap,#view-cropmap .vw-title .cm-iconbtn{display:none}
+    .cm-phone-cap{order:5;flex:1 0 100%;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--ink-2);margin-top:-2px}
+    #view-cropmap .vw-tools{display:none}
+    /* Block pills — finger-sized, one row that scrolls sideways. */
+    #view-cropmap .cm-block-picker{gap:7px;padding:.7rem .8rem;border-bottom:1px solid var(--line);
+      scrollbar-width:none}
+    #view-cropmap .cm-block-picker::-webkit-scrollbar{display:none}
+    .cm-block-pill{flex:0 0 auto;min-width:44px;height:44px;padding:0 1rem;border-radius:999px;
+      border:1px solid var(--line-2);background:none;color:var(--ink-2);font:600 .82rem var(--mono);
+      white-space:nowrap;cursor:pointer}
+    .cm-block-pill[aria-selected="true"]{background:var(--steel);border-color:var(--steel);color:#fff}
+    .cm-phone-head{display:flex;align-items:center;gap:.6rem;padding:.65rem .9rem .5rem}
+    .cm-ph-dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+    .cm-ph-name{font-size:1rem;font-weight:650;white-space:nowrap}
+    .cm-ph-meta{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);white-space:nowrap}
+    .cm-ph-swipe{font-family:var(--mono);font-size:.66rem;color:var(--ink-2);white-space:nowrap}
+    .cm-phone-head .spacer{flex:1 1 auto}
+    /* The grid: no block header (the line above says it), month axis pinned while beds scroll. */
+    #view-cropmap #cmBlocks{padding:0 .6rem .4rem 0;gap:0}
+    #view-cropmap .cm-block{padding:0}
+    #view-cropmap .cm-block-h{display:none}
+    /* Width must stay CM_AXIS_W (30px) — the bar layer is positioned from it. */
+    #view-cropmap .cm-axis{position:sticky;left:0;z-index:4;background:var(--paper)}
+    #view-cropmap .cm-mon{font-size:.62rem;display:flex;align-items:flex-start;padding-top:3px}
+    #view-cropmap .cm-mon-now{color:var(--steel);font-weight:700}
+    #view-cropmap .cm-col-h{font-size:.66rem;height:18px}
+    /* Bottom bar: colour key + unplaced, instead of zoom controls. */
+    #view-cropmap .cm-statusbar{height:auto;min-height:48px;padding:.4rem .9rem;gap:.6rem}
+    #view-cropmap .cm-statusbar > .cm-sb-icon,#view-cropmap .cm-zoomgrp,#view-cropmap #cmAssigned{display:none}
+    .cm-phone-legend{display:flex;gap:.35rem .8rem;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+    .cm-phone-legend::-webkit-scrollbar{display:none}
+    .cm-ph-key{display:inline-flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.66rem;
+      color:var(--ink-2);white-space:nowrap}
+    .cm-ph-key i{width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+    #view-cropmap .cm-statusbar > .spacer{display:none}
+    .cm-phone-unplaced{flex:0 0 auto;display:inline-flex;align-items:center;height:40px;padding:0 .9rem;border-radius:10px;border:1px solid var(--line-2);
+      background:none;color:var(--ink-2);font:700 .74rem var(--mono);white-space:nowrap;cursor:pointer}
+    .cm-phone-unplaced.short{color:var(--clay);border-color:var(--clay);background:var(--clay-tint)}
+    /* Assign plantings: a bottom sheet opened from "N unplaced", not a floating pill. */
+    #view-cropmap #cmUnassigned{position:absolute;left:0;right:0;bottom:0;top:auto;width:auto;max-width:none;
+      max-height:78%;z-index:31;border:none;border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
+      box-shadow:var(--shadow)}
+    #view-cropmap #cmUnassigned.collapsed{display:none}
+    #view-cropmap #cmUnassigned .cm-un-body{max-height:none}
+    #view-cropmap .cm-un-head{min-height:56px}
+    /* Planting details: bottom sheet, head pinned, like the Farm map. */
+    #view-cropmap #cmPanel.open{position:absolute;inset:auto 0 0 0;width:100%;max-width:100%;max-height:75%;
+      z-index:32;border-left:none;border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;box-shadow:var(--shadow)}
+    #view-cropmap #cmPanel .tl-panel-head{position:sticky;top:0;z-index:2;background:var(--paper-2)}
+    #view-cropmap #cmPanel .tl-panel-x{width:44px;height:44px;font-size:1.1rem}
+    .cm-sheet-scrim{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.35)}
+    .cm-sheet{position:absolute;left:0;right:0;bottom:0;z-index:31;max-height:80%;overflow:auto;
+      background:var(--paper-2);border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
+      box-shadow:var(--shadow);padding:.5rem 0 1rem}
+    .cm-sh-year{display:flex;align-items:center;justify-content:center;gap:1.2rem;padding:0 1.1rem .4rem}
+    .cm-sh-year b{font:700 1.15rem var(--mono);min-width:4ch;text-align:center}
+    .cm-sh-year button{width:52px;height:44px;border-radius:10px;border:1px solid var(--line-2);
+      background:var(--paper);color:var(--ink);font-size:1.4rem;cursor:pointer}
+  }
   .fm-hold-ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
     border:3px solid var(--steel);pointer-events:none;z-index:6;opacity:0;transform:scale(.35);
     animation:fmHold linear forwards;animation-delay:80ms}
@@ -3452,7 +3520,14 @@
       <div class="vw-title">
         <span class="vw-name">Crop map</span>
         <span class="sub" id="cmSummary"></span>
+        <span class="cm-phone-cap fm-phone-only" id="cmPhoneCap"></span>
         <span class="spacer"></span>
+        <!-- Phone only: season, colour and filters collapse into this one button + a bottom sheet
+             (same pattern as the Farm map). -->
+        <button class="fm-phone-only fm-menu-btn" id="cmMenuBtn" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.6 5.6h12.8M5.8 10h8.4M8.2 14.4h3.6"/></svg>
+          View
+        </button>
         <div class="cm-pop-wrap">
           <button class="btn-ghost cm-season" id="cmSeasonBtn" type="button" aria-expanded="false">
             <span>Season <b id="cmYearLabel">—</b></span>
@@ -3540,6 +3615,7 @@
         </button>
       </div>
       <div class="cm-block-picker" id="cmBlockPicker"></div>
+      <div class="cm-phone-head fm-phone-only" id="cmPhoneHead"></div>
       <div id="cmViewport">
         <div id="cmBlocks"></div>
         <div class="map-ui" id="cmZoombar" style="display:none">
@@ -3571,9 +3647,13 @@
         <button class="cm-sb-icon" id="cmZoomFitW" type="button" title="Fit the width">
           <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.6 10h12.8M6.4 7.2L3.6 10l2.8 2.8M13.6 7.2L16.4 10l-2.8 2.8"/></svg>
         </button>
+        <span class="cm-phone-legend fm-phone-only" id="cmPhoneLegend"></span>
         <span class="spacer"></span>
         <span class="cm-assigned" id="cmAssigned"></span>
+        <button class="cm-phone-unplaced fm-phone-only" id="cmPhoneUnplaced" type="button"></button>
       </div>
+      <div class="cm-sheet-scrim" id="cmSheetScrim" hidden></div>
+      <div class="cm-sheet" id="cmSheet" role="dialog" aria-modal="true" aria-labelledby="fmSheetTitle" hidden></div>
       </div>
       <!-- /.cm-left -->
         <aside id="cmUnassigned">
@@ -3586,7 +3666,7 @@
             <span class="cm-un-arrow" aria-hidden="true">✕</span>
           </div>
           <div class="cm-un-intro">
-            <p>Drag a planting onto a block to place it. Anything left here has no bed yet.</p>
+            <p><span class="cm-desk-only">Drag a planting onto a block to place it.</span><span class="cm-phone-inline">Tap a planting to choose its bed.</span> Anything left here has no bed yet.</p>
             <div class="cm-un-search">
               <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><circle cx="9" cy="9" r="5.4"/><path d="M13 13l3.6 3.6"/></svg>
               <input type="text" id="cmUnSearch" placeholder="Search crops" autocomplete="off" spellcheck="false">
@@ -6844,6 +6924,10 @@ function backCandidates(){
   });
   const sh=document.getElementById("fmSheet");
   if(sh && !sh.hidden && backVisible(sh)) out.push([sh,fmCloseSheet]);
+  const csh=document.getElementById("cmSheet");
+  if(csh && !csh.hidden && backVisible(csh)) out.push([csh,cmCloseSheet]);
+  const cun=document.getElementById("cmUnassigned");
+  if(cun && cmIsMobile() && !cmUnCollapsed && backVisible(cun)) out.push([cun,()=>cmSetUnCollapsed(true)]);
   document.querySelectorAll(".cm-pop:not([hidden]), .vw-menu:not([hidden])").forEach(el=>{
     if(!backVisible(el)) return;
     out.push([el,()=>{ el.hidden=true;
@@ -8964,6 +9048,24 @@ function cmDrawBlockChips(allKeys){
   const box=document.getElementById("cmBlockPicker"); if(!box) return;
   box.innerHTML="";
   if(allKeys.length<2) return;   // nothing to pick between
+  if(cmIsMobile()){
+    // Phone: one block at a time (the design's "one block at a time"), so no "All blocks" pill —
+    // at phone width every block shrinks to an unreadable thumbnail.
+    allKeys.forEach(k=>{
+      const c=document.createElement("button"); c.className="cm-block-pill"; c.type="button";
+      c.textContent=k.replace(/^Back Paddock /,"BP ");
+      c.title=k;
+      c.setAttribute("aria-selected", k===cmSelectedBlock?"true":"false");
+      c.addEventListener("click",()=>{
+        cmSelectedBlock=k; try{ localStorage.setItem(CM_PHONE_BLOCK_KEY,k); }catch(_){}
+        buildCropMap();
+      });
+      box.appendChild(c);
+    });
+    const on=box.querySelector('[aria-selected="true"]');
+    if(on) requestAnimationFrame(()=>on.scrollIntoView({block:"nearest",inline:"center"}));
+    return;
+  }
   const mk=(label,val)=>{
     const c=document.createElement("button"); c.className="cm-block-tab"; c.textContent=label;
     c.setAttribute("aria-selected", val===cmSelectedBlock?"true":"false");
@@ -9237,8 +9339,10 @@ function buildCropMap(){
   const groups=bedGroups();
   const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
 
-  cmDrawBlockChips(keys);                                                     // always offer every block
   if(cmSelectedBlock && !keys.includes(cmSelectedBlock)) cmSelectedBlock=null; // stale (renamed/removed) → fall back to "All"
+  const phone=cmIsMobile();
+  if(phone) cmPhonePrepare(keys);
+  cmDrawBlockChips(keys);                                                     // always offer every block
   // mobile-only: a picked block narrows the view to just that block; desktop always sees every
   // block regardless of a stale cmSelectedBlock left over from a mobile session on this browser
   const activeKeys = (cmSelectedBlock && cmIsMobile()) ? [cmSelectedBlock] : keys;
@@ -9299,7 +9403,9 @@ function buildCropMap(){
     const grid=document.createElement("div");grid.className="cm-grid";
 
     const axis=document.createElement("div");axis.className="cm-axis";
-    CM_MONTHS.forEach(m=>{const c=document.createElement("div");c.className="cm-mon";c.textContent=m;
+    const nowD=new Date();
+    CM_MONTHS.forEach((m,mi)=>{const c=document.createElement("div");c.className="cm-mon";c.textContent=m;
+      if(cmYear===nowD.getFullYear() && mi===nowD.getMonth()) c.classList.add("cm-mon-now");
       c.style.height=(CM_H/12)+"px";axis.appendChild(c);});
     grid.appendChild(axis);
 
@@ -9394,6 +9500,7 @@ function buildCropMap(){
   }
   buildUnassigned();
   cmRenderAssigned();
+  if(phone) cmPhoneRender(activeKeys[0], groups, perBlock);
   // The default view mode is a variable; the toggle's pressed state and the pan/zoom transform
   // live in the DOM. Apply it once, after the blocks exist, so the map opens fitted the way the
   // design has it — and only once, so a later rebuild never yanks the view back from where the
@@ -9519,6 +9626,114 @@ function applyCmMapView(){
 }
 
 // How much of the year's plan actually has ground under it — the number the assign step is for.
+/* ---------- Crop map — phone (2026-09-24) ----------
+   One block at a time, in List mode (a real scrolling grid, not the pan/zoom board): months fill
+   the height, beds scroll sideways under a pinned month axis. Everything the desktop keeps in the
+   tools row and title-row popovers lives in one "View" sheet; the Pan/Select/Tarp tools and zoom
+   are hidden, since there is no dragging on a phone — a planting is placed from its own panel. */
+const CM_PHONE_BLOCK_KEY="roseberry_cm_phone_block_v1";
+let cmPhoneDesktopMode=null, cmPhoneUnInit=false, cmSheetMode=null;
+function cmPhonePrepare(keys){
+  if(!cmSelectedBlock){
+    let saved=null; try{ saved=localStorage.getItem(CM_PHONE_BLOCK_KEY); }catch(_){}
+    cmSelectedBlock = (saved && keys.includes(saved)) ? saved : (keys[0]||null);
+  }
+  if(cmViewMode!=="list"){ cmPhoneDesktopMode=cmViewMode; cmViewMode="list"; cmViewApplied=false; }
+  if(!cmPhoneUnInit){ cmPhoneUnInit=true; cmSetUnCollapsed(true); }   // opened from "N unplaced" instead
+}
+// Back to desktop width: restore the board the desktop was on before the phone forced List.
+window.matchMedia("(max-width:760px)").addEventListener("change",ev=>{
+  if(ev.matches || cmPhoneDesktopMode==null) return;
+  const m=cmPhoneDesktopMode; cmPhoneDesktopMode=null; cmPhoneUnInit=false; cmCloseSheet();
+  setTimeout(()=>{ setCmViewMode(m); },250);
+});
+function cmUnplacedCount(){ return (data.plantingsActive||[]).filter(p=>!(p.bedIds||[]).length).length; }
+function cmPhoneRender(key, groups, perBlock){
+  const beds=(groups[key]||[]);
+  const inYear=[...(perBlock[key]||[])].filter(p=>{ const d=p.tp||p.sow; return d && new Date(d).getFullYear()===cmYear; });
+  const used=new Set(); inYear.forEach(p=>(p.bedIds||[]).forEach(id=>used.add(id)));
+  const planted=beds.filter(b=>used.has(b.id)).length;
+  const meta=cmBlockByName(key), pref=(meta&&meta.preferredCropTypes)||[];
+  const dot = pref.length ? cropTypeColor(pref[0]) : "var(--steel)";
+  const title = /^[A-Z0-9]{1,3}$/i.test(key) ? "Block "+key : key;
+  const cap=document.getElementById("cmPhoneCap");
+  if(cap) cap.textContent=`Season ${cmYear}`;
+  const head=document.getElementById("cmPhoneHead");
+  if(head){
+    head.innerHTML=`<span class="cm-ph-dot" style="background:${dot}"></span>`
+      +`<span class="cm-ph-name">${esc(title)}</span>`
+      +`<span class="cm-ph-meta">${beds.length} bed${beds.length===1?"":"s"} · ${planted} planted</span>`
+      +`<span class="spacer"></span><span class="cm-ph-swipe" id="cmPhSwipe">swipe for more beds</span>`;
+    const vp=document.getElementById("cmViewport");
+    requestAnimationFrame(()=>{ const sw=document.getElementById("cmPhSwipe");
+      if(sw && vp) sw.style.visibility = vp.scrollWidth>vp.clientWidth+4 ? "visible" : "hidden"; });
+  }
+  // Key: what is actually in this block this season, in the colours the bars are drawn in.
+  const leg=document.getElementById("cmPhoneLegend");
+  if(leg){
+    const seen=new Map();
+    inYear.forEach(p=>{
+      const k = cmColorMode==="type" ? ((data.cropDefs[p.cropId]||{}).type||"Other") : p.crop;
+      if(!seen.has(k)) seen.set(k, cmColorMode==="type" ? cropTypeColor(k) : cmSwatchColor(p.cropId,p.crop));
+    });
+    leg.innerHTML=[...seen].map(([k,c])=>`<span class="cm-ph-key"><i style="background:${c}"></i>${esc(k)}</span>`).join("")
+      || `<span class="cm-ph-key cm-ph-none">Nothing planted this season</span>`;
+  }
+  const un=document.getElementById("cmPhoneUnplaced");
+  if(un){ const n=cmUnplacedCount(); un.textContent = n ? `${n} unplaced` : "All placed"; un.classList.toggle("short", n>0); }
+  if(cmSheetMode) cmRenderSheet();
+}
+function cmOpenAssign(){ cmCloseSheet(); cmClosePanel(); cmSetUnCollapsed(false); }
+function cmOpenSheet(mode){ cmSheetMode=mode; cmClosePanel(); cmRenderSheet();
+  document.getElementById("cmSheet").hidden=false; document.getElementById("cmSheetScrim").hidden=false; }
+function cmCloseSheet(){ cmSheetMode=null;
+  const a=document.getElementById("cmSheet"), b=document.getElementById("cmSheetScrim");
+  if(a) a.hidden=true;
+  if(b) b.hidden=true; }
+function cmRenderSheet(){
+  const sh=document.getElementById("cmSheet"); if(!sh) return;
+  const n=cmUnplacedCount();
+  sh.innerHTML=fmSheetHead("Crop map view").replace('data-fmsh="close"','data-cmsh="close"')
+    +`<div class="fm-sh-lbl">Season</div>`
+    +`<div class="cm-sh-year"><button type="button" data-cmsh="prev" aria-label="Previous season">‹</button>`
+    +`<b>${cmYear}</b><button type="button" data-cmsh="next" aria-label="Next season">›</button></div>`
+    +`<div class="fm-sh-lbl">Colour plantings by</div><div class="fm-sh-seg">`
+    +`<button type="button" data-cmsh="color" data-val="crop" aria-pressed="${cmColorMode==="crop"}">Crop</button>`
+    +`<button type="button" data-cmsh="color" data-val="type" aria-pressed="${cmColorMode==="type"}">Crop type</button></div>`
+    +`<div class="fm-sh-lbl">Show</div>`
+    +fmSwitchRow("warn","Behind-schedule warnings","A ! on plantings that are running late",cmWarnOnly).replace(/data-fmsh=/g,"data-cmsh=")
+    +fmSwitchRow("inactive","Grey out late plantings","Due in the ground but not marked planted",cmInactiveOn).replace(/data-fmsh=/g,"data-cmsh=")
+    +`<div class="fm-sh-lbl">Plantings</div>`
+    +`<button class="fm-sh-row" type="button" data-cmsh="assign"><span class="grow"><div class="nm">Assign plantings</div>`
+    +`<div class="mt">${n ? n+" still need a bed" : "Every planting has a bed"}</div></span>`
+    +`<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M8 5l5 5-5 5"/></svg></button>`;
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const sh=document.getElementById("cmSheet"); if(!sh) return;
+  document.getElementById("cmMenuBtn").addEventListener("click",()=>cmOpenSheet("view"));
+  document.getElementById("cmSheetScrim").addEventListener("click",cmCloseSheet);
+  document.getElementById("cmPhoneUnplaced").addEventListener("click",cmOpenAssign);
+  sh.addEventListener("click",e=>{
+    const t=e.target.closest("[data-cmsh]"); if(!t || t.tagName==="INPUT") return;
+    const a=t.dataset.cmsh;
+    if(a==="close") cmCloseSheet();
+    else if(a==="prev") document.getElementById("cmPrev").click();
+    else if(a==="next") document.getElementById("cmNext").click();
+    else if(a==="color") setCmColorMode(t.dataset.val);
+    else if(a==="assign") cmOpenAssign();
+    if(cmSheetMode) cmRenderSheet();
+  });
+  sh.addEventListener("change",e=>{
+    const t=e.target.closest("[data-cmsh]"); if(!t) return;
+    const cb=document.getElementById(t.dataset.cmsh==="warn"?"cmWarnOnly":"cmInactiveOn");
+    if(cb){ cb.checked=t.checked; cb.dispatchEvent(new Event("change")); }
+  });
+  // The "swipe for more beds" hint goes once you have swiped.
+  const vp=document.getElementById("cmViewport");
+  if(vp) vp.addEventListener("scroll",()=>{ const sw=document.getElementById("cmPhSwipe");
+    if(sw && vp.scrollLeft>20) sw.style.visibility="hidden"; },{passive:true});
+});
+
 function cmRenderAssigned(){
   const el=document.getElementById("cmAssigned"); if(!el) return;
   const all=(data.plantingsActive||[]);
