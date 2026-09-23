@@ -7196,7 +7196,7 @@ function fmScreenToWorld(clientX,clientY){
 (function(){
   const wrap=document.getElementById("mapWrap");
   let dragging=false,lastX,lastY,moved=false,downTarget=null;
-  const pts=new Map();let pinchD=0;
+  const pts=new Map();let pinchD=0,pinchMid=null;
   let dragBlockKey=null,dragBlockGroup=null,dragBlockStart=null;
   let dragImage=false,dragImageStart=null,dragImageOrig=null;
   let dragLabelKey=null,dragLabelEl=null,dragLabelStart=null,dragLabelOrig=null;
@@ -7300,8 +7300,14 @@ function fmScreenToWorld(clientX,clientY){
     if(pts.size===2){
       moved=true;
       const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(pinchD){const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;zoomAt(cx,cy,d/pinchD);}
-      pinchD=d;return;
+      const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+      if(pinchD){
+        // Pan by how far the midpoint moved, then zoom about it — so the spot between your fingers
+        // stays under your fingers instead of the map sliding off while you zoom.
+        view.tx+=cx-pinchMid.x; view.ty+=cy-pinchMid.y;
+        zoomAt(cx,cy,d/pinchD);
+      }
+      pinchD=d; pinchMid={x:cx,y:cy}; return;
     }
     if(!dragging) return;
     if(dragLabelKey){
@@ -7345,6 +7351,10 @@ function fmScreenToWorld(clientX,clientY){
     const wasCancel=e.type==="pointercancel";
     cancelHold(); holdStart=null;
     pts.delete(e.pointerId);if(pts.size<2)pinchD=0;
+    // Lifting one finger of a pinch: the other keeps panning, measured from where IT is now. Using
+    // the stale lastX/lastY (the first finger's touch-down point) made the map lurch — it read as
+    // the map "recentring" itself after every pinch.
+    if(pts.size===1){ const [r]=[...pts.values()]; lastX=r.x; lastY=r.y; }
     if(pts.size===0){
       dragging=false;wrap.classList.remove("dragging");
       if(dragLabelKey){
@@ -8031,7 +8041,14 @@ document.getElementById("gearBtn").onclick=()=>{
 document.getElementById("panelClose").onclick=closePanel;
 document.getElementById("reloadBtn").onclick=loadAll;
 document.getElementById("themeBtn").onclick=()=>setTheme(theme==="dark"?"light":"dark");
-window.addEventListener("resize",()=>{if(document.getElementById("view-map").classList.contains("active"))fitView();});
+// Refit only when the WIDTH changes (rotating the phone, resizing the window). Height-only resizes
+// — Android's nav/status bar, the keyboard — used to snap the map back to the whole farm mid-pan.
+let fmLastW=window.innerWidth;
+window.addEventListener("resize",()=>{
+  if(window.innerWidth===fmLastW) return;
+  fmLastW=window.innerWidth;
+  if(document.getElementById("view-map").classList.contains("active"))fitView();
+});
 
 /* ---------- utils ---------- */
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
