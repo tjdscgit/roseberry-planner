@@ -24931,10 +24931,12 @@ function fwRender(){
     return `${n} note${n===1?"":"s"} this walk`;
   });
   const label=document.getElementById("fwDateLabel");
-  if(label){
-    const isToday=fwDateISO===fwTodayISO();
-    label.textContent=(isToday?"Today · ":"")+fmt(fwDateISO);
-  }
+  const isToday=fwDateISO===fwTodayISO();
+  if(label) label.textContent=(isToday?"Today · ":"")+fmt(fwDateISO);
+  // The jump-to-today button is only useful once you've navigated away from today — showing it
+  // next to a label that already says "Today ·" is redundant clutter on the one date it can't help.
+  const todayBtn=document.getElementById("fwToday");
+  if(todayBtn) todayBtn.hidden=isToday;
   const walkersEl=document.getElementById("fwWalkers");
   if(walkersEl && document.activeElement!==walkersEl){
     walkersEl.value = walk ? walk.walkers : myWalkers;
