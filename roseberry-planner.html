@@ -3134,6 +3134,15 @@
      the bottom so the map stays visible above them. Every tap target is >=44px. ---- */
   .fm-phone-only{display:none}
   #fmSheet[hidden],#fmSheetScrim[hidden]{display:none}
+  .fm-hold-ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
+    border:3px solid var(--steel);pointer-events:none;z-index:6;opacity:0;transform:scale(.35);
+    animation:fmHold linear forwards;animation-delay:80ms}
+  @keyframes fmHold{from{opacity:.2;transform:scale(.35)}to{opacity:.95;transform:scale(1)}}
+  #fmHoldHint{left:50%;bottom:5rem;transform:translate(-50%,8px);background:var(--ink);color:var(--paper);
+    padding:.6rem 1rem;border-radius:999px;font-size:.88rem;white-space:nowrap;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+  #fmHoldHint.show{opacity:1;transform:translate(-50%,0)}
+  @media(max-width:760px){ #mapWrap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} }
   @media(max-width:760px){
     #view-map .vw-title .cm-iconbtn,#view-map .vw-title .cm-pop-wrap{display:none}
     #view-map .vw-title{padding-right:48px}   /* clear of the fixed reload button (.rail-utils) */
@@ -7198,10 +7207,65 @@ function fmScreenToWorld(clientX,clientY){
   function plantingFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.planting)return el.dataset.planting;el=el.parentNode;}return null;}
   function blockFrom(el){while(el&&el!==wrap){if(el.dataset&&el.dataset.block)return el.dataset.block;el=el.parentNode;}return null;}
 
+  // What a tap (desktop) or a press-and-hold (phone) opens: the planting if it was the crop name,
+  // else the bed, else the block; empty ground closes whatever is open.
+  function openAt(target){
+    const badgeLink=target.closest && target.closest(".bed-behind-badge");
+    const cropLink=target.closest && target.closest(".bed-croplabel");
+    const id=bedFrom(target);
+    if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
+    else if(cropLink && id) fmOpenPlantingPanel(id, plantingFrom(target));
+    else if(id) selectBed(id);
+    else{ const blk=blockFrom(target); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
+  }
+
+  // Phone: panning with a thumb kept landing on beds and popping the details sheet open. So on a
+  // phone a quick tap never opens anything — you press and hold (~0.45s) instead, with a ring that
+  // fills under the finger so it's clear something is happening. A few px of finger wobble is
+  // allowed; anything more is a pan and cancels the hold.
+  const HOLD_MS=450, HOLD_SLOP=10;
+  let holdTimer=null, holdFired=false, holdStart=null, holdRing=null;
+  function cancelHold(){
+    clearTimeout(holdTimer); holdTimer=null;
+    if(holdRing){ holdRing.remove(); holdRing=null; }
+  }
+  function startHold(e){
+    cancelHold(); holdFired=false; holdStart={x:e.clientX,y:e.clientY};
+    const r=wrap.getBoundingClientRect();
+    holdRing=document.createElement("div"); holdRing.className="fm-hold-ring";
+    holdRing.style.left=(e.clientX-r.left)+"px"; holdRing.style.top=(e.clientY-r.top)+"px";
+    holdRing.style.animationDuration=HOLD_MS+"ms";
+    wrap.appendChild(holdRing);
+    const target=e.target;
+    holdTimer=setTimeout(()=>{
+      holdTimer=null; if(holdRing){ holdRing.remove(); holdRing=null; }
+      if(moved || pts.size!==1) return;
+      holdFired=true;
+      if(navigator.vibrate) try{ navigator.vibrate(15); }catch(_){}
+      openAt(target);
+    }, HOLD_MS);
+  }
+  // A short "hold to open" hint after a plain tap on a bed, so the change isn't a mystery — shown
+  // at most a few times per device, then it stays out of the way.
+  const FM_HOLD_HINT_KEY="roseberry_fm_holdhint_v1";
+  function holdHint(){
+    let n=0; try{ n=+localStorage.getItem(FM_HOLD_HINT_KEY)||0; }catch(_){}
+    if(n>=3) return;
+    try{ localStorage.setItem(FM_HOLD_HINT_KEY, String(n+1)); }catch(_){}
+    let t=document.getElementById("fmHoldHint");
+    if(!t){ t=document.createElement("div"); t.id="fmHoldHint"; t.className="map-ui"; wrap.parentNode.appendChild(t); }
+    t.textContent="Press and hold a bed to see its details";
+    t.classList.add("show");
+    clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"), 2200);
+  }
+  wrap.addEventListener("contextmenu",e=>{ if(fmIsPhone()) e.preventDefault(); });
+
   wrap.addEventListener("pointerdown",e=>{
     wrap.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size>1){ moved=true; cancelHold(); }
     if(pts.size===1){
       dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;
+      if(fmIsPhone() && !fmInfraMode) startHold(e);
       dragBlockKey=null;dragBlockGroup=null;dragImage=false;dragLabelKey=null;dragLabelEl=null;
       // Block-name label drag takes priority over whole-block drag (even in move mode) — grabbing
       // the label itself should reposition just the label, not the whole block underneath it.
@@ -7234,6 +7298,7 @@ function fmScreenToWorld(clientX,clientY){
     if(!pts.has(e.pointerId))return;
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===2){
+      moved=true;
       const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);
       if(pinchD){const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;zoomAt(cx,cy,d/pinchD);}
       pinchD=d;return;
@@ -7271,11 +7336,14 @@ function fmScreenToWorld(clientX,clientY){
       return;
     }
     const dx=e.clientX-lastX,dy=e.clientY-lastY;
-    if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
+    if(holdStart && fmIsPhone()){
+      if(Math.hypot(e.clientX-holdStart.x, e.clientY-holdStart.y)>HOLD_SLOP){ moved=true; cancelHold(); }
+    }else if(Math.abs(dx)+Math.abs(dy)>2) moved=true;
     view.tx+=dx;view.ty+=dy;lastX=e.clientX;lastY=e.clientY;applyView();
   });
   function up(e){
     const wasCancel=e.type==="pointercancel";
+    cancelHold(); holdStart=null;
     pts.delete(e.pointerId);if(pts.size<2)pinchD=0;
     if(pts.size===0){
       dragging=false;wrap.classList.remove("dragging");
@@ -7305,15 +7373,16 @@ function fmScreenToWorld(clientX,clientY){
         if(fmInfraMode==="point"){ fmPlacePoint(fmScreenToWorld(e.clientX,e.clientY)); }
         else if(fmInfraMode==="line"){ fmAddLinePoint(fmScreenToWorld(e.clientX,e.clientY)); }
         else if(featEl && !fmIsPhone()){ fmOpenFeatureEditor(featEl.dataset.feature); }
-        else{
-          const badgeLink=downTarget.closest && downTarget.closest(".bed-behind-badge");
-          const cropLink=downTarget.closest && downTarget.closest(".bed-croplabel");
-          const id=bedFrom(downTarget);
-          if(badgeLink) alert(badgeLink.dataset.reason||"Behind schedule");
-          else if(cropLink && id) fmOpenPlantingPanel(id, plantingFrom(downTarget));
-          else if(id) selectBed(id);
-          else{ const blk=blockFrom(downTarget); if(blk) selectBlock(blk); else{ closePanel(); fmClosePlantingPanel(); } }
+        else if(fmIsPhone()){
+          // The hold already opened it — or this was a quick tap: close anything open, and if the
+          // tap was on a bed, say how to open it instead.
+          if(holdFired){ holdFired=false; }
+          else if(document.getElementById("panel").classList.contains("open")
+               || document.getElementById("fmPlantingPanel").classList.contains("open")){
+            closePanel(); fmClosePlantingPanel();
+          }else if(bedFrom(downTarget)) holdHint();
         }
+        else openAt(downTarget);
       }
       downTarget=null;
     }
@@ -19175,6 +19244,8 @@ function wkCtxDescs(target){
   return members.map(r=>
     r.kind==="milestone" ? {isMilestone:true, msDf:r.msDf, plantingId:r.p.id}
   : r.kind==="tarp"      ? {isTarp:true, tarpId:r.tarp.id, tarpStep:r.tarpStep}
+  : r.kind==="spray"     ? {isSpray:true, sprayId:r.app.id}
+  : r.kind==="bedprep"   ? {isBedPrep:true}
   :                        {isMilestone:false, taskId:r.t.id});
 }
 function wkShowCtxMenu(ev,target){
@@ -19186,7 +19257,7 @@ function wkShowCtxMenu(ev,target){
     menu.innerHTML=`<button data-act="addTaskAt">+ Add task at ${wkClock(target.startMin)}</button>`;
   }else{
   const names=knownAssignees();
-  const taskCount=wkCtxDescs(target).filter(d=>!d.isMilestone && !d.isTarp).length;
+  const taskCount=wkCtxDescs(target).filter(d=>d.taskId||d.sprayId).length;
   menu.innerHTML=`<div class="tl-ctx-label">Assign to…</div>`
     +`<button data-act="unassign">— Unassign —</button>`
     +(names.length?`<div class="tl-ctx-sep"></div>`+names.map(n=>`<button data-assign="${esc(n)}">${esc(n)}</button>`).join(""):"")
@@ -19207,6 +19278,13 @@ async function wkSetAssigneeFor(desc,name){
     const akey=MS_ASSIGNEE_KEY[desc.msDf], prev=p[akey]; p[akey]=name;
     try{ await atPatch(CFG.farmBase,CFG.tables.plantings,p.id,{[CFG.f[MS_ASSIGNEE_FIELD[akey]]]:name||null}); }
     catch(e){ p[akey]=prev; throw e; }
+  }else if(desc.isBedPrep){
+    return;
+  }else if(desc.isSpray){
+    const a=(data.sprayApplications||[]).find(x=>x.id===desc.sprayId); if(!a) return;
+    const prev=a.sprayedBy; a.sprayedBy=name;
+    try{ await atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_by]:name||null}); }
+    catch(e){ a.sprayedBy=prev; throw e; }
   }else if(desc.isTarp){
     const tarp=(data.tarps||[]).find(x=>x.id===desc.tarpId); if(!tarp) return;
     const s=PlannerShared.tarpStep(desc.tarpStep); if(!s) return;
@@ -19231,13 +19309,25 @@ async function wkApplyCtxAssign(name){
 async function wkApplyCtxDelete(){
   const target=wkCtxTarget; wkHideCtxMenu();
   if(!target) return;
-  const ids=wkCtxDescs(target).filter(d=>!d.isMilestone && !d.isTarp).map(d=>d.taskId);
-  if(!ids.length) return;
-  const label = ids.length===1 ? "Delete this task?" : `Delete these ${ids.length} tasks?`;
-  if(!confirm(label+"\n\nThis permanently removes the record"+(ids.length>1?"s":"")+" from Airtable.")) return;
+  const descs=wkCtxDescs(target);
+  const ids=descs.filter(d=>d.taskId).map(d=>d.taskId);
+  const sprayIds=descs.filter(d=>d.sprayId).map(d=>d.sprayId);
+  const n=ids.length+sprayIds.length;
+  if(!n) return;
+  const label = n===1 ? (sprayIds.length?"Delete this scheduled spray?":"Delete this task?") : `Delete these ${n} tasks?`;
+  if(!confirm(label+"\n\nThis permanently removes the record"+(n>1?"s":"")+".")) return;
   try{
-    await atDelete(CFG.farmBase, CFG.tables.plantingTasks, ids);
-    data.plantingTasks=(data.plantingTasks||[]).filter(t=>!ids.includes(t.id));
+    if(ids.length){
+      await atDelete(CFG.farmBase, CFG.tables.plantingTasks, ids);
+      data.plantingTasks=(data.plantingTasks||[]).filter(t=>!ids.includes(t.id));
+    }
+    for(const sid of sprayIds){
+      const a=(data.sprayApplications||[]).find(x=>x.id===sid);
+      const itemIds=((a&&a.items)||[]).map(it=>it.id);
+      if(itemIds.length) await atDelete(CFG.farmBase, CFG.tables.sprayApplicationItems, itemIds);
+      await atDelete(CFG.farmBase, CFG.tables.sprayApplications, [sid]);
+      data.sprayApplications=(data.sprayApplications||[]).filter(x=>x.id!==sid);
+    }
   }catch(e){ alert("Couldn't delete: "+e.message); }
   buildWeekPlanner();
 }
