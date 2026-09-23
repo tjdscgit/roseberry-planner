@@ -24859,7 +24859,20 @@ function fwWalkFor(iso, walkers){
   if(!rows.length) return null;
   const key=(walkers||"").trim().toLowerCase();
   if(!key) return rows[0];   // no identity established yet — legacy single-walker behaviour
-  return rows.find(w=>(w.walkers||"").trim().toLowerCase()===key) || null;
+  const match=rows.find(w=>(w.walkers||"").trim().toLowerCase()===key);
+  if(match) return match;
+  // One-time recovery for walks forked before fwSaveWalkers' anonymous-rename fix: a nameless walk
+  // with notes on it can't belong to anyone but whoever names themselves next — there was no name
+  // on it to misattribute away from. Adopt it instead of returning null and leaving those notes
+  // stranded under an identity the box no longer matches (the "typed my name and my notes vanished"
+  // bug). A genuinely handed-off walk always has SOME name on it already, so this never touches one.
+  const anon=rows.find(w=>!(w.walkers||"").trim() && fwWalkHasContent(w.id));
+  if(anon){
+    anon.walkers=walkers.trim();
+    fwEnqueue("patch","fieldWalks",{[CFG.f.fw_walkers]:walkers.trim()},{recId:anon.id});
+    return anon;
+  }
+  return null;
 }
 
 // Walks are created lazily, on the first thing written to one, rather than on opening the tab —
@@ -25119,23 +25132,29 @@ function fwSaveWalkers(){
   // The walk that was showing before this edit — found by the OLD box value, since fwWalkFor
   // matches on walkers and el.value is already the new one by the time `change` fires.
   const prior=fwWalkFor(fwDateISO, fwWalkersBeforeEdit);
-  if(prior && !fwWalkHasContent(prior.id)){
+  // Typing your name into a box that was EMPTY is establishing identity, not a handoff — there was
+  // nobody else's name on that walk to misattribute. Relabel in place even if it already has notes,
+  // otherwise "assign who's walking" after you've already written notes forks a second, empty walk
+  // and the ones you just took vanish from the feed (they're still there, just under the old
+  // nameless walk the box no longer matches) — this is the bug that guard used to cause.
+  const wasAnonymous = !fwWalkersBeforeEdit.trim();
+  if(prior && (wasAnonymous || !fwWalkHasContent(prior.id))){
     // Nothing recorded under it yet, so this edit is "typing my name in" or "fixing a typo" —
     // safe to relabel that same walk in place.
     prior.walkers=v;
     fwEnqueue("patch","fieldWalks",{[CFG.f.fw_walkers]:v},{recId:prior.id});
   }
-  // If the prior walk already has notes on it, leave it — and whoever's name is on it — alone.
-  // This is the handoff case (Tim finishes, hands the phone to Jess, clears the box): renaming
-  // Tim's walk to "Jess" would misattribute his notes to her. fwRender below resolves (or lazily
-  // creates, on the next note) a separate walk under the new name instead.
+  // If the prior walk already had a name AND already has notes on it, leave it — and whoever's
+  // name is on it — alone. This is the real handoff case (Tim finishes, hands the phone to Jess):
+  // renaming Tim's walk to "Jess" would misattribute his notes to her. fwRender below resolves (or
+  // lazily creates, on the next note) a separate walk under the new name instead.
   //
   // Known, accepted cost: there's no way to tell "Tim" -> "Timothy" (the same person elaborating
   // their own name) apart from "Tim" -> "Jess" (a handoff) from the text alone — both are edits to
-  // an already-populated walk. This guard treats both as a handoff and forks a second walk, so
-  // self-editing after your first note produces a small, cosmetically-fragmented extra walk rather
-  // than ever risking one person's notes reading as another's. Misattribution is the failure that
-  // matters here; a stray half-empty walk row is not.
+  // an already-populated, already-named walk. This guard treats both as a handoff and forks a
+  // second walk, so self-editing after your first note produces a small, cosmetically-fragmented
+  // extra walk rather than ever risking one person's notes reading as another's. Misattribution is
+  // the failure that matters here; a stray half-empty walk row is not.
   fwRender();
 }
 
