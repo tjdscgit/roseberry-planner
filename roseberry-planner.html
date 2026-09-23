@@ -18765,6 +18765,16 @@ function wkMoveOneRow(r, toDayISO, startMin){
       rollback:()=>{ planRecs.forEach((p,i)=>{ p.startMin=prev[i].startMin; p.day=prev[i].day; }); },
     };
   }
+  // A planned spray is a synthetic row (planner-shared.js, id "spray:<appId>") with no Planting
+  // Task behind it — falling through to the task patch below hit a task id that doesn't exist, and
+  // Supabase returned no row ("Cannot destructure property 'id' of 'row'"). Moving one just moves
+  // the spray application's own date; sprays have no start-minute or duration column.
+  if(r.kind==="spray"){
+    const a=r.app, prevDate=a.date, prevDue=r.due;
+    a.date=toDayISO;
+    return { patch: atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_date]:toDayISO}),
+             rollback:()=>{ a.date=prevDate; r.due=prevDue; } };
+  }
   const t=r.t, prevDue=t.due, prevStart=t.start;
   t.due=toDayISO; t.start=startMin;
   return { patch: atPatch(CFG.farmBase,CFG.tables.plantingTasks,t.id,{[CFG.f.pt_due]:toDayISO,[CFG.f.pt_start]:startMin}), rollback:()=>{ t.due=prevDue; t.start=prevStart; } };
