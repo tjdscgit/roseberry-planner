@@ -19129,6 +19129,11 @@ function wkSetOdCollapsed(val){
 })();
 
 function saveUiState(){
+  // Until restoreUiState has run, currentView is just the "map" default, not where the user was.
+  // A reload (the service-worker auto-reload, or coming back after 10 min hidden) fires
+  // pagehide/visibilitychange on the fresh page before data has loaded, and saving then
+  // overwrote the real saved tab with "map" — the "refresh dumps me on Farm map" bug.
+  if(!uiRestored) return;
   try{
     const tab = currentView || "map";
     const state = {
