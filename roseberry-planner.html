@@ -3134,6 +3134,10 @@
      the bottom so the map stays visible above them. Every tap target is >=44px. ---- */
   .fm-phone-only{display:none}
   #fmSheet[hidden],#fmSheetScrim[hidden]{display:none}
+  #backToast{position:fixed;left:50%;bottom:76px;z-index:200;transform:translate(-50%,8px);
+    background:var(--ink);color:var(--paper);padding:.6rem 1rem;border-radius:999px;font-size:.88rem;
+    white-space:nowrap;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
+  #backToast.show{opacity:1;transform:translate(-50%,0)}
   .fm-hold-ring{position:absolute;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
     border:3px solid var(--steel);pointer-events:none;z-index:6;opacity:0;transform:scale(.35);
     animation:fmHold linear forwards;animation-delay:80ms}
@@ -3143,9 +3147,25 @@
     opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
   #fmHoldHint.show{opacity:1;transform:translate(-50%,0)}
   @media(max-width:760px){ #mapWrap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} }
+  /* Phone: no reload button. It floated over the top-right corner of every screen — including the
+     ✕ of full-screen panels — and the app now refreshes itself when it comes back to the front.
+     So the title rows no longer need to keep that corner clear either. */
+  @media(max-width:760px){
+    .rail-utils{display:none}
+    .vw-title{padding-right:.6rem}
+    /* Farm map's planting details slide up like the bed details, instead of the full-screen
+       takeover every other .tl-panel host uses on phone — the map stays visible above. */
+    #view-map #fmPlantingPanel.open{position:absolute;inset:auto 0 0 0;width:100%;max-width:100%;
+      max-height:70%;border-left:none;border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
+      z-index:21;transform:none;box-shadow:var(--shadow)}
+    #view-map #fmPlantingPanel .tl-panel-head{position:relative;padding-top:.6rem}
+    #view-map #fmPlantingPanel .tl-panel-head::before{content:"";position:absolute;top:.45rem;left:50%;
+      width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line-2)}
+    #view-map #fmPlantingPanel .tl-panel-x{width:44px;height:44px;font-size:1.1rem}
+  }
   @media(max-width:760px){
     #view-map .vw-title .cm-iconbtn,#view-map .vw-title .cm-pop-wrap{display:none}
-    #view-map .vw-title{padding-right:48px}   /* clear of the fixed reload button (.rail-utils) */
+    #view-map .vw-title{padding-right:.6rem}
     #view-map .vw-title .sub{display:none}
     .fm-phone-only{display:inline-flex}
     .fm-menu-btn{align-items:center;gap:.45rem;height:44px;padding:0 1rem;border-radius:12px;
@@ -6775,6 +6795,90 @@ function refreshChips(){
 // "C" reads better as "Block C"; "Back Paddock A" already says what it is.
 function fmBlockTitle(key){ return /^[A-Z0-9]{1,3}$/i.test(key) ? "Block "+key : key; }
 
+/* ---------- Back button (Android / browser) ----------
+   The app is one page, so the phone's back button used to leave it straight away. Now one extra
+   history entry sits on top the whole time; pressing back consumes it, and we decide what "back"
+   means, then put the entry back:
+     1. close the top-most open thing (dialog, panel, sheet, menu) — using its OWN close button when
+        it has one, so any "discard changes?" check or cleanup runs exactly as if ✕ was tapped;
+     2. otherwise return to the previous screen;
+     3. otherwise say "press back again to exit" and let a second press leave. */
+const viewHistory=[]; let backNavigating=false;
+const BACK_CLOSE_SEL=".tl-panel-x, .close-x, .ap-x, .fm-sh-close, [aria-label='Close'], [title='Close'], [id$='Close'], [id$='Cancel']";
+function backZ(el){
+  for(let n=el;n && n!==document.body;n=n.parentElement){
+    const z=getComputedStyle(n).zIndex; if(z!=="auto") return +z;
+  }
+  return 0;
+}
+function backVisible(el){ return el.getClientRects().length>0 && getComputedStyle(el).visibility!=="hidden"; }
+// Each candidate: [element, close()]. Ones that aren't dialogs but still use .open/[hidden]
+// (context menus, popovers, the phone list sheet) are listed explicitly; everything else counts
+// only if it carries a close button, so a random .open class elsewhere can never be "closed".
+function backCandidates(){
+  const out=[];
+  document.querySelectorAll(".open").forEach(el=>{
+    if(!backVisible(el)) return;
+    if(el.id==="sbwrap"){ out.push([el,()=>el.classList.remove("open")]); return; }
+    if(el.id==="panel"){ out.push([el,closePanel]); return; }
+    if(el.id==="fmPlantingPanel"){ out.push([el,fmClosePlantingPanel]); return; }
+    if(el.id==="cmTypePopover"){ out.push([el,cmHideTypePopover]); return; }
+    if(/CtxMenu$|ctx-menu/i.test(el.id+" "+el.className)){ out.push([el,()=>el.classList.remove("open")]); return; }
+    const x=[...el.querySelectorAll(BACK_CLOSE_SEL)].find(b=>backVisible(b) && b.closest(".open")===el);
+    if(x) out.push([el,()=>x.click()]);
+  });
+  const sh=document.getElementById("fmSheet");
+  if(sh && !sh.hidden && backVisible(sh)) out.push([sh,fmCloseSheet]);
+  document.querySelectorAll(".cm-pop:not([hidden]), .vw-menu:not([hidden])").forEach(el=>{
+    if(!backVisible(el)) return;
+    out.push([el,()=>{ el.hidden=true;
+      const btn=el.parentElement && el.parentElement.querySelector("[aria-expanded='true']");
+      if(btn) btn.setAttribute("aria-expanded","false"); }]);
+  });
+  return out;
+}
+function backCloseTop(){
+  const c=backCandidates(); if(!c.length) return false;
+  // Top-most = highest stacking z-index; on a tie, the later one in the page is drawn on top.
+  const all=[...document.querySelectorAll("*")];
+  c.sort((a,b)=> (backZ(b[0])-backZ(a[0])) || (all.indexOf(b[0])-all.indexOf(a[0])));
+  try{ c[0][1](); }catch(e){ console.error("back: close failed", e); c[0][0].classList.remove("open"); }
+  return true;
+}
+let backExitArmed=false, backExitTimer=null;
+function backRearm(){
+  if(!backExitArmed) return;
+  backExitArmed=false; clearTimeout(backExitTimer);
+  if(!(history.state && history.state.rbBack)) history.pushState({rbBack:1},"");
+}
+function backToast(msg){
+  let t=document.getElementById("backToast");
+  if(!t){ t=document.createElement("div"); t.id="backToast"; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2000);
+}
+(function(){
+  if(!window.history || !history.pushState) return;
+  const arm=()=>history.pushState({rbBack:1},"");
+  if(!(history.state && history.state.rbBack)) arm();
+  // Any tap during the exit window (opening a dialog, say) means you're still using the app.
+  document.addEventListener("pointerdown", backRearm, true);
+  window.addEventListener("popstate",()=>{
+    if(backCloseTop()){ backExitArmed=false; arm(); return; }
+    if(viewHistory.length){
+      backNavigating=true;
+      try{ showView(viewHistory.pop()); } finally{ backNavigating=false; }
+      backExitArmed=false; arm(); return;
+    }
+    // Nothing left to close or go back to. Leave the guard entry OFF for two seconds, so a second
+    // press is handled by the phone itself and exits; after that, put it back.
+    backExitArmed=true;
+    backToast("Press back again to exit");
+    clearTimeout(backExitTimer);
+    backExitTimer=setTimeout(()=>{ backExitArmed=false; if(!(history.state && history.state.rbBack)) arm(); }, 2000);
+  });
+})();
+
 /* ---------- Farm map — phone sheet (blocks list / view options) ---------- */
 // The phone is for looking, not arranging: map-layout edits (move/tilt blocks, drag labels, drag
 // the satellite photo, add pumps and lines) are all switched off below 760px — see fmIsPhone's
@@ -7876,6 +7980,10 @@ function renderViewContent(view){
   if(view==="fertcost") buildFertCost();
 }
 function showView(view){
+  if(typeof currentView!=="undefined" && currentView && currentView!==view && !backNavigating){
+    viewHistory.push(currentView); if(viewHistory.length>30) viewHistory.shift();
+    backRearm();   // moved on inside the 2s "press back again to exit" window — don't exit next time
+  }
   document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
   const el=document.getElementById("view-"+view); if(el) el.classList.add("active");
 
