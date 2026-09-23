@@ -17542,7 +17542,7 @@ function wkBlockHTML(g, dayISO){
   // slot ("×5"); resizing THAT spreads the change proportionally across all of them rather than
   // picking one, so — unlike task/milestone — it stays resizable even grouped. tarp/spray have no
   // duration field at all.
-  const resizable = g.kind==="bedprep" || (total===1 && (!g.kind || g.kind==="milestone"));
+  const resizable = g.kind==="bedprep" || (total===1 && (!g.kind || g.kind==="milestone" || g.kind==="spray"));
   return `<div class="wk-block${allDone?" done":""}${total>1?" wk-block-grouped":""}${selected?" wk-selected":""}" style="top:${top}px;height:${h}px;background:${col.bg}" `
     +`data-grp="${esc(g.key)}" data-day="${dayISO}" data-total="${total}" data-min="${Math.round(g.dispMin)}">`
     +`<div class="wk-block-h" data-drag="1" title="${g.kind==="bedprep"?(total>1?"Drag to set a time · click for full details":"Drag to set a time"):(total>1?"Drag to reschedule · click for full details":"Drag to reschedule")}">`
@@ -18586,7 +18586,7 @@ function wkResizeOnPointerDown(e){
   const {rows}=wkCollect();
   const members=rows.filter(r=>wkCalGroupKey(r)===block.dataset.grp && wkSameDay(r.due,wkParse(block.dataset.day)));
   if(!members.length) return;
-  const resizableKind = members.length===1 ? (!members[0].kind || members[0].kind==="milestone" || members[0].kind==="bedprep")
+  const resizableKind = members.length===1 ? (!members[0].kind || members[0].kind==="milestone" || members[0].kind==="bedprep" || members[0].kind==="spray")
     : members.every(r=>r.kind==="bedprep");
   if(!resizableKind) return;
   e.preventDefault(); e.stopPropagation();
@@ -18615,6 +18615,13 @@ async function wkResizeCommitOne(r, newMin){
     planRecs.forEach(p=>{ p.minutesOverride=newMin; });
     try{ await Promise.all(planRecs.map(p=>atPatch(CFG.farmBase,CFG.tables.bedPrepPlan,p.id,{[CFG.f.bpp_minutesOverride]:newMin}))); }
     catch(err){ planRecs.forEach((p,i)=>{ p.minutesOverride=prev[i]; }); throw err; }
+    return;
+  }
+  if(r.kind==="spray"){
+    const a=r.app, prev=a.durationMin;
+    a.durationMin=newMin;
+    try{ await atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_duration]:newMin}); }
+    catch(err){ a.durationMin=prev; throw err; }
     return;
   }
   const bm=r.p.bm||0;
@@ -18768,12 +18775,12 @@ function wkMoveOneRow(r, toDayISO, startMin){
   // A planned spray is a synthetic row (planner-shared.js, id "spray:<appId>") with no Planting
   // Task behind it — falling through to the task patch below hit a task id that doesn't exist, and
   // Supabase returned no row ("Cannot destructure property 'id' of 'row'"). Moving one just moves
-  // the spray application's own date; sprays have no start-minute or duration column.
+  // the spray application's own date and start minute.
   if(r.kind==="spray"){
-    const a=r.app, prevDate=a.date, prevDue=r.due;
-    a.date=toDayISO;
-    return { patch: atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_date]:toDayISO}),
-             rollback:()=>{ a.date=prevDate; r.due=prevDue; } };
+    const a=r.app, prevDate=a.date, prevStart=a.startMin;
+    a.date=toDayISO; a.startMin=startMin;
+    return { patch: atPatch(CFG.farmBase,CFG.tables.sprayApplications,a.id,{[CFG.f.sap_date]:toDayISO,[CFG.f.sap_start]:startMin}),
+             rollback:()=>{ a.date=prevDate; a.startMin=prevStart; } };
   }
   const t=r.t, prevDue=t.due, prevStart=t.start;
   t.due=toDayISO; t.start=startMin;

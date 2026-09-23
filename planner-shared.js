@@ -247,6 +247,7 @@
       // (actually applied). Blank ⇒ Logged. `sap_followUp` links a scheduled follow-up back to the
       // spray it follows.
       sap_status:"Status", sap_followUp:"Follow-up of",
+      sap_duration:"Duration min", sap_start:"Start minute",
       // Ops app mirror id. A planned spray surfaces in Ops as a read-only row —
       // logging it needs product/amount/WHP, so it can only be completed here.
       sap_opsid:"Ops Task ID",
@@ -704,10 +705,10 @@
       const crops=(a.cropIds||[]).map(id=>(data.crops||{})[id]).filter(Boolean).join(", ");
       rows.push({
         id:`spray:${a.id}`, kind:"spray", app:a,
-        t:{done:false, repeat:0, start:null, assignee:a.sprayedBy||""},
+        t:{done:false, repeat:0, start:a.startMin!=null?a.startMin:null, assignee:a.sprayedBy||""},
         p:{ id:`spray:${a.id}`, crop:crops||"Spray", variety:"", bedIds:(a.bedIds||[]).slice(), bm:0, cropId:null },
         task:{name:"Spray", category:"Spray"},
-        due, overdue, inWeek, minutes:null,
+        due, overdue, inWeek, minutes:a.durationMin!=null?a.durationMin:null,
       });
     });
     // Bed prep passes. One row per operation, covering every bed still needing it — a pass with one
@@ -2030,6 +2031,8 @@
       opsId:r.fields[F.sap_opsid]||"",
       status:r.fields[F.sap_status]||"Logged",   // blank ⇒ Logged, so legacy rows need no backfill
       followUpOfId:(r.fields[F.sap_followUp]||[])[0]||null,
+      durationMin:num(r.fields[F.sap_duration]),
+      startMin:num(r.fields[F.sap_start]),
       items:[],
     }));
   }
