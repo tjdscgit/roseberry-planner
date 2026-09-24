@@ -3162,6 +3162,8 @@
     .fw-tag-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .fw-tag-btn.on{border-color:var(--steel);color:var(--steel);background:var(--sel)}
     #fwQuickAdd{flex:0 0 auto;min-height:48px;padding:0 1.2rem;font-size:1rem}
+    .fw-at-btn{flex:0 0 48px;height:48px;align-items:center;justify-content:center;border-radius:12px;
+      border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:600 1.25rem var(--sans);cursor:pointer}
     #fwTagSheet{position:fixed;bottom:56px}
     #fwTagScrim{position:fixed;inset:0 0 56px 0}
     #fwTagSheetBody #fwTagRow{display:flex;flex-wrap:wrap;gap:.45rem;overflow:visible}
@@ -4585,6 +4587,8 @@
                 <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M3.4 10.6V4.2a.8.8 0 01.8-.8h6.4l6 6a.8.8 0 010 1.1l-5.3 5.3a.8.8 0 01-1.1 0z"/><circle cx="7" cy="7" r="1.2"/></svg>
                 <span id="fwTagBtnTxt">Tag</span>
               </button>
+              <!-- Phone: "@" lives on the keyboard's second page; this types it (and opens the bed picker). -->
+              <button type="button" class="fm-phone-only fw-at-btn" id="fwAtBtn" aria-label="Insert @ to tag a bed or block">@</button>
               <button class="btn-primary" id="fwQuickAdd" type="button">Add note</button>
             </div>
             <!-- Revealed only when a parent tag is ticked (see fwRenderSubRow). -->
@@ -26269,6 +26273,17 @@ function fwDeleteItem(id){
   window.matchMedia("(max-width:760px)").addEventListener("change", ()=>{ fwPlaceChrome(); fwRender(); });
   document.getElementById("fwWhoBtn")?.addEventListener("click", fwOpenWhoSheet);
   document.getElementById("fwTagBtn")?.addEventListener("click", fwOpenTagSheet);
+  const atBtn=document.getElementById("fwAtBtn");
+  // Keep the keyboard up if it already is (same trick as the tag buttons).
+  atBtn?.addEventListener("pointerdown", e=>{ if(document.activeElement===quick) e.preventDefault(); });
+  atBtn?.addEventListener("click", ()=>{
+    if(!quick) return;
+    const a=quick.selectionStart ?? quick.value.length, b=quick.selectionEnd ?? a;
+    const pre=(a>0 && !/\s/.test(quick.value[a-1])) ? " " : "";   // "@" must start a word to match a bed
+    quick.focus();
+    quick.setRangeText(pre+"@", a, b, "end");
+    quick.dispatchEvent(new Event("input", {bubbles:true}));      // opens the bed/block suggestions
+  });
   ["fwTagScrim","fwTagSheetClose","fwTagDone"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwCloseTagSheet));
   document.getElementById("fwTagClear")?.addEventListener("click", ()=>{ fwQuickTags.clear(); fwQuickSubs.clear(); fwRenderTagRow(); });
   ["fwSheetScrim","fwSheetClose","fwSheetDone"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwCloseWhoSheet));
