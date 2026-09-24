@@ -3153,22 +3153,30 @@
     .fw-sh-hint{font-size:.82rem;color:var(--ink-2);margin:.6rem 0 0;line-height:1.4}
     .fw-sh-foot{padding:1rem 1.1rem 0;display:flex;justify-content:flex-end}
     .fw-sh-foot .btn-primary{min-height:44px;padding:0 1.4rem}
-    /* Composer tags (2026-09-24): one sideways-scrolling strip squeezed beside "Add note" was too
-       fiddly. The quick-row dissolves (display:contents) so its parts stack in the composer:
-       tags wrap into finger-sized buttons, the follow-up actions get their own labelled group,
-       and Add note runs full width underneath. */
-    #fwQuickBar{display:flex;flex-direction:column}
-    #fwQuickBar .fw-quick-row{display:contents}
-    #fwTagRow{order:3;flex-wrap:wrap;overflow:visible;gap:.4rem;margin-top:.6rem}
-    #fwSubRow{order:4;flex-wrap:wrap;gap:.4rem;margin-top:.7rem;padding:0;border-left:none}
-    #fwQuickAdd{order:5;width:100%;min-height:48px;margin-top:.8rem;font-size:1rem;justify-content:center}
-    #fwTagRow::before,#fwSubRow::before{flex:1 0 100%;font-family:var(--mono);font-size:10.5px;
-      letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin-bottom:.1rem}
-    #fwTagRow::before{content:"Tag"}
-    #fwSubRow::before{content:"Follow-up"}
-    #fwQuickBar .fw-tag{flex:1 1 auto;min-height:44px;padding:0 .8rem;font-size:.76rem;border-radius:12px;
+    /* Composer tags (2026-09-25): a Tag button beside Add note opens #fwTagSheet, which holds the
+       real tag rows (moved there by fwPlaceChrome) as finger-sized wrapping buttons. */
+    #fwQuickBar .fw-quick-row{gap:.5rem;margin-top:.6rem}
+    .fw-tag-btn{flex:1 1 auto;min-width:0;align-items:center;gap:.45rem;min-height:48px;padding:0 .9rem;
+      border-radius:12px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink-2);
+      font:600 .9rem var(--sans);cursor:pointer;text-align:left}
+    .fw-tag-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .fw-tag-btn.on{border-color:var(--steel);color:var(--steel);background:var(--sel)}
+    #fwQuickAdd{flex:0 0 auto;min-height:48px;padding:0 1.2rem;font-size:1rem}
+    #fwTagSheet{position:fixed;bottom:56px}
+    #fwTagScrim{position:fixed;inset:0 0 56px 0}
+    #fwTagSheetBody #fwTagRow{display:flex;flex-wrap:wrap;gap:.45rem;overflow:visible}
+    #fwTagSheetBody #fwSubRow{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1rem;padding:0;border-left:none}
+    #fwTagSheetBody #fwSubRow[hidden]{display:none}
+    #fwTagSheetBody #fwTagRow::before,#fwTagSheetBody #fwSubRow::before{flex:1 0 100%;font-family:var(--mono);
+      font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin-bottom:.15rem}
+    #fwTagSheetBody #fwTagRow::before{content:"What is it?"}
+    #fwTagSheetBody #fwSubRow::before{content:"Follow-up"}
+    #fwTagSheetBody .fw-tag{flex:1 1 auto;min-height:48px;padding:0 .9rem;font-size:.8rem;border-radius:12px;
       display:inline-flex;align-items:center;justify-content:center}
-    #fwQuickBar .fw-tag.fw-sub{font-family:var(--sans);text-transform:none;letter-spacing:0;font-size:.9rem}
+    #fwTagSheetBody .fw-tag.fw-sub{font-family:var(--sans);text-transform:none;letter-spacing:0;font-size:.95rem}
+    #fwTagSheet .fw-sh-foot{align-items:center;gap:.5rem}
+    #fwTagSheet .fw-sh-foot .spacer{flex:1 1 auto}
+    #fwTagClear{min-height:44px;padding:0 1rem}
   }
 
   /* ---- Farm map — phone (2026-09-24). A field tool, not an editor: one "View" button and a block
@@ -4571,6 +4579,12 @@
             <div class="fw-task-hint" id="fwTaskHint" hidden></div>
             <div class="fw-quick-row">
               <span class="fw-tags" id="fwTagRow"></span>
+              <!-- Phone: the tag rows live in #fwTagSheet (moved there by fwPlaceChrome); this
+                   button opens it and reads back what is picked. -->
+              <button type="button" class="fm-phone-only fw-tag-btn" id="fwTagBtn" aria-haspopup="dialog">
+                <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M3.4 10.6V4.2a.8.8 0 01.8-.8h6.4l6 6a.8.8 0 010 1.1l-5.3 5.3a.8.8 0 01-1.1 0z"/><circle cx="7" cy="7" r="1.2"/></svg>
+                <span id="fwTagBtnTxt">Tag</span>
+              </button>
               <button class="btn-primary" id="fwQuickAdd" type="button">Add note</button>
             </div>
             <!-- Revealed only when a parent tag is ticked (see fwRenderSubRow). -->
@@ -4586,6 +4600,15 @@
           </div>
           <div id="fwLists"></div>
         </div>
+      </div>
+      <div class="cm-sheet-scrim" id="fwTagScrim" hidden></div>
+      <div class="cm-sheet" id="fwTagSheet" role="dialog" aria-modal="true" aria-labelledby="fwTagSheetTitle" hidden>
+        <div class="fm-sh-grip"></div>
+        <div class="fm-sh-head"><h3 id="fwTagSheetTitle">Tag this note</h3>
+          <button class="fm-sh-close" type="button" id="fwTagSheetClose" aria-label="Close">✕</button></div>
+        <div class="fw-sh-body" id="fwTagSheetBody"></div>
+        <div class="fw-sh-foot"><button class="btn-ghost" type="button" id="fwTagClear">Clear</button>
+          <span class="spacer"></span><button class="btn-primary" type="button" id="fwTagDone">Done</button></div>
       </div>
       <div class="cm-sheet-scrim" id="fwSheetScrim" hidden></div>
       <div class="cm-sheet" id="fwSheet" role="dialog" aria-modal="true" aria-labelledby="fwSheetTitle" hidden>
@@ -6983,6 +7006,8 @@ function backCandidates(){
   });
   const sh=document.getElementById("fmSheet");
   if(sh && !sh.hidden && backVisible(sh)) out.push([sh,fmCloseSheet]);
+  const tsh=document.getElementById("fwTagSheet");
+  if(tsh && !tsh.hidden && backVisible(tsh)) out.push([tsh,fwCloseTagSheet]);
   const fsh=document.getElementById("fwSheet");
   if(fsh && !fsh.hidden && backVisible(fsh)) out.push([fsh,fwCloseWhoSheet]);
   const csh=document.getElementById("cmSheet");
@@ -9700,14 +9725,36 @@ function fwPlaceChrome(){
   const input=document.getElementById("fwWalkers"), dl=document.getElementById("fwWalkerNames");
   const body=document.getElementById("fwSheetBody");
   if(!top||!title||!badge||!input||!body) return;
+  const tagRow=document.getElementById("fwTagRow"), subRow=document.getElementById("fwSubRow");
+  const tagBody=document.getElementById("fwTagSheetBody"), tagBtn=document.getElementById("fwTagBtn");
+  const quick=document.getElementById("fwQuickBar");
   if(cmIsMobile()){
     top.insertBefore(badge, who);
     body.insertBefore(input, body.firstChild); if(dl) body.appendChild(dl);
+    if(tagBody && tagRow && subRow){ tagBody.appendChild(tagRow); tagBody.appendChild(subRow); }
   }else{
-    fwCloseWhoSheet();
+    fwCloseWhoSheet(); fwCloseTagSheet();
     title.appendChild(badge);
     top.insertBefore(input, who); if(dl) top.insertBefore(dl, who);
+    if(tagRow && tagBtn) tagBtn.parentNode.insertBefore(tagRow, tagBtn);
+    if(subRow && quick) quick.appendChild(subRow);
   }
+}
+function fwOpenTagSheet(){
+  const q=document.getElementById("fwQuickText"); if(q && document.activeElement===q) q.blur();
+  document.getElementById("fwTagSheet").hidden=false; document.getElementById("fwTagScrim").hidden=false;
+}
+function fwCloseTagSheet(){
+  const sh=document.getElementById("fwTagSheet"), sc=document.getElementById("fwTagScrim");
+  if(sh) sh.hidden=true;
+  if(sc) sc.hidden=true;
+}
+// The phone's Tag button reads back what's picked: "Tag" → "Pest" → "Pest · Spray, Scout".
+function fwRenderTagBtn(){
+  const t=document.getElementById("fwTagBtnTxt"), b=document.getElementById("fwTagBtn"); if(!t||!b) return;
+  const tags=[...fwQuickTags], subs=[...fwQuickSubs];
+  t.textContent = tags.length ? tags.join(", ")+(subs.length?" · "+subs.join(", "):"") : "Tag";
+  b.classList.toggle("on", tags.length>0);
 }
 function fwIsSheetOpen(){ const sh=document.getElementById("fwSheet"); return !!sh && !sh.hidden; }
 function fwOpenWhoSheet(){
@@ -25884,6 +25931,7 @@ function fwRenderTagRow(){
   row.innerHTML=FW_TAGS.map(t=>
     `<button type="button" class="fw-tag${fwQuickTags.has(t.name)?" on":""}" data-fwtag="${esc(t.name)}">${esc(t.name)}</button>`).join("");
   fwRenderSubRow();
+  fwRenderTagBtn();
 }
 
 // Second pill row — only present once a parent is ticked, so the composer stays uncluttered for
@@ -25891,13 +25939,14 @@ function fwRenderTagRow(){
 function fwRenderSubRow(){
   const row=document.getElementById("fwSubRow"); if(!row) return;
   const subs=fwAvailableSubs();
-  if(!subs.length){ row.hidden=true; row.innerHTML=""; return; }
+  if(!subs.length){ row.hidden=true; row.innerHTML=""; fwRenderTagBtn(); return; }
   row.innerHTML=subs.map(s=>{
     const lib=fwSubTask(s);
     return `<button type="button" class="fw-tag fw-sub${fwQuickSubs.has(s)?" on":""}${lib?" fw-sub-lib":""}"`+
       ` data-fwsub="${esc(s)}" title="${lib?"Library task · "+esc(lib.category||"")||"Library task":"No library task — becomes a quick task"}">${esc(s)}</button>`;
   }).join("");
   row.hidden=false;
+  fwRenderTagBtn();
 }
 
 function fwRenderFeed(){
@@ -26219,6 +26268,9 @@ function fwDeleteItem(id){
   fwPlaceChrome();
   window.matchMedia("(max-width:760px)").addEventListener("change", ()=>{ fwPlaceChrome(); fwRender(); });
   document.getElementById("fwWhoBtn")?.addEventListener("click", fwOpenWhoSheet);
+  document.getElementById("fwTagBtn")?.addEventListener("click", fwOpenTagSheet);
+  ["fwTagScrim","fwTagSheetClose","fwTagDone"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwCloseTagSheet));
+  document.getElementById("fwTagClear")?.addEventListener("click", ()=>{ fwQuickTags.clear(); fwQuickSubs.clear(); fwRenderTagRow(); });
   ["fwSheetScrim","fwSheetClose","fwSheetDone"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwCloseWhoSheet));
   document.getElementById("fwWalkers")?.addEventListener("keydown", e=>{ if(e.key==="Enter" && fwIsSheetOpen()){ e.preventDefault(); fwCloseWhoSheet(); } });
   ["fwSyncBadge","bppSyncBadge"].forEach(id=>
