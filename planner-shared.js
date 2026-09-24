@@ -426,9 +426,21 @@
     now = now || new Date();
     const o = opts || {};
     const lookaheadDays = o.lookaheadDays != null ? o.lookaheadDays : 21;
+    // How far back a planting that should already be in (still Planned/Seeded) keeps asking for
+    // its bed — "late". Current week only, same as carried-over plan rows. Older than this and the
+    // status has more likely just not been updated than the bed still waiting.
+    const lateDays = o.lateDays != null ? o.lateDays : 14;
+    // A logged pass counts toward a planting's bed if it's no more than this long before the
+    // planting's date — so "Prepped ✓" means prepped FOR this crop, not for the last one.
+    const prepWindowDays = o.prepWindowDays != null ? o.prepWindowDays : 14;
     const bpOpsSeed = o.bpOps || [];
     const start = wkParse(weekISO);
     const isCurrent = wkSameDay(start, wkMonday(now));
+    const weekEnd = wkISO(wkAddDays(start,7));
+    const horizon = wkISO(wkAddDays(start, lookaheadDays));
+    const lateFrom = (isCurrent && lateDays>0) ? wkISO(wkAddDays(start,-lateDays)) : weekISO;
+    // Which group a bed falls in, by the date it has to be ready for.
+    const whenOf = d => !d ? "other" : d<weekISO ? "late" : d<weekEnd ? "this" : d<horizon ? "next" : "other";
     const bedById = {};
     (data.beds||[]).forEach(b=>{ bedById[b.id]=b; });
 
@@ -450,6 +462,28 @@
       });
       return map;
     };
+    // Latest pass logged on a bed within prepWindowDays before `needBy` (or any time after it).
+    const preppedFor = (bedId, needBy) => {
+      if(!needBy) return null;
+      const per = doneSince(wkISO(wkAddDays(wkParse(needBy), -prepWindowDays)))[bedId];
+      const dates = per ? Object.values(per).sort() : [];
+      return dates.length ? dates[dates.length-1] : null;
+    };
+
+    // The planting schedule: every planting going in within the window, soonest per bed. Upcoming
+    // ones count unless already in the ground; late ones (date passed) only while still waiting to
+    // go in — Planned, or Seeded in the nursery.
+    const sched = [], schedByBed = {};
+    (data.plantings||[]).forEach(p=>{
+      if(p.parked || p.failed) return;
+      const d=p.tp||p.sow; if(!d || d<lateFrom || d>=horizon) return;
+      if(p.status==="Harvested" || p.status==="Finished") return;
+      if(statusRank(p.status) >= statusRank("In ground")) return;
+      sched.push({p, d});
+      (p.bedIds||[]).forEach(bid=>{
+        if(!schedByBed[bid] || d<schedByBed[bid].d) schedByBed[bid]={p, d};
+      });
+    });
 
     // Rows for this week, plus — on the current week only — older rows with work still outstanding.
     // Carried rows keep their original Week so the record stays honest; they're flagged instead.
@@ -476,11 +510,20 @@
           const sa=a.reg?a.reg.seq:9999, sb=b.reg?b.reg.seq:9999;
           return sa!==sb ? sa-sb : a.op.localeCompare(b.op);
         });
+      // What the bed has to be ready for: its linked planting, else the soonest one on the
+      // schedule for that bed, else the task that asked for it.
+      const s=schedByBed[r.bedId];
+      const schedPlanting = planting || (s ? s.p : null);
+      const needBy = (planting && (planting.tp||planting.sow)) || (s && s.d) || (task && task.due) || null;
+      const remaining=ops.filter(x=>!x.done).length;
+      const doneDates=ops.map(x=>x.doneDate).filter(Boolean).sort();
       return { planId:r.id, bedId:r.bedId, bed, week:r.week, notes:r.notes,
-               carried:r.week!==weekISO, planting, plantingId:r.plantingId,
+               carried:r.week!==weekISO, planting, plantingId:r.plantingId, schedPlanting,
                task, taskName:(taskLib&&taskLib.name)||(task&&task.label)||"", taskId:r.taskId,
-               ops, remaining:ops.filter(x=>!x.done).length, startMin:r.startMin, day:r.day,
-               minutesOverride:r.minutesOverride };
+               ops, remaining, startMin:r.startMin, day:r.day,
+               minutesOverride:r.minutesOverride,
+               needBy, when:whenOf(needBy),
+               preppedDate: (ops.length && !remaining) ? doneDates[doneDates.length-1] : null };
     }).filter(x=>x.bed)                       // a plan row whose bed was deleted is not renderable
       .sort(bpBedOrder);
 
@@ -539,16 +582,19 @@
       s.sources.add(source);
       if(ref && ref.plantingId && !s.plantingId) s.plantingId=ref.plantingId;
       if(ref && ref.taskId && !s.taskId) s.taskId=ref.taskId;
+      // The soonest date anything needs this bed ready by decides its group.
+      if(ref && ref.date && (!s.needBy || ref.date<s.needBy)){
+        s.needBy=ref.date;
+        if(ref.planting) s.planting=ref.planting;
+      }
     };
 
-    // 1. Upcoming plantings — a bed with a crop going in soon needs to be ready for it.
-    const horizon=wkISO(wkAddDays(start, lookaheadDays));
-    (data.plantings||[]).forEach(p=>{
-      const d=p.tp||p.sow; if(!d || d<weekISO || d>horizon) return;
-      if(p.status==="Harvested" || p.status==="Finished") return;
+    // 1. Plantings on the schedule — a bed with a crop going in soon (or late going in) needs to
+    //    be ready for it.
+    sched.forEach(({p,d})=>{
       const what=p.tp?"TP":"Sow";
       const label=(p.crop||"Crop")+(p.variety?" "+p.variety:"")+" · "+what+" "+d;
-      (p.bedIds||[]).forEach(bid=>add(bid, label, "planting", {plantingId:p.id}));
+      (p.bedIds||[]).forEach(bid=>add(bid, label, "planting", {plantingId:p.id, date:d, planting:p}));
     });
 
     // 2. Overdue on its target interval. Yields nothing until intervals are set, and a never-done
@@ -571,7 +617,6 @@
     //    are in play here, using the same lookaheadDays dial as the plantings source above (source
     //    1) so "close" means one distance across every source, not a different window per rule.
     const taskBack=wkISO(wkAddDays(start, -lookaheadDays));
-    const weekEnd=wkISO(wkAddDays(start,7));
     (data.plantingTasks||[]).forEach(t=>{
       if(t.done || !t.due || !t.bedId) return;
       if(t.due<taskBack || t.due>horizon) return;
@@ -581,11 +626,13 @@
                  : t.due<weekEnd ? "due "+t.due
                  : "due "+t.due+" (next)";
       add(t.bedId, "task: "+(lib.name||t.label||"Bed prep")+" · "+when, "task",
-          {taskId:t.id, plantingId:t.plantingId||null});
+          {taskId:t.id, plantingId:t.plantingId||null, date:t.due});
     });
 
     const suggestions=Object.values(sugg)
-      .map(s=>Object.assign({}, s, {sources:[...s.sources], reason:s.reasons[0]}))
+      .map(s=>Object.assign({}, s, {sources:[...s.sources], reason:s.reasons[0],
+        needBy:s.needBy||null, when:whenOf(s.needBy), planting:s.planting||null,
+        preppedDate:preppedFor(s.bedId, s.needBy)}))
       .sort((a,b)=>bpBedOrder({bed:a.bed},{bed:b.bed}));
 
     return { weekISO, isCurrent, beds, passes, suggestions, registry, defaultOps };

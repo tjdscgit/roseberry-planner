@@ -237,8 +237,7 @@
   #view-crops.active,#view-beds.active,#view-bedsetup.active,#view-seedbook.active,#view-outlets.active,
   #view-whiteboard.active,
   #view-misc.active,#view-tasklib.active,#view-croptasks.active,
-  #view-farminfo.active,#view-fertprog.active,#view-fertrec.active,
-  #view-bedprep.active{display:flex;flex-direction:column}
+  #view-farminfo.active,#view-fertprog.active,#view-fertrec.active{display:flex;flex-direction:column}
   /* min-height:0 is load-bearing: without it a flex child's default min-height:auto lets .cr-wrap
      size to its content instead of shrinking to the space main{overflow:hidden} actually gives it
      — the scrollbar never appears and the tail of a long list (many seed-book/whiteboard cards)
@@ -344,13 +343,31 @@
   .bd-blockrow-meta{color:var(--ink-2);font-weight:400;text-transform:none;letter-spacing:0;font-size:.8rem;line-height:1;flex:1 1 auto}
   .bd-blockeditrow td{background:var(--paper-2);padding:.8rem .9rem 1rem}
   .bd-blockedit{display:flex;flex-direction:column;gap:.7rem}
-  /* ---- Bed prep planner (view-bedprep) ----
+  /* ---- Bed prep (Field walk's Prep tab) ----
      Two renderers over one derivation (PlannerShared.bpPlanForWeek): By bed is the planning
-     surface — a chip grid you thumb through while walking the field — and By pass is the doing
-     surface, grouped by implement so one hitch-up covers every bed that needs it. */
-  .bpp-body{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;padding:.2rem 1rem 2rem;max-width:1000px}
-  .bpp-search{padding:.4rem 1rem 0;max-width:1000px;position:relative}
+     surface — what the schedule says is due, soonest first, with a chip per pass — and By pass is
+     the doing surface, grouped by implement so one hitch-up covers every bed that needs it.
+     #view-fieldwalk scrolls as a whole, so the body just flows. */
+  #fwPrepPane{min-width:0;max-width:1000px}
+  #fwCols.fw-prep-on{grid-template-columns:minmax(0,1fr)}
+  .bpp-bar{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .bpp-bar .spacer{flex:1 1 auto}
+  .bpp-sum{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);margin:.6rem 0 .1rem}
+  .bpp-body{padding:.2rem 0 2rem}
+  .bpp-search{padding:.5rem 0 0;position:relative}
+  .bpp-group{display:flex;align-items:center;gap:.45rem;font-family:var(--mono);font-size:.68rem;
+    text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2);margin:1.1rem 0 .45rem}
+  .bpp-group:first-child{margin-top:.4rem}
+  .bpp-group span{border:1px solid var(--line-2);border-radius:999px;padding:0 .45rem;font-size:.64rem;
+    background:var(--paper-2)}
+  .bpp-group-late{color:var(--clay)}
+  .bpp-bed.bpp-bed-sugg{border-style:dashed;border-color:color-mix(in srgb,var(--ink-2) 60%,transparent);background:var(--paper)}
+  .bpp-bed.bpp-bed-late{border-left:3px solid var(--clay)}
+  .bpp-bed.bpp-bed-prepped{opacity:.72}
+  .bpp-state{font-family:var(--mono);font-size:.68rem;color:var(--ink-2);white-space:nowrap}
+  .bpp-state.ok{color:var(--ok);font-weight:600}
+  .bpp-bed-note{font-size:.8rem;color:var(--ink-2);font-style:italic;margin:-.25rem 0 .4rem;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .bpp-search input{width:100%;max-width:22rem}
   .bpp-search .sp-suggest{max-width:22rem}
   .bpp-block{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;
@@ -427,8 +444,9 @@
   @media (max-width:760px){
     /* The nav FAB floats bottom-right over this view, so the last row needs room to be scrolled
        clear of it — otherwise the final suggestion's "+ Add" sits underneath the hamburger. */
-    .bpp-body{padding:.2rem .7rem 5.5rem}
-    .bpp-search{padding:.4rem .7rem 0}
+    .bpp-body{padding:.2rem 0 1.5rem}
+    .bpp-bar .btn-ghost,.bpp-bar .icon-btn{min-height:40px}
+    .bpp-bar #bppModeToggle button{min-height:40px}
     /* Field-walk targets: everything tappable clears 44px, and the chips get room to breathe. */
     .bpp-chips button{font-size:.85rem;padding:.55rem .7rem;min-height:2.75rem}
     .bpp-tick{padding:.55rem .7rem;min-height:2.75rem;font-size:.9rem}
@@ -441,10 +459,6 @@
     .bpp-sugg [data-sugg]{margin-left:auto}
     .bpp-pass-head{padding:.7rem .75rem}
     .bpp-pass-tool{padding:.55rem .6rem;min-height:2.4rem;display:inline-flex;align-items:center}
-    /* Bed prep's toolbar is two rows now (.vw-title / .vw-tools), so the old full-width wrapping
-       of the mode toggle would fight the title row rather than help it. The seg scrolls instead,
-       same as This week's. */
-    #view-bedprep .vw-tools{gap:.3rem}
   }
   /* ---- Bed prep history (last subsection of the Beds tab) ----
      Cards rather than a table: the grid is BP_OPS-wide and would never fit a phone, and cards let
@@ -3013,7 +3027,33 @@
   .railbtn[data-fw-pending]::after{content:"";position:absolute;top:6px;right:6px;width:9px;height:9px;
     border-radius:50%;background:var(--clay);border:1.5px solid var(--paper-2)}
 
-  .fw-seg{display:none;gap:.4rem;padding:.2rem .8rem .5rem}
+  .fw-seg{display:flex;gap:.4rem;padding:.6rem .8rem 0;max-width:22rem}
+  .fw-seg-phone{display:none}
+  .fw-seg [data-fwpane="lists"]{display:none}
+  /* Glance line: beds due for prep, from the notes side. */
+  .fw-prepdue{display:flex;align-items:center;gap:.55rem;width:calc(100% - 1.6rem);margin:.6rem .8rem 0;
+    padding:.5rem .8rem;min-height:40px;border:1px solid var(--line-2);border-left:3px solid var(--clay);
+    border-radius:10px;background:var(--paper-2);color:var(--ink);font:inherit;font-size:.86rem;
+    cursor:pointer;text-align:left}
+  .fw-prepdue[hidden]{display:none}
+  .fw-prepdue b{flex:0 0 auto;font-family:var(--mono);font-size:.66rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.07em;color:var(--clay)}
+  .fw-prepdue .fw-prepdue-list{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fw-prepdue em{font-style:normal;font-size:.76rem;color:var(--clay)}
+  .fw-prepdue .fw-prepdue-go{flex:0 0 auto;color:var(--ink-2);font-size:1.15rem;line-height:1}
+  /* Plan prep: a centred dialog on desktop, a bottom sheet on phone (overridden below). */
+  #fwPrepScrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.3)}
+  #fwPrepSheet{position:fixed;left:50%;top:12vh;transform:translateX(-50%);width:min(560px,92vw);max-height:76vh;
+    overflow:auto;z-index:61;background:var(--paper-2);border:1px solid var(--line-2);border-radius:14px;
+    box-shadow:var(--shadow);padding:.6rem 0 1rem}
+  #fwPrepSheet .fm-sh-grip{display:none}
+  #fwPrepSheet .fw-sh-body{padding:0 1.1rem}
+  #fwPrepSheet .fw-sh-foot{padding:1rem 1.1rem 0;display:flex;justify-content:flex-end}
+  #fwPrepSheet .fw-sh-hint{font-size:.82rem;color:var(--ink-2);margin:.1rem 0 0;line-height:1.4}
+  .fw-prep-bed{margin-top:.9rem}
+  .fw-prep-bed-name{font-weight:650;margin-bottom:.35rem}
+  .fw-prep-bed-name span{font-family:var(--mono);font-size:.64rem;font-weight:400;color:var(--ink-2);
+    text-transform:uppercase;letter-spacing:.06em;margin-left:.35rem}
   .fw-seg button{flex:1 1 0;padding:.55rem .9rem;border:1px solid var(--line-2);border-radius:8px;
     background:var(--paper-2);color:var(--ink-2);font-family:inherit;font-size:.9rem;cursor:pointer}
   .fw-seg button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:600}
@@ -3113,7 +3153,15 @@
   @media(max-width:760px){
     /* The two desktop columns become one pane at a time, picked by #fwSeg. */
     #fwCols{grid-template-columns:1fr;padding:0 .6rem .6rem}
-    .fw-seg{display:flex}
+    .fw-seg{display:flex;max-width:none;padding:.4rem .6rem .5rem}
+    .fw-seg-phone{display:inline}
+    .fw-seg-desk{display:none}
+    .fw-seg [data-fwpane="lists"]{display:block}
+    .fw-prepdue{width:calc(100% - 1.2rem);margin:.4rem .6rem 0;min-height:44px}
+    #fwPrepSheet{left:0;right:0;top:auto;bottom:56px;transform:none;width:auto;max-height:80%;border:none;
+      border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;padding:.5rem 0 1rem}
+    #fwPrepSheet .fm-sh-grip{display:block}
+    #fwPrepScrim{inset:0 0 56px 0}
     /* The quick-add bar sticks to the top so it stays reachable however far the feed has scrolled.
        This page gets used one-handed while walking, and hunting for the input is the whole failure. */
     #fwQuickBar{position:sticky;top:0;z-index:5;background:var(--paper);padding-bottom:.5rem}
@@ -3143,7 +3191,7 @@
       border-radius:999px;border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink);
       font:600 .82rem var(--sans);cursor:pointer}
     .fw-who-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #view-fieldwalk .fw-seg{padding-top:.1rem}
+    #view-fieldwalk .fw-seg{padding-top:.4rem}
     /* #view-fieldwalk scrolls as a whole, so an absolute sheet would ride away with the feed —
        pin it to the screen instead, just above the tab bar. */
     #fwSheet{position:fixed;bottom:56px}
@@ -4395,35 +4443,6 @@
       <div class="tl-ctx" id="wkCtxMenu"></div>
     </section>
 
-    <!-- BED PREP (weekly pass planning). Two ways at the same data: By bed to plan it while
-         walking the field, By pass to drive it. See bppBuild() for how the two relate. -->
-    <section class="view" id="view-bedprep">
-      <div class="vw-title">
-        <span class="vw-name">Bed prep</span>
-        <span class="sub" id="bppSummary"></span>
-        <span class="spacer"></span>
-        <button type="button" id="bppSyncBadge" title="Sync status — tap to retry"></button>
-        <div class="seg" id="bppModeToggle">
-          <button data-bppmode="bed" aria-pressed="true">By bed</button>
-          <button data-bppmode="pass" aria-pressed="false">By pass</button>
-        </div>
-      </div>
-      <div class="vw-tools">
-        <button class="icon-btn" id="bppPrev" title="Previous week">◀</button>
-        <span class="cm-year" id="bppRangeLabel" style="min-width:12ch">—</span>
-        <button class="icon-btn" id="bppNext" title="Next week">▶</button>
-        <button class="icon-btn" id="bppToday" title="Jump to the current week" style="margin-left:.2rem">This week</button>
-        <span class="spacer"></span>
-        <button class="icon-btn" id="bppOpsBtn" title="Edit the operations, their order and their implements">Operations…</button>
-        <button class="btn-ghost" id="bppAddBedsBtn">+ Add beds</button>
-      </div>
-      <div class="bpp-search" id="bppSearch" hidden>
-        <input type="text" id="bppBedSearch" placeholder="Add a bed by name — H10, G3…" autocomplete="off">
-        <div class="sp-suggest" id="bppBedSuggest" hidden></div>
-      </div>
-      <div class="bpp-body" id="bppBody"></div>
-    </section>
-
     <!-- HARVEST PLANNER (2-panel: available-to-pick list + per-outlet planned/actual entry) -->
     <section class="view" id="view-harvest">
       <div class="vw-title">
@@ -4565,9 +4584,14 @@
         </button>
       </div>
       <div id="fwBackendWarn" class="fw-warn" hidden></div>
+      <!-- "What should be prepped" at a glance from the notes side — tap to open the Prep tab. -->
+      <button type="button" class="fw-prepdue" id="fwPrepDue" hidden></button>
 
+      <!-- Bed prep lives here as the Prep tab (2026-09-25): it's the same walk. Desktop shows
+           Notes + Lists side by side, so there the tabs are just Walk / Prep. -->
       <div class="fw-seg" id="fwSeg" role="tablist">
-        <button type="button" data-fwpane="walk" aria-pressed="true">Walk</button>
+        <button type="button" data-fwpane="walk" aria-pressed="true"><span class="fw-seg-phone">Notes</span><span class="fw-seg-desk">Walk</span></button>
+        <button type="button" data-fwpane="prep" aria-pressed="false">Prep</button>
         <button type="button" data-fwpane="lists" aria-pressed="false">Lists</button>
       </div>
 
@@ -4604,6 +4628,34 @@
           </div>
           <div id="fwLists"></div>
         </div>
+
+        <!-- PREP — weekly pass planning. By bed: what the schedule says is due, soonest first, and
+             the passes each bed gets. By pass: the same grouped by implement, to drive it. -->
+        <div id="fwPrepPane" hidden>
+          <div class="bpp-bar">
+            <div class="seg" id="bppModeToggle">
+              <button type="button" data-bppmode="bed" aria-pressed="true">By bed</button>
+              <button type="button" data-bppmode="pass" aria-pressed="false">By pass</button>
+            </div>
+            <span class="spacer"></span>
+            <button class="btn-ghost" id="bppAddBedsBtn" type="button">+ Add bed</button>
+            <button class="icon-btn" id="bppOpsBtn" type="button" title="Edit the operations, their order and their implements">Operations…</button>
+          </div>
+          <div class="bpp-sum" id="bppSummary"></div>
+          <div class="bpp-search" id="bppSearch" hidden>
+            <input type="text" id="bppBedSearch" placeholder="Add a bed by name — H10, G3…" autocomplete="off">
+            <div class="sp-suggest" id="bppBedSuggest" hidden></div>
+          </div>
+          <div class="bpp-body" id="bppBody"></div>
+        </div>
+      </div>
+      <div class="cm-sheet-scrim" id="fwPrepScrim" hidden></div>
+      <div class="cm-sheet" id="fwPrepSheet" role="dialog" aria-modal="true" aria-labelledby="fwPrepSheetTitle" hidden>
+        <div class="fm-sh-grip"></div>
+        <div class="fm-sh-head"><h3 id="fwPrepSheetTitle">Plan prep · this week</h3>
+          <button class="fm-sh-close" type="button" id="fwPrepSheetClose" aria-label="Close">✕</button></div>
+        <div class="fw-sh-body" id="fwPrepSheetBody"></div>
+        <div class="fw-sh-foot"><button class="btn-primary" type="button" id="fwPrepDone">Done</button></div>
       </div>
       <div class="cm-sheet-scrim" id="fwTagScrim" hidden></div>
       <div class="cm-sheet" id="fwTagSheet" role="dialog" aria-modal="true" aria-labelledby="fwTagSheetTitle" hidden>
@@ -7010,6 +7062,8 @@ function backCandidates(){
   });
   const sh=document.getElementById("fmSheet");
   if(sh && !sh.hidden && backVisible(sh)) out.push([sh,fmCloseSheet]);
+  const psh=document.getElementById("fwPrepSheet");
+  if(psh && !psh.hidden && backVisible(psh)) out.push([psh,fwClosePrepSheet]);
   const tsh=document.getElementById("fwTagSheet");
   if(tsh && !tsh.hidden && backVisible(tsh)) out.push([tsh,fwCloseTagSheet]);
   const fsh=document.getElementById("fwSheet");
@@ -8147,7 +8201,6 @@ function renderViewContent(view){
   if(view==="crops") buildCropsTab();
   if(view==="beds"){ buildBedsTab(); bdRenderConflicts(); bpRenderHistory(); }
   if(view==="bedsetup") buildBedSetupTab();
-  if(view==="bedprep") bppBuild();
   if(view==="seedbook") buildSeedbook();
   if(view==="misc") buildMiscTab();
   if(view==="tasklib") buildTaskLibrary();
@@ -8169,6 +8222,9 @@ function renderViewContent(view){
   if(view==="fertcost") buildFertCost();
 }
 function showView(view){
+  // Bed prep is Field walk's Prep tab now. The old name still works — the menu shortcut, This
+  // week's bed-prep links and a saved last-view all arrive here.
+  if(view==="bedprep"){ fwPane="prep"; view="fieldwalk"; }
   if(typeof currentView!=="undefined" && currentView && currentView!==view && !backNavigating){
     viewHistory.push(currentView); if(viewHistory.length>30) viewHistory.shift();
     backRearm();   // moved on inside the 2s "press back again to exit" window — don't exit next time
@@ -15853,7 +15909,7 @@ async function bpRenameOp(id, oldName, raw){
       +"\n\nSome records may still carry the old name — reload and try again.");
   }
   bpRenderTargets(); bpRenderHistory();
-  if(document.getElementById("view-bedprep")?.classList.contains("active")) bppBuild();
+  if(bppShowing()) bppBuild();
 }
 
 // Patch an existing registry row, or create it on the spot if this operation is still only a seed
@@ -16086,7 +16142,7 @@ function bpWire(){
 bpWire();
 
 
-/* ============================ BED PREP PLANNER (view-bedprep) ============================
+/* ====================== BED PREP PLANNER (Field walk → Prep tab, #fwPrepPane) ======================
    The forward-looking half of bed prep. Bed prep events record what was done; this page records
    what still needs doing, and turns that into a run order.
 
@@ -16103,7 +16159,9 @@ bpWire();
 let bppMode = "bed";              // "bed" (plan it) | "pass" (drive it)
 let bppSearchOpen = false;
 let bppCollapsed = new Set();     // attachment names collapsed in By pass
-const BPP_LOOKAHEAD = 21;         // days ahead a planting starts asking for its bed to be prepped
+// A planting starts asking for its bed to be prepped this many days ahead: the week it goes in
+// and the week before. A planting still waiting to go in up to 14 days late keeps asking ("Late").
+const BPP_LOOKAHEAD = 14;
 
 // The week being planned, shared with This Week via wkStartISO so stepping it on either page
 // steps both. Every read goes through here: wkStartISO starts null and is only set when a page
@@ -16114,59 +16172,109 @@ function bppWeek(){
   return wkStartISO;
 }
 
-function bppPlan(){
-  return PlannerShared.bpPlanForWeek(data, bppWeek(), new Date(),
+function bppPlanFor(week){
+  return PlannerShared.bpPlanForWeek(data, week, new Date(),
                                      { bpOps: BP_OPS, lookaheadDays: BPP_LOOKAHEAD });
+}
+function bppPlan(){ return bppPlanFor(bppWeek()); }
+function bppThisWeek(){ return wkISO(wkMonday(new Date())); }
+function bppShowing(){ return currentView==="fieldwalk" && fwPane==="prep"; }
+function bppSetMode(m){
+  bppMode=m;
+  document.querySelectorAll("#bppModeToggle button").forEach(x=>
+    x.setAttribute("aria-pressed", x.dataset.bppmode===bppMode?"true":"false"));
+}
+
+// One list for By bed: the beds already planned and the beds the schedule says are due, each
+// tagged with the group it falls in (late / this / next / other). Prepped beds sink to the bottom
+// of their group — still visible, so a mis-tick can be spotted, but out of the way.
+function bppItems(P){
+  const items=P.beds.map(b=>Object.assign({}, b, {planned:true}))
+    .concat(P.suggestions.map(x=>Object.assign({}, x,
+      {planned:false, ops:[], remaining:0, carried:false, planId:null})));
+  const rank={late:0, this:1, next:2, other:3};
+  const blk=(a,b)=>String(a.bed.block||"").localeCompare(String(b.bed.block||""),undefined,{numeric:true})
+    || ((a.bed.order??1e9)-(b.bed.order??1e9))
+    || String(a.bed.name||"").localeCompare(String(b.bed.name||""),undefined,{numeric:true});
+  return items.sort((a,b)=> rank[a.when]-rank[b.when]
+    || (a.preppedDate?1:0)-(b.preppedDate?1:0)
+    || String(a.needBy||"").localeCompare(String(b.needBy||""))
+    || blk(a,b));
+}
+// Beds due (late, this week, next week) and not yet prepped — what "due for prep" counts.
+function bppDue(items){ return items.filter(i=>i.when!=="other" && !i.preppedDate); }
+function bppDay(iso){ return wkParse(iso).toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}); }
+function bppRel(iso){
+  const n=Math.round((wkParse(iso)-wkParse(todayISO()))/864e5);
+  return n===0?"today" : n===1?"tomorrow" : n>1?`in ${n} days` : n===-1?"1 day late" : `${-n} days late`;
 }
 
 function bppBuild(){
   const body=document.getElementById("bppBody"); if(!body) return;
   const P=bppPlan();
-  document.getElementById("bppRangeLabel").textContent=wkFmtRange(wkParse(bppWeek()));
 
   const outstanding=P.beds.reduce((n,b)=>n+b.remaining,0);
   const mins=P.passes.reduce((n,p)=>n+(p.minutes||0),0);
-  document.getElementById("bppSummary").textContent = P.beds.length
-    ? `${P.beds.length} bed${P.beds.length===1?"":"s"} · ${outstanding} pass${outstanding===1?"":"es"} left`
-      + (mins?` · ~${wkFmtMins(mins)}`:"")
-    : "";
+  const items=bppItems(P), due=bppDue(items);
+  const late=due.filter(i=>i.when==="late").length, planned=due.filter(i=>i.planned).length;
+  const sum=document.getElementById("bppSummary");
+  if(sum) sum.textContent = (due.length
+      ? `${due.length} bed${due.length===1?"":"s"} due${late?` · ${late} late`:""} · ${planned} planned`
+      : "Nothing due for prep")
+    + (outstanding ? ` · ${outstanding} pass${outstanding===1?"":"es"} left`+(mins?` (~${wkFmtMins(mins)})`:"") : "");
 
-  body.innerHTML = bppMode==="pass" ? bppRenderByPass(P) : bppRenderByBed(P);
+  body.innerHTML = bppMode==="pass" ? bppRenderByPass(P) : bppRenderByBed(P, items);
   bppWireBody(P);
   fwRenderBadge();       // the queue may have drained (or stalled) since this page was last drawn
+  fwAfterPrepChange();   // the notes side shows prep too: the glance line, the Plan prep sheet
 }
 
-/* ---- By bed: the planning surface ---- */
-function bppRenderByBed(P){
+/* ---- By bed: the planning surface ----
+   Led by the planting schedule: every bed that has to be ready soon, grouped by when — Late (the
+   crop should be in already), This week, Next week — then anything else planned. A bed the
+   schedule flagged but nobody has planned yet shows dashed with its chips off; tapping a chip
+   plans it, so there's no separate "add" step between seeing it and planning it. */
+function bppRenderByBed(P, items){
+  items=items||bppItems(P);
   const ops=bpActiveOps();
-  let html="";
-  if(P.beds.length){
-    let blk=null;
-    P.beds.forEach(b=>{
-      const bl=b.bed.block||"—";
-      if(bl!==blk){ blk=bl; html+=`<div class="bpp-block">Block ${esc(bl)}</div>`; }
-      html+=bppBedHTML(b, ops);
-    });
+  if(!items.length){
+    return `<div class="bpp-empty">Nothing due for prep ${P.isCurrent?"this week or next":"that week or the one after"}.`
+      +`<br><br>Beds turn up here on their own when a planting goes into them within two weeks, when `
+      +`one is running late, when an operation is past its target interval, or when a Bed prep task `
+      +`is due. Or add any bed by name with <b>+ Add bed</b>.</div>`;
   }
-
-  if(!P.beds.length && !P.suggestions.length){
-    html+=`<div class="bpp-empty">Nothing planned for this week, and nothing is asking to be.`
-      +`<br><br>Beds turn up here on their own when a planting is due on them in the next `
-      +`${BPP_LOOKAHEAD} days, when an operation is past its target interval, or when a Bed prep `
-      +`task is due. Or add any bed by name with <b>+ Add beds</b>.</div>`;
-  }
-
-  if(P.suggestions.length){
-    html+=`<div class="bpp-sugg-h"><b>Suggested</b>`
-      +`<span class="bpp-bed-why">beds that look like they want prep — tap to plan the default passes</span></div>`
-      +P.suggestions.map(s=>
-        `<div class="bpp-sugg">`
-          +`<span class="bpp-sugg-name">${esc(s.bed.name)}</span>`
-          +`<span class="bpp-sugg-why">${esc(s.reason||"")}</span>`
-          +`<button type="button" class="bpp-bed-act" data-sugg="${esc(s.bedId)}">+ Add</button>`
-        +`</div>`).join("");
-  }
+  const nextWk=wkISO(wkAddDays(wkParse(P.weekISO),7));
+  const labels={ late:"Late — should be in already",
+                 this:P.isCurrent?"This week":`Week of ${bppDay(P.weekISO)}`,
+                 next:P.isCurrent?"Next week":`Week of ${bppDay(nextWk)}`,
+                 other:"Other beds" };
+  let html="", g=null;
+  items.forEach(i=>{
+    if(i.when!==g){
+      g=i.when;
+      html+=`<div class="bpp-group bpp-group-${g}">${esc(labels[g])}<span>${items.filter(x=>x.when===g).length}</span></div>`;
+    }
+    html+=bppBedHTML(i, ops);
+  });
   return html;
+}
+
+// Why this bed is on the list, most specific first: the crop it's being prepped for (and when),
+// then the task that asked for it, then whatever flagged it (an overdue interval).
+function bppWhy(b){
+  const pl=b.planting||b.schedPlanting;
+  let why="";
+  if(pl){
+    const d=pl.tp||pl.sow;
+    why=`${pl.crop||"Crop"}${pl.variety?" "+pl.variety:""} · ${pl.tp?"TP":"Sow"} ${bppDay(d)} · ${bppRel(d)}`;
+  }else if(b.task){
+    why=`${b.taskName||"Bed prep"}${b.task.due?` · due ${bppDay(b.task.due)}`:""}`;
+  }else if(!b.planned){
+    why=String(b.reason||"").replace(/^task: /,"");
+  }else{
+    why=b.notes||"";
+  }
+  return b.carried ? `carried over from ${fmt(b.week)}${why?" · "+why:""}` : why;
 }
 
 function bppBedHTML(b, ops){
@@ -16175,28 +16283,32 @@ function bppBedHTML(b, ops){
   const planned=new Set(b.ops.map(o=>o.op));
   const doneMap={}; b.ops.forEach(o=>{ if(o.done) doneMap[o.op]=o.doneDate; });
   const list=ops.map(o=>o.op).concat(b.ops.map(o=>o.op).filter(op=>!ops.some(x=>x.op===op)));
-  // Why this bed is on the list, most specific first: a carry-over says so, otherwise the crop
-  // it's being prepped for, otherwise the task that asked for it.
-  const why = b.carried ? `carried over from ${fmt(b.week)}`
-            : b.planting ? `${b.planting.crop}${b.planting.variety?" "+b.planting.variety:""}`
-                           + `${b.planting.tp||b.planting.sow?` · ${b.planting.tp?"TP":"Sow"} ${fmt(b.planting.tp||b.planting.sow)}`:""}`
-            : b.task ? `${b.taskName||"Bed prep"}${b.task.due?` · due ${fmt(b.task.due)}`:""}`
-            : (b.notes||"");
-  const hasDefaults=bpActiveOps().some(o=>o.isDefault);
-  return `<div class="bpp-bed${b.carried?" bpp-bed-carried":""}" data-plan="${esc(b.planId)}">`
+  const why=bppWhy(b);
+  const hasDefaults=ops.some(o=>o.isDefault);
+  const prepped=!!b.preppedDate, total=b.ops.length, left=b.remaining;
+  const state = prepped ? `<span class="bpp-state ok">Prepped ✓ ${esc(bppDay(b.preppedDate))}</span>`
+    : !b.planned ? `<span class="bpp-state">Not planned</span>`
+    : `<span class="bpp-state">${left===total ? `${total} pass${total===1?"":"es"}` : `${left} of ${total} left`}</span>`;
+  const cls=["bpp-bed", b.carried&&"bpp-bed-carried", !b.planned&&"bpp-bed-sugg",
+             prepped&&"bpp-bed-prepped", b.when==="late"&&!prepped&&"bpp-bed-late"].filter(Boolean).join(" ");
+  // A note from the walk that planned it rides along under the reason, when there's a reason too.
+  const note = b.planned && b.notes && why!==b.notes ? `<div class="bpp-bed-note">${esc(b.notes)}</div>` : "";
+  return `<div class="${cls}"${b.planId?` data-plan="${esc(b.planId)}"`:""}>`
     +`<div class="bpp-bed-head">`
       +`<span class="bpp-bed-name">${esc(b.bed.name)}</span>`
-      +(hasDefaults?`<button type="button" class="bpp-bed-act" data-def="${esc(b.bedId)}">Default</button>`:"")
-      +`<button type="button" class="bpp-bed-act rm" data-rm="${esc(b.planId)}">Remove</button>`
+      +state
+      +(!prepped&&hasDefaults?`<button type="button" class="bpp-bed-act" data-def="${esc(b.bedId)}">Default</button>`:"")
+      +(b.planned&&!prepped?`<button type="button" class="bpp-bed-act rm" data-rm="${esc(b.planId)}">Remove</button>`:"")
     +`</div>`
     +(why?`<div class="bpp-bed-why">${esc(why)}</div>`:"")
-    +`<div class="bpp-chips">`+list.map(op=>{
+    +note
+    +(prepped ? "" : `<div class="bpp-chips">`+list.map(op=>{
         const on=planned.has(op), done=doneMap[op]!=null;
         const cls=done?"done":(on?"on":"");
-        const title=done?`Done ${fmt(doneMap[op])}`:(on?"Planned — tap to drop":"Tap to add");
+        const title=done?`Done ${fmt(doneMap[op])}`:(on?"Planned — tap to drop":(b.planned?"Tap to add":"Tap to plan this bed"));
         return `<button type="button" class="${cls}" data-op="${esc(op)}" data-bed="${esc(b.bedId)}" `
           +`title="${esc(title)}">${done?"✓ ":""}${esc(op)}</button>`;
-      }).join("")+`</div>`
+      }).join("")+`</div>`)
   +`</div>`;
 }
 
@@ -16256,11 +16368,19 @@ function bppOpHTML(g){
    stays queued and retries rather than being undone under the grower's thumb. The sync badge in
    the toolbar is what surfaces a queue that isn't draining. */
 
-// Toggle one operation on one bed's plan, creating the plan row if this is the first tap.
-function bppToggleOp(bedId, op){
-  const P=bppPlan();
+// Toggle one operation on one bed's plan, creating the plan row if this is the first tap. A bed the
+// schedule flagged keeps what flagged it (planting / task) on the new row, so its card still says
+// why. `o.week` plans a week other than the one on screen (the Plan prep sheet always plans the
+// current week); `o.extra` adds fields to a new row (notes).
+function bppToggleOp(bedId, op, o){
+  o=o||{};
+  const week=o.week||bppWeek();
+  const P=bppPlanFor(week);
   const row=P.beds.find(b=>b.bedId===bedId);
-  if(!row) return bppAddBed(bedId, [op]);
+  if(!row){
+    const sg=P.suggestions.find(x=>x.bedId===bedId);
+    return bppAddBed(bedId, [op], Object.assign(sg?{taskId:sg.taskId, plantingId:sg.plantingId}:{}, o.extra||{}), week);
+  }
   if(row.ops.some(o=>o.op===op && o.done)){
     alert(`${op} is already logged as done on ${row.bed.name} this week.\nUntick it under By pass to undo that.`);
     return;
@@ -16275,14 +16395,14 @@ function bppToggleOp(bedId, op){
   bppBuild();
 }
 
-function bppAddBed(bedId, ops, extra){
+function bppAddBed(bedId, ops, extra, weekISO){
   const bed=(data.beds||[]).find(b=>b.id===bedId); if(!bed) return;
   const list=(ops&&ops.length)?ops.slice():bppPlan().defaultOps.slice();
   if(!list.length){
     alert("No default operations are set yet.\nOpen Operations… and tick “Default” on the passes a bed normally gets.");
     return;
   }
-  const e=extra||{}, week=bppWeek();
+  const e=extra||{}, week=weekISO||bppWeek();
   const fields={
     [CFG.f.bpp_name]:`${bed.name} · ${week}`,
     [CFG.f.bpp_bed]:[bedId],
@@ -16292,10 +16412,11 @@ function bppAddBed(bedId, ops, extra){
   };
   if(e.plantingId) fields[CFG.f.bpp_planting]=[e.plantingId];
   if(e.taskId)     fields[CFG.f.bpp_task]=[e.taskId];
+  if(e.notes)      fields[CFG.f.bpp_notes]=e.notes;
   // The queue hands back a tmp id immediately, so the row can be rendered and patched again right
   // away; fwResolveRefs swaps it for the real one when the create lands.
   const id=fwEnqueue("create","bedPrepPlan",fields);
-  data.bedPrepPlan.push({ id, bedId, week, ops:list, notes:"",
+  data.bedPrepPlan.push({ id, bedId, week, ops:list, notes:e.notes||"",
                           plantingId:e.plantingId||null, taskId:e.taskId||null });
   bppBuild();
 }
@@ -16311,7 +16432,10 @@ function bppRemoveBed(planId){
 
 function bppApplyDefaults(bedId){
   const P=bppPlan(), row=P.beds.find(b=>b.bedId===bedId);
-  if(!row) return bppAddBed(bedId, P.defaultOps);
+  if(!row){
+    const sg=P.suggestions.find(x=>x.bedId===bedId);
+    return bppAddBed(bedId, P.defaultOps, sg?{taskId:sg.taskId, plantingId:sg.plantingId}:null);
+  }
   const rec=(data.bedPrepPlan||[]).find(r=>r.id===row.planId); if(!rec) return;
   const add=P.defaultOps.filter(op=>!rec.ops.includes(op));
   if(!add.length) return;
@@ -16455,15 +16579,10 @@ function bppBedSuggest(q){
 }
 
 (function bppWire(){
-  const prev=document.getElementById("bppPrev"); if(!prev) return;
-  // The week is shared with This Week (wkStartISO), so stepping it on either page steps both.
-  prev.onclick=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(bppWeek()),-7)); bppBuild(); };
-  document.getElementById("bppNext").onclick=()=>{ wkStartISO=wkISO(wkAddDays(wkParse(bppWeek()),7)); bppBuild(); };
-  document.getElementById("bppToday").onclick=()=>{ wkStartISO=wkISO(wkMonday(new Date())); bppBuild(); };
+  if(!document.getElementById("bppModeToggle")) return;
+  // The week is stepped by Field walk's date strip while this tab is showing (fwPrepStep).
   document.querySelectorAll("#bppModeToggle button").forEach(b=>b.onclick=()=>{
-    bppMode=b.dataset.bppmode;
-    document.querySelectorAll("#bppModeToggle button").forEach(x=>
-      x.setAttribute("aria-pressed", x.dataset.bppmode===bppMode?"true":"false"));
+    bppSetMode(b.dataset.bppmode);
     bppBuild();
   });
   document.getElementById("bppAddBedsBtn").onclick=()=>{
@@ -16483,11 +16602,9 @@ function bppBedSuggest(q){
 
 // Open By pass, scrolled to one attachment. Used by This Week's bed prep rows.
 function bppOpenPass(attachName){
-  bppMode="pass";
+  bppSetMode("pass");
   bppCollapsed.delete(attachName);
-  document.querySelectorAll("#bppModeToggle button").forEach(x=>
-    x.setAttribute("aria-pressed", x.dataset.bppmode==="pass"?"true":"false"));
-  showView("bedprep");
+  showView("bedprep");            // → Field walk, Prep tab
   const el=document.querySelector(`[data-pass="${window.CSS.escape(attachName)}"]`);
   if(el) el.scrollIntoView({block:"start", behavior:"smooth"});
 }
@@ -20111,7 +20228,7 @@ function restoreUiState(){
   // Only the pane is restored, never the date — a phone that backgrounded mid-walk should come
   // back to the same half of the page, but always to today's walk. Reopening on last Monday's
   // walk and typing into it is a much worse failure than losing the pane.
-  if(saved.fieldWalk && saved.fieldWalk.pane==="lists") fwPane="lists";
+  if(saved.fieldWalk && (saved.fieldWalk.pane==="lists" || saved.fieldWalk.pane==="prep")) fwPane=saved.fieldWalk.pane;
 
   // Farm info restores its filters but never the open entry — coming back to the tab should show
   // the shelf you left it filtered to, not re-open a document you'd finished reading.
@@ -25347,7 +25464,7 @@ function fwReconcile(tableKey, tmpId, realId){
   fix(data.bedPrepPlan, []);
   fix(data.bedPrepEvents, []);
   if(document.getElementById("view-fieldwalk")?.classList.contains("active")) fwRender();
-  if(document.getElementById("view-bedprep")?.classList.contains("active")) bppBuild();
+  if(bppShowing()) bppBuild();
 }
 
 async function fwFlush(){
@@ -25899,13 +26016,25 @@ function fwRender(){
     return `${n} note${n===1?"":"s"} this walk`;
   });
   const label=document.getElementById("fwDateLabel");
-  const isToday=fwDateISO===fwTodayISO();
-  // Phone strip is tight: "Today" alone says it (any other day shows its date + a Today button).
-  if(label) label.textContent = (isToday && cmIsMobile()) ? "Today" : (isToday?"Today · ":"")+fmt(fwDateISO);
-  // The jump-to-today button is only useful once you've navigated away from today — showing it
-  // next to a label that already says "Today ·" is redundant clutter on the one date it can't help.
   const todayBtn=document.getElementById("fwToday");
-  if(todayBtn) todayBtn.hidden=isToday;
+  const prep=fwPane==="prep";
+  if(prep){
+    // Prep plans by the week — the same week This week shows (wkStartISO) — so on this tab the
+    // strip shows and steps weeks instead of walk days.
+    const wk=bppWeek(), cur=wk===bppThisWeek();
+    if(label) label.textContent = (cur && cmIsMobile()) ? "This week" : (cur?"This week · ":"")+wkFmtRange(wkParse(wk));
+    if(todayBtn){ todayBtn.hidden=cur; todayBtn.textContent="This week"; todayBtn.title="Jump to the current week"; }
+  }else{
+    const isToday=fwDateISO===fwTodayISO();
+    // Phone strip is tight: "Today" alone says it (any other day shows its date + a Today button).
+    if(label) label.textContent = (isToday && cmIsMobile()) ? "Today" : (isToday?"Today · ":"")+fmt(fwDateISO);
+    // The jump-to-today button is only useful once you've navigated away from today — showing it
+    // next to a label that already says "Today ·" is redundant clutter on the one date it can't help.
+    if(todayBtn){ todayBtn.hidden=isToday; todayBtn.textContent="Today"; todayBtn.title="Jump to today"; }
+  }
+  const pv=document.getElementById("fwPrev"), nx=document.getElementById("fwNext");
+  if(pv) pv.title=prep?"Previous week":"Previous walk";
+  if(nx) nx.title=prep?"Next week":"Next walk";
   const walkersEl=document.getElementById("fwWalkers");
   if(walkersEl && document.activeElement!==walkersEl){
     walkersEl.value = walk ? walk.walkers : myWalkers;
@@ -25915,19 +26044,101 @@ function fwRender(){
   const dl=document.getElementById("fwWalkerNames");
   if(dl) dl.innerHTML=knownAssignees().map(n=>`<option value="${esc(n)}">`).join("");
 
-  // Panes: both show on desktop, one at a time on mobile via #fwSeg.
+  // Panes. Phone: one at a time via #fwSeg (Notes / Prep / Lists). Desktop: Notes and Lists side
+  // by side as "Walk", or Prep on its own.
   const mobile=cmIsMobile();
   const wp=document.getElementById("fwWalkPane"), lp=document.getElementById("fwListsPane");
-  if(wp) wp.hidden = mobile && fwPane!=="walk";
-  if(lp) lp.hidden = mobile && fwPane!=="lists";
+  const pp=document.getElementById("fwPrepPane");
+  if(wp) wp.hidden = prep || (mobile && fwPane!=="walk");
+  if(lp) lp.hidden = prep || (mobile && fwPane!=="lists");
+  if(pp) pp.hidden = !prep;
+  document.getElementById("fwCols")?.classList.toggle("fw-prep-on", prep);
+  const pressed = (!mobile && fwPane==="lists") ? "walk" : fwPane;
   document.querySelectorAll("#fwSeg button").forEach(b=>
-    b.setAttribute("aria-pressed", b.dataset.fwpane===fwPane?"true":"false"));
+    b.setAttribute("aria-pressed", b.dataset.fwpane===pressed?"true":"false"));
 
   fwRenderTagRow();
   fwRenderFeed();
   fwRenderLists();
   fwRenderBadge();
   fwRenderTaskHint();
+  if(prep) bppBuild();
+  fwRenderPrepDue();
+}
+
+/* ---- Prep, from the notes side ----
+   Bed prep is this page's Prep tab. Two ways in from the notes: the glance line ("Prep due: H7,
+   G3 ›") and a note's Plan prep button, which puts the beds it tagged on this week's plan. */
+function fwPrepStep(n){ wkStartISO=wkISO(wkAddDays(wkParse(bppWeek()),7*n)); fwRender(); }
+function fwGoPrep(){
+  fwPane="prep"; wkStartISO=bppThisWeek(); bppSetMode("bed");
+  fwRender(); saveUiState();
+  document.getElementById("view-fieldwalk")?.scrollTo({top:0});
+}
+// Whatever changed the prep plan, keep the notes side's view of it current.
+function fwAfterPrepChange(){
+  fwRenderPrepDue();
+  if(fwPrepSheetObs) fwRenderPrepSheet();
+  if(currentView==="fieldwalk" && fwPane!=="prep" && !document.querySelector("#fwFeed [data-obs-save]")) fwRenderFeed();
+}
+// Always the current week — this is "what needs doing now", whatever week Prep was left on.
+function fwRenderPrepDue(){
+  const el=document.getElementById("fwPrepDue"); if(!el) return;
+  if(fwPane==="prep" || !(data.beds||[]).length){ el.hidden=true; return; }
+  let due=[];
+  try{ due=bppDue(bppItems(bppPlanFor(bppThisWeek()))); }catch(e){ console.warn("prep due", e); }
+  if(!due.length){ el.hidden=true; return; }
+  const names=due.slice(0,4).map(i=>esc(i.bed.name)+(i.when==="late"?" <em>late</em>":"")).join(", ");
+  el.innerHTML=`<b>Prep due</b><span class="fw-prepdue-list">${names}${due.length>4?` +${due.length-4} more`:""}</span>`
+    +`<span class="fw-prepdue-go" aria-hidden="true">›</span>`;
+  el.title=`${due.length} bed${due.length===1?"":"s"} due for prep — open the Prep tab`;
+  el.hidden=false;
+}
+// Beds a note tagged that have prep planned since the week of its walk — derived from the plan
+// itself, so taking the bed off the plan takes the "→ Prep planned" off the note too.
+// The beds a note is about for prep: the ones it @tagged. Only when it tagged none (a crop, say)
+// fall back to the beds its plantings sit on — fwObsBeds also pulls in the far end of a planting
+// that spans two beds, which is right for the card's chips but not for "prep these".
+function fwObsPrepBeds(o){
+  const tagged=(o.bedIds||[]).map(id=>(data.beds||[]).find(b=>b.id===id)).filter(Boolean);
+  return tagged.length ? tagged : fwObsBeds(o);
+}
+function fwObsPrepPlanned(o){
+  const beds=fwObsPrepBeds(o); if(!beds.length) return [];
+  const walk=(data.fieldWalks||[]).find(w=>w.id===o.walkId);
+  const since=wkISO(wkMonday(walk&&walk.date ? wkParse(walk.date) : new Date()));
+  const planned=new Set((data.bedPrepPlan||[]).filter(r=>r.week>=since && (r.ops||[]).length).map(r=>r.bedId));
+  return beds.filter(b=>planned.has(b.id));
+}
+let fwPrepSheetObs=null;
+function fwOpenPrepSheet(obsId){
+  fwPrepSheetObs=obsId;
+  const q=document.getElementById("fwQuickText"); if(q && document.activeElement===q) q.blur();
+  fwRenderPrepSheet();
+  document.getElementById("fwPrepSheet").hidden=false; document.getElementById("fwPrepScrim").hidden=false;
+}
+function fwClosePrepSheet(){
+  fwPrepSheetObs=null;
+  const sh=document.getElementById("fwPrepSheet"), sc=document.getElementById("fwPrepScrim");
+  if(sh) sh.hidden=true;
+  if(sc) sc.hidden=true;
+}
+function fwRenderPrepSheet(){
+  const body=document.getElementById("fwPrepSheetBody"); if(!body) return;
+  const o=(data.walkObservations||[]).find(x=>x.id===fwPrepSheetObs);
+  if(!o){ fwClosePrepSheet(); return; }
+  const week=bppThisWeek(), P=bppPlanFor(week), ops=bpActiveOps();
+  const beds=fwObsPrepBeds(o);
+  body.innerHTML=`<p class="fw-sh-hint">Tap the passes each bed needs. They go on this week's prep plan (${esc(wkFmtRange(wkParse(week)))}), with this note as the reason.</p>`
+    + beds.map(bed=>{
+        const row=P.beds.find(b=>b.bedId===bed.id);
+        const on=new Set(row?row.ops.map(x=>x.op):[]), done=new Set(row?row.ops.filter(x=>x.done).map(x=>x.op):[]);
+        return `<div class="fw-prep-bed"><div class="fw-prep-bed-name">${esc(bed.name)}${row?"":"<span>not planned yet</span>"}</div>`
+          +`<div class="bpp-chips">`+ops.map(x=>{
+            const d=done.has(x.op), a=on.has(x.op);
+            return `<button type="button" class="${d?"done":a?"on":""}" data-prepop="${esc(x.op)}" data-prepbed="${esc(bed.id)}">${d?"✓ ":""}${esc(x.op)}</button>`;
+          }).join("")+`</div></div>`;
+      }).join("");
 }
 
 function fwRenderTagRow(){
@@ -25991,6 +26202,9 @@ function fwRenderFeed(){
     const notedBit=o.notedAt
       ? `<span class="fw-obs-noted" title="Copied to its own notes">✓ noted${target?" on "+esc(target.label):""}</span>` : "";
     const beds=fwObsBeds(o);
+    const prepBeds=fwObsPrepPlanned(o);
+    const prepBit=prepBeds.length
+      ? `<button type="button" class="fw-obs-task" data-obs-prep="${esc(o.id)}" title="Change the prep planned for these beds">→ Prep planned · ${esc(prepBeds.slice(0,4).map(b=>b.name).join(", "))}${prepBeds.length>4?" +"+(prepBeds.length-4):""}</button>` : "";
     const chips=beds.slice(0,3).map(b=>
       `<span class="fw-bedchip" style="background:${fwBedChipColour(b,o)}">${esc(b.name)}</span>`).join("")
       + (beds.length>3?`<span class="fw-bedchip fw-bedchip-more">+${beds.length-3}</span>`:"");
@@ -26004,9 +26218,10 @@ function fwRenderFeed(){
         ${tags}
       </div>
       <div class="fw-obs-text">${fwRenderNote(o)}</div>
-      <div class="fw-obs-meta">${taskBit}${notedBit}
+      <div class="fw-obs-meta">${taskBit}${prepBit}${notedBit}
         <span class="fw-obs-actions">
           ${linked?"":`<button type="button" data-obs-task="${esc(o.id)}">${fwSprayTrigger(o)?"Link to spray plan":"Make it a job"}</button>`}
+          ${fwObsPrepBeds(o).length && !prepBeds.length?`<button type="button" data-obs-prep="${esc(o.id)}" title="Put the tagged beds on this week's prep plan">Plan prep</button>`:""}
           ${o.notedAt||!target?"":`<button type="button" data-obs-note="${esc(o.id)}" title="Copy onto ${esc(target.label)}'s notes">＋ Note</button>`}
           <button type="button" data-obs-edit="${esc(o.id)}">Edit</button>
           <button type="button" data-obs-del="${esc(o.id)}">Delete</button>
@@ -26266,9 +26481,23 @@ function fwDeleteItem(id){
   document.getElementById("fwQuickAdd")?.addEventListener("click", fwQuickAdd);
   // The "already on the list" check re-runs as the text changes, since it keys off the @beds in it.
   quick?.addEventListener("input", fwRenderTaskHint);
-  document.getElementById("fwPrev")?.addEventListener("click", ()=>fwStep(-1));
-  document.getElementById("fwNext")?.addEventListener("click", ()=>fwStep(1));
-  document.getElementById("fwToday")?.addEventListener("click", ()=>{ fwDateISO=fwTodayISO(); fwRender(); });
+  // On the Prep tab the strip steps weeks; everywhere else, walk days.
+  document.getElementById("fwPrev")?.addEventListener("click", ()=>fwPane==="prep" ? fwPrepStep(-1) : fwStep(-1));
+  document.getElementById("fwNext")?.addEventListener("click", ()=>fwPane==="prep" ? fwPrepStep(1) : fwStep(1));
+  document.getElementById("fwToday")?.addEventListener("click", ()=>{
+    if(fwPane==="prep") wkStartISO=bppThisWeek(); else fwDateISO=fwTodayISO();
+    fwRender();
+  });
+  document.getElementById("fwPrepDue")?.addEventListener("click", fwGoPrep);
+  ["fwPrepScrim","fwPrepSheetClose","fwPrepDone"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwClosePrepSheet));
+  document.getElementById("fwPrepSheetBody")?.addEventListener("click", e=>{
+    const b=e.target.closest("[data-prepop]"); if(!b) return;
+    const o=(data.walkObservations||[]).find(x=>x.id===fwPrepSheetObs); if(!o) return;
+    // The reason reads as the note itself — the @bed tags would only repeat the card's name.
+    const first=String(o.note||"").split("\n")[0].replace(/@[^\s,.;:!?]+/g,"").replace(/\s+/g," ").trim();
+    bppToggleOp(b.dataset.prepbed, b.dataset.prepop,
+      { week:bppThisWeek(), extra:{ notes:first ? "From walk: "+first.slice(0,100) : "" } });
+  });
   fwPlaceChrome();
   window.matchMedia("(max-width:760px)").addEventListener("change", ()=>{ fwPlaceChrome(); fwRender(); });
   document.getElementById("fwWhoBtn")?.addEventListener("click", fwOpenWhoSheet);
@@ -26323,6 +26552,7 @@ function fwDeleteItem(id){
   });
   document.getElementById("fwFeed")?.addEventListener("click", e=>{
     const ed=e.target.closest("[data-obs-edit]"); if(ed){ fwObsEdit(ed.dataset.obsEdit); return; }
+    const pr=e.target.closest("[data-obs-prep]"); if(pr){ fwOpenPrepSheet(pr.dataset.obsPrep); return; }
     const sv=e.target.closest("[data-obs-save]"); if(sv){ fwObsSave(sv.dataset.obsSave); return; }
     if(e.target.closest("[data-obs-cancel]")){ fwRenderFeed(); return; }
     const dl=e.target.closest("[data-obs-del]"); if(dl){ fwObsDelete(dl.dataset.obsDel); return; }
