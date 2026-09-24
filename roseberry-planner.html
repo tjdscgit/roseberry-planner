@@ -3153,6 +3153,22 @@
     .fw-sh-hint{font-size:.82rem;color:var(--ink-2);margin:.6rem 0 0;line-height:1.4}
     .fw-sh-foot{padding:1rem 1.1rem 0;display:flex;justify-content:flex-end}
     .fw-sh-foot .btn-primary{min-height:44px;padding:0 1.4rem}
+    /* Composer tags (2026-09-24): one sideways-scrolling strip squeezed beside "Add note" was too
+       fiddly. The quick-row dissolves (display:contents) so its parts stack in the composer:
+       tags wrap into finger-sized buttons, the follow-up actions get their own labelled group,
+       and Add note runs full width underneath. */
+    #fwQuickBar{display:flex;flex-direction:column}
+    #fwQuickBar .fw-quick-row{display:contents}
+    #fwTagRow{order:3;flex-wrap:wrap;overflow:visible;gap:.4rem;margin-top:.6rem}
+    #fwSubRow{order:4;flex-wrap:wrap;gap:.4rem;margin-top:.7rem;padding:0;border-left:none}
+    #fwQuickAdd{order:5;width:100%;min-height:48px;margin-top:.8rem;font-size:1rem;justify-content:center}
+    #fwTagRow::before,#fwSubRow::before{flex:1 0 100%;font-family:var(--mono);font-size:10.5px;
+      letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin-bottom:.1rem}
+    #fwTagRow::before{content:"Tag"}
+    #fwSubRow::before{content:"Follow-up"}
+    #fwQuickBar .fw-tag{flex:1 1 auto;min-height:44px;padding:0 .8rem;font-size:.76rem;border-radius:12px;
+      display:inline-flex;align-items:center;justify-content:center}
+    #fwQuickBar .fw-tag.fw-sub{font-family:var(--sans);text-transform:none;letter-spacing:0;font-size:.9rem}
   }
 
   /* ---- Farm map — phone (2026-09-24). A field tool, not an editor: one "View" button and a block
@@ -26227,6 +26243,11 @@ function fwDeleteItem(id){
     [...fwQuickSubs].forEach(s=>{ if(!still.has(s)) fwQuickSubs.delete(s); });
     fwRenderTagRow();
   });
+  // Tapping a tag must not take focus from the note box — on a phone that drops the keyboard
+  // mid-sentence. preventDefault on pointerdown keeps focus where it is; the click still fires.
+  ["fwTagRow","fwSubRow"].forEach(id=>document.getElementById(id)?.addEventListener("pointerdown", e=>{
+    if(e.target.closest("[data-fwtag],[data-fwsub]") && document.activeElement===document.getElementById("fwQuickText")) e.preventDefault();
+  }));
   document.getElementById("fwSubRow")?.addEventListener("click", e=>{
     const b=e.target.closest("[data-fwsub]"); if(!b) return;
     const s=b.dataset.fwsub;
