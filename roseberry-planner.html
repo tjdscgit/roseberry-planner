@@ -3127,6 +3127,32 @@
        note input is reachable without scrolling. */
     .fw-top #fwWalkers{order:5;flex:1 1 8rem;width:auto;min-width:0}
     .fw-top #fwSyncBadge{order:6;margin-left:0;flex:0 0 auto}
+    /* No title row: the date strip is the top of the page (2026-09-24). */
+    #view-fieldwalk .vw-title{display:none}
+    #view-fieldwalk .fw-top{flex-wrap:nowrap;gap:.35rem;padding:.5rem .6rem;min-height:0}
+    #view-fieldwalk .fw-top .icon-btn{width:40px;height:40px;flex:0 0 auto;justify-content:center}
+    #view-fieldwalk #fwDateLabel{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+      font-size:.9rem}
+    #view-fieldwalk #fwToday{flex:0 0 auto;height:40px;padding:0 .7rem}
+    #view-fieldwalk #fwToday[hidden]{display:none}
+    #view-fieldwalk .fw-top .spacer{flex:1 1 auto;min-width:0}
+    /* Only worth space when something is waiting to sync — "✓ saved" is the normal state. */
+    #view-fieldwalk .fw-top #fwSyncBadge{order:0;height:40px;padding:0 .6rem;font-size:.74rem;white-space:nowrap}
+    #view-fieldwalk .fw-top #fwSyncBadge.fw-sync-ok{display:none}
+    .fw-who-btn{flex:0 0 auto;min-width:0;max-width:7.5rem;align-items:center;gap:.35rem;height:40px;padding:0 .75rem;
+      border-radius:999px;border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink);
+      font:600 .82rem var(--sans);cursor:pointer}
+    .fw-who-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #view-fieldwalk .fw-seg{padding-top:.1rem}
+    /* #view-fieldwalk scrolls as a whole, so an absolute sheet would ride away with the feed —
+       pin it to the screen instead, just above the tab bar. */
+    #fwSheet{position:fixed;bottom:56px}
+    #fwSheetScrim{position:fixed;inset:0 0 56px 0}
+    .fw-sh-body{padding:0 1.1rem}
+    .fw-sh-body #fwWalkers{width:100%;height:48px;font-size:16px;border-radius:12px;padding:0 1rem}
+    .fw-sh-hint{font-size:.82rem;color:var(--ink-2);margin:.6rem 0 0;line-height:1.4}
+    .fw-sh-foot{padding:1rem 1.1rem 0;display:flex;justify-content:flex-end}
+    .fw-sh-foot .btn-primary{min-height:44px;padding:0 1.4rem}
   }
 
   /* ---- Farm map — phone (2026-09-24). A field tool, not an editor: one "View" button and a block
@@ -4504,6 +4530,13 @@
         <span class="spacer"></span>
         <input id="fwWalkers" type="text" placeholder="Who's walking" list="fwWalkerNames" autocomplete="off">
         <datalist id="fwWalkerNames"></datalist>
+        <!-- Phone: the title row is hidden and this row is the whole top strip. "Who's walking" is
+             set once per walk, so it becomes a name button that opens a small sheet holding the
+             real #fwWalkers input (moved there by fwPlaceChrome), rather than a full-width row. -->
+        <button type="button" class="fm-phone-only fw-who-btn" id="fwWhoBtn" aria-haspopup="dialog">
+          <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><circle cx="10" cy="7" r="3.2"/><path d="M3.8 17c.8-3.2 3.3-5 6.2-5s5.4 1.8 6.2 5"/></svg>
+          <span id="fwWhoName">Who?</span>
+        </button>
       </div>
       <div id="fwBackendWarn" class="fw-warn" hidden></div>
 
@@ -4537,6 +4570,16 @@
           </div>
           <div id="fwLists"></div>
         </div>
+      </div>
+      <div class="cm-sheet-scrim" id="fwSheetScrim" hidden></div>
+      <div class="cm-sheet" id="fwSheet" role="dialog" aria-modal="true" aria-labelledby="fwSheetTitle" hidden>
+        <div class="fm-sh-grip"></div>
+        <div class="fm-sh-head"><h3 id="fwSheetTitle">Who's walking?</h3>
+          <button class="fm-sh-close" type="button" id="fwSheetClose" aria-label="Close">✕</button></div>
+        <div class="fw-sh-body" id="fwSheetBody">
+          <p class="fw-sh-hint">Notes on this walk are saved under this name. Handing the phone to someone else after notes are taken? Change it here and they get a walk of their own.</p>
+        </div>
+        <div class="fw-sh-foot"><button class="btn-primary" type="button" id="fwSheetDone">Done</button></div>
       </div>
     </section>
 
@@ -6924,6 +6967,8 @@ function backCandidates(){
   });
   const sh=document.getElementById("fmSheet");
   if(sh && !sh.hidden && backVisible(sh)) out.push([sh,fmCloseSheet]);
+  const fsh=document.getElementById("fwSheet");
+  if(fsh && !fsh.hidden && backVisible(fsh)) out.push([fsh,fwCloseWhoSheet]);
   const csh=document.getElementById("cmSheet");
   if(csh && !csh.hidden && backVisible(csh)) out.push([csh,cmCloseSheet]);
   const cun=document.getElementById("cmUnassigned");
@@ -9629,6 +9674,39 @@ function applyCmMapView(){
 }
 
 // How much of the year's plan actually has ground under it — the number the assign step is for.
+/* ---------- Field walk — phone top strip (2026-09-24) ----------
+   Same treatment as the Crop map: no title row on a phone. The sync badge joins the date strip,
+   and #fwWalkers moves into a small sheet behind a name button. The elements are MOVED, not
+   copied, so every listener (fwSaveWalkers on change, the retry on the badge) keeps working. */
+function fwPlaceChrome(){
+  const top=document.querySelector("#view-fieldwalk .fw-top"), title=document.querySelector("#view-fieldwalk .vw-title");
+  const badge=document.getElementById("fwSyncBadge"), who=document.getElementById("fwWhoBtn");
+  const input=document.getElementById("fwWalkers"), dl=document.getElementById("fwWalkerNames");
+  const body=document.getElementById("fwSheetBody");
+  if(!top||!title||!badge||!input||!body) return;
+  if(cmIsMobile()){
+    top.insertBefore(badge, who);
+    body.insertBefore(input, body.firstChild); if(dl) body.appendChild(dl);
+  }else{
+    fwCloseWhoSheet();
+    title.appendChild(badge);
+    top.insertBefore(input, who); if(dl) top.insertBefore(dl, who);
+  }
+}
+function fwIsSheetOpen(){ const sh=document.getElementById("fwSheet"); return !!sh && !sh.hidden; }
+function fwOpenWhoSheet(){
+  document.getElementById("fwSheet").hidden=false; document.getElementById("fwSheetScrim").hidden=false;
+  const i=document.getElementById("fwWalkers"); if(i) setTimeout(()=>i.focus(),50);
+}
+function fwCloseWhoSheet(){
+  const sh=document.getElementById("fwSheet"), sc=document.getElementById("fwSheetScrim");
+  if(!sh || sh.hidden) return;
+  const i=document.getElementById("fwWalkers");
+  if(i && document.activeElement===i) i.blur();          // commits the name (fwSaveWalkers on change)
+  sh.hidden=true; if(sc) sc.hidden=true;
+  const n=document.getElementById("fwWhoName"); if(n && i) n.textContent=i.value.trim()||"Who?";
+}
+
 /* ---------- Crop map — phone (2026-09-24) ----------
    One block at a time, in List mode (a real scrolling grid, not the pan/zoom board): months fill
    the height, beds scroll sideways under a pinned month axis. Everything the desktop keeps in the
@@ -25260,10 +25338,12 @@ function fwRenderBadge(){
     : worst>2 ? `⚠ ${n} unsynced — tap to retry` : `⟳ ${n} unsynced`;
   const err=q.entries.find(e=>e.lastErr);
   const title = err ? `Last error: ${err.lastErr}` : "Sync status — tap to retry";
+  // Field walk's phone strip has room for the icon and count only; the title says the rest.
+  const shortTxt = !n ? "✓" : !navigator.onLine ? `⚑ ${n}` : worst>2 ? `⚠ ${n}` : `⟳ ${n}`;
   [["fwSyncBadge",true],["bppSyncBadge",false]].forEach(([id,showWhenIdle])=>{
     const badge=document.getElementById(id); if(!badge) return;
     badge.className=cls;
-    badge.textContent = (!n && !showWhenIdle) ? "" : txt;
+    badge.textContent = (!n && !showWhenIdle) ? "" : (id==="fwSyncBadge" && cmIsMobile()) ? shortTxt : txt;
     badge.title=title;
   });
 }
@@ -25753,7 +25833,8 @@ function fwRender(){
   });
   const label=document.getElementById("fwDateLabel");
   const isToday=fwDateISO===fwTodayISO();
-  if(label) label.textContent=(isToday?"Today · ":"")+fmt(fwDateISO);
+  // Phone strip is tight: "Today" alone says it (any other day shows its date + a Today button).
+  if(label) label.textContent = (isToday && cmIsMobile()) ? "Today" : (isToday?"Today · ":"")+fmt(fwDateISO);
   // The jump-to-today button is only useful once you've navigated away from today — showing it
   // next to a label that already says "Today ·" is redundant clutter on the one date it can't help.
   const todayBtn=document.getElementById("fwToday");
@@ -25762,6 +25843,8 @@ function fwRender(){
   if(walkersEl && document.activeElement!==walkersEl){
     walkersEl.value = walk ? walk.walkers : myWalkers;
   }
+  const whoName=document.getElementById("fwWhoName");
+  if(whoName && walkersEl) whoName.textContent = walkersEl.value.trim() || "Who?";
   const dl=document.getElementById("fwWalkerNames");
   if(dl) dl.innerHTML=knownAssignees().map(n=>`<option value="${esc(n)}">`).join("");
 
@@ -26117,6 +26200,11 @@ function fwDeleteItem(id){
   document.getElementById("fwPrev")?.addEventListener("click", ()=>fwStep(-1));
   document.getElementById("fwNext")?.addEventListener("click", ()=>fwStep(1));
   document.getElementById("fwToday")?.addEventListener("click", ()=>{ fwDateISO=fwTodayISO(); fwRender(); });
+  fwPlaceChrome();
+  window.matchMedia("(max-width:760px)").addEventListener("change", ()=>{ fwPlaceChrome(); fwRender(); });
+  document.getElementById("fwWhoBtn")?.addEventListener("click", fwOpenWhoSheet);
+  ["fwSheetScrim","fwSheetClose","fwSheetDone"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwCloseWhoSheet));
+  document.getElementById("fwWalkers")?.addEventListener("keydown", e=>{ if(e.key==="Enter" && fwIsSheetOpen()){ e.preventDefault(); fwCloseWhoSheet(); } });
   ["fwSyncBadge","bppSyncBadge"].forEach(id=>
     document.getElementById(id)?.addEventListener("click", ()=>{
       const q=fwLoadQueue(), err=q.entries.find(e=>e.lastErr);
