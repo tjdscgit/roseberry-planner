@@ -3251,6 +3251,73 @@
       #view-fieldwalk.fwm-home #fwToday{display:none}
     #view-fieldwalk.fwm-home .fw-who-btn{height:32px;padding:0 10px;font-size:12px}
     #view-fieldwalk.fwm-sub .fwm-title{display:none}
+    /* Notes + Lists (phone): title in the strip like Prep run; day stepper and filters in the pane;
+       the note box is pinned to the bottom, one row: Tag · @ · text · Add. */
+    #view-fieldwalk.fwm-notes .fwm-title,#view-fieldwalk.fwm-lists .fwm-title{display:flex}
+    #view-fieldwalk.fwm-notes .fw-top,#view-fieldwalk.fwm-lists .fw-top{height:56px}
+    #view-fieldwalk.fwm-notes #fwPrev,#view-fieldwalk.fwm-notes #fwNext,#view-fieldwalk.fwm-notes #fwDateLabel,
+      #view-fieldwalk.fwm-notes #fwToday,#view-fieldwalk.fwm-notes .fw-top .spacer,
+      #view-fieldwalk.fwm-lists #fwPrev,#view-fieldwalk.fwm-lists #fwNext,#view-fieldwalk.fwm-lists #fwDateLabel,
+      #view-fieldwalk.fwm-lists #fwToday,#view-fieldwalk.fwm-lists .fw-top .spacer,
+      #view-fieldwalk.fwm-lists .fw-who-btn{display:none}
+    #view-fieldwalk.fwm-notes .fw-who-btn{height:32px;padding:0 10px;font-size:12px}
+    .fwm-day{display:flex;align-items:center;gap:8px;padding:12px 0 8px}
+    .fwm-day[hidden],.fwm-filters[hidden],.fwm-newlist[hidden]{display:none}
+    .fwm-day b{flex:1 1 auto;text-align:center;font-size:15px;font-weight:600}
+    .fwm-day button{width:44px;height:40px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper-2);
+      color:var(--ink);cursor:pointer;font-size:14px}
+    .fwm-day .fwm-day-now{width:auto;padding:0 12px;font:500 13px var(--sans)}
+    .fwm-filters{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
+    .fwm-filters::-webkit-scrollbar{display:none}
+    .fwm-filters button{flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);
+      background:var(--paper-2);color:var(--ink);font:400 13px var(--sans);cursor:pointer}
+    .fwm-filters button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:var(--paper)}
+    #view-fieldwalk.fwm-notes #fwWalkPane{padding-bottom:88px}
+    #view-fieldwalk.fwm-notes #fwQuickBar{position:fixed;left:0;right:0;bottom:56px;top:auto;z-index:20;display:flex;flex-wrap:wrap;
+      align-items:center;gap:8px;padding:12px 16px;background:var(--paper);border:0;border-top:1px solid var(--line-2);border-radius:0;margin:0}
+    #view-fieldwalk.fwm-notes #fwQuickBar .fw-quick-row{display:contents}
+    #view-fieldwalk.fwm-notes #fwQuickText{order:3;flex:1 1 0;min-width:0;height:44px;min-height:44px;max-height:120px;resize:none;
+      padding:11px 12px;line-height:20px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper-2);color:var(--ink);
+      font:16px/20px var(--sans);overflow:hidden}
+    #view-fieldwalk.fwm-notes #fwTagBtn{order:1;flex:0 0 auto;max-width:80px;min-height:44px;height:44px;padding:0 12px;font-size:13px}
+    #view-fieldwalk.fwm-notes #fwAtBtn{order:2;flex:0 0 44px;height:44px;font-size:17px}
+    #view-fieldwalk.fwm-notes #fwQuickAdd{order:4;flex:0 0 44px;width:44px;min-height:44px;height:44px;padding:0;border-radius:12px;
+      display:inline-flex;align-items:center;justify-content:center}
+    #view-fieldwalk.fwm-notes #fwSuggest{order:0;flex:1 0 100%;position:static}
+    #view-fieldwalk.fwm-notes #fwTaskHint{order:0;flex:1 0 100%;margin:0}
+    .fwm-notes{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-2)}
+    #fwFeed .fwm-note{display:flex;gap:12px;margin:0;padding:12px 16px;border:0;border-top:1px solid var(--line);border-radius:0;
+      background:transparent;box-shadow:none}
+    #fwFeed .fwm-note:first-child{border-top:0}
+    .fwm-note-bed{flex:0 0 44px;font:500 18px var(--serif);line-height:1.2}
+    .fwm-note-body{flex:1 1 auto;min-width:0}
+    .fwm-note-text{font-size:14px;line-height:1.4}
+    .fwm-note-text .fw-chip{font-weight:600}
+    .fwm-note-meta{margin-top:3px;font-size:12px;color:var(--ink-2);line-height:1.6}
+    .fwm-link{border:0;background:none;padding:0;color:var(--steel);font:inherit;cursor:pointer}
+    .fwm-link.quiet{color:var(--ink-2)}
+    #fwFeed .fwm-note textarea{width:100%;font:16px var(--sans)}
+    /* Lists */
+    #view-fieldwalk.fwm-lists .fw-lists-top{display:none}
+    #view-fieldwalk.fwm-lists #fwLists{padding-top:16px}
+    #view-fieldwalk.fwm-lists .fw-list-card{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;padding:0;
+      margin-bottom:12px;overflow:hidden}
+    #view-fieldwalk.fwm-lists .fw-list-head{display:flex;align-items:baseline;gap:8px;padding:12px 14px}
+    #view-fieldwalk.fwm-lists .fw-list-name{font-size:15px;font-weight:600}
+    #view-fieldwalk.fwm-lists .fw-list-count{flex:1 1 auto;font-size:12px;color:var(--ink-2)}
+    #view-fieldwalk.fwm-lists .fw-list-x{font-size:12px;color:var(--ink-2);border:0;background:none;cursor:pointer}
+    #view-fieldwalk.fwm-lists .fw-item{align-items:center;gap:12px;min-height:48px;padding:0 14px;font-size:14px;border-top:1px solid var(--line)}
+    #view-fieldwalk.fwm-lists .fw-item input[type=checkbox]{width:24px;height:24px;margin:0;accent-color:var(--ok)}
+    #view-fieldwalk.fwm-lists .fw-item-body{flex:1 1 auto}
+    #view-fieldwalk.fwm-lists .fw-item-bed{font:500 16px var(--serif);margin-right:4px}
+    #view-fieldwalk.fwm-lists .fw-item .x{width:36px;height:36px}
+    #view-fieldwalk.fwm-lists .fw-list-empty{padding:10px 14px;border-top:1px solid var(--line)}
+    #view-fieldwalk.fwm-lists .fw-done-toggle{padding:10px 14px}
+    #view-fieldwalk.fwm-lists .fw-item-add{margin:0;padding:10px 14px 12px;border-top:1px solid var(--line)}
+    #view-fieldwalk.fwm-lists .fw-item-add input{height:40px;border-radius:10px;font:16px var(--sans);padding:0 12px}
+    #view-fieldwalk.fwm-lists .fw-item-add .btn-ghost{height:40px;border-radius:10px}
+    .fwm-newlist{display:block;width:100%;height:48px;margin-bottom:16px;border-radius:12px;border:1px dashed var(--line-2);
+      background:transparent;color:var(--ink-2);font:500 14px var(--sans);cursor:pointer}
     /* Prep run: title + Log in the strip, week stepper in the body, the old bar and summary hidden. */
     #view-fieldwalk.fwm-run .fw-top{height:56px}
     #view-fieldwalk.fwm-run #fwPrev,#view-fieldwalk.fwm-run #fwNext,#view-fieldwalk.fwm-run #fwDateLabel,
@@ -3310,7 +3377,7 @@
     .fwm-blocks i{font-style:normal;font-size:11px;font-weight:600;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;
       border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--clay-tint);color:var(--clay)}
     .fwm-blocks button[aria-pressed="true"] i{background:var(--paper);color:var(--steel)}
-    .fwm-list{margin:0 -10px 16px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);background:var(--paper-2)}
+    .fwm-list{margin:0 calc(-.6rem - 4px) 16px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);background:var(--paper-2)}
     .fwm-list .fw-obs-empty{padding:20px 16px}
     .fwm-group{padding:16px 16px 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
       color:var(--ink-2);background:var(--paper)}
@@ -4750,6 +4817,8 @@
           <div class="fwm-list" id="fwmList"></div>
         </div>
         <div id="fwWalkPane">
+          <div class="fwm-day" id="fwmDay" hidden></div>
+          <div class="fwm-filters" id="fwmNoteFilters" hidden></div>
           <div class="fw-quick" id="fwQuickBar">
             <textarea id="fwQuickText" rows="2" placeholder="What are you seeing? Type @ to tag a bed or block…"></textarea>
             <div class="sp-pick-suggest" id="fwSuggest" hidden></div>
@@ -4780,6 +4849,7 @@
             <button class="btn-ghost" id="fwNewListBtn" type="button">＋ New list</button>
           </div>
           <div id="fwLists"></div>
+          <button type="button" class="fwm-newlist" id="fwmNewList" hidden>+ New list</button>
         </div>
 
         <!-- PREP — weekly pass planning. By bed: what the schedule says is due, soonest first, and
@@ -26226,6 +26296,8 @@ function fwRender(){
   const beds=fwPane==="beds" && cmIsMobile();
   const view=document.getElementById("view-fieldwalk");
   const run=cmIsMobile() && fwPane==="prep";
+  const notesP=cmIsMobile() && fwPane==="walk", listsP=cmIsMobile() && fwPane==="lists";
+  if(view){ view.classList.toggle("fwm-notes", notesP); view.classList.toggle("fwm-lists", listsP); }
   if(view){ view.classList.toggle("fwm-home", beds); view.classList.toggle("fwm-sub", cmIsMobile() && !beds && !run);
             view.classList.toggle("fwm-run", run); }
   const logB=document.getElementById("fwmLog"); if(logB) logB.hidden=!run;
@@ -26233,6 +26305,11 @@ function fwRender(){
   const ttl=document.getElementById("fwmTitle");
   const sub=document.getElementById("fwmSub");
   if(sub && run) sub.textContent="Tractor passes by implement";
+  else if(sub && notesP){ const n=walk ? (data.walkObservations||[]).filter(o=>o.walkId===walk.id).length : 0;
+    sub.textContent=`${fwDateISO===fwTodayISO()?"Today":fmt(fwDateISO)} · ${n} note${n===1?"":"s"}`; }
+  else if(sub && listsP){ const ls=(data.walkLists||[]).filter(l=>l.active), ids=new Set(ls.map(l=>l.id));
+    const open=(data.walkListItems||[]).filter(it=>ids.has(it.listId)&&!it.done).length;
+    sub.textContent=`${ls.length} list${ls.length===1?"":"s"} · ${open} open`; }
   else if(sub){ const who=(walk&&walk.walkers)||myWalkers;
     sub.textContent=[new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}), who].filter(Boolean).join(" · "); }
   if(ttl) ttl.textContent = fwPane==="prep" ? "Prep run" : fwPane==="lists" ? "Lists" : fwPane==="walk" ? "Notes" : "Field walk";
@@ -26286,6 +26363,34 @@ function fwRender(){
   fwRenderPrepDue();
   fwmRenderBeds();
   if(fwmBedId) fwmRenderBedSheet();
+  fwmRenderNotesChrome(notesP);
+  const nl=document.getElementById("fwmNewList"); if(nl) nl.hidden=!listsP;
+  const qt=document.getElementById("fwQuickText");
+  if(qt) qt.placeholder = notesP ? "What did you see?" : "What are you seeing? Type @ to tag a bed or block…";
+  const qa=document.getElementById("fwQuickAdd");
+  if(qa && qa.dataset.phone!==String(notesP)){
+    qa.dataset.phone=String(notesP);
+    qa.innerHTML = notesP ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>' : "Add note";
+    qa.setAttribute("aria-label","Add note");
+  }
+}
+// Phone Notes: a day stepper and tag filters above the feed (the top strip carries the title).
+let fwmNoteFilter="";
+function fwmRenderNotesChrome(on){
+  const day=document.getElementById("fwmDay"), fl=document.getElementById("fwmNoteFilters");
+  if(!day||!fl) return;
+  day.hidden=!on; fl.hidden=!on; if(!on) return;
+  const isToday=fwDateISO===fwTodayISO();
+  day.innerHTML=`<button type="button" data-fwmday="-1" aria-label="Previous walk">◀</button>`
+    +`<b>${isToday?"Today":esc(fmt(fwDateISO))}</b>`
+    +(isToday?"":`<button type="button" class="fwm-day-now" data-fwmday="0">Today</button>`)
+    +`<button type="button" data-fwmday="1" aria-label="Next walk">▶</button>`;
+  const walk=fwActiveWalk, rows=walk ? (data.walkObservations||[]).filter(o=>o.walkId===walk.id) : [];
+  const used=FW_TAGS.map(t=>t.name).filter(n=>rows.some(o=>(o.tags||[]).includes(n)));
+  const opts=[["","All"], ...used.map(n=>[n,n]), ...(rows.some(o=>!fwObsBeds(o).length)?[["__nobed","No bed"]]:[])];
+  if(!opts.some(([k])=>k===fwmNoteFilter)) fwmNoteFilter="";
+  fl.hidden=opts.length<3;
+  fl.innerHTML=opts.map(([k,l])=>`<button type="button" data-fwmnf="${esc(k)}" aria-pressed="${k===fwmNoteFilter}">${esc(l)}</button>`).join("");
 }
 
 /* ---- Prep, from the notes side ----
@@ -26668,6 +26773,7 @@ function fwRenderFeed(){
     feed.innerHTML=`<div class="fw-obs-empty">No notes yet for this walk.<br>Type what you're seeing above — <code>@</code> tags a bed or block.</div>`;
     return;
   }
+  if(cmIsMobile()){ feed.innerHTML=fwmFeedHTML(rows); return; }
   feed.innerHTML=rows.slice().reverse().map(o=>{   // newest first
     const t=o.created ? new Date(o.created) : null;
     const time=t&&!isNaN(t) ? String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0") : "";
@@ -26724,6 +26830,32 @@ function fwRenderFeed(){
       </div>
     </div>`;
   }).join("");
+}
+
+// Phone note rows: bed name in a column, the note, one meta line (time · tags · what it became), and
+// the actions as small links — same data-* hooks as the desktop cards, so the feed's click handler
+// (edit, delete, make a job, open task) is shared.
+function fwmFeedHTML(rows){
+  const f=fwmNoteFilter;
+  const list=rows.filter(o=> !f ? true : f==="__nobed" ? !fwObsBeds(o).length : (o.tags||[]).includes(f)).slice().reverse();
+  if(!list.length) return `<div class="fw-obs-empty">Nothing matches that filter.</div>`;
+  return `<div class="fwm-notes">`+list.map(o=>{
+    const t=o.created ? new Date(o.created) : null;
+    const time=t&&!isNaN(t) ? String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0") : "";
+    const beds=fwObsBeds(o);
+    const lt=o.taskId ? (data.plantingTasks||[]).find(x=>x.id===o.taskId) : null;
+    const ls=o.sprayId ? (data.sprayApplications||[]).find(a=>a.id===o.sprayId) : null;
+    const link = lt ? `<button type="button" class="fwm-link" data-obs-opentask="${esc(o.taskId)}">→ ${esc(fwTaskName(lt))}</button>`
+      : ls ? `<button type="button" class="fwm-link" data-obs-openspray="${esc(o.sprayId)}">→ Spray ${esc((ls.status||"").toLowerCase())}</button>` : "";
+    const meta=[time, (o.tags||[]).join(", ")].filter(Boolean).map(esc).join(" · ");
+    return `<div class="fw-obs-card fwm-note${fwIsTmp(o.id)?" fw-unsynced":""}" data-obs="${esc(o.id)}">`
+      +`<b class="fwm-note-bed">${beds.length?esc(beds.slice(0,2).map(b=>b.name).join(" ")):"—"}${beds.length>2?"+":""}</b>`
+      +`<div class="fwm-note-body"><div class="fwm-note-text">${fwRenderNote(o)}</div>`
+      +`<div class="fwm-note-meta">${meta}${meta&&link?" · ":""}${link}`
+      +(lt||ls?"":`${meta?" · ":""}<button type="button" class="fwm-link" data-obs-task="${esc(o.id)}">${fwSprayTrigger(o)?"Spray plan":"Make a job"}</button>`)
+      +` · <button type="button" class="fwm-link quiet" data-obs-edit="${esc(o.id)}">Edit</button>`
+      +` · <button type="button" class="fwm-link quiet" data-obs-del="${esc(o.id)}">Delete</button></div></div></div>`;
+  }).join("")+`</div>`;
 }
 
 /* ---- Observations ---- */
@@ -26985,6 +27117,15 @@ function fwDeleteItem(id){
   });
   document.getElementById("fwPrepDue")?.addEventListener("click", fwGoPrep);
   document.getElementById("fwmBack")?.addEventListener("click", ()=>fwmGo("beds"));
+  document.getElementById("fwmDay")?.addEventListener("click", e=>{
+    const b=e.target.closest("[data-fwmday]"); if(!b) return;
+    const n=+b.dataset.fwmday; if(n) fwStep(n); else { fwDateISO=fwTodayISO(); fwRender(); }
+  });
+  document.getElementById("fwmNoteFilters")?.addEventListener("click", e=>{
+    const b=e.target.closest("[data-fwmnf]"); if(!b) return;
+    fwmNoteFilter=b.dataset.fwmnf; fwRender();
+  });
+  document.getElementById("fwmNewList")?.addEventListener("click", fwNewList);
   document.getElementById("fwmLog")?.addEventListener("click", ()=>bpOpenLog({date:todayISO(), title:"Log bed prep"}));
   document.getElementById("bppBody")?.addEventListener("click", e=>{
     const w=e.target.closest("[data-fwmweek]");
