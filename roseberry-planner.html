@@ -3251,7 +3251,41 @@
       #view-fieldwalk.fwm-home #fwToday{display:none}
     #view-fieldwalk.fwm-home .fw-who-btn{height:32px;padding:0 10px;font-size:12px}
     #view-fieldwalk.fwm-sub .fwm-title{display:none}
-    #view-fieldwalk.fwm-sub #fwPrepPane .bpp-bar #bppModeToggle{display:none}
+    /* Prep run: title + Log in the strip, week stepper in the body, the old bar and summary hidden. */
+    #view-fieldwalk.fwm-run .fw-top{height:56px}
+    #view-fieldwalk.fwm-run #fwPrev,#view-fieldwalk.fwm-run #fwNext,#view-fieldwalk.fwm-run #fwDateLabel,
+      #view-fieldwalk.fwm-run #fwToday,#view-fieldwalk.fwm-run .fw-who-btn,#view-fieldwalk.fwm-run .fw-top .spacer{display:none}
+    #view-fieldwalk.fwm-run #fwPrepPane .bpp-bar,#view-fieldwalk.fwm-run #bppSummary{display:none}
+    .fwm-log{height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--paper-2);
+      color:var(--ink);font:500 13px var(--sans);cursor:pointer;flex:0 0 auto}
+    .fwm-log[hidden]{display:none}
+    .fwm-run-week{display:flex;align-items:center;gap:8px;padding:12px 0}
+    .fwm-run-week button{width:44px;height:40px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper-2);
+      color:var(--ink);cursor:pointer;font-size:14px}
+    .fwm-run-week div{flex:1 1 auto;text-align:center;display:flex;flex-direction:column}
+    .fwm-run-week b{font-size:15px;font-weight:600}
+    .fwm-run-week span{font-size:12px;color:var(--ink-2)}
+    .fwm-run-now{display:block;margin:-4px auto 10px;border:0;background:none;color:var(--steel);font:500 13px var(--sans);cursor:pointer}
+    .fwm-run-empty{padding:20px 4px;color:var(--ink-2);font-size:14px;line-height:1.5}
+    .fwm-run-card{background:var(--paper-2);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:12px}
+    .fwm-run-head{display:flex;align-items:center;gap:10px;padding:12px 14px}
+    .fwm-run-head div{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+    .fwm-run-head b{font-size:15px;font-weight:600}
+    .fwm-run-head span{font-size:12px;color:var(--ink-2)}
+    .fwm-run-head button{height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--steel);background:transparent;
+      color:var(--steel);font:500 13px var(--sans);cursor:pointer}
+    .fwm-run-card.complete .fwm-run-head b{color:var(--ok)}
+    .fwm-run-op{padding:8px 14px 4px;border-top:1px solid var(--line);font-size:11px;font-weight:600;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--ink-2)}
+    .fwm-run-row{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 14px;border-top:1px solid var(--line);cursor:pointer}
+    .fwm-run-op+.fwm-run-row{border-top:0}
+    .fwm-run-row input{width:24px;height:24px;margin:0;accent-color:var(--ok);flex:0 0 auto}
+    .fwm-run-row b{flex:0 0 44px;font:500 18px var(--serif)}
+    .fwm-run-row span{flex:1 1 auto;min-width:0;font-size:13px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fwm-run-row.done b{text-decoration:line-through;color:var(--ink-2)}
+    .fwm-run-foot{position:sticky;bottom:0;display:flex;gap:8px;padding:12px 0 16px;background:var(--paper)}
+    .fwm-run-foot button{flex:1 1 0;height:48px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper-2);
+      color:var(--ink);font:500 14px var(--sans);cursor:pointer}
     #fwBedsPane{padding:0 4px}
     .fwm-quick{display:flex;gap:8px;padding-top:12px}
     .fwm-quick button{flex:1 1 0;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--paper-2);
@@ -4679,6 +4713,7 @@
         <button type="button" class="fm-phone-only fwm-back" id="fwmBack" aria-label="Back to beds">
           <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M12.5 4.5L7 10l5.5 5.5"/></svg><span>Beds</span></button>
         <span class="fwm-title"><b id="fwmTitle">Field walk</b><small id="fwmSub"></small></span>
+        <button type="button" class="fm-phone-only fwm-log" id="fwmLog" hidden>Log…</button>
         <button class="icon-btn" id="fwPrev" title="Previous walk">◀</button>
         <span class="cm-year" id="fwDateLabel">—</span>
         <button class="icon-btn" id="fwNext" title="Next walk">▶</button>
@@ -16363,10 +16398,39 @@ function bppBuild(){
       : "Nothing due for prep")
     + (outstanding ? ` · ${outstanding} pass${outstanding===1?"":"es"} left`+(mins?` (~${wkFmtMins(mins)})`:"") : "");
 
-  body.innerHTML = bppMode==="pass" ? bppRenderByPass(P) : bppRenderByBed(P, items);
+  body.innerHTML = (cmIsMobile() && bppShowing()) ? fwmRenderRun(P)
+    : bppMode==="pass" ? bppRenderByPass(P) : bppRenderByBed(P, items);
   bppWireBody(P);
   fwRenderBadge();       // the queue may have drained (or stalled) since this page was last drawn
   fwAfterPrepChange();   // the notes side shows prep too: the glance line, the Plan prep sheet
+}
+
+/* ---- Phone Prep run (2026-09-26): the canvas frame — week stepper, one card per implement with
+   its beds as tick rows (crop / late beside each), Mark all per card. Same data and writes as By pass. */
+function fwmRenderRun(P){
+  const cur=P.weekISO===bppThisWeek();
+  const beds=new Set(); P.passes.forEach(a=>a.ops.forEach(g=>g.beds.concat(g.done).forEach(b=>beds.add(b.bedId))));
+  const prep=fwmPrepByBed();
+  const step=`<div class="fwm-run-week"><button type="button" data-fwmweek="-1" aria-label="Previous week">◀</button>`
+    +`<div><b>${cur?"This week":"Week of "+esc(bppDay(P.weekISO))}</b>`
+    +`<span>${esc(wkFmtRange(wkParse(P.weekISO)))} · ${beds.size} bed${beds.size===1?"":"s"}</span></div>`
+    +`<button type="button" data-fwmweek="1" aria-label="Next week">▶</button></div>`
+    +(cur?"":`<button type="button" class="fwm-run-now" data-fwmweek="0">Back to this week</button>`);
+  if(!P.passes.length) return step+`<div class="fwm-run-empty">No passes planned for this week. Tap a bed on the bed list and pick <b>Prep</b> to plan its passes.</div>`;
+  const row=(g,b,done)=>{
+    const i=prep.get(b.bedId), bed=b.bed||(data.beds||[]).find(x=>x.id===b.bedId)||{name:"?"};
+    const sub=i && i.when!=="other" ? (i.when==="late"&&!done?"Late · ":"")+fwmRowSub(bed,i) : "";
+    return `<label class="fwm-run-row${done?" done":""}"><input type="checkbox" data-tick="${esc(g.op)}" data-bed="${esc(b.bedId)}"${done?" checked":""}>`
+      +`<b>${esc(bed.name)}</b><span>${esc(sub)}</span></label>`;
+  };
+  return step+P.passes.map(a=>{
+    const meta=a.complete ? `all ${a.doneCount} done` : `${a.bedCount} bed${a.bedCount===1?"":"s"}${a.minutes?` · ~${wkFmtMins(a.minutes)}`:""}${a.doneCount?` · ${a.doneCount} done`:""}`;
+    return `<div class="fwm-run-card${a.complete?" complete":""}"><div class="fwm-run-head"><div><b>${a.complete?"✓ ":""}${esc(a.name)}</b><span>${esc(meta)}</span></div>`
+      +(a.complete?"":`<button type="button" data-allpass="${esc(a.name)}">Mark all</button>`)+`</div>`
+      +a.ops.map(g=>(a.ops.length>1||g.op!==a.name?`<div class="fwm-run-op">${esc(g.op)}</div>`:"")
+        +g.beds.map(b=>row(g,b,false)).join("")+g.done.map(b=>row(g,b,true)).join("")).join("")
+      +`</div>`;
+  }).join("")+`<div class="fwm-run-foot"><button type="button" data-fwmrun="add">+ Add bed</button><button type="button" data-fwmrun="ops">Operations…</button></div>`;
 }
 
 /* ---- By bed: the planning surface ----
@@ -26161,11 +26225,15 @@ function fwRender(){
   const prep=fwPane==="prep";
   const beds=fwPane==="beds" && cmIsMobile();
   const view=document.getElementById("view-fieldwalk");
-  if(view){ view.classList.toggle("fwm-home", beds); view.classList.toggle("fwm-sub", cmIsMobile() && !beds); }
+  const run=cmIsMobile() && fwPane==="prep";
+  if(view){ view.classList.toggle("fwm-home", beds); view.classList.toggle("fwm-sub", cmIsMobile() && !beds && !run);
+            view.classList.toggle("fwm-run", run); }
+  const logB=document.getElementById("fwmLog"); if(logB) logB.hidden=!run;
   const back=document.getElementById("fwmBack"); if(back) back.hidden=!cmIsMobile() || beds;
   const ttl=document.getElementById("fwmTitle");
   const sub=document.getElementById("fwmSub");
-  if(sub){ const who=(walk&&walk.walkers)||myWalkers;
+  if(sub && run) sub.textContent="Tractor passes by implement";
+  else if(sub){ const who=(walk&&walk.walkers)||myWalkers;
     sub.textContent=[new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}), who].filter(Boolean).join(" · "); }
   if(ttl) ttl.textContent = fwPane==="prep" ? "Prep run" : fwPane==="lists" ? "Lists" : fwPane==="walk" ? "Notes" : "Field walk";
   if(prep){
@@ -26917,6 +26985,14 @@ function fwDeleteItem(id){
   });
   document.getElementById("fwPrepDue")?.addEventListener("click", fwGoPrep);
   document.getElementById("fwmBack")?.addEventListener("click", ()=>fwmGo("beds"));
+  document.getElementById("fwmLog")?.addEventListener("click", ()=>bpOpenLog({date:todayISO(), title:"Log bed prep"}));
+  document.getElementById("bppBody")?.addEventListener("click", e=>{
+    const w=e.target.closest("[data-fwmweek]");
+    if(w){ const n=+w.dataset.fwmweek; if(n) fwPrepStep(n); else { wkStartISO=bppThisWeek(); fwRender(); } return; }
+    const r=e.target.closest("[data-fwmrun]");
+    if(r){ document.getElementById(r.dataset.fwmrun==="add"?"bppAddBedsBtn":"bppOpsBtn")?.click();
+      if(r.dataset.fwmrun==="add") document.getElementById("bppSearch")?.scrollIntoView({block:"center"}); }
+  });
   document.getElementById("fwBedsPane")?.addEventListener("click", e=>{
     const go=e.target.closest("[data-fwmgo]"); if(go){ fwmGo(go.dataset.fwmgo); return; }
     const bl=e.target.closest("[data-fwmblock]"); if(bl){ fwmBlock=bl.dataset.fwmblock; fwmRenderBeds(); return; }
