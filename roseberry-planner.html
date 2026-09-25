@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Roseberry Planner</title>
+<!-- Fraunces: bed names and titles on the phone Field walk. Offline it falls back to Georgia. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -41,6 +44,7 @@
     --tarp-a:rgba(38,44,48,.62);
     --tarp-b:rgba(38,44,48,.16);
     --tarp-edge:rgba(38,44,48,.55);
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
     --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     color-scheme:light;
@@ -3229,94 +3233,104 @@
     #fwTagClear{min-height:44px;padding:0 1rem}
 
     /* Walk by bed (2026-09-26): the phone opens on the bed list; Notes / Lists / Prep run are
-       screens off it with a back arrow; #fwSeg and the prep glance line are desktop only now. */
+       screens off it with a back arrow; #fwSeg and the prep glance line are desktop only now.
+       Sizes are px on purpose — they match the design canvas frame for frame. */
     #view-fieldwalk .fw-seg{display:none}
-    .fwm-back{flex:0 0 auto;align-items:center;gap:.2rem;height:40px;padding:0 .7rem 0 .4rem;border-radius:10px;
-      border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:600 .85rem var(--sans);cursor:pointer}
+    #fwBedsPane,#fwPrepPane,#fwWalkPane,#fwListsPane{min-width:0}
+    .fwm-back{flex:0 0 auto;align-items:center;justify-content:center;width:40px;height:40px;padding:0;border-radius:10px;
+      border:1px solid var(--line-2);background:var(--paper);color:var(--ink);cursor:pointer}
     .fwm-back[hidden]{display:none}
-    .fwm-back svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
-    .fwm-title{display:block;flex:0 1 auto;min-width:0;font-weight:700;font-size:1.05rem;white-space:nowrap;
-      overflow:hidden;text-overflow:ellipsis}
+    .fwm-back span{display:none}
+    .fwm-back svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+    .fwm-title{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;line-height:1.15}
+    .fwm-title b{font:600 20px var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fwm-title small{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #view-fieldwalk.fwm-home .fw-top{height:56px;border-bottom:1px solid var(--line)}
+    #view-fieldwalk.fwm-home .fw-top .spacer{display:none}
     #view-fieldwalk.fwm-home #fwPrev,#view-fieldwalk.fwm-home #fwNext,#view-fieldwalk.fwm-home #fwDateLabel,
       #view-fieldwalk.fwm-home #fwToday{display:none}
+    #view-fieldwalk.fwm-home .fw-who-btn{height:32px;padding:0 10px;font-size:12px}
     #view-fieldwalk.fwm-sub .fwm-title{display:none}
     #view-fieldwalk.fwm-sub #fwPrepPane .bpp-bar #bppModeToggle{display:none}
-    #fwBedsPane,#fwPrepPane,#fwWalkPane,#fwListsPane{min-width:0}
-    #view-fieldwalk.fwm-sub .fwm-back span{display:none}
-    #view-fieldwalk.fwm-sub .fwm-back{padding:0;width:40px;justify-content:center}
-    .fwm-quick{display:flex;gap:.45rem;padding:.6rem 0 0}
-    .fwm-quick button{flex:1 1 0;min-height:44px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper-2);
-      color:var(--ink);font:600 .88rem var(--sans);cursor:pointer}
-    .fwm-quick b{color:var(--steel);font-weight:700;margin-left:.2rem}
-    .fwm-card{display:flex;align-items:center;gap:.6rem;width:100%;margin-top:.6rem;min-height:48px;padding:.6rem .9rem;
-      border-radius:12px;border:1px solid color-mix(in srgb, var(--steel) 40%, transparent);
-      background:color-mix(in srgb, var(--steel) 14%, var(--paper));color:var(--ink);font:500 .92rem var(--sans);
-      text-align:left;cursor:pointer}
+    #fwBedsPane{padding:0 4px}
+    .fwm-quick{display:flex;gap:8px;padding-top:12px}
+    .fwm-quick button{flex:1 1 0;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--paper-2);
+      color:var(--ink);font:500 13px var(--sans);cursor:pointer}
+    .fwm-quick b{color:var(--ink-2);font-weight:500;margin-left:3px}
+    .fwm-card{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;padding:12px 14px;border:0;
+      border-radius:12px;background:color-mix(in srgb, var(--steel) 16%, transparent);color:var(--steel);
+      font:400 14px var(--sans);text-align:left;cursor:pointer}
     .fwm-card[hidden]{display:none}
     .fwm-card .fwm-card-txt{flex:1 1 auto;min-width:0}
-    .fwm-card em{font-style:normal;color:var(--clay);font-weight:600}
-    .fwm-card .fwm-card-go{flex:0 0 auto;color:var(--steel);font-weight:700}
-    .fwm-card.on{background:var(--steel);border-color:var(--steel);color:#fff}
-    .fwm-card.on em,.fwm-card.on .fwm-card-go{color:#fff}
-    .fwm-blocks{display:flex;gap:.4rem;overflow-x:auto;padding:.7rem 0 .5rem;-webkit-overflow-scrolling:touch}
+    .fwm-card .fwm-card-txt b{font-weight:600}
+    .fwm-card em{font-style:normal;color:var(--clay)}
+    .fwm-card .fwm-card-go{flex:0 0 auto;font-size:13px;font-weight:600}
+    .fwm-card.on{background:var(--steel);color:var(--paper)}
+    .fwm-card.on em{color:var(--paper)}
+    .fwm-blocks{display:flex;gap:8px;overflow-x:auto;padding:12px 0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+    .fwm-blocks::-webkit-scrollbar{display:none}
     .fwm-blocks[hidden]{display:none}
-    .fwm-blocks button{flex:0 0 auto;min-width:44px;height:40px;padding:0 .9rem;border-radius:999px;border:1px solid var(--line-2);
-      background:var(--paper);color:var(--ink);font:600 .9rem var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:.35rem}
-    .fwm-blocks button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff}
-    .fwm-blocks i{font-style:normal;font-size:.7rem;min-width:1.2rem;height:1.2rem;border-radius:999px;display:inline-flex;
-      align-items:center;justify-content:center;background:var(--clay);color:#fff}
-    .fwm-list{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-2);margin-bottom:1rem}
-    .fwm-list .fw-obs-empty{padding:1.2rem}
-    .fwm-group{padding:.7rem .9rem .35rem;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+    .fwm-blocks button{flex:0 0 auto;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);
+      background:var(--paper-2);color:var(--ink);font:400 13px var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .fwm-blocks button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:var(--paper)}
+    .fwm-blocks i{font-style:normal;font-size:11px;font-weight:600;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;
+      border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:var(--clay-tint);color:var(--clay)}
+    .fwm-blocks button[aria-pressed="true"] i{background:var(--paper);color:var(--steel)}
+    .fwm-list{margin:0 -10px 16px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);background:var(--paper-2)}
+    .fwm-list .fw-obs-empty{padding:20px 16px}
+    .fwm-group{padding:16px 16px 6px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
       color:var(--ink-2);background:var(--paper)}
     .fwm-group.late{color:var(--clay)}
-    .fwm-row{display:flex;align-items:center;gap:.7rem;width:100%;min-height:54px;padding:.45rem .9rem;border:0;
+    .fwm-row{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 16px;box-sizing:border-box;border:0;
       border-top:1px solid var(--line);background:transparent;color:var(--ink);text-align:left;cursor:pointer;font-family:var(--sans)}
     .fwm-row:first-child,.fwm-group+.fwm-row{border-top:0}
-    .fwm-row-name{flex:0 0 3.2rem;font-weight:700;font-size:1.05rem}
-    .fwm-row-sub{flex:1 1 auto;min-width:0;font-size:.85rem;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;
-      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-    .fwm-row-go{flex:0 0 auto;color:var(--ink-2);font-size:1.2rem}
-    .fwm-badge{flex:0 0 auto;font-size:.72rem;font-weight:600;padding:.2rem .5rem;border-radius:999px;white-space:nowrap;
-      background:var(--paper-3);color:var(--ink)}
+    .fwm-row-name{flex:0 0 44px;font:500 19px var(--serif)}
+    .fwm-row-sub{flex:1 1 auto;min-width:0;font-size:14px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fwm-row-go{flex:0 0 auto;color:var(--ink-2);opacity:.6;font-size:18px;line-height:1}
+    .fwm-badge{flex:0 0 auto;font-size:12px;padding:3px 8px;border-radius:999px;white-space:nowrap}
     .fwm-badge.late{background:var(--clay-tint);color:var(--clay)}
-    .fwm-badge.due{background:color-mix(in srgb, var(--steel) 18%, transparent);color:var(--steel)}
-    .fwm-badge.plan{background:transparent;border:1px solid var(--steel);color:var(--steel)}
-    .fwm-badge.ok{background:transparent;color:var(--ok)}
+    .fwm-badge.due{background:color-mix(in srgb, var(--steel) 16%, transparent);color:var(--steel)}
+    .fwm-badge.plan{border:1px solid var(--steel);color:var(--steel);padding:2px 7px}
+    .fwm-badge.ok{color:var(--ok);padding:3px 0}
+    .fwm-badge.note{background:var(--paper-3);color:var(--ink)}
     /* Bed sheet */
-    #fwBedSheet{position:fixed;bottom:56px;max-height:calc(100% - 110px)}
+    #fwBedSheet{position:fixed;bottom:56px;max-height:calc(100% - 110px);background:var(--paper);padding:10px 0 0;
+      border-radius:20px 20px 0 0}
     #fwBedScrim{position:fixed;inset:0 0 56px 0}
-    .fwm-sh-head{flex-wrap:wrap;align-items:baseline;gap:.3rem .6rem}
-    .fwm-sh-head h3{font-size:1.6rem}
-    .fwm-sh-sub{flex:1 1 8rem;min-width:0;font-size:.85rem;color:var(--ink-2)}
-    .fwm-lbl{display:block;margin:1rem 0 .45rem;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;
-      text-transform:uppercase;color:var(--ink-2)}
-    #fwBedBody .fwm-lbl:first-child{margin-top:.4rem}
-    .fwm-jobs{display:flex;flex-wrap:wrap;gap:.45rem}
-    .fwm-jobs button,.fwm-when button{flex:1 1 auto;min-height:46px;padding:0 .9rem;border-radius:12px;border:1px solid var(--line-2);
-      background:var(--paper);color:var(--ink);font:600 .9rem var(--sans);cursor:pointer}
-    .fwm-jobs button.on,.fwm-when button.on{background:var(--steel);border-color:var(--steel);color:#fff}
-    .fwm-jobs button.hint{border-style:dashed;border-color:var(--steel);color:var(--steel)}
-    .fwm-subs button{font-weight:500}
-    .fwm-when{display:flex;gap:.45rem}
-    .fwm-passes{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
-    .fwm-pass{display:flex;align-items:center;gap:.75rem;min-height:48px;padding:0 .9rem;border-top:1px solid var(--line);cursor:pointer}
+    #fwBedSheet .fw-sh-body{padding:0 20px}
+    .fwm-sh-head{flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:6px 20px 0}
+    #fwBedSheet .fwm-sh-head h3{margin:0;font:600 34px/1.1 var(--serif)}
+    .fwm-sh-sub{flex:1 1 8rem;min-width:0;font-size:14px;color:var(--ink-2)}
+    .fwm-lbl{display:block;margin:16px 0 8px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+    #fwBedBody .fwm-lbl:first-child{margin-top:10px}
+    .fwm-jobs{display:flex;flex-wrap:wrap;gap:8px}
+    .fwm-jobs button,.fwm-when button{flex:1 1 auto;height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line-2);
+      background:var(--paper-2);color:var(--ink);font:500 14px var(--sans);cursor:pointer}
+    .fwm-jobs button.on,.fwm-when button.on{background:var(--steel);border-color:var(--steel);color:var(--paper)}
+    .fwm-jobs button.hint{border-style:dashed;border-color:var(--steel);color:var(--steel);
+      background:color-mix(in srgb, var(--steel) 16%, transparent)}
+    .fwm-when{display:flex;gap:8px}
+    .fwm-when button{height:36px;font-size:13px}
+    .fwm-passes{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper-2)}
+    .fwm-pass{display:flex;align-items:center;gap:12px;min-height:44px;padding:0 14px;border-top:1px solid var(--line);cursor:pointer}
     .fwm-pass:first-child{border-top:0}
-    .fwm-pass input{width:22px;height:22px;accent-color:var(--steel);flex:0 0 auto}
-    .fwm-pass span{flex:1 1 auto;font-size:.98rem}
-    .fwm-pass em{font-style:normal;font-size:.75rem;color:var(--ink-2)}
+    .fwm-pass input{width:22px;height:22px;accent-color:var(--steel);flex:0 0 auto;margin:0}
+    .fwm-pass span{flex:1 1 auto;font-size:15px}
+    .fwm-pass em{font-style:normal;font-size:12px;color:var(--ink-2)}
     .fwm-pass.done em{color:var(--ok)}
-    .fwm-hint{margin-top:.5rem;font-size:.85rem;color:var(--ok)}
-    #fwmNote{width:100%;min-height:3.2rem;font:16px var(--sans);border-radius:12px;padding:.6rem .8rem;resize:vertical;
-      background:var(--paper);color:var(--ink);border:1px solid var(--line-2)}
-    .fwm-past{display:flex;flex-wrap:wrap;align-items:center;gap:.2rem .6rem;padding:.55rem .75rem;margin-bottom:.4rem;
-      border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:.9rem}
+    .fwm-hint{margin-top:8px;font-size:13px;color:var(--ok)}
+    #fwmNote{width:100%;box-sizing:border-box;min-height:48px;font:16px var(--sans);border-radius:12px;padding:12px 14px;resize:vertical;
+      background:var(--paper-2);color:var(--ink);border:1px solid var(--line-2)}
+    .fwm-past{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 14px;margin-bottom:8px;
+      border:1px solid var(--line);border-radius:10px;background:var(--paper-2);font-size:14px}
     .fwm-past div{flex:1 1 100%}
-    .fwm-past span{flex:1 1 auto;font-size:.75rem;color:var(--ink-2)}
-    .fwm-past button{flex:0 0 auto;min-height:36px;padding:0 .7rem;border-radius:8px;border:1px solid var(--steel);
-      background:transparent;color:var(--steel);font:600 .8rem var(--sans);cursor:pointer}
-    .fwm-foot{position:sticky;bottom:-1rem;background:var(--paper-2);padding-bottom:1rem;gap:.5rem;align-items:center}
-    .fwm-foot .btn-ghost,.fwm-foot .btn-primary{min-height:48px}
+    .fwm-past span{flex:1 1 auto;font-size:12px;color:var(--ink-2)}
+    .fwm-past button{flex:0 0 auto;height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--steel);
+      background:transparent;color:var(--steel);font:500 13px var(--sans);cursor:pointer}
+    .fwm-foot{position:sticky;bottom:0;background:var(--paper);padding:12px 20px 16px;gap:8px;align-items:center}
+    .fwm-foot .btn-ghost,.fwm-foot .btn-primary{flex:1 1 0;min-width:0;height:48px;border-radius:12px;font-size:14px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 10px}
+    .fwm-foot .spacer{display:none}
     .fwm-foot .btn-ghost[hidden]{display:none}
     .fwm-foot .btn-primary:disabled{opacity:.45}
   }
@@ -4664,7 +4678,7 @@
         <!-- Phone: Notes / Lists / Prep run are screens off the bed list; this goes back to it. -->
         <button type="button" class="fm-phone-only fwm-back" id="fwmBack" aria-label="Back to beds">
           <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M12.5 4.5L7 10l5.5 5.5"/></svg><span>Beds</span></button>
-        <span class="fwm-title" id="fwmTitle">Field walk</span>
+        <span class="fwm-title"><b id="fwmTitle">Field walk</b><small id="fwmSub"></small></span>
         <button class="icon-btn" id="fwPrev" title="Previous walk">◀</button>
         <span class="cm-year" id="fwDateLabel">—</span>
         <button class="icon-btn" id="fwNext" title="Next walk">▶</button>
@@ -26150,6 +26164,9 @@ function fwRender(){
   if(view){ view.classList.toggle("fwm-home", beds); view.classList.toggle("fwm-sub", cmIsMobile() && !beds); }
   const back=document.getElementById("fwmBack"); if(back) back.hidden=!cmIsMobile() || beds;
   const ttl=document.getElementById("fwmTitle");
+  const sub=document.getElementById("fwmSub");
+  if(sub){ const who=(walk&&walk.walkers)||myWalkers;
+    sub.textContent=[new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}), who].filter(Boolean).join(" · "); }
   if(ttl) ttl.textContent = fwPane==="prep" ? "Prep run" : fwPane==="lists" ? "Lists" : fwPane==="walk" ? "Notes" : "Field walk";
   if(prep){
     // Prep plans by the week — the same week This week shows (wkStartISO) — so on this tab the
@@ -26325,17 +26342,25 @@ function fwmBadge(i, notes){
   return "";
 }
 function fwmBedSub(bed, i){
-  if(i && i.when!=="other"){ const w=bppWhy(i); if(w) return w; }
+  if(i && i.when!=="other"){ const w=bppWhy(i).replace(/^carried over from [^·]*· /,""); if(w) return w; }
   const p=bed.planting;
   if(p && p.crop && p.crop!=="—") return p.status==="Finished" ? `Empty · was ${p.crop}`
     : `${p.crop}${p.variety?" "+p.variety:""}${p.status?" · "+p.status:""}`;
   return "Empty";
 }
+// The list row's short line: crop and the date it goes in ("Onion · TP 28 Sep"); the sheet has the rest.
+function fwmRowSub(bed, i){
+  const pl=i && i.when!=="other" && (i.planting||i.schedPlanting);
+  if(pl){ const d=pl.tp||pl.sow;
+    return `${pl.crop||"Crop"} · ${pl.tp?"TP":"Sow"} ${wkParse(d).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}`; }
+  if(i && i.when!=="other" && i.task) return i.taskName||"Bed prep";
+  return fwmBedSub(bed, null);
+}
 function fwmRowHTML(bed, i){
   const n=fwmNotesToday(bed.id).length;
   return `<button type="button" class="fwm-row${i&&i.when==="late"&&!i.preppedDate?" late":""}" data-fwmbed="${esc(bed.id)}">`
     +`<span class="fwm-row-name">${esc(bed.name)}</span>`
-    +`<span class="fwm-row-sub">${esc(fwmBedSub(bed, i))}</span>`
+    +`<span class="fwm-row-sub">${esc(fwmRowSub(bed, i))}</span>`
     +fwmBadge(i, n)
     +`<span class="fwm-row-go" aria-hidden="true">›</span></button>`;
 }
@@ -26471,7 +26496,7 @@ function fwmRenderBedSheet(){
   const save=document.getElementById("fwBedSave"), note=(document.getElementById("fwmNote")?.value||"").trim();
   if(save){
     const n=fwmOps?fwmOps.size:0;
-    save.textContent = fwmJob==="Prep" ? (i&&i.planned ? (n?"Update prep":"Remove prep") : `Plan prep · ${n} pass${n===1?"":"es"}`)
+    save.textContent = fwmJob==="Prep" ? (i&&i.planned ? (n?"Update prep":"Remove prep") : `Plan ${n} pass${n===1?"":"es"}`)
       : fwmJob ? (fwmWhen==="note" ? "Save note" : "Save + make job")
       : "Save note";
     save.disabled = fwmJob==="Prep" ? (!n && !(i&&i.planned)) : (!fwmJob && !note);
