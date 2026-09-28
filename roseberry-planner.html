@@ -3464,18 +3464,66 @@
     #fwBedSheet #fwBedBody{grid-area:body}
     #view-fieldwalk.fwd-walk #fwBedSheet .fwm-notebox{grid-area:note}
     #view-fieldwalk.fwd-walk #fwBedSheet #fwBedHist{grid-area:hist}
-    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-foot{position:static;padding:16px 0 0;background:none;justify-content:flex-end}
+    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-foot{display:flex;gap:10px;align-items:center;position:static;padding:16px 0 0;background:none;justify-content:flex-end}
     #view-fieldwalk.fwd-walk #fwBedSheet .fwm-foot .btn-ghost,#view-fieldwalk.fwd-walk #fwBedSheet .fwm-foot .btn-primary{flex:0 0 auto;padding:0 20px}
     .fwm-empty-bed{padding:40px 0;color:var(--ink-2);font-size:15px}
     #view-fieldwalk.fwd-walk #fwWalkPane{grid-area:notes;padding:0 16px;border-left:1px solid var(--line)}
     #view-fieldwalk.fwd-walk #fwListsPane{grid-area:lists;display:block;padding:8px 16px 16px;border-left:1px solid var(--line);align-self:stretch}
     #view-fieldwalk.fwd-walk #fwQuickBar{margin-bottom:10px}
     #view-fieldwalk.fwd-walk #fwQuickText{font:14px var(--sans)}
-    .fwm-day::before{content:"Notes";flex:0 0 auto;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
-    #view-fieldwalk.fwd-walk .fwm-day b{text-align:left;font-size:14px}
-    #view-fieldwalk.fwd-walk .fwm-day button{width:32px;height:32px}
+    /* Title bar = the canvas top bar: serif name over the date, Walk / Prep run tabs, sync, walker. */
+    #view-fieldwalk .fw-top{display:none}
+    #view-fieldwalk .vw-title{height:64px;padding:0 24px;display:grid;grid-template-columns:auto 1fr auto auto auto;
+      grid-template-rows:auto auto;column-gap:14px;align-content:center;border-bottom:1px solid var(--line)}
+    #view-fieldwalk .vw-title .vw-name{grid-row:1;grid-column:1;font:600 24px/1.1 var(--serif)}
+    #view-fieldwalk .vw-title #fwSummary{grid-row:2;grid-column:1;font:12px var(--sans);color:var(--ink-2);letter-spacing:0;text-transform:none}
+    #view-fieldwalk .vw-title .spacer{grid-row:1/3;grid-column:2}
+    #view-fieldwalk .vw-title #fwSeg{grid-row:1/3;grid-column:3;display:flex;gap:4px;padding:3px;margin:0;max-width:none;
+      border-radius:10px;background:var(--paper-2)}
+    #view-fieldwalk .vw-title #fwSeg button{flex:0 0 auto;height:34px;padding:0 16px;border:0;border-radius:8px;background:transparent;
+      color:var(--ink-2);font:500 13px var(--sans)}
+    #view-fieldwalk .vw-title #fwSeg button[aria-pressed="true"]{background:var(--paper-3);color:var(--ink);font-weight:600}
+    #view-fieldwalk .vw-title #fwSyncBadge{grid-row:1/3;grid-column:4}
+    #view-fieldwalk .vw-title #fwWalkers{grid-row:1/3;grid-column:5;width:130px;height:36px;border-radius:999px;padding:0 14px;font:13px var(--sans)}
+    /* Beds column */
+    #view-fieldwalk.fwd-walk .fwm-card{font-size:13px;padding:10px 12px;margin-top:16px}
+    #view-fieldwalk.fwd-walk .fwm-row{min-height:46px;padding:6px 14px}
+    #view-fieldwalk.fwd-walk .fwm-row-name{flex-basis:38px;font-size:17px}
+    #view-fieldwalk.fwd-walk .fwm-row-sub{font-size:13px}
+    /* The bed */
+    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-sh-sub{font-size:15px}
+    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-jobs button{height:40px;padding:0 16px}
+    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-pass{min-height:40px}
+    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-pass span{font-size:14px}
+    #view-fieldwalk.fwd-walk #fwBedSheet #fwmNote{min-height:88px}
+    #view-fieldwalk.fwd-walk #fwBedSheet .fwm-foot .spacer{display:none}
+    /* Notes + lists column */
+    #view-fieldwalk.fwd-walk .fwm-day{padding:14px 0 10px;gap:6px}
+    #view-fieldwalk.fwd-walk .fwm-day-lbl{flex:1 1 auto;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+    #view-fieldwalk.fwd-walk .fwm-day button{width:30px;height:30px;border-radius:8px;font-size:11px}
+    #view-fieldwalk.fwd-walk .fwm-day .fwm-day-now{width:auto;padding:0 10px;font-size:12px}
+    #view-fieldwalk.fwd-walk #fwQuickBar{display:flex;flex-wrap:wrap;gap:8px;padding:0;border:0;background:none;margin:0 0 10px}
+    #view-fieldwalk.fwd-walk #fwQuickBar .fw-quick-row{display:contents}
+    #view-fieldwalk.fwd-walk #fwTagRow,#view-fieldwalk.fwd-walk #fwSubRow{display:none}
+    #view-fieldwalk.fwd-walk #fwQuickText{order:1;flex:1 1 0;min-width:0;height:40px;min-height:40px;resize:none;overflow:hidden;
+      padding:10px 12px;border-radius:10px;font:13px/20px var(--sans);background:var(--paper-2);border:1px solid var(--line-2);color:var(--ink)}
+    #view-fieldwalk.fwd-walk #fwQuickAdd{order:2;height:40px;padding:0 14px;border-radius:10px;font-size:13px}
+    #view-fieldwalk.fwd-walk #fwSuggest,#view-fieldwalk.fwd-walk #fwTaskHint{order:3;flex:1 0 100%}
+    #view-fieldwalk.fwd-walk .fwm-notes{margin:0 -16px;border-radius:0;border-left:0;border-right:0}
+    #view-fieldwalk.fwd-walk #fwFeed .fwm-note{padding:10px 16px;gap:10px}
+    #view-fieldwalk.fwd-walk .fwm-note-bed{flex-basis:34px;font-size:16px}
+    #view-fieldwalk.fwd-walk .fwm-note-text{font-size:13px}
+    #view-fieldwalk.fwd-walk .fwm-note-meta{font-size:11px}
+    #view-fieldwalk.fwd-walk #fwFeed .fw-obs-empty{padding:14px 0;font-size:13px}
+    #view-fieldwalk.fwd-walk .fw-lists-top{margin:6px 0 8px}
+    #view-fieldwalk.fwd-walk .fw-lists-top .sub{flex:1 1 auto;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--ink-2);font-family:var(--sans)}
+    #view-fieldwalk.fwd-walk #fwNewListBtn{border:0;background:none;padding:0;color:var(--steel);font:500 12px var(--sans);min-height:0}
+    #fwListsPane .fw-item{min-height:36px;font-size:13px}
+    #fwListsPane .fw-item input[type=checkbox]{width:18px;height:18px}
     #view-fieldwalk.fwd-run #fwPrepPane .bpp-bar,#view-fieldwalk.fwd-run #bppSummary{display:none}
-    #view-fieldwalk.fwd-run #fwPrepPane{padding:0 8px}
+    #view-fieldwalk.fwd-run #fwCols{grid-template-columns:minmax(0,1fr);padding:4px 24px 24px}
+    #view-fieldwalk.fwd-run #fwPrepPane{padding:0;max-width:none;width:100%}
     .fwm-run-cards{display:flex;gap:16px;align-items:flex-start}
     .fwm-run-cards .fwm-run-card{flex:1 1 0;min-width:0}
     .fwm-run-week{justify-content:flex-start}
@@ -4855,7 +4903,7 @@
            Notes + Lists side by side, so there the tabs are just Walk / Prep. -->
       <div class="fw-seg" id="fwSeg" role="tablist">
         <button type="button" data-fwpane="walk" aria-pressed="true"><span class="fw-seg-phone">Notes</span><span class="fw-seg-desk">Walk</span></button>
-        <button type="button" data-fwpane="prep" aria-pressed="false">Prep</button>
+        <button type="button" data-fwpane="prep" aria-pressed="false"><span class="fw-seg-phone">Prep</span><span class="fw-seg-desk">Prep run</span></button>
         <button type="button" data-fwpane="lists" aria-pressed="false">Lists</button>
       </div>
 
@@ -4896,7 +4944,7 @@
 
         <div id="fwListsPane" hidden>
           <div class="fw-lists-top">
-            <span class="sub">Standing lists · roll over between walks</span>
+            <span class="sub" title="Standing lists — they roll over between walks">Lists</span>
             <button class="btn-ghost" id="fwNewListBtn" type="button">＋ New list</button>
           </div>
           <div id="fwLists"></div>
@@ -10091,13 +10139,16 @@ function fwPlaceChrome(){
     else if(bsh.parentElement!==cols) cols.appendChild(bsh);
   }
   if(cmIsMobile()){
+    const seg=document.getElementById("fwSeg"), fwc=document.getElementById("fwCols");
+    if(seg && fwc && seg.parentElement!==fwc.parentElement) fwc.before(seg);
     top.insertBefore(badge, who);
     body.insertBefore(input, body.firstChild); if(dl) body.appendChild(dl);
     if(tagBody && tagRow && subRow){ tagBody.appendChild(tagRow); tagBody.appendChild(subRow); }
   }else{
     fwCloseWhoSheet(); fwCloseTagSheet();
+    const seg=document.getElementById("fwSeg"); if(seg) title.appendChild(seg);
     title.appendChild(badge);
-    top.insertBefore(input, who); if(dl) top.insertBefore(dl, who);
+    title.appendChild(input); if(dl) title.appendChild(dl);
     if(tagRow && tagBtn) tagBtn.parentNode.insertBefore(tagRow, tagBtn);
     if(subRow && quick) quick.appendChild(subRow);
   }
@@ -16540,7 +16591,10 @@ function fwmRenderRun(P){
   const prep=fwmPrepByBed();
   const step=`<div class="fwm-run-week"><button type="button" data-fwmweek="-1" aria-label="Previous week">◀</button>`
     +`<div><b>${cur?"This week":"Week of "+esc(bppDay(P.weekISO))}</b>`
-    +`<span>${esc(wkFmtRange(wkParse(P.weekISO)))} · ${beds.size} bed${beds.size===1?"":"s"}</span></div>`
+    +`<span>${esc(wkFmtRange(wkParse(P.weekISO)))} · ${beds.size} bed${beds.size===1?"":"s"}`
+      +(()=>{ const left=P.passes.reduce((n,a)=>n+a.bedCount,0), mins=P.passes.reduce((n,a)=>n+(a.minutes||0),0);
+        return left ? ` · ${left} pass${left===1?"":"es"} left${mins?` · ~${wkFmtMins(mins)}`:""}` : ""; })()
+    +`</span></div>`
     +`<button type="button" data-fwmweek="1" aria-label="Next week">▶</button></div>`
     +(cur?"":`<button type="button" class="fwm-run-now" data-fwmweek="0">Back to this week</button>`);
   if(!P.passes.length) return step+`<div class="fwm-run-empty">No passes planned for this week. Tap a bed on the bed list and pick <b>Prep</b> to plan its passes.</div>`;
@@ -26440,11 +26494,17 @@ function fwRender(){
   fwmRenderNotesChrome(notesP || walkD);
   const nl=document.getElementById("fwmNewList"); if(nl) nl.hidden=!listsP;
   const qt=document.getElementById("fwQuickText");
-  if(qt) qt.placeholder = notesP ? "What did you see?" : "What are you seeing? Type @ to tag a bed or block…";
+  if(qt) qt.placeholder = notesP ? "What did you see?" : walkD ? "Quick note — @ tags a bed" : "What are you seeing? Type @ to tag a bed or block…";
+  if(!cmIsMobile()){
+    const fs=document.getElementById("fwSummary");
+    if(fs) fs.textContent=new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})
+      +(fwPane==="prep"?" · this week's prep":" · walk by bed");
+  }
   const qa=document.getElementById("fwQuickAdd");
-  if(qa && qa.dataset.phone!==String(notesP)){
-    qa.dataset.phone=String(notesP);
-    qa.innerHTML = notesP ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>' : "Add note";
+  const qaMode=notesP?"phone":walkD?"desk":"";
+  if(qa && qa.dataset.phone!==qaMode){
+    qa.dataset.phone=qaMode;
+    qa.innerHTML = walkD ? "Add" : notesP ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>' : "Add note";
     qa.setAttribute("aria-label","Add note");
   }
 }
@@ -26455,6 +26515,13 @@ function fwmRenderNotesChrome(on){
   if(!day||!fl) return;
   day.hidden=!on; fl.hidden=!on; if(!on) return;
   const isToday=fwDateISO===fwTodayISO();
+  if(!cmIsMobile()){
+    const n=fwActiveWalk ? (data.walkObservations||[]).filter(o=>o.walkId===fwActiveWalk.id).length : 0;
+    day.innerHTML=`<span class="fwm-day-lbl">${isToday?"Today&#39;s notes":esc(fmt(fwDateISO))} · ${n}</span>`
+      +(isToday?"":`<button type="button" class="fwm-day-now" data-fwmday="0">Today</button>`)
+      +`<button type="button" data-fwmday="-1" aria-label="Previous walk">◀</button><button type="button" data-fwmday="1" aria-label="Next walk">▶</button>`;
+    return;
+  }
   day.innerHTML=`<button type="button" data-fwmday="-1" aria-label="Previous walk">◀</button>`
     +`<b>${isToday?"Today":esc(fmt(fwDateISO))}</b>`
     +(isToday?"":`<button type="button" class="fwm-day-now" data-fwmday="0">Today</button>`)
@@ -26853,6 +26920,7 @@ function fwRenderFeed(){
     feed.innerHTML=`<div class="fw-obs-empty">No notes yet for this walk.<br>Type what you're seeing above — <code>@</code> tags a bed or block.</div>`;
     return;
   }
+  if(!cmIsMobile() && fwPane!=="prep") fwmRenderNotesChrome(true);
   feed.innerHTML=fwmFeedHTML(rows); return;
   feed.innerHTML=rows.slice().reverse().map(o=>{   // newest first
     const t=o.created ? new Date(o.created) : null;
