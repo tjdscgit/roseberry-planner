@@ -323,6 +323,12 @@
       // Farm settings — the Farm map's satellite underlay {url,x,y,w,h,locked}, shared by every
       // device (opacity/visibility stay per-device, they're a viewing preference).
       fs_sat:"Satellite map",
+      // The rest of the one 'farm' row — edited on the Settings page. Market days is text[] of
+      // "Sat|<outlet id>": a weekday plus the sales outlet it serves, keyed by id so renaming the
+      // outlet doesn't break the link. The Harvest plan groups its "By market" list by these.
+      fs_name:"Farm name", fs_location:"Location", fs_season:"Season start", fs_market:"Market days",
+      fs_certifier:"Certifier", fs_certNo:"Certification number", fs_certSince:"Certified since",
+      fs_notes:"Notes", fs_updated:"Updated at",
       // Map features — see CFG.tables.mapFeatures above.
       mf_name:"Name", mf_kind:"Kind", mf_shape:"Shape", mf_points:"Points",
       mf_label:"Label", mf_detail:"Detail", mf_colour:"Colour", mf_order:"Order", mf_notes:"Notes",

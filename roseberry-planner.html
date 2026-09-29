@@ -960,6 +960,46 @@
   .sw input:checked + i{background:var(--ok)}
   .sw input:checked + i::after{transform:translateX(15px)}
   .sw input:focus-visible + i{outline:2px solid var(--steel);outline-offset:2px}
+  /* ---- Settings — carded sections of label/description rows, per Settings.dc.html. ---- */
+  #view-settings.active{display:flex;flex-direction:column}
+  .st-wrap{flex:1 1 auto;min-height:0;overflow-y:auto;padding:1.1rem 1.25rem 2rem;
+    display:flex;gap:16px;align-items:flex-start}
+  .st-col{flex:1 1 0;min-width:0;max-width:680px}
+  .st-col-side{flex:0 1 340px}
+  .st-sect{border:1px solid var(--line);border-radius:11px;background:var(--paper-2);overflow:hidden;margin-bottom:14px}
+  .st-sh{display:flex;align-items:center;gap:9px;min-height:42px;padding:0 15px;border-bottom:1px solid var(--line);
+    background:var(--paper-3);font-size:13.5px;font-weight:600}
+  .st-shm{font-family:var(--mono);font-size:10px;font-weight:400;color:var(--ink-2);text-transform:uppercase;letter-spacing:.08em}
+  .st-row{display:flex;align-items:center;gap:14px;min-height:52px;padding:11px 15px;border-bottom:1px solid var(--line)}
+  .st-row:last-child{border-bottom:none}
+  .st-row-top{align-items:flex-start}
+  .st-tx{flex:1 1 auto;min-width:0}
+  .st-t{font-size:13.5px;font-weight:600}
+  .st-d{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);margin-top:4px;line-height:1.45}
+  .st-fld{border:1px solid var(--line-2);border-radius:7px;background:var(--paper-3);padding:7px 11px;
+    font-family:var(--mono);font-size:11.5px;color:var(--ink);width:220px;max-width:55%}
+  textarea.st-fld{resize:vertical;font-family:var(--mono)}
+  .st-mkts{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+  .st-mkt{display:flex;gap:6px;align-items:center}
+  .st-mkt select{border:1px solid var(--line-2);border-radius:7px;background:var(--paper-3);padding:6px 8px;
+    font-family:var(--mono);font-size:11.5px;color:var(--ink)}
+  .st-ok{font-family:var(--mono);font-size:10.5px;color:var(--ok);white-space:nowrap}
+  .st-off{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);white-space:nowrap}
+  .st-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--line-2)}
+  .st-dot.on{background:var(--ok)}
+  .st-kv{padding:6px 15px}
+  .st-kv div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:12.5px;border-bottom:1px dashed var(--line)}
+  .st-kv div:last-child{border-bottom:none}
+  .st-kv span:last-child{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-align:right}
+  .st-note{margin:4px 15px 10px;padding:9px 11px;border-radius:8px;background:var(--paper-3);font-size:12px;color:var(--ink-2);line-height:1.45}
+  .st-acts{display:flex;gap:8px;padding:0 15px 14px}
+  @media (max-width:760px){
+    .st-wrap{flex-direction:column;align-items:stretch;padding:.8rem 16px 5rem}
+    .st-col,.st-col-side{flex:none;max-width:none}
+    .st-row{flex-wrap:wrap}
+    .st-fld{width:100%;max-width:none}
+    .st-mkts{align-items:stretch;width:100%}
+  }
   /* An outlet you have stopped selling to stays listed but steps back visually. */
   .lib-table tbody tr.lib-off .lib-name,
   .lib-table tbody tr.lib-off td{opacity:.62}
@@ -5212,6 +5252,71 @@
         <div id="irResults"></div>
       </div>
     </section>
+
+    <!-- SETTINGS — the farm's shared details (farm_settings) plus this device's connections. The
+         sign-in screen (#gate) still owns tokens and passwords; this page links to it rather than
+         duplicating those forms. -->
+    <section class="view" id="view-settings">
+      <div class="vw-title">
+        <span class="vw-name">Settings</span>
+        <span class="sub" id="stSummary"></span>
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="stDiscard" type="button" disabled>Discard</button>
+        <button class="btn-primary" id="stSave" type="button" disabled>Save changes</button>
+      </div>
+      <div class="st-wrap">
+        <div class="st-col">
+          <div class="st-sect">
+            <div class="st-sh">The farm</div>
+            <label class="st-row"><div class="st-tx"><div class="st-t">Name</div><div class="st-d">Shows on printed records</div></div>
+              <input class="st-fld" data-st="fs_name" placeholder="Roseberry Growers"></label>
+            <label class="st-row"><div class="st-tx"><div class="st-t">Where</div><div class="st-d">For reference — the weather still comes from the farm's own station</div></div>
+              <input class="st-fld" data-st="fs_location" placeholder="Roseberry Creek, NSW 2474"></label>
+            <label class="st-row"><div class="st-tx"><div class="st-t">Season starts</div><div class="st-d">Stored for now — the crop map and timeline don't read it yet</div></div>
+              <input class="st-fld" data-st="fs_season" placeholder="1 January"></label>
+            <div class="st-row st-row-top"><div class="st-tx"><div class="st-t">Market days</div><div class="st-d">The Harvest plan groups its pick list around these</div></div>
+              <div class="st-mkts" id="stMarkets"></div></div>
+          </div>
+
+          <div class="st-sect">
+            <div class="st-sh">Connections <span class="st-shm">this device</span><span class="spacer"></span>
+              <button class="btn-ghost" id="stKeysBtn" type="button">Sign-in &amp; keys</button></div>
+            <div id="stConns"></div>
+          </div>
+
+          <div class="st-sect">
+            <div class="st-sh">Notifications</div>
+            <div class="st-row"><div class="st-tx"><div class="st-t">Task reminders</div><div class="st-d" id="stPushD">—</div></div>
+              <button class="btn-ghost" id="stPushBtn" type="button" style="display:none">Turn on</button></div>
+            <div class="st-row"><div class="st-tx"><div class="st-d">Spray-window, frost and whiteboard alerts aren't built yet, so there are no switches for them.</div></div></div>
+          </div>
+        </div>
+
+        <div class="st-col st-col-side">
+          <div class="st-sect">
+            <div class="st-sh">This device</div>
+            <div class="st-kv" id="stDevice"></div>
+            <div class="st-note">Field walk notes and ticked jobs save on the phone and go up when you're back in range.</div>
+            <div class="st-acts">
+              <button class="btn-ghost" id="stSyncBtn" type="button">Sync now</button>
+              <button class="btn-ghost" id="stSignOut" type="button">Sign out</button>
+            </div>
+          </div>
+
+          <div class="st-sect">
+            <div class="st-sh">Certification</div>
+            <label class="st-row"><div class="st-tx"><div class="st-t">Certifier</div></div>
+              <input class="st-fld" data-st="fs_certifier" placeholder="ACO / SXC"></label>
+            <label class="st-row"><div class="st-tx"><div class="st-t">Number</div></div>
+              <input class="st-fld" data-st="fs_certNo"></label>
+            <label class="st-row"><div class="st-tx"><div class="st-t">Certified since</div></div>
+              <input class="st-fld" type="date" data-st="fs_certSince"></label>
+            <label class="st-row st-row-top"><div class="st-tx"><div class="st-t">Notes</div><div class="st-d">Audit dates, conditions</div></div>
+              <textarea class="st-fld" data-st="fs_notes" rows="3"></textarea></label>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
   </div><!-- /.shell-main -->
 
@@ -6556,6 +6661,8 @@ async function loadAll(){
     data.irrigEvents   = PlannerShared.parseIrrigationEvents(irrigEvents);
     data.irrigSettings = PlannerShared.parseIrrigSettings(irrigSettings);
     fmSyncSatShared(farmSettings);
+    data.farmSettings = ((farmSettings||[]).find(r=>r.id==="farm")||{}).fields || {};
+    lastLoadAt = Date.now();
 
     rebuildDerived(); // sets each bed's headline planting for the farm map
 
@@ -8416,6 +8523,7 @@ const RAIL_GROUPS = {
 const VIEW_RAIL = {};
 for(const [rail,cfg] of Object.entries(RAIL_GROUPS))
   for(const g of cfg.groups) for(const [v] of g.views) VIEW_RAIL[v]=rail;
+VIEW_RAIL.settings="more";   // reached from #gearBtn, not a RAIL_GROUPS row
 
 let currentView = "map";                       // single source of truth for saveUiState
 let currentRail = VIEW_RAIL[currentView] || "field";
@@ -8507,6 +8615,7 @@ function syncGearBtn(rail){
   if(!gearBtn||!box) return;
   if(rail==="more"){ box.appendChild(gearBtn); gearBtn.style.display="flex"; }
   else gearBtn.style.display="none";
+  gearBtn.setAttribute("aria-selected", currentView==="settings" ? "true":"false");
 }
 function paintSidebar(rail){
   const box=document.getElementById("sbinner"); if(!box) return;
@@ -8565,6 +8674,7 @@ function renderViewContent(view){
   if(view==="fertcalc") buildFertCalc();
   if(view==="irrig") buildIrrig();
   if(view==="fertcost") buildFertCost();
+  if(view==="settings") buildSettings();
 }
 function showView(view){
   // Bed prep is Field walk's Prep tab now. The old name still works — the menu shortcut, This
@@ -8725,7 +8835,16 @@ document.getElementById("clearBtn").onclick=()=>{
   applyBackendFieldVisibility();
   gate(true,null,"Logged out.");
 };
+// The gear opens the Settings page; the sign-in screen is reached from its "Sign-in & keys" button.
+// gearBtn keeps its other click listeners (TickTick/Ops/Calendar/push status refreshers), which
+// only repaint parts of the gate and are harmless here.
 document.getElementById("gearBtn").onclick=()=>{
+  document.getElementById("sbwrap")?.classList.remove("open");
+  showView("settings");
+};
+function openGateSettings(){
+  ["ttRenderSettings","opsSyncRenderSettings","gcalRenderSettings","pushRenderState"]
+    .forEach(n=>{ try{ if(typeof window[n]==="function") window[n](); }catch(_){} });
   document.getElementById("backendSelect").value=BACKEND;
   document.getElementById("patInput").value=PAT;
   document.getElementById("sbPasswordInput").value="";
@@ -8736,6 +8855,163 @@ document.getElementById("gearBtn").onclick=()=>{
   document.getElementById("sbwrap")?.classList.remove("open");   // same as picking any other row
   gate(true,null,"");
 };
+
+/* ---------- Settings page ----------
+   Farm details and market days are ONE shared row (farm_settings id 'farm'), edited as a draft and
+   written on Save. Connections and the device card are read-outs of this device's localStorage —
+   secrets never go in the shared row (see supabase-migration-redesign.sql). Nothing here is shown
+   as a switch unless something real sits behind it. */
+const ST_FIELDS = ["fs_name","fs_location","fs_season","fs_market","fs_certifier","fs_certNo","fs_certSince","fs_notes"];
+var stDraft, stBase, lastLoadAt;   // var, no initialiser: loadAll() can set lastLoadAt before this line runs
+
+// "Sat|<outlet id>" → {day:6, outletId}. Unknown days are dropped rather than guessed.
+function marketDays(src){
+  const arr = src || (data.farmSettings||{})[CFG.f.fs_market] || [];
+  return (Array.isArray(arr)?arr:[]).map(s=>{
+    const [d,id]=String(s).split("|");
+    return { day:DAY_ABBR.indexOf(d), outletId:id||"" };
+  }).filter(m=>m.day>=0);
+}
+function stSaved(){
+  const fs=data.farmSettings||{}, o={};
+  ST_FIELDS.forEach(k=>{ const v=fs[CFG.f[k]]; o[k]= k==="fs_market" ? (Array.isArray(v)?v.slice():[]) : (v??""); });
+  if(o.fs_certSince) o.fs_certSince=String(o.fs_certSince).slice(0,10);
+  return o;
+}
+// Dirty = edited since the draft was taken (stBase), NOT "differs from the latest load" — otherwise
+// a sync that brings in someone else's change would look like an unsaved edit here and stick.
+function stDirty(){ return !!stDraft && JSON.stringify(stDraft)!==JSON.stringify(stBase); }
+function stReset(){ stBase=stSaved(); stDraft=JSON.parse(JSON.stringify(stBase)); }
+function stSyncButtons(){
+  const d=stDirty();
+  document.getElementById("stSave").disabled=!d;
+  document.getElementById("stDiscard").disabled=!d;
+  vwSetSummary("stSummary",()=>{
+    const name=stSaved().fs_name||"Farm";
+    if(d) return `${name} · unsaved changes`;
+    const u=(data.farmSettings||{})[CFG.f.fs_updated];
+    return u ? `${name} · saved ${fmt(String(u).slice(0,10))}` : name;
+  });
+}
+
+function buildSettings(){
+  if(!stDraft || !stDirty()) stReset();
+  document.querySelectorAll("#view-settings [data-st]").forEach(inp=>{
+    if(document.activeElement!==inp) inp.value=stDraft[inp.dataset.st]||"";
+  });
+  stRenderMarkets();
+  stRenderConns();
+  stRenderDevice();
+  stRenderPush();
+  stSyncButtons();
+}
+
+function stRenderMarkets(){
+  const box=document.getElementById("stMarkets"); if(!box) return;
+  const outlets=(data.salesOutlets||[]).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  const rows=marketDays(stDraft.fs_market);
+  const dayOpts=d=>[1,2,3,4,5,6,0].map(i=>`<option value="${DAY_ABBR[i]}"${i===d?" selected":""}>${DAY_ABBR[i]}</option>`).join("");
+  const outOpts=id=>`<option value="">— outlet —</option>`+outlets.map(o=>
+    `<option value="${esc(o.id)}"${o.id===id?" selected":""}>${esc(o.name)}${o.active?"":" (inactive)"}</option>`).join("");
+  box.innerHTML=rows.map((m,i)=>
+    `<div class="st-mkt" data-i="${i}"><select data-mk="day">${dayOpts(m.day)}</select>`
+    +`<select data-mk="out">${outOpts(m.outletId)}</select>`
+    +`<button type="button" class="icon-btn" data-mk="del" title="Remove">✕</button></div>`).join("")
+    +(outlets.length
+      ? `<button type="button" class="btn-ghost" id="stMktAdd">＋ Market day</button>`
+      : `<div class="st-d">Add a sales outlet first — each market day is a day plus the outlet it serves.</div>`);
+  const write=()=>{
+    stDraft.fs_market=[...box.querySelectorAll(".st-mkt")].map(r=>
+      `${r.querySelector('[data-mk="day"]').value}|${r.querySelector('[data-mk="out"]').value}`);
+    stSyncButtons();
+  };
+  box.querySelectorAll("select").forEach(s=>s.onchange=write);
+  box.querySelectorAll('[data-mk="del"]').forEach(b=>b.onclick=()=>{ b.closest(".st-mkt").remove(); write(); stRenderMarkets(); });
+  const add=document.getElementById("stMktAdd");
+  if(add) add.onclick=()=>{ stDraft.fs_market=(stDraft.fs_market||[]).concat(`Sat|`); stRenderMarkets(); stSyncButtons(); };
+}
+
+function stRenderConns(){
+  const box=document.getElementById("stConns"); if(!box) return;
+  const tt=Object.keys((typeof ttLoadAccounts==="function"?ttLoadAccounts():{})||{}).length;
+  const gc=typeof gcalLoadAccount==="function" ? gcalLoadAccount() : null;
+  const ops=typeof opsSyncLoadSecret==="function" ? opsSyncLoadSecret() : "";
+  const wx=Object.keys(data.weatherByDate||{}).sort().pop();
+  const rows=[
+    ["Farm data", BACKEND==="supabase"?"Supabase — shared by every device":"Airtable", connected(), connected()?"Signed in":"Signed out"],
+    ["TickTick", "Jobs you tick there tick here", tt>0, tt?`${tt} ${tt===1?"person":"people"}`:"Not set up"],
+    ["Google Calendar", "This week's timed jobs go to the farm calendar", !!gc, gc?"Connected":"Not set up"],
+    ["Ops app sync", "Makes ⇄ Ops sync immediately instead of on the 15-min timer", !!ops, ops?"Connected":"Not set up"],
+    ["Claude", "Reads seed-book and whiteboard photos, quick add", !!AKEY, AKEY?"Key saved":"Not set up"],
+    ["Weather station", "Irrigation, spray-record weather", !!wx, wx?`Latest ${fmt(wx)}`:"No readings"],
+  ];
+  box.innerHTML=rows.map(([t,d,on,s])=>
+    `<div class="st-row"><span class="st-dot${on?" on":""}"></span><div class="st-tx"><div class="st-t">${esc(t)}</div><div class="st-d">${esc(d)}</div></div>`
+    +`<span class="${on?"st-ok":"st-off"}">${esc(s)}</span></div>`).join("");
+}
+
+async function stRenderDevice(){
+  const box=document.getElementById("stDevice"); if(!box) return;
+  let ver="—";
+  try{ const k=(await caches.keys()).filter(n=>n.startsWith("roseberry-shell-")).sort().pop(); if(k) ver=k.replace("roseberry-shell-",""); }catch(_){}
+  const app=window.matchMedia?.("(display-mode: standalone)").matches ? "installed as an app" : "in the browser";
+  const ago=lastLoadAt ? (()=>{ const m=Math.round((Date.now()-lastLoadAt)/60000); return m<1?"just now":m<60?`${m} min ago`:`${Math.round(m/60)} h ago`; })() : "—";
+  box.innerHTML=[
+    ["Roseberry Planner", `${ver} · ${app}`],
+    ["Signed in", connected()?"Yes":"No"],
+    ["Last sync", ago],
+    ["Online", navigator.onLine?"Yes":"No — changes wait on the phone"],
+  ].map(([k,v])=>`<div><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join("");
+}
+
+async function stRenderPush(){
+  const d=document.getElementById("stPushD"), b=document.getElementById("stPushBtn"); if(!d) return;
+  b.style.display="none";
+  if(!(connected() && BACKEND==="supabase")){ d.textContent="Needs the Supabase sign-in first."; return; }
+  if(typeof pushSupported!=="function" || !pushSupported()){ d.textContent="This browser can't do notifications. On iPhone, add the app to the home screen first."; return; }
+  if(Notification.permission==="denied"){ d.textContent="Blocked in the browser's site settings — has to be re-allowed there."; return; }
+  const reg=await navigator.serviceWorker.getRegistration();
+  const sub=reg ? await reg.pushManager.getSubscription() : null;
+  if(sub){ d.textContent="On — this device gets task reminders."; }
+  else { d.textContent="Off on this device. Each phone is turned on separately."; b.style.display=""; }
+}
+
+async function stSave(){
+  const btn=document.getElementById("stSave"); btn.disabled=true; btn.textContent="Saving…";
+  const f={};
+  ST_FIELDS.forEach(k=>{
+    let v=stDraft[k];
+    if(k==="fs_market") v=(v||[]).filter(s=>!/\|$/.test(s));        // drop rows with no outlet picked
+    else v=String(v??"").trim()||null;
+    f[CFG.f[k]]=v;
+  });
+  f[CFG.f.fs_updated]=new Date().toISOString();
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.farmSettings, "farm", f);
+    data.farmSettings=Object.assign({}, data.farmSettings, f);
+    stReset();
+  }catch(e){ alert("Couldn't save settings: "+e.message); }
+  btn.textContent="Save changes";
+  buildSettings();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll("#view-settings [data-st]").forEach(inp=>inp.addEventListener("input",()=>{
+    if(!stDraft) stReset();
+    stDraft[inp.dataset.st]=inp.value; stSyncButtons();
+  }));
+  document.getElementById("stSave").onclick=stSave;
+  document.getElementById("stDiscard").onclick=()=>{ stReset(); buildSettings(); };
+  document.getElementById("stKeysBtn").onclick=openGateSettings;
+  document.getElementById("stSyncBtn").onclick=async()=>{ await loadAll(); if(currentView==="settings") buildSettings(); };
+  document.getElementById("stSignOut").onclick=()=>{
+    if(confirm("Sign out on this device? Tokens and keys saved here are forgotten.")) document.getElementById("clearBtn").onclick();
+  };
+  document.getElementById("stPushBtn").onclick=async()=>{
+    try{ await pushEnable(); }catch(e){ alert(e.message); }
+    stRenderPush();
+  };
+});
 document.getElementById("panelClose").onclick=closePanel;
 document.getElementById("reloadBtn").onclick=loadAll;
 document.getElementById("themeBtn").onclick=()=>setTheme(theme==="dark"?"light":"dark");
@@ -11385,10 +11661,22 @@ function hvLines(){
   });
   return out;
 }
+/* The market day an outlet is picked for — from Settings' Market days. An outlet listed on two
+   days (a box run Thu and Sat, say) goes under the earlier one: a harvest record is one per outlet
+   per week, so there is nothing to split between the two. */
+function hvMarketOf(o){
+  return marketDays().filter(m=>m.outletId===o.id).sort((a,b)=>(a.day+6)%7-(b.day+6)%7)[0] || null;
+}
 function hvGroupOf(l){
-  return hvGroupMode==="crop" ? l.pl.crop
-       : hvGroupMode==="block" ? `Block ${l.block}`
-       : l.o.name;
+  if(hvGroupMode==="crop") return l.pl.crop;
+  if(hvGroupMode==="block") return `Block ${l.block}`;
+  const m=hvMarketOf(l.o);
+  return m ? `${DAY_ABBR[m.day]} ${fmt(isoAddDays(hvState.week,(m.day+6)%7))} — ${l.o.name}` : l.o.name;
+}
+// Market-day groups run in week order (Mon first) ahead of outlets with no market day set.
+function hvGroupSort(l){
+  const m=hvGroupMode==="outlet" ? hvMarketOf(l.o) : null;
+  return m ? `0${(m.day+6)%7}` : "1";
 }
 function hvGroupColour(l){
   return hvGroupMode==="outlet" ? cropColor(l.o.id) : cropColor(l.pl.cropId||l.pl.crop);
@@ -11438,7 +11726,11 @@ function hvRenderStats(lines){
     +`<div class="hv-stat"><span class="v">${target}</span><span class="lbl">Target</span></div>`
     +`<div class="hv-stat${short?" short":""}"><span class="v">${short}</span><span class="lbl">Short</span></div>`
     +`<span class="spacer" style="flex:1"></span>`
-    +`<span class="note">Targets are what you allocated to each outlet for this week</span>`;
+    +(hvGroupMode==="outlet" && !marketDays().length
+      ? `<span class="note">No market days set — <a href="#" data-hv-settings>add them in Settings</a> to group by day</span>`
+      : `<span class="note">Targets are what you allocated to each outlet for this week</span>`);
+  const ln=box.querySelector("[data-hv-settings]");
+  if(ln) ln.onclick=e=>{ e.preventDefault(); showView("settings"); };
 }
 
 function hvRenderList(lines){
@@ -11451,7 +11743,7 @@ function hvRenderList(lines){
   lines.forEach(l=>{ const k=hvGroupOf(l); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(l); });
 
   let html="";
-  [...groups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).forEach(([name,ls])=>{
+  [...groups.entries()].sort((a,b)=>(hvGroupSort(a[1][0])+a[0]).localeCompare(hvGroupSort(b[1][0])+b[0])).forEach(([name,ls])=>{
     const done=ls.filter(l=>l.done).length;
     html+=`<div class="hv-grouphead">`
       +`<span class="hv-gdot" style="background:${hvGroupColour(ls[0])}"></span>`
