@@ -93,6 +93,9 @@
       // "point" or "line"; Points is a jsonb array of {x,y} in the same world-metres space the
       // bed/block frames use, so a line's on-screen length is already its real length.
       mapFeatures:      "tblMFfeatures",      // "Map Features"
+      boardNotes:       "tblBNnotes",         // Whiteboard — Supabase only (no Airtable base behind these)
+      boardReplies:     "tblBRreplies",
+      boardTallies:     "tblBTtallies",
       farmSettings:     "tblFSsettings",      // "Farm Settings" — one row, id 'farm
     },
     f: { // field names (readable; rename in Airtable => update here)
@@ -329,6 +332,13 @@
       fs_name:"Farm name", fs_location:"Location", fs_season:"Season start", fs_market:"Market days",
       fs_certifier:"Certifier", fs_certNo:"Certification number", fs_certSince:"Certified since",
       fs_notes:"Notes", fs_updated:"Updated at",
+      // Whiteboard — board_notes / board_replies / board_tallies (supabase-migration-redesign.sql).
+      bn_name:"Name", bn_note:"Note", bn_kind:"Kind", bn_where:"Where", bn_by:"Raised by",
+      bn_created:"Created at", bn_pinned:"Pinned", bn_done:"Done", bn_seen:"Seen by",
+      bn_bed:"Bed", bn_planting:"Planting", bn_task:"Task",
+      br_note:"Note", br_by:"By", br_text:"Text", br_created:"Created at",
+      bt_name:"Name", bt_crop:"Crop", bt_planting:"Planting", bt_bed:"Bed", bt_qty:"Quantity",
+      bt_unit:"Unit", bt_note:"Note", bt_by:"By", bt_at:"At", bt_created:"Created at", bt_hr:"Harvest record",
       // Map features — see CFG.tables.mapFeatures above.
       mf_name:"Name", mf_kind:"Kind", mf_shape:"Shape", mf_points:"Points",
       mf_label:"Label", mf_detail:"Detail", mf_colour:"Colour", mf_order:"Order", mf_notes:"Notes",
@@ -358,6 +368,7 @@
     weatherObs:"weather_observations", irrigEvents:"irrigation_events",
     irrigSettings:"irrigation_settings",
     mapFeatures:"map_features", farmSettings:"farm_settings",
+    boardNotes:"board_notes", boardReplies:"board_replies", boardTallies:"board_tallies",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
