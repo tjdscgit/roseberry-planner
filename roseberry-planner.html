@@ -1000,63 +1000,120 @@
     .st-fld{width:100%;max-width:none}
     .st-mkts{align-items:stretch;width:100%}
   }
-  /* ---- Whiteboard — live board (Whiteboard.dc.html): write box, tallies, two note columns, and a
-     full-height 320px note panel as a sibling of the left column (same shape as .wk-main). ---- */
+  /* ---- Whiteboard — live board (Whiteboard.dc.html): one-line write box, three equal columns
+     (Tallied today / Needs doing / Good to know), a full-height 320px note panel as a sibling of
+     the left column. On a phone (WhiteboardPhone.dc.html) the columns melt into one feed with
+     filter chips: pinned alerts, then tallies, then notes. ---- */
   .wb-main{flex:1 1 auto;min-height:0;display:flex}
   .wb-left{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;min-height:0}
   .wb-left > .cr-wrap{flex:1 1 auto;min-height:0;overflow-y:auto}
-  .wb-board{flex:1 1 auto;min-height:0;overflow-y:auto;padding:1rem 1.25rem 2rem}
-  .wb-panel{display:none;flex:0 0 320px;border-left:1px solid var(--line);background:var(--paper-2);
-    flex-direction:column;min-height:0}
-  .wb-has-panel .wb-panel{display:flex}
-  .wb-write{border:1px solid var(--line-2);border-radius:11px;background:var(--paper-2);padding:10px 12px;margin-bottom:18px}
-  .wb-write textarea{width:100%;border:none;background:transparent;color:var(--ink);font:14px var(--sans);resize:vertical;outline:none;padding:2px 0}
+  .wb-board{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 24px 2rem}
+  .wb-ico{width:19px;height:19px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .wb-ico-s{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+
+  .wb-write{display:flex;align-items:center;gap:11px;min-height:44px;padding:0 14px;border:1px dashed var(--line-2);
+    border-radius:10px;margin-bottom:14px}
+  .wb-write-closed{flex:1 1 auto;display:flex;align-items:center;gap:11px;height:44px;border:none;background:none;
+    padding:0;cursor:text;text-align:left;color:var(--ink-2);font:14px var(--sans);min-width:0}
+  .wb-write-closed span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wb-photo-btn{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+  .wb-compose{display:none;flex:1 1 auto;min-width:0;padding:10px 0}
+  .wb-write.open{border-style:solid;background:var(--paper-2)}
+  .wb-write.open .wb-write-closed,.wb-write.open .wb-photo-btn{display:none}
+  .wb-write.open .wb-compose{display:block}
+  .wb-compose textarea{width:100%;border:none;background:transparent;color:var(--ink);font:14px var(--sans);resize:vertical;outline:none;padding:2px 0}
   .wb-writebar,.wb-tallyrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
-  .wb-writebar input,.wb-tallyrow input,.wb-tallyrow select,.wb-tally select{border:1px solid var(--line-2);border-radius:7px;background:var(--paper-3);
+  .wb-writebar input,.wb-tallyrow input,.wb-tallyrow select{border:1px solid var(--line-2);border-radius:7px;background:var(--paper-3);
     color:var(--ink);padding:6px 9px;font:12px var(--mono)}
   #wbWhere{width:150px} #wbMe{width:120px} #wbTQty{width:80px} #wbTUnit{width:90px}
   #wbTPlanting{flex:1 1 220px;min-width:0}
-  .wb-sect-h{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-family:var(--mono);font-size:10px;
-    letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
-  .wb-n{font-family:var(--mono);color:var(--ink)}
-  .wb-hint{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);text-transform:none;letter-spacing:0}
-  .wb-tallies{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:20px}
-  .wb-tally{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
-  .wb-tally:last-child{border-bottom:none}
-  .wb-tally-tx{flex:1 1 auto;min-width:0}
-  .wb-qty{font-family:var(--mono);font-size:13px;font-weight:600;white-space:nowrap}
-  .wb-posted{font-family:var(--mono);font-size:10.5px;color:var(--ok);white-space:nowrap}
-  .wb-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .wb-card{border:1px solid var(--line);border-radius:10px;background:var(--paper-2);padding:10px 12px;margin-bottom:8px;cursor:pointer}
-  .wb-card:hover{background:var(--hover)}
-  .wb-card.sel{border-color:var(--steel);box-shadow:0 0 0 1px var(--steel)}
-  .wb-card.pinned{border-left:3px solid var(--clay)}
-  .wb-card.done .wb-card-t{text-decoration:line-through;opacity:.6}
-  .wb-card-t{font-size:13.5px;line-height:1.4}
-  .wb-card-m{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px;font-family:var(--mono);font-size:10.5px;color:var(--ink-2)}
+
+  .wb-chips{display:none}
+  .wb-cols{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;align-items:start}
+  .wb-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .wb-colhead{display:flex;align-items:center;gap:8px;height:30px}
+  .wb-colhead .lbl:first-of-type{color:var(--ink)}
+  .wb-sq{display:inline-block;width:9px;height:9px;border-radius:2px;flex:0 0 auto}
+  .wb-rule{flex:1 1 auto;height:1px;background:var(--line)}
+  #view-whiteboard .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+
+  .wb-note{border:1px solid var(--line);border-radius:9px;background:var(--paper-2);padding:12px 13px;text-align:left;color:var(--ink)}
+  .wb-note[data-wbnote]{cursor:pointer}
+  .wb-note[data-wbnote]:hover{border-color:var(--line-2)}
+  .wb-note.sel{border-color:var(--steel);box-shadow:0 0 0 1px var(--steel)}
+  .wb-note.done .wb-note-t{text-decoration:line-through;opacity:.55}
+  .wb-note-t{font-size:13.5px;line-height:1.45;text-wrap:pretty}
+  .wb-note-f{display:flex;align-items:center;gap:8px;margin-top:9px}
+  .wb-meta{font-family:var(--mono);font-size:10px;color:var(--ink-2)}
+  .wb-job{font-family:var(--mono);font-size:9.5px;color:var(--steel);white-space:nowrap}
   .wb-av{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;
-    color:#fff;font:600 9px var(--mono);flex:0 0 auto}
-  .wb-tag{border:1px solid var(--line-2);border-radius:999px;padding:1px 7px}
-  .wb-tag.pin{color:var(--clay);border-color:currentColor}
-  .wb-tag.job{color:var(--steel);border-color:currentColor}
-  .wb-reps{margin-left:auto}
-  .wb-empty{font-family:var(--mono);font-size:11px;color:var(--ink-2);padding:10px 12px}
-  .wb-ph{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px 0 15px;border-bottom:1px solid var(--line)}
-  .wb-pbody{flex:1 1 auto;overflow-y:auto;padding:14px 15px}
-  .wb-ptitle{font-size:15px;font-weight:600;line-height:1.4}
-  .wb-pbody .st-kv{padding:0}
-  .wb-rep{display:flex;gap:9px;margin-bottom:10px}
-  .wb-rep-t{font-size:13px;line-height:1.4}
-  .wb-repbox{display:flex;flex-direction:column;gap:6px;margin-top:6px}
-  .wb-repbox textarea{border:1px solid var(--line-2);border-radius:8px;background:var(--paper-3);color:var(--ink);padding:7px 9px;font:13px var(--sans);resize:vertical}
-  .wb-repbox .btn-ghost{align-self:flex-end}
-  .wb-pfoot{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--line)}
+    color:#fff;font:700 8.5px var(--mono);letter-spacing:.02em;flex:0 0 auto}
+  .wb-alert{display:flex;align-items:flex-start;gap:9px;border-color:var(--clay);background:var(--clay-tint)}
+  .wb-alert > .wb-ico-s{color:var(--clay);margin-top:2px}
+  .wb-alert-b{flex:1 1 auto;min-width:0}
+  .wb-alert-t{font-size:13.5px;font-weight:600;color:var(--clay);line-height:1.4;text-wrap:pretty}
+  .wb-alert.sel{box-shadow:0 0 0 1px var(--clay)}
+
+  .wb-tally-h{display:flex;align-items:center;gap:10px}
+  .wb-tally-n{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:600}
+  .wb-qty{font-family:var(--mono);font-size:13px;font-weight:700;white-space:nowrap}
+  .wb-tally-m{margin-top:6px}
+  .wb-tally-f{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .wb-tally-f:has(.wb-job:only-child){margin-top:6px}
+  .wb-post{border:1px solid var(--line-2);border-radius:6px;background:var(--paper-3);color:var(--ink);
+    padding:3px 6px;font:10.5px var(--mono);max-width:100%}
+  .wb-x{border:none;background:none;color:var(--ink-2);cursor:pointer;font-size:12px;padding:2px 4px}
+  .wb-x:hover{color:var(--clay)}
+  .wb-add{display:flex;align-items:center;gap:9px;border-style:dashed;background:transparent;cursor:pointer;
+    font:12.5px var(--sans);color:var(--ink-2)}
+  .wb-add:hover{border-color:var(--line-2);color:var(--ink)}
+  .wb-empty{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);padding:4px 2px}
+  .wb-listview .lib-table tr.sel{background:var(--sel)}
+
+  .wb-panel{display:none;flex:0 0 320px;border-left:1px solid var(--line);background:var(--paper-2);
+    flex-direction:column;min-height:0}
+  .wb-has-panel .wb-panel{display:flex}
+  .wb-ph{display:flex;align-items:center;gap:6px;height:62px;flex:0 0 auto;padding:0 12px 0 18px;border-bottom:1px solid var(--line)}
+  .wb-ph .lbl{flex:0 0 auto;white-space:nowrap}
+  .wb-hbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:none;border-radius:7px;
+    background:none;color:var(--ink-2);cursor:pointer}
+  .wb-hbtn:hover{background:var(--hover);color:var(--ink)}
+  .wb-hbtn.on{color:var(--clay)}
+  .wb-pbody{flex:1 1 auto;min-height:0;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:16px}
+  .wb-ptitle{font-size:16px;font-weight:650;line-height:1.4;letter-spacing:-.01em;text-wrap:pretty}
+  .wb-kv{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:32px;border-bottom:1px solid var(--line)}
+  .wb-kv > span:last-child{font-family:var(--mono);font-size:12.5px;text-align:right}
+  .wb-rep{display:flex;gap:9px;margin-bottom:9px}
+  .wb-rep .wb-av{margin-top:2px}
+  .wb-rep-t{font-size:12.5px;line-height:1.45;text-wrap:pretty}
+  .wb-repbox{display:flex;align-items:center;gap:6px;height:38px;padding:0 4px 0 12px;border-radius:8px;
+    background:var(--paper-3);border:1px solid var(--line)}
+  .wb-repbox input{flex:1 1 auto;min-width:0;border:none;background:transparent;color:var(--ink);font:12.5px var(--sans);outline:none}
+  .wb-pfoot{flex:0 0 auto;display:flex;gap:9px;padding:14px 18px;border-top:1px solid var(--line)}
+  .wb-jobbtn{flex:1 1 auto;border:none;border-radius:9px;background:var(--ok);color:#fff;padding:11px 0;
+    font:600 13.5px var(--sans);cursor:pointer}
+  .wb-donebtn{padding:11px 14px !important;font-size:13.5px !important;border-radius:9px !important}
+  .wb-pfoot .wb-donebtn:only-child{flex:1 1 auto}
+
   @media (max-width:760px){
-    .wb-board{padding:.8rem 16px 5rem}
-    .wb-cols{grid-template-columns:1fr}
+    .wb-board{padding:.6rem 16px 5rem}
+    #view-whiteboard #wbModeSeg,#view-whiteboard #wbClearDone{display:none !important}
+    .wb-write{margin-bottom:10px}
     .wb-writebar .spacer{display:none}
     #wbWhere,#wbMe{flex:1 1 120px;width:auto}
-    .wb-tally{flex-wrap:wrap}
+    .wb-chips{display:flex;gap:6px;margin:0 -16px 12px;padding:0 16px 12px;border-bottom:1px solid var(--line);overflow-x:auto}
+    .wb-chips button{flex:0 0 auto;height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);
+      background:transparent;color:var(--ink-2);font:10.5px var(--mono);cursor:pointer}
+    .wb-chips button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff}
+    /* one feed: the column wrappers dissolve and each card is ordered by what it is */
+    .wb-cols{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+    .wb-col{display:contents}
+    .wb-colhead,.wb-empty,.wb-add{display:none}
+    .wb-note[data-feed="0"]{order:0} .wb-note[data-feed="1"]{order:1} .wb-note[data-feed="2"]{order:2}
+    .wb-cols[data-chip="tally"] .wb-note:not(.wb-tallycard){display:none}
+    .wb-cols[data-chip="tally"] .wb-add{display:flex;order:1}
+    .wb-cols[data-chip="todo"] .wb-note:not([data-todo="1"]){display:none}
+    .wb-cols[data-chip="pinned"] .wb-note:not([data-pin="1"]){display:none}
     /* the note panel becomes a full-screen sheet over the board */
     .wb-has-panel .wb-panel{position:fixed;inset:0 0 56px 0;z-index:40;flex-basis:auto;border-left:none}
   }
@@ -4888,40 +4945,52 @@
         <span class="spacer"></span>
         <div class="seg" id="wbModeSeg">
           <button type="button" data-wbmode="board" aria-pressed="true">Board</button>
-          <button type="button" data-wbmode="photo" aria-pressed="false">Read a photo</button>
+          <button type="button" data-wbmode="list" aria-pressed="false">List</button>
         </div>
+        <button class="btn-ghost" id="wbClearDone" type="button">Clear done</button>
         <button class="btn ghost" id="wbResetBtn" style="display:none">Start over</button>
       </div>
 
-      <!-- The live board: a shared noticeboard of notes (board_notes + replies) and pick tallies. -->
+      <!-- The live board (Whiteboard.dc.html / WhiteboardPhone.dc.html): a shared noticeboard of
+           notes (board_notes + replies) and pick tallies. Desktop = three columns; phone = one feed. -->
       <div class="wb-board" id="wbBoard">
-        <div class="wb-write">
-          <textarea id="wbText" rows="2" placeholder="Write on the board — “cool room door isn’t sealing”"></textarea>
-          <div class="wb-tallyrow" id="wbTallyRow" style="display:none">
-            <select id="wbTPlanting"></select>
-            <input id="wbTQty" type="number" min="0" step="any" placeholder="Qty">
-            <input id="wbTUnit" type="text" placeholder="unit" list="wbUnitList">
-            <datalist id="wbUnitList"><option>kg</option><option>Bunch</option><option>Each</option><option>Crate</option></datalist>
-          </div>
-          <div class="wb-writebar">
-            <div class="seg" id="wbKindSeg">
-              <button type="button" data-wbkind="Needs doing" aria-pressed="true">Needs doing</button>
-              <button type="button" data-wbkind="Good to know" aria-pressed="false">Good to know</button>
-              <button type="button" data-wbkind="Tally" aria-pressed="false">Tally</button>
+        <div class="wb-write" id="wbWrite">
+          <button type="button" class="wb-write-closed" id="wbWriteOpen">
+            <svg viewBox="0 0 20 20" class="wb-ico" style="color:var(--steel)"><path d="M10 4.4v11.2M4.4 10h11.2"/></svg>
+            <span>Write on the board — “cool room door isn’t sealing”</span>
+          </button>
+          <button type="button" class="btn-ghost wb-photo-btn" id="wbPhotoBtn" title="Read a photo of the physical whiteboard">
+            <svg viewBox="0 0 20 20" class="wb-ico-s"><path d="M3.6 6.8h2.6l1.4-2h4.8l1.4 2h2.6v8.4H3.6z"/><circle cx="10" cy="10.8" r="2.6"/></svg>Photo</button>
+          <div class="wb-compose" id="wbCompose">
+            <textarea id="wbText" rows="2" placeholder="Write on the board"></textarea>
+            <div class="wb-tallyrow" id="wbTallyRow" style="display:none">
+              <select id="wbTPlanting"></select>
+              <input id="wbTQty" type="number" min="0" step="any" placeholder="Qty" inputmode="decimal">
+              <input id="wbTUnit" type="text" placeholder="unit" list="wbUnitList">
+              <datalist id="wbUnitList"><option>kg</option><option>Bunch</option><option>Each</option><option>Crate</option></datalist>
             </div>
-            <input id="wbWhere" type="text" placeholder="Where (optional)">
-            <span class="spacer"></span>
-            <input id="wbMe" type="text" placeholder="Your name" list="fwWalkerNames" autocomplete="off">
-            <button class="btn-primary" id="wbPost" type="button">Post</button>
+            <div class="wb-writebar">
+              <div class="seg" id="wbKindSeg">
+                <button type="button" data-wbkind="Needs doing" aria-pressed="true">Needs doing</button>
+                <button type="button" data-wbkind="Good to know" aria-pressed="false">Good to know</button>
+                <button type="button" data-wbkind="Tally" aria-pressed="false">Tally</button>
+              </div>
+              <input id="wbWhere" type="text" placeholder="Where (optional)">
+              <input id="wbMe" type="text" placeholder="Your name" list="fwWalkerNames" autocomplete="off">
+              <span class="spacer"></span>
+              <button class="btn-ghost" id="wbCancel" type="button">Cancel</button>
+              <button class="btn-primary" id="wbPost" type="button">Post</button>
+            </div>
           </div>
         </div>
-        <div class="wb-sect-h"><span>Tallied today</span><span class="wb-n" id="wbTallyN"></span><span class="spacer"></span>
-          <span class="wb-hint">Post each one to the Harvest plan against an outlet</span></div>
-        <div class="wb-tallies" id="wbTallies"></div>
-        <div class="wb-cols">
-          <div class="wb-col"><div class="wb-sect-h"><span>Needs doing</span><span class="wb-n" id="wbNeedN"></span></div><div id="wbNeed"></div></div>
-          <div class="wb-col"><div class="wb-sect-h"><span>Good to know</span><span class="wb-n" id="wbKnowN"></span></div><div id="wbKnow"></div></div>
+        <div class="wb-chips" id="wbChips">
+          <button type="button" data-wbchip="all" aria-pressed="true">All</button>
+          <button type="button" data-wbchip="tally" aria-pressed="false">Tallies</button>
+          <button type="button" data-wbchip="todo" aria-pressed="false">To do</button>
+          <button type="button" data-wbchip="pinned" aria-pressed="false">Pinned</button>
         </div>
+        <div class="wb-cols" id="wbCols"></div>
+        <div class="wb-listview" id="wbList" style="display:none"></div>
       </div>
 
       <div class="cr-wrap" id="wbPhoto" style="display:none">
@@ -7623,6 +7692,8 @@ function backCandidates(){
   if(tsh && !tsh.hidden && backVisible(tsh)) out.push([tsh,fwCloseTagSheet]);
   const fsh=document.getElementById("fwSheet");
   if(fsh && !fsh.hidden && backVisible(fsh)) out.push([fsh,fwCloseWhoSheet]);
+  const wbp=document.getElementById("wbPanel");
+  if(wbp && cmIsMobile() && wbSel && backVisible(wbp)) out.push([wbp,()=>{ wbSel=null; buildWhiteboard(); }]);
   const csh=document.getElementById("cmSheet");
   if(csh && !csh.hidden && backVisible(csh)) out.push([csh,cmCloseSheet]);
   const cun=document.getElementById("cmUnassigned");
@@ -12545,14 +12616,27 @@ function wbVisibleNotes(){
     return wbFilter==="today" ? d===today : d>=wkStart;
   }).sort((a,b)=>(b.pinned-a.pinned) || b.created.localeCompare(a.created));
 }
+// Today's tallies, plus any older one still waiting to be posted.
+function wbVisibleTallies(){
+  const today=todayISO();
+  return (data.boardTallies||[]).filter(t=>wbLocalDay(t.at)===today || !t.hrId)
+    .sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+}
+
+const WB_COLS = { tally:"#7A4FA0", need:"var(--clay)", know:"#527A9E" };
+let wbComposeOpen = false, wbChip = "all";
 
 function buildWhiteboard(){
+  const photo = wbMode==="photo";
   document.querySelectorAll("#wbModeSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.wbmode===wbMode?"true":"false"));
-  document.getElementById("wbBoard").style.display = wbMode==="board" ? "" : "none";
-  document.getElementById("wbPhoto").style.display = wbMode==="photo" ? "" : "none";
-  if(wbMode==="photo"){ wbSel=null; wbRenderPanel(); wbPhotoBuild(); return; }
+  document.getElementById("wbBoard").style.display = photo ? "none" : "";
+  document.getElementById("wbPhoto").style.display = photo ? "" : "none";
+  document.getElementById("wbClearDone").style.display = photo ? "none" : "";
+  if(photo){ wbSel=null; wbRenderPanel(); wbPhotoBuild(); return; }
   document.getElementById("wbResetBtn").style.display="none";
 
+  // composer — a dashed one-liner until tapped, as the design draws it
+  document.getElementById("wbWrite").classList.toggle("open", wbComposeOpen);
   const me=document.getElementById("wbMe");
   if(me && document.activeElement!==me) me.value=wbMe();
   document.querySelectorAll("#wbKindSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.wbkind===wbKind?"true":"false"));
@@ -12561,58 +12645,104 @@ function buildWhiteboard(){
   document.getElementById("wbText").placeholder = wbKind==="Tally"
     ? "Anything to add — “5 crates, tops on”" : "Write on the board — “cool room door isn’t sealing”";
   if(wbKind==="Tally") wbFillTallyPlantings();
+  document.querySelectorAll("#wbChips button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.wbchip===wbChip?"true":"false"));
 
-  const notes=wbVisibleNotes();
+  const notes=wbVisibleNotes(), tallies=wbVisibleTallies();
   const need=notes.filter(n=>n.kind==="Needs doing"), know=notes.filter(n=>n.kind!=="Needs doing");
-  document.getElementById("wbNeed").innerHTML = need.map(wbCardHTML).join("") || `<div class="wb-empty">Nothing needs doing.</div>`;
-  document.getElementById("wbKnow").innerHTML = know.map(wbCardHTML).join("") || `<div class="wb-empty">Nothing here yet.</div>`;
-  document.getElementById("wbNeedN").textContent = need.length || "";
-  document.getElementById("wbKnowN").textContent = know.length || "";
-  wbRenderTallies();
+  const list = wbMode==="list";
+  document.getElementById("wbCols").style.display = list ? "none" : "";
+  document.getElementById("wbChips").style.display = list ? "none" : "";
+  document.getElementById("wbList").style.display = list ? "" : "none";
 
-  const people=new Set((data.boardNotes||[]).filter(n=>wbLocalDay(n.created)===todayISO()).map(n=>n.by).filter(Boolean));
-  vwSetSummary("wbSummary",()=>`${fmt(todayISO())} · ${notes.length} note${notes.length===1?"":"s"}`
-    + (people.size ? ` · ${people.size} ${people.size===1?"person":"people"} today` : ""));
+  if(list) wbRenderList(notes, tallies);
+  else {
+    const col=(key,label,items,empty,extra)=>
+      `<div class="wb-col" data-col="${key}"><div class="wb-colhead"><span class="wb-sq" style="background:${WB_COLS[key]}"></span>`
+      + `<span class="lbl">${label}</span><span class="wb-rule"></span><span class="lbl wb-n">${items.length}</span></div>`
+      + (items.length ? items.join("") : `<div class="wb-empty">${empty}</div>`) + (extra||"") + `</div>`;
+    const cols=document.getElementById("wbCols");
+    cols.innerHTML =
+        col("tally","Tallied today", tallies.map(wbTallyHTML), "Nothing tallied today.",
+            `<button type="button" class="wb-note wb-add" id="wbAddTally"><svg viewBox="0 0 20 20" class="wb-ico-s"><path d="M10 5.6v8.8M5.6 10h8.8"/></svg><span>Add a tally</span></button>`)
+      + col("need","Needs doing", need.map(wbNoteHTML), "Nothing needs doing.")
+      + col("know","Good to know", know.map(wbNoteHTML), "Nothing here yet.");
+    // On a phone the columns melt into one feed (WhiteboardPhone.dc.html) — the chip is read by CSS.
+    cols.dataset.chip=wbChip;
+    const add=document.getElementById("wbAddTally");
+    if(add) add.onclick=()=>{ wbKind="Tally"; wbComposeOpen=true; buildWhiteboard(); document.getElementById("wbTPlanting").focus(); };
+    cols.querySelectorAll("[data-wbtout]").forEach(s=>{ s.onclick=e=>e.stopPropagation(); s.onchange=()=>{ if(s.value) wbPostTally(s.dataset.wbtout, s.value); }; });
+    cols.querySelectorAll("[data-wbtdel]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); wbDeleteTally(b.dataset.wbtdel); });
+  }
+
+  const today=todayISO();
+  const people=new Set((data.boardNotes||[]).filter(n=>wbLocalDay(n.created)===today).map(n=>n.by)
+    .concat((data.boardTallies||[]).filter(t=>wbLocalDay(t.at)===today).map(t=>t.by)).filter(Boolean));
+  vwSetSummary("wbSummary",()=>{
+    const d=isoToDate(today);
+    return `${DAY_ABBR[d.getDay()]} ${d.getDate()} ${d.toLocaleString("en-AU",{month:"short"})} · ${notes.length} note${notes.length===1?"":"s"}`
+      + (people.size ? ` · ${people.size} ${people.size===1?"person":"people"} on` : "");
+  });
   wbRenderPanel();
   renderSidebar();
 }
 
-function wbCardHTML(n){
+function wbNoteHTML(n){
   const reps=wbRepliesFor(n.id).length;
   const job=n.taskId ? (data.plantingTasks||[]).find(t=>t.id===n.taskId) : null;
-  return `<div class="wb-card${n.pinned?" pinned":""}${n.done?" done":""}${wbSel===n.id?" sel":""}" data-wbnote="${esc(n.id)}" tabindex="0">`
-    + `<div class="wb-card-t">${esc(n.note)}</div>`
-    + `<div class="wb-card-m">${wbAvatar(n.by)}<span>${esc(n.by||"—")} · ${esc(wbWhen(n.created))}</span>`
-    + (n.where ? `<span class="wb-tag">${esc(n.where)}</span>` : "")
-    + (n.pinned ? `<span class="wb-tag pin">pinned</span>` : "")
-    + (n.taskId ? `<span class="wb-tag job">→ ${job&&job.done?"job done":"made a job"}</span>` : "")
-    + (reps ? `<span class="wb-reps">${reps} repl${reps===1?"y":"ies"}</span>` : "")
-    + `</div></div>`;
+  const sel=wbSel===n.id?" sel":"", done=n.done?" done":"";
+  const live=n.pinned && !n.done;
+  const attrs=` data-wbnote="${esc(n.id)}" tabindex="0" data-feed="${live?0:2}" data-todo="${n.kind==="Needs doing"?1:0}" data-pin="${live?1:0}"`;
+  // A pinned "Needs doing" is the alert card: clay, warning glyph, no avatar in the body.
+  if(live && n.kind==="Needs doing"){
+    return `<div class="wb-note wb-alert${sel}"${attrs}>`
+      + `<svg viewBox="0 0 20 20" class="wb-ico-s"><path d="M10 3.2l7 12.4H3z"/><path d="M10 8.2v3.4M10 13.6v.1"/></svg>`
+      + `<div class="wb-alert-b"><div class="wb-alert-t">${esc(n.note)}</div>`
+      + `<div class="wb-meta" style="margin-top:7px">${esc(n.by||"—")} · pinned since ${esc(fmtShort(wbLocalDay(n.created)))}${reps?` · ${reps} repl${reps===1?"y":"ies"}`:""}</div></div></div>`;
+  }
+  const when = live ? "pinned" : wbWhen(n.created);
+  const right = n.taskId ? `<span class="wb-job">→ ${job&&job.done?"job done":"made a job"}</span>`
+    : reps ? `<span class="wb-meta">${reps} repl${reps===1?"y":"ies"}</span>`
+    : n.where ? `<span class="wb-meta">${esc(n.where)}</span>` : "";
+  return `<div class="wb-note${sel}${done}"${attrs}>`
+    + `<div class="wb-note-t">${esc(n.note)}</div>`
+    + `<div class="wb-note-f">${wbAvatar(n.by)}<span class="wb-meta">${esc(when)}</span><span class="spacer"></span>${right}</div></div>`;
 }
 
-function wbRenderTallies(){
-  const box=document.getElementById("wbTallies"); if(!box) return;
-  const today=todayISO();
-  const ts=(data.boardTallies||[]).filter(t=>wbLocalDay(t.at)===today || !t.hrId)
-    .sort((a,b)=>String(b.at).localeCompare(String(a.at)));
-  document.getElementById("wbTallyN").textContent = ts.length || "";
+function wbTallyHTML(t){
+  const pl=(data.plantings||[]).find(p=>p.id===t.plantingId);
+  const name=pl ? `${pl.crop}${pl.variety?` — ${pl.variety}`:""}` : (t.crop||"Unknown crop");
+  const beds=pl ? plantingBedNames(pl) : "";
+  const d=t.at ? new Date(t.at) : null;
+  const hm=d ? `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}` : "";
   const outs=activeOutlets();
-  box.innerHTML = ts.length ? ts.map(t=>{
-    const pl=(data.plantings||[]).find(p=>p.id===t.plantingId);
-    const name=pl ? `${pl.crop}${pl.variety?` — ${pl.variety}`:""}` : (t.crop||"Unknown crop");
-    const beds=pl ? plantingBedNames(pl) : "";
-    const post = t.hrId ? `<span class="wb-posted">in Harvest plan</span>`
-      : !pl ? `<span class="wb-hint">no planting — can't post</span>`
-      : outs.length ? `<select data-wbtout="${esc(t.id)}"><option value="">Post to…</option>${outs.map(o=>`<option value="${esc(o.id)}">${esc(o.name)}</option>`).join("")}</select>`
-      : `<span class="wb-hint">add a sales outlet to post</span>`;
-    return `<div class="wb-tally">${wbAvatar(t.by)}<div class="wb-tally-tx"><div class="wb-card-t">${esc(name)}</div>`
-      + `<div class="wb-card-m"><span>${esc([beds, wbWhen(t.at), t.note].filter(Boolean).join(" · "))}</span></div></div>`
-      + `<span class="wb-qty">${esc(t.qty??"")} ${esc(t.unit)}</span>${post}`
-      + (t.hrId ? "" : `<button type="button" class="icon-btn" data-wbtdel="${esc(t.id)}" title="Delete this tally">✕</button>`)
-      + `</div>`;
-  }).join("") : `<div class="wb-empty">Nothing tallied today. Pick <b>Tally</b> above to add one.</div>`;
-  box.querySelectorAll("[data-wbtout]").forEach(s=>s.onchange=()=>{ if(s.value) wbPostTally(s.dataset.wbtout, s.value); });
-  box.querySelectorAll("[data-wbtdel]").forEach(b=>b.onclick=()=>wbDeleteTally(b.dataset.wbtdel));
+  const post = t.hrId ? `<span class="wb-job">→ in Harvest plan</span>`
+    : !pl ? `<span class="wb-meta">no planting — can't post</span>`
+    : outs.length ? `<select class="wb-post" data-wbtout="${esc(t.id)}"><option value="">Post to Harvest plan…</option>${outs.map(o=>`<option value="${esc(o.id)}">${esc(o.name)}</option>`).join("")}</select>`
+    : `<span class="wb-meta">add a sales outlet to post</span>`;
+  return `<div class="wb-note wb-tallycard" data-feed="1">`
+    + `<div class="wb-tally-h">${wbAvatar(t.by)}<span class="wb-tally-n">${esc(name)}</span><span class="wb-qty">${esc(t.qty??"")} ${esc(wbUnitShort(t.unit))}</span></div>`
+    + `<div class="wb-meta wb-tally-m">${esc([beds, hm, t.note].filter(Boolean).join(" · "))}</div>`
+    + `<div class="wb-tally-f">${post}<span class="spacer"></span>`
+    + (t.hrId ? "" : `<button type="button" class="wb-x" data-wbtdel="${esc(t.id)}" title="Delete this tally">✕</button>`)
+    + `</div></div>`;
+}
+function wbUnitShort(u){ const k=String(u||"").toLowerCase(); return k==="bunch"?"bu":k==="kilogram"?"kg":(u||""); }
+function fmtShort(iso){ if(!iso) return ""; const d=isoToDate(iso); return `${d.getDate()} ${d.toLocaleString("en-AU",{month:"short"})}`; }
+
+// List mode: every note and tally in one dense, time-ordered table.
+function wbRenderList(notes, tallies){
+  const rows=notes.map(n=>({at:n.created, html:
+      `<tr data-wbnote="${esc(n.id)}" class="${n.done?"lib-off":""}${wbSel===n.id?" sel":""}" style="cursor:pointer"><td style="width:22px"><span class="wb-sq" style="background:${n.kind==="Needs doing"?WB_COLS.need:WB_COLS.know}"></span></td>`
+    + `<td><div class="lib-name">${esc(n.note)}</div><div class="lib-sub">${esc(n.kind)}${n.where?` · ${esc(n.where)}`:""}${n.pinned?" · pinned":""}${n.done?" · done":""}${n.taskId?" · made a job":""}</div></td>`
+    + `<td style="width:30px">${wbAvatar(n.by)}</td><td class="lib-num">${esc(wbWhen(n.created))}</td></tr>`}))
+    .concat(tallies.map(t=>{ const pl=(data.plantings||[]).find(p=>p.id===t.plantingId); return {at:t.at, html:
+      `<tr><td style="width:22px"><span class="wb-sq" style="background:${WB_COLS.tally}"></span></td>`
+    + `<td><div class="lib-name">${esc(pl?pl.crop:(t.crop||"?"))} — ${esc(t.qty)} ${esc(wbUnitShort(t.unit))}</div><div class="lib-sub">Tally${t.hrId?" · in Harvest plan":" · not posted"}${t.note?` · ${esc(t.note)}`:""}</div></td>`
+    + `<td style="width:30px">${wbAvatar(t.by)}</td><td class="lib-num">${esc(wbWhen(t.at))}</td></tr>`}; }))
+    .sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  document.getElementById("wbList").innerHTML = rows.length
+    ? `<div class="mc-card"><table class="lib-table"><tbody>${rows.map(r=>r.html).join("")}</tbody></table></div>`
+    : `<div class="wb-empty">Nothing on the board.</div>`;
 }
 
 function wbFillTallyPlantings(){
@@ -12659,6 +12789,7 @@ async function wbPost(){
       document.getElementById("wbWhere").value="";
     }
     document.getElementById("wbText").value="";
+    wbComposeOpen=false;
     buildWhiteboard();
   }catch(e){ alert("Couldn't post that: "+e.message); }
   finally{ btn.disabled=false; }
@@ -12717,31 +12848,32 @@ function wbRenderPanel(){
   if(!n){ p.innerHTML=""; return; }
   const reps=wbRepliesFor(n.id);
   const job=n.taskId ? (data.plantingTasks||[]).find(t=>t.id===n.taskId) : null;
-  const age=Math.round((Date.now()-new Date(n.created))/864e5);
-  p.innerHTML=`<div class="wb-ph"><span class="lbl">${esc(n.kind)}</span><span class="spacer"></span>`
-      + `<button type="button" class="icon-btn" id="wbPClose" title="Close">✕</button></div>`
+  const day=wbLocalDay(n.created);
+  const age=Math.round((isoToDate(todayISO())-isoToDate(day))/864e5);
+  const kv=(k,v)=>`<div class="wb-kv"><span class="lbl">${k}</span><span>${esc(v)}</span></div>`;
+  p.innerHTML=`<div class="wb-ph"><span class="lbl">Note</span><span class="spacer"></span>`
+      + `<button type="button" class="wb-hbtn${n.pinned?" on":""}" id="wbPinBtn" title="${n.pinned?"Unpin":"Pin to the board"}"><svg viewBox="0 0 20 20" class="wb-ico"><path d="M12.6 3.2l4.2 4.2-2.4.8-3 3 .4 3.4-1.4 1.4-3-3-3.8 3.8M7.4 8.6l-3-3M8 7.6l3-3 .8-2.4"/></svg></button>`
+      + `<button type="button" class="wb-hbtn" id="wbDelBtn" title="Delete this note"><svg viewBox="0 0 20 20" class="wb-ico"><path d="M4.4 6h11.2M8 6V4.4h4V6M6 6l.8 10h6.4L14 6"/></svg></button>`
+      + `<button type="button" class="wb-hbtn" id="wbPClose" title="Close"><svg viewBox="0 0 20 20" class="wb-ico"><path d="M5.4 5.4l9.2 9.2M14.6 5.4l-9.2 9.2"/></svg></button></div>`
     + `<div class="wb-pbody">`
-    + `<div class="wb-ptitle">${esc(n.note)}</div>`
-    + `<div class="wb-card-m">${wbAvatar(n.by)}<span>${esc(n.by||"—")} · ${esc(wbWhen(n.created))}${n.pinned?" · pinned":""}${n.done?" · done":""}</span></div>`
-    + `<div class="pn-sect">Details</div>`
-    + `<div class="st-kv">`
-      + `<div><span>Where</span><span>${esc(n.where||"—")}</span></div>`
-      + `<div><span>Raised</span><span>${esc(fmt(wbLocalDay(n.created)))}${age>0?` · ${age} day${age===1?"":"s"} ago`:""}</span></div>`
-      + `<div><span>Seen by</span><span>${esc(n.seen.join(", ")||"—")}</span></div>`
-      + (n.taskId ? `<div><span>Job</span><span>${job?esc(job.label||"task")+(job.done?" · done":` · due ${esc(fmt(job.due))}`):"linked"}</span></div>` : "")
-    + `</div>`
-    + `<div class="pn-sect">Replies</div>`
-    + (reps.map(r=>`<div class="wb-rep">${wbAvatar(r.by)}<div><div class="wb-rep-t">${esc(r.text)}</div><div class="wb-card-m"><span>${esc(r.by)} · ${esc(wbWhen(r.created))}</span></div></div></div>`).join("")
-       || `<div class="wb-empty">No replies yet.</div>`)
-    + `<div class="wb-repbox"><textarea id="wbReplyText" rows="2" placeholder="Reply…"></textarea>`
-      + `<button type="button" class="btn-ghost" id="wbReplyBtn">Reply</button></div>`
+      + `<div><div class="wb-ptitle">${esc(n.note)}</div>`
+      + `<div class="wb-note-f" style="margin-top:10px">${wbAvatar(n.by)}<span class="wb-meta" style="font-size:11px">${esc(n.by||"—")} · ${esc(fmtShort(day))}${n.pinned?" · pinned":""}${n.done?" · done":""}</span></div></div>`
+      + `<div>`
+        + kv("Where", n.where||"—")
+        + kv("Raised", `${fmtShort(day)}${age>0?` · ${age} day${age===1?"":"s"} ago`:" · today"}`)
+        + kv("Seen by", n.seen.join(", ")||"—")
+        + (n.taskId ? kv("Job", job ? `${job.label||"task"}${job.done?" · done":job.due?` · due ${fmtShort(job.due)}`:""}` : "linked") : "")
+      + `</div>`
+      + `<div><div class="lbl" style="margin-bottom:7px">Replies</div>`
+        + (reps.map(r=>`<div class="wb-rep">${wbAvatar(r.by)}<div><div class="wb-rep-t">${esc(r.text)}</div><div class="wb-meta" style="margin-top:4px">${esc(r.by)} · ${esc(wbWhen(r.created))}</div></div></div>`).join("")
+           || `<div class="wb-meta">No replies yet.</div>`)
+      + `</div>`
+      + `<div class="wb-repbox"><input id="wbReplyText" type="text" placeholder="Reply" autocomplete="off">`
+        + `<button type="button" class="wb-hbtn" id="wbReplyBtn" title="Send reply" style="color:var(--steel)"><svg viewBox="0 0 20 20" class="wb-ico-s"><path d="M3.6 10h11.6M11 5.8l4.2 4.2-4.2 4.2"/></svg></button></div>`
     + `</div>`
     + `<div class="wb-pfoot">`
-      + (n.taskId ? "" : `<button type="button" class="btn-ghost" id="wbJobBtn">Make it a job</button>`)
-      + `<button type="button" class="btn-ghost" id="wbPinBtn">${n.pinned?"Unpin":"Pin"}</button>`
-      + `<button type="button" class="btn-ghost" id="wbDelBtn" title="Delete this note">Delete</button>`
-      + `<span class="spacer"></span>`
-      + `<button type="button" class="btn-primary" id="wbDoneBtn">${n.done?"Not done":"Done"}</button>`
+      + (n.taskId ? "" : `<button type="button" class="wb-jobbtn" id="wbJobBtn">Make it a job</button>`)
+      + `<button type="button" class="btn-ghost wb-donebtn" id="wbDoneBtn">${n.done?"Not done":"Done"}</button>`
     + `</div>`;
   const F=CFG.f;
   document.getElementById("wbPClose").onclick=()=>{ wbSel=null; buildWhiteboard(); };
@@ -12749,23 +12881,17 @@ function wbRenderPanel(){
   document.getElementById("wbDoneBtn").onclick=()=>wbPatchNote(n,{[F.bn_done]:!n.done},{done:!n.done});
   document.getElementById("wbDelBtn").onclick=async()=>{
     if(!confirm("Delete this note and its replies for everyone?")) return;
-    try{
-      const rids=reps.map(r=>r.id);
-      if(rids.length) await atDelete(CFG.farmBase, CFG.tables.boardReplies, rids);
-      await atDelete(CFG.farmBase, CFG.tables.boardNotes, [n.id]);
-      data.boardNotes=data.boardNotes.filter(x=>x.id!==n.id);
-      data.boardReplies=data.boardReplies.filter(r=>r.noteId!==n.id);
-      wbSel=null; buildWhiteboard();
-    }catch(e){ alert("Couldn't delete: "+e.message); }
+    try{ await wbDeleteNotes([n]); wbSel=null; buildWhiteboard(); }
+    catch(e){ alert("Couldn't delete: "+e.message); }
   };
   const jb=document.getElementById("wbJobBtn");
   if(jb) jb.onclick=()=>{
-    wbJobNoteId=n.id;
     wkTaskOpen(null);
+    wbJobNoteId=n.id;          // set after opening — the link is written when the task saves
     document.getElementById("wkTaskLabel").value=n.note;
   };
-  document.getElementById("wbReplyBtn").onclick=async()=>{
-    const ta=document.getElementById("wbReplyText"), text=ta.value.trim(); if(!text) return;
+  const send=async()=>{
+    const inp=document.getElementById("wbReplyText"), text=inp.value.trim(); if(!text) return;
     let who=wbMe();
     if(!who){ who=(prompt("Your name?")||"").trim(); if(!who) return; localStorage.setItem(WB_ME_KEY, who); }
     const now=wbNow();
@@ -12776,6 +12902,17 @@ function wbRenderPanel(){
       buildWhiteboard();
     }catch(e){ alert("Couldn't reply: "+e.message); }
   };
+  document.getElementById("wbReplyBtn").onclick=send;
+  document.getElementById("wbReplyText").onkeydown=e=>{ if(e.key==="Enter") send(); };
+}
+
+async function wbDeleteNotes(notes){
+  const ids=notes.map(n=>n.id);
+  const rids=(data.boardReplies||[]).filter(r=>ids.includes(r.noteId)).map(r=>r.id);
+  if(rids.length) await atDelete(CFG.farmBase, CFG.tables.boardReplies, rids);
+  await atDelete(CFG.farmBase, CFG.tables.boardNotes, ids);
+  data.boardNotes=data.boardNotes.filter(x=>!ids.includes(x.id));
+  data.boardReplies=data.boardReplies.filter(r=>!ids.includes(r.noteId));
 }
 
 // Called by wkTaskSave once the task exists — links it to the note that asked for it.
@@ -12787,25 +12924,45 @@ function wbLinkJob(taskId){
 
 SIDEBAR_EXTRAS.whiteboard = ()=>{
   const all=data.boardNotes||[], today=todayISO(), wk=isoAddDays(today,-6);
-  const open=all.filter(n=>!n.done);
   const cnt=f=>{ const s=wbFilter; wbFilter=f; const k=wbVisibleNotes().length; wbFilter=s; return k; };
   const who=new Map();
   all.filter(n=>wbLocalDay(n.created)>=wk).forEach(n=>{ if(n.by) who.set(n.by,(who.get(n.by)||0)+1); });
+  const pinned=all.filter(n=>n.pinned && !n.done);
+  const short=t=>String(t).split(/\s+/).slice(0,3).join(" ").replace(/[—,.:;-]+$/,"");
   return sbGroup("Board")
     + sbFilter({label:"Today", count:cnt("today"), act:"f:today", on:wbFilter==="today"})
     + sbFilter({label:"This week", count:cnt("week"), act:"f:week", on:wbFilter==="week"})
     + sbFilter({label:"Everything", count:all.length, act:"f:all", on:wbFilter==="all"})
-    + sbFilter({label:"Pinned", count:open.filter(n=>n.pinned).length, act:"f:pinned", on:wbFilter==="pinned"})
-    + (who.size ? sbGroup("Who's on this week") + sbLines([...who.entries()].sort((a,b)=>b[1]-a[1]).map(([n,k])=>[n,`${k} note${k===1?"":"s"}`])) : "")
-    + sbGroup("Tallies") + sbNote("A tally reaches the Harvest plan when it's posted against an outlet — once only, so nothing is counted twice.");
+    + (pinned.length ? sbGroup("Pinned") + pinned.map(n=>
+        `<button type="button" class="navrow" data-sbact="n:${esc(n.id)}" aria-selected="${wbSel===n.id}">`
+        + `<span class="sb-swatch" style="background:${n.kind==="Needs doing"?WB_COLS.need:WB_COLS.know};border-radius:2px"></span>`
+        + `<span class="navname">${esc(short(n.note))}</span></button>`).join("") : "")
+    + (who.size ? sbGroup("Who's on") + [...who.entries()].sort((a,b)=>b[1]-a[1]).map(([n,k])=>
+        `<div class="navrow">${wbAvatar(n)}<span class="navname">${esc(n)}</span><span class="navn">${k} note${k===1?"":"s"}</span></div>`).join("") : "")
+    + sbGroup("Tallies") + sbNote("A tally lands in the Harvest plan when it's posted to an outlet — once only, so nothing is counted twice.");
 };
 SIDEBAR_ACTIONS.whiteboard = act=>{
-  if(act.startsWith("f:")){ wbFilter=act.slice(2); wbMode="board"; buildWhiteboard(); }
+  if(act.startsWith("f:")){ wbFilter=act.slice(2); if(wbMode==="photo") wbMode="board"; buildWhiteboard(); }
+  if(act.startsWith("n:")){ if(wbMode==="photo") wbMode="board"; wbOpen(act.slice(2)); }
 };
 
 document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll("#wbModeSeg button").forEach(b=>b.onclick=()=>{ wbMode=b.dataset.wbmode; buildWhiteboard(); });
   document.querySelectorAll("#wbKindSeg button").forEach(b=>b.onclick=()=>{ wbKind=b.dataset.wbkind; buildWhiteboard(); });
+  document.querySelectorAll("#wbChips button").forEach(b=>b.onclick=()=>{ wbChip=b.dataset.wbchip; buildWhiteboard(); });
+  document.getElementById("wbWriteOpen").onclick=()=>{
+    wbComposeOpen=true; if(wbKind==="Tally") wbKind="Needs doing"; buildWhiteboard(); document.getElementById("wbText").focus();
+  };
+  document.getElementById("wbCancel").onclick=()=>{ wbComposeOpen=false; document.getElementById("wbText").value=""; buildWhiteboard(); };
+  document.getElementById("wbPhotoBtn").onclick=()=>{ wbMode="photo"; buildWhiteboard(); };
+  document.getElementById("wbClearDone").onclick=async()=>{
+    const done=(data.boardNotes||[]).filter(n=>n.done);
+    if(!done.length){ alert("Nothing is marked done."); return; }
+    if(!confirm(`Take ${done.length} done note${done.length===1?"":"s"} off the board for good? Their replies go too.`)) return;
+    try{ await wbDeleteNotes(done); if(done.some(n=>n.id===wbSel)) wbSel=null; }
+    catch(e){ alert("Couldn't clear: "+e.message); }
+    buildWhiteboard();
+  };
   document.getElementById("wbPost").onclick=wbPost;
   document.getElementById("wbText").addEventListener("keydown",e=>{ if(e.key==="Enter" && (e.ctrlKey||e.metaKey)) wbPost(); });
   document.getElementById("wbMe").addEventListener("change",e=>localStorage.setItem(WB_ME_KEY, e.target.value.trim()));
@@ -12815,7 +12972,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
   const board=document.getElementById("wbBoard");
   board.addEventListener("click",e=>{ const c=e.target.closest("[data-wbnote]"); if(c) wbOpen(c.dataset.wbnote); });
-  board.addEventListener("keydown",e=>{ const c=e.target.closest("[data-wbnote]"); if(c && e.key==="Enter") wbOpen(c.dataset.wbnote); });
+  board.addEventListener("keydown",e=>{ const c=e.target.closest("[data-wbnote]"); if(c && e.key==="Enter" && e.target===c) wbOpen(c.dataset.wbnote); });
 });
 
 // The date and outlet a row falls back to when the board didn't say.
