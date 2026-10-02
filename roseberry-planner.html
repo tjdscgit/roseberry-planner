@@ -11927,7 +11927,13 @@ let hvGroupMode = "outlet";
    Nothing new is stored — it all lives on the existing per-planting harvest records:
    - the line's target is the sum of `planned` over the crop's records (normally just one carries it)
    - a sowing's picked is the sum of `actual` over its plantings' records (normally just one carries it) */
-function hvCropKey(p){ return `${p.crop}|${p.variety||""}`; }
+// Lines are per crop (all varieties together); sowings split by sow date and variety.
+function hvCropKey(p){ return String(p.cropId||p.crop); }
+// "Cabbage — Golden Acre" when every planting is one variety, plain "Cabbage" when they're mixed.
+function hvCropName(pls){
+  const vs=[...new Set(pls.map(p=>p.variety||""))];
+  return `${pls[0].crop}${vs.length===1&&vs[0]?" — "+vs[0]:""}`;
+}
 // A planting's own price/unit, else the crop's default (most plantings leave them blank).
 function hvPriceOf(p){ return p.price ?? ((data.cropDefs||{})[p.cropId]||{}).price ?? null; }
 function hvUnitOf(p){ return p.harvestUnit || ((data.cropDefs||{})[p.cropId]||{}).harvestUnit || ""; }
@@ -11936,13 +11942,15 @@ function hvSowOf(p){ return p.sowActual || p.sow || ""; }
 // Plantings whose harvest window touches the week on screen (not just today).
 function hvReadyInWeek(){
   const ws=hvState.week || mondayOfISO(todayISO()), we=isoAddDays(ws,6);
-  return (data.plantingsActive||[]).filter(p=>p.h1 && p.h2 && p.h1<=we && p.h2>=ws);
+  // inside its harvest window, or marked Harvesting (the dates are often stale while picking carries on)
+  return (data.plantingsActive||[]).filter(p=>!p.failed && p.status!=="Finished" &&
+    (p.status==="Harvesting" || (p.h1 && p.h2 && p.h1<=we && p.h2>=ws)));
 }
 // Bunch plantings into sowings, oldest first.
 function hvSowings(pls){
   const m=new Map();
-  pls.forEach(p=>{ const k=hvSowOf(p); if(!m.has(k)) m.set(k,[]); m.get(k).push(p); });
-  return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([sow,ps])=>({ sow, plantings:ps,
+  pls.forEach(p=>{ const k=hvSowOf(p)+"|"+(p.variety||""); if(!m.has(k)) m.set(k,[]); m.get(k).push(p); });
+  return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,ps])=>({ sow:hvSowOf(ps[0]), variety:ps[0].variety||"", plantings:ps,
     beds: ps.map(plantingBedNames).filter(Boolean).join(", ") || "no bed" }));
 }
 function hvLines(){
@@ -12089,7 +12097,7 @@ function hvRenderList(lines){
           +(l.done?`<svg viewBox="0 0 20 20" style="width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"><path d="M5 10.4l3.2 3.2L15 6.6"/></svg>`:``)
         +`</button>`
         +`<div style="min-width:0">`
-          +`<div class="hv-nm">${esc(l.pl.crop)}${l.pl.variety?` — ${esc(l.pl.variety)}`:""}</div>`
+          +`<div class="hv-nm">${esc(hvCropName(l.plantings))}</div>`
           +`<div class="hv-sub">${esc(l.beds)}${hvGroupMode!=="outlet"?` \u00b7 ${esc(l.o.name)}`:""}</div>`
         +`</div>`
         +`<span class="hv-qty${isShort?" short":""}">`
@@ -12105,7 +12113,7 @@ function hvRenderList(lines){
       if(multi) l.groups.forEach((g,gi)=>{
         html+=`<div class="hv-gline">`
           +`<span class="hv-gtick">${gi+1}</span>`
-          +`<div class="hv-sub" style="min-width:0">Sown ${g.sow?esc(fmt(g.sow)):"?"} · ${esc(g.beds)}</div>`
+          +`<div class="hv-sub" style="min-width:0">${new Set(l.groups.map(x=>x.variety)).size>1&&g.variety?esc(g.variety)+" · ":""}Sown ${g.sow?esc(fmt(g.sow)):"?"} · ${esc(g.beds)}</div>`
           +`<span class="hv-qty"><input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="${gi}" value="${g.picked||""}" placeholder="${l.recorded?"":"–"}" title="How many picked from this sowing"></span>`
           +`</div>`;
       });
@@ -12161,13 +12169,13 @@ document.addEventListener("DOMContentLoaded",()=>{
     // one option per crop; its target covers every ready sowing of that crop
     const byCrop=new Map();
     hvReadyInWeek().forEach(p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,[]); byCrop.get(k).push(p); });
-    ready=[...byCrop.values()].sort((a,b)=>hvCropKey(a[0]).localeCompare(hvCropKey(b[0])));
+    ready=[...byCrop.values()].sort((a,b)=>hvCropName(a).localeCompare(hvCropName(b)));
     outlets=activeOutlets();
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
     selP.replaceChildren(...ready.map((ps,i)=>{
       const p=ps[0];
-      return new Option(`${p.crop}${p.variety?" · "+p.variety:""} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`, i);
+      return new Option(`${hvCropName(ps)} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`, i);
     }));
     selP.selectedIndex=0;                       // a list box starts with nothing chosen
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
