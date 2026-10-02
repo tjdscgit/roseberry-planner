@@ -739,6 +739,11 @@
     justify-content:center;background:rgba(247,245,239,.7);font-family:var(--mono);
     font-size:.78rem;color:var(--ink-2);letter-spacing:.06em}
   #loading.show{display:flex}
+  .nw-menu{position:fixed;z-index:1000;min-width:190px;padding:4px;border:1px solid var(--line-2);border-radius:9px;
+    background:var(--paper-2);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+  .nw-menu button{display:block;width:100%;text-align:left;border:none;background:none;color:var(--ink);
+    font:13px var(--sans);padding:8px 10px;border-radius:6px;cursor:pointer}
+  .nw-menu button:hover{background:var(--hover)}
 
   /* ---- Crop Map ---- */
   #view-cropmap.active{display:flex;flex-direction:column}
@@ -6528,15 +6533,35 @@ async function sbLogin(password){
   if(!r.ok) throw new Error(j.error_description || j.msg || `${r.status}`);
   saveSbSession(j);
 }
+// Two windows of the app share one stored session but each runs its own refresh timer. Supabase
+// rotates the refresh token on every use, so the second window to refresh would be holding a spent
+// token — and its failure path used to sign everyone out. Before refreshing (and before giving up),
+// take the newer session another window may already have stored.
+function sbScheduleRefresh(){
+  clearTimeout(sbRefreshTimer);
+  // a little jitter so two windows opened together don't fire in the same instant
+  sbRefreshTimer = setTimeout(refreshSbSession, Math.max(30000, SB_SESSION.expires_at - Date.now() - 120000) + Math.random()*20000);
+}
+function sbAdoptStoredSession(){
+  let s; try{ s = JSON.parse(localStorage.getItem(SB_SESSION_KEY) || "null"); }catch{ s = null; }
+  if(!s || !s.refresh_token || s.refresh_token === SB_SESSION.refresh_token || s.expires_at <= SB_SESSION.expires_at) return false;
+  SB_SESSION = s; sbScheduleRefresh();
+  return true;
+}
+window.addEventListener("storage", e=>{ if(e.key === SB_SESSION_KEY) sbAdoptStoredSession(); });
 async function refreshSbSession(){
   if(!SB_SESSION.refresh_token) return false;
+  if(sbAdoptStoredSession() && SB_SESSION.expires_at - Date.now() > 180000) return true;
   try{
     const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
       method:"POST",
       headers:{ apikey:SB_KEY, "Content-Type":"application/json" },
       body: JSON.stringify({ refresh_token: SB_SESSION.refresh_token }),
     });
-    if(!r.ok){ saveSbSession(null); return false; }
+    if(!r.ok){
+      if(sbAdoptStoredSession()) return true;   // another window rotated the token first — use theirs
+      saveSbSession(null); return false;
+    }
     saveSbSession(await r.json());
     return true;
   }catch{ return false; } // offline etc — leave the stored session alone, try again next schedule
@@ -6862,7 +6887,12 @@ async function loadAll(opts){
     fwBuildIndex();  // @bed autocomplete index — must run after rebuildDerived(), it reads bed.planting
     fwFlush();       // push anything written while offline now that we've clearly got a connection
     gate(false);
-    if(!uiRestored){ uiRestored=true; restoreUiState(); }
+    if(!uiRestored){
+      uiRestored=true; restoreUiState();
+      // A window opened with "Open in new window" names its page in the URL; that beats the saved one.
+      const startView=new URLSearchParams(location.search).get("view");
+      if(startView && VIEW_RAIL[startView]) showView(startView);
+    }
   }catch(e){
     console.error(e);
     if(quiet) throw e;
@@ -28334,8 +28364,7 @@ applyBackendFieldVisibility();
     await refreshSbSession();
   } else if(SB_SESSION.refresh_token){
     // Still fresh — just reschedule the background refresh timer, which a page reload always loses.
-    clearTimeout(sbRefreshTimer);
-    sbRefreshTimer = setTimeout(refreshSbSession, Math.max(30000, SB_SESSION.expires_at - Date.now() - 120000));
+    sbScheduleRefresh();
   }
   if(connected()){ loadAll(); }
   else gate(true);
@@ -28650,6 +28679,56 @@ window.loadAll = async function(...args){ const r = await rtOriginalLoadAll.appl
 // A phone suspends the socket in the background; reconnect as soon as the app is back on screen.
 document.addEventListener("visibilitychange", () => { if (!document.hidden) rtStart(); });
 window.addEventListener("online", () => rtStart());
+
+/* ---------- Open a page in a second window ----------
+   Right-click a page in the sidebar list (or a rail icon) → "Open in new window"; Ctrl/Shift/middle-
+   click does it directly. window.open with popup features gives a separate app window when the
+   planner is installed as a Chrome app (a plain open would land in a browser tab). The new window
+   shares this one's sign-in, and the live sync above keeps the two in step. */
+function nwViewOf(el){
+  if(el.dataset.view) return el.dataset.view;
+  const cfg = el.dataset.rail && RAIL_GROUPS[el.dataset.rail];
+  return cfg ? cfg.groups[0].views[0][0] : null;
+}
+function nwOpen(view){
+  const url = new URL(location.href); url.search = ""; url.hash = "";
+  url.searchParams.set("view", view);
+  const w = Math.max(900, Math.round(window.outerWidth*0.8)), h = Math.max(650, Math.round(window.outerHeight*0.85));
+  const left = window.screenX + 40, top = window.screenY + 40;
+  window.open(url.toString(), "_blank", `popup,width=${w},height=${h},left=${left},top=${top}`);
+}
+let nwMenu = null;
+function nwHide(){ if(nwMenu){ nwMenu.remove(); nwMenu = null; } }
+const NW_TARGET = ".navrow[data-view], .railbtn[data-rail]";
+document.addEventListener("contextmenu", e => {
+  const el = e.target.closest(NW_TARGET); if(!el) return;
+  const view = nwViewOf(el); if(!view || !VIEW_RAIL[view]) return;
+  e.preventDefault(); nwHide();
+  nwMenu = document.createElement("div");
+  nwMenu.className = "nw-menu";
+  nwMenu.innerHTML = `<button type="button">Open in new window</button>`;
+  nwMenu.firstChild.onclick = () => { nwHide(); nwOpen(view); };
+  document.body.appendChild(nwMenu);
+  const r = nwMenu.getBoundingClientRect();
+  nwMenu.style.left = Math.min(e.clientX, innerWidth - r.width - 8) + "px";
+  nwMenu.style.top  = Math.min(e.clientY, innerHeight - r.height - 8) + "px";
+});
+document.addEventListener("pointerdown", e => { if(nwMenu && !nwMenu.contains(e.target)) nwHide(); }, true);
+document.addEventListener("keydown", e => { if(e.key === "Escape") nwHide(); });
+window.addEventListener("blur", nwHide);
+// Capture phase, so the row's own onclick (which navigates this window) never sees the modified click.
+document.addEventListener("click", e => {
+  if(!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
+  const el = e.target.closest(NW_TARGET); if(!el) return;
+  const view = nwViewOf(el); if(!view) return;
+  e.preventDefault(); e.stopPropagation(); nwOpen(view);
+}, true);
+document.addEventListener("auxclick", e => {
+  if(e.button !== 1) return;
+  const el = e.target.closest(NW_TARGET); if(!el) return;
+  const view = nwViewOf(el); if(!view) return;
+  e.preventDefault(); nwOpen(view);
+});
 </script>
 </body>
 </html>
