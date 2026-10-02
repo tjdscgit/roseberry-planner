@@ -1157,6 +1157,11 @@
   .hv-qty{font-family:var(--mono);font-size:.74rem;white-space:nowrap;display:flex;align-items:center;gap:.3rem}
   .hv-qty input{width:52px;font-family:var(--mono);font-size:.74rem;text-align:right}
   .hv-qty.short{color:var(--clay)}
+  /* a crop with more than one planting ready: one row per sowing under the crop line */
+  .hv-gline{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:.75rem;
+    padding:.35rem 1rem .35rem 2.6rem;border-bottom:1px solid var(--line);background:var(--paper-2)}
+  .hv-gline .hv-sub{margin-top:0;color:var(--ink)}
+  .hv-gline .hv-gtick{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);text-align:center}
   .hv-track{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
   .hv-daychips{display:inline-flex;gap:.2rem}
   .hv-empty{padding:1.4rem 1rem;color:var(--ink-2);font-size:.82rem}
@@ -1217,6 +1222,8 @@
     /* This is the list you work from with a knife in one hand — the tick and the open chevron both
        clear 44px, and the progress bar gives up its column to make room. */
     .hv-line{grid-template-columns:44px minmax(0,1fr) auto;gap:.55rem;padding:.5rem .6rem}
+    .hv-gline{grid-template-columns:44px minmax(0,1fr) auto;gap:.55rem;padding:.4rem .6rem .4rem 1.4rem}
+    .hv-gline .hv-qty input{min-height:40px}
     .hv-line .hv-track-cell{display:none}
     .hv-cb{width:44px;height:44px}
     .hv-line .icon-btn{min-width:44px;min-height:44px}
@@ -5592,9 +5599,9 @@
     <div class="wk-group-card">
       <button class="ap-x" id="hvAddClose" title="Close">✕</button>
       <div class="wk-group-title">Add harvest line</div>
-      <label class="ap-trow-f"><span>Planting</span><select id="hvAddPlanting"></select></label>
+      <label class="ap-trow-f"><span>Crop</span><select id="hvAddPlanting"></select></label>
       <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
-      <label class="ap-trow-f"><span>Target</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
+      <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
       <div class="ap-actions">
         <span class="spacer"></span>
         <button class="btn-ghost" id="hvAddCancel">Cancel</button>
@@ -11866,24 +11873,59 @@ let hvState = { plantingId:null, week:null };
    list someone works from. */
 let hvGroupMode = "outlet";
 
-// Every allocated line for the open week, with everything a row needs already resolved.
+/* One line is one crop (crop + variety) going to one outlet. Under it, the plantings of that crop
+   are bunched by sow date: beds sown the same day are one "sowing" and get one picked number.
+   Nothing new is stored — it all lives on the existing per-planting harvest records:
+   - the line's target is the sum of `planned` over the crop's records (normally just one carries it)
+   - a sowing's picked is the sum of `actual` over its plantings' records (normally just one carries it) */
+function hvCropKey(p){ return `${p.crop}|${p.variety||""}`; }
+function hvSowOf(p){ return p.sowActual || p.sow || ""; }
+// Plantings whose harvest window touches the week on screen (not just today).
+function hvReadyInWeek(){
+  const ws=hvState.week || mondayOfISO(todayISO()), we=isoAddDays(ws,6);
+  return (data.plantingsActive||[]).filter(p=>p.h1 && p.h2 && p.h1<=we && p.h2>=ws);
+}
+// Bunch plantings into sowings, oldest first.
+function hvSowings(pls){
+  const m=new Map();
+  pls.forEach(p=>{ const k=hvSowOf(p); if(!m.has(k)) m.set(k,[]); m.get(k).push(p); });
+  return [...m.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([sow,ps])=>({ sow, plantings:ps,
+    beds: ps.map(plantingBedNames).filter(Boolean).join(", ") || "no bed" }));
+}
 function hvLines(){
   const week=hvState.week, out=[];
-  const outlets=activeOutlets();
-  (data.plantings||[]).forEach(pl=>{
-    outlets.forEach(o=>{
-      const rec=hrFor(pl.id,o.id,week);
-      if(!rec) return;
-      const target=rec.planned||0, picked=rec.actual||0;
+  const ready=hvReadyInWeek();
+  activeOutlets().forEach(o=>{
+    const byCrop=new Map();
+    const add=p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,new Set()); byCrop.get(k).add(p); };
+    (data.plantings||[]).forEach(p=>{ const r=hrFor(p.id,o.id,week); if(r && (r.planned||r.actual)) add(p); });
+    [...byCrop.keys()].forEach(k=>ready.filter(p=>hvCropKey(p)===k).forEach(add));   // other ready sowings of a listed crop
+    byCrop.forEach((set)=>{
+      const pls=[...set];
+      const recOf=p=>hrFor(p.id,o.id,week);
+      const target=pls.reduce((n,p)=>n+((recOf(p)||{}).planned||0),0);
+      const groups=hvSowings(pls).map(g=>({ ...g, picked:g.plantings.reduce((n,p)=>n+((recOf(p)||{}).actual||0),0) }));
+      const picked=groups.reduce((n,g)=>n+g.picked,0);
       if(!target && !picked) return;
-      const beds=plantingBedNames(pl)||"no bed";
-      out.push({ rec, pl, o, target, picked, beds,
+      const pl=groups[0].plantings[0];
+      out.push({ id:`${hvCropKey(pl)}|${o.id}`, pl, o, plantings:pls, groups, target, picked,
+        beds: groups.length>1 ? `${groups.length} sowings` : groups[0].beds,
         block:(data.beds||[]).find(b=>(pl.bedIds||[]).includes(b.id))?.block || "—",
         unit: unitLabel(pl.harvestUnit, target||picked),
         done: target>0 && picked>=target });
     });
   });
   return out;
+}
+/* Put `value` in one record's field and clear that field on the rest, so a sum over the set reads
+   back as `value`. Keeps the record that already holds a number, else uses `anchor`. */
+async function hvSetSum(pls, o, field, value, anchor){
+  const week=hvState.week;
+  const holders=pls.filter(p=>{ const r=hrFor(p.id,o.id,week); return r && r[field]; });
+  const keep=holders[0] || anchor || pls[0];
+  for(const p of holders) if(p!==keep) await upsertHarvest(p, o, week, field, null, true);
+  await upsertHarvest(keep, o, week, field, value, true);
+  buildHarvestPlanner();
 }
 /* The market day an outlet is picked for — from Settings' Market days. An outlet listed on two
    days (a box run Thu and Sat, say) goes under the earlier one: a harvest record is one per outlet
@@ -11977,8 +12019,9 @@ function hvRenderList(lines){
     ls.sort((a,b)=>a.pl.crop.localeCompare(b.pl.crop)).forEach(l=>{
       const pct = l.target>0 ? Math.min(100, Math.round(l.picked/l.target*100)) : 0;
       const isShort = l.target>0 && l.picked<l.target;
-      html+=`<div class="hv-line${l.done?" done":""}" data-rec="${esc(l.rec.id)}">`
-        +`<button type="button" class="hv-cb${l.done?" done":""}" data-pick-full="${esc(l.rec.id)}" title="${l.done?"Picked":"Mark picked in full"}">`
+      const multi=l.groups.length>1;
+      html+=`<div class="hv-line${l.done?" done":""}">`
+        +`<button type="button" class="hv-cb${l.done?" done":""}" data-pick-full="${esc(l.id)}" title="${l.done?"Picked":"Mark picked in full"}">`
           +(l.done?`<svg viewBox="0 0 20 20" style="width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"><path d="M5 10.4l3.2 3.2L15 6.6"/></svg>`:``)
         +`</button>`
         +`<div style="min-width:0">`
@@ -11986,32 +12029,41 @@ function hvRenderList(lines){
           +`<div class="hv-sub">${esc(l.beds)}${hvGroupMode!=="outlet"?` \u00b7 ${esc(l.o.name)}`:""}</div>`
         +`</div>`
         +`<span class="hv-qty${isShort?" short":""}">`
-          +`<input type="number" min="0" step="1" data-actual="${esc(l.rec.id)}" value="${l.picked||""}" title="How many picked">`
+          // with several sowings the line shows the total; picked numbers go in on the rows below
+          +(multi ? `<b>${l.picked}</b>`
+                  : `<input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="0" value="${l.picked||""}" title="How many picked">`)
           +`<span>/ ${l.target||"–"} ${esc(l.unit)}</span></span>`
         +`<div class="hv-track-cell"><div class="hv-track"><div style="width:${pct}%;height:100%;background:${isShort?"var(--clay)":"var(--ok)"}"></div></div></div>`
         +`<button type="button" class="icon-btn" data-hv-open="${esc(l.pl.id)}" title="Open this planting">›</button>`
         +`</div>`;
+      if(multi) l.groups.forEach((g,gi)=>{
+        html+=`<div class="hv-gline">`
+          +`<span class="hv-gtick">${gi+1}</span>`
+          +`<div class="hv-sub" style="min-width:0">Sown ${g.sow?esc(fmt(g.sow)):"?"} · ${esc(g.beds)}</div>`
+          +`<span class="hv-qty"><input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="${gi}" value="${g.picked||""}" title="How many picked from this sowing"></span>`
+          +`</div>`;
+      });
     });
   });
   box.innerHTML=html;
 
-  // picked-in-full sets actual to the target, which is the same field the number box writes
-  box.querySelectorAll("[data-pick-full]").forEach(b=>b.onclick=()=>{
-    const l=lines.find(x=>x.rec.id===b.dataset.pickFull); if(!l) return;
-    hvSaveActual(l, l.done ? 0 : l.target);
+  const lineOf=id=>lines.find(x=>x.id===id);
+  // Picked in full: one sowing → it gets the target. Several → the shortfall goes on the oldest.
+  box.querySelectorAll("[data-pick-full]").forEach(b=>b.onclick=async ()=>{
+    const l=lineOf(b.dataset.pickFull); if(!l) return;
+    if(l.done){ for(const g of l.groups) if(g.picked) await hvSetSum(g.plantings, l.o, "actual", null); return; }
+    const g=l.groups[0];
+    hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.picked));
   });
   box.querySelectorAll("[data-actual]").forEach(inp=>inp.onchange=()=>{
-    const l=lines.find(x=>x.rec.id===inp.dataset.actual); if(!l) return;
-    hvSaveActual(l, inp.value===""?null:(+inp.value));
+    const l=lineOf(inp.dataset.actual); if(!l) return;
+    const g=l.groups[+inp.dataset.g]; if(!g) return;
+    hvSetSum(g.plantings, l.o, "actual", inp.value===""?null:(+inp.value));
   });
   box.querySelectorAll("[data-hv-open]").forEach(b=>b.onclick=()=>{
     const pl=(data.plantings||[]).find(x=>x.id===b.dataset.hvOpen);
     if(pl) apOpenEdit(pl);
   });
-}
-
-function hvSaveActual(l, value){
-  upsertHarvest(l.pl, l.o, hvState.week, "actual", value);
 }
 
 // Wired once at load. "+ Add line" opens #hvAddModal: pick a ready planting + outlet + target, and
@@ -12031,23 +12083,32 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.getElementById("hvAddCancel").onclick=close;
   const add=document.getElementById("hvAddLineBtn");
   if(add) add.onclick=()=>{
-    ready=harvestReadyPlantings(); outlets=activeOutlets();
+    // one option per crop; its target covers every ready sowing of that crop
+    const byCrop=new Map();
+    hvReadyInWeek().forEach(p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,[]); byCrop.get(k).push(p); });
+    ready=[...byCrop.values()].sort((a,b)=>hvCropKey(a[0]).localeCompare(hvCropKey(b[0])));
+    outlets=activeOutlets();
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
-    selP.replaceChildren(...ready.map((p,i)=>new Option(
-      `${p.crop}${p.variety?" · "+p.variety:""} — ${plantingBedNames(p)||"no bed"}`, i)));
+    selP.replaceChildren(...ready.map((ps,i)=>{
+      const n=hvSowings(ps).length, p=ps[0];
+      return new Option(`${p.crop}${p.variety?" · "+p.variety:""} — ${n>1?n+" sowings":hvSowings(ps)[0].beds}`, i);
+    }));
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
     qty.value="";
     modal.classList.add("open");
     selP.focus();
   };
   document.getElementById("hvAddOk").onclick=async ()=>{
-    const p=ready[selP.value], o=outlets[selO.value];
+    const ps=ready[selP.value], o=outlets[selO.value];
     const v=qty.value===""?null:Number(qty.value);
-    if(!p||!o) return;
+    if(!ps||!o) return;
     if(v==null || !(v>=0)){ qty.focus(); return; }
     close();
-    await upsertHarvest(p, o, hvState.week, "planned", v);
+    // include any of this crop's records already on the outlet this week, so the target is replaced, not doubled
+    const all=new Set(ps);
+    (data.plantings||[]).forEach(p=>{ if(hvCropKey(p)===hvCropKey(ps[0]) && hrFor(p.id,o.id,hvState.week)) all.add(p); });
+    await hvSetSum([...all], o, "planned", v, hvSowings(ps)[0].plantings[0]);
   };
 });
 
@@ -12057,7 +12118,7 @@ function wireHarvestWeekNav(){
   if(next) next.onclick=()=>{ hvState.week=isoAddDays(hvState.week,7); buildHarvestPlanner(); };
   if(tw) tw.onclick=()=>{ hvState.week=mondayOfISO(todayISO()); buildHarvestPlanner(); };
 }
-async function upsertHarvest(p, o, week, field, value){
+async function upsertHarvest(p, o, week, field, value, noRedraw){
   const fieldMap={planned:CFG.f.hr_planned, actual:CFG.f.hr_actual, priceOverride:CFG.f.hr_priceOverride};
   let rec=hrFor(p.id,o.id,week);
   try{
@@ -12075,7 +12136,7 @@ async function upsertHarvest(p, o, week, field, value){
         planned:field==="planned"?value:null, actual:field==="actual"?value:null,
         priceOverride:field==="priceOverride"?value:null });
     }
-    buildHarvestPlanner();         // refresh the line, its group count and the stats row
+    if(!noRedraw) buildHarvestPlanner();   // refresh the line, its group count and the stats row
   }catch(e){
     console.error(e); alert("Couldn't save harvest entry:\n"+e.message); buildHarvestPlanner();
   }
