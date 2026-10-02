@@ -1529,10 +1529,10 @@
   .wk-group-row-beds{font-family:var(--sans);font-size:.76rem;color:var(--ink-2);
     margin-top:.3rem;line-height:1.4}
   /* ---- add/edit manual task modal (reuses .wk-group-card + .ap-trow-f/.ap-actions) ---- */
-  #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal,#tlSuccessionModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal,#tlSuccessionModal,#hvAddModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open{display:flex}
-  #wkDateModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
+  #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open,#hvAddModal.open{display:flex}
+  #wkDateModal .wk-group-card,#hvAddModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
   .wk-task-form-row{display:flex;gap:.9rem}
   .wk-task-typeseg{align-self:stretch}
@@ -5578,6 +5578,22 @@
         <span class="spacer"></span>
         <button class="btn-ghost" id="wkDateCancel">Cancel</button>
         <button class="btn-primary" id="wkDateOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Harvest plan "+ Add line": put a ready planting against an outlet for the shown week. -->
+  <div id="hvAddModal">
+    <div class="wk-group-card">
+      <button class="ap-x" id="hvAddClose" title="Close">✕</button>
+      <div class="wk-group-title">Add harvest line</div>
+      <label class="ap-trow-f"><span>Planting</span><select id="hvAddPlanting"></select></label>
+      <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
+      <label class="ap-trow-f"><span>Target</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
+      <div class="ap-actions">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="hvAddCancel">Cancel</button>
+        <button class="btn-primary" id="hvAddOk">Add</button>
       </div>
     </div>
   </div>
@@ -11964,20 +11980,40 @@ function hvSaveActual(l, value){
   upsertHarvest(l.pl, l.o, hvState.week, "actual", value);
 }
 
-// Wired once at load. "+ Add line" reuses the Add-planting dialog's outlet allocation rather than
-// growing a second way to create a harvest record.
+// Wired once at load. "+ Add line" opens #hvAddModal: pick a ready planting + outlet + target, and
+// it goes through upsertHarvest like an inline edit would.
 document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll("#hvGroupToggle button").forEach(b=>b.onclick=()=>{
     hvGroupMode=b.dataset.hvgrp; buildHarvestPlanner();
   });
   const pr=document.getElementById("hvPrintBtn");
   if(pr) pr.onclick=()=>window.print();
+  const modal=document.getElementById("hvAddModal");
+  const selP=document.getElementById("hvAddPlanting"), selO=document.getElementById("hvAddOutlet"),
+        qty=document.getElementById("hvAddQty");
+  let ready=[], outlets=[];
+  const close=()=>modal.classList.remove("open");
+  document.getElementById("hvAddClose").onclick=close;
+  document.getElementById("hvAddCancel").onclick=close;
   const add=document.getElementById("hvAddLineBtn");
   if(add) add.onclick=()=>{
-    const ready=harvestReadyPlantings();
+    ready=harvestReadyPlantings(); outlets=activeOutlets();
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
-    if(!activeOutlets().length){ showView("outlets"); return; }
-    apOpenEdit(ready[0]);
+    if(!outlets.length){ showView("outlets"); return; }
+    selP.replaceChildren(...ready.map((p,i)=>new Option(
+      `${p.crop}${p.variety?" · "+p.variety:""}`, i)));
+    selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
+    qty.value="";
+    modal.classList.add("open");
+    selP.focus();
+  };
+  document.getElementById("hvAddOk").onclick=async ()=>{
+    const p=ready[selP.value], o=outlets[selO.value];
+    const v=qty.value===""?null:Number(qty.value);
+    if(!p||!o) return;
+    if(v==null || !(v>=0)){ qty.focus(); return; }
+    close();
+    await upsertHarvest(p, o, hvState.week, "planned", v);
   };
 });
 
