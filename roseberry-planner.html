@@ -1157,6 +1157,7 @@
   .hv-qty{font-family:var(--mono);font-size:.74rem;white-space:nowrap;display:flex;align-items:center;gap:.3rem}
   .hv-qty input{width:52px;font-family:var(--mono);font-size:.74rem;text-align:right}
   .hv-qty.short{color:var(--clay)}
+  .hv-earn{color:var(--ok);font-weight:600;min-width:3.2em;text-align:right}
   /* a crop with more than one planting ready: one row per sowing under the crop line */
   .hv-gline{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:.75rem;
     padding:.35rem 1rem .35rem 2.6rem;border-bottom:1px solid var(--line);background:var(--paper-2)}
@@ -1546,6 +1547,9 @@
   #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal,#tlSuccessionModal,#hvAddModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
   #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open,#hvAddModal.open{display:flex}
+  /* crop picker is a list box, not a drop-down: a long native drop-down ran off the bottom of the screen */
+  #hvAddPlanting{height:auto;max-height:min(16rem,45vh);overflow-y:auto;padding:.2rem 0}
+  #hvAddPlanting option{padding:.35rem .6rem}
   #wkDateModal .wk-group-card,#hvAddModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
   .wk-task-form-row{display:flex;gap:.9rem}
@@ -5601,7 +5605,7 @@
     <div class="wk-group-card">
       <button class="ap-x" id="hvAddClose" title="Close">✕</button>
       <div class="wk-group-title">Add harvest line</div>
-      <label class="ap-trow-f"><span>Crop</span><select id="hvAddPlanting"></select></label>
+      <label class="ap-trow-f"><span>Crop</span><select id="hvAddPlanting" size="8"></select></label>
       <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
       <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
       <div class="ap-actions">
@@ -11893,6 +11897,10 @@ let hvGroupMode = "outlet";
    - the line's target is the sum of `planned` over the crop's records (normally just one carries it)
    - a sowing's picked is the sum of `actual` over its plantings' records (normally just one carries it) */
 function hvCropKey(p){ return `${p.crop}|${p.variety||""}`; }
+// A planting's own price/unit, else the crop's default (most plantings leave them blank).
+function hvPriceOf(p){ return p.price ?? ((data.cropDefs||{})[p.cropId]||{}).price ?? null; }
+function hvUnitOf(p){ return p.harvestUnit || ((data.cropDefs||{})[p.cropId]||{}).harvestUnit || ""; }
+const hvMoney=n=>"$"+(Math.round(n*100)/100).toFixed(n%1?2:0);
 function hvSowOf(p){ return p.sowActual || p.sow || ""; }
 // Plantings whose harvest window touches the week on screen (not just today).
 function hvReadyInWeek(){
@@ -11922,10 +11930,17 @@ function hvLines(){
       const picked=groups.reduce((n,g)=>n+g.picked,0);
       if(!target && !picked) return;
       const pl=groups[0].plantings[0];
+      // what the picked amount is worth: each record's price override, else the planting/crop price
+      let earned=0, priced=false;
+      pls.forEach(p=>{ const r=recOf(p); if(!r||!r.actual) return;
+        const pr=r.priceOverride!=null ? r.priceOverride : hvPriceOf(p);
+        if(pr!=null){ earned+=r.actual*pr; priced=true; } });
+      const price=hvPriceOf(pl);
       out.push({ id:`${hvCropKey(pl)}|${o.id}`, pl, o, plantings:pls, groups, target, picked,
         beds: groups.length>1 ? `${groups.length} sowings` : groups[0].beds,
         block:(data.beds||[]).find(b=>(pl.bedIds||[]).includes(b.id))?.block || "—",
-        unit: unitLabel(pl.harvestUnit, target||picked),
+        unit: unitLabel(hvUnitOf(pl), target||picked),
+        earned, priced: priced || price!=null, price,
         done: target>0 && picked>=target });
     });
   });
@@ -12004,6 +12019,7 @@ function hvRenderStats(lines){
   box.innerHTML=
      `<div class="hv-stat"><span class="v">${picked}</span><span class="lbl">Picked</span></div>`
     +`<div class="hv-stat"><span class="v">${target}</span><span class="lbl">Target</span></div>`
+    +`<div class="hv-stat"><span class="v">${hvMoney(lines.reduce((n,l)=>n+l.earned,0))}</span><span class="lbl">Picked value</span></div>`
     +`<div class="hv-stat${short?" short":""}"><span class="v">${short}</span><span class="lbl">Short</span></div>`
     +`<span class="spacer" style="flex:1"></span>`
     +(hvGroupMode==="outlet" && !marketDays().length
@@ -12046,7 +12062,9 @@ function hvRenderList(lines){
           // with several sowings the line shows the total; picked numbers go in on the rows below
           +(multi ? `<b>${l.picked}</b>`
                   : `<input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="0" value="${l.picked||""}" title="How many picked">`)
-          +`<span>/ ${l.target||"–"} ${esc(l.unit)}</span></span>`
+          +`<span>/ ${l.target||"–"} ${esc(l.unit)}</span>`
+          +(l.priced ? `<span class="hv-earn" title="${l.price!=null?esc(hvMoney(l.price))+" per "+esc(unitLabel(hvUnitOf(l.pl),1)||"unit"):""}">${hvMoney(l.earned)}</span>` : ``)
+          +`</span>`
         +`<div class="hv-track-cell"><div class="hv-track"><div style="width:${pct}%;height:100%;background:${isShort?"var(--clay)":"var(--ok)"}"></div></div></div>`
         +`<button type="button" class="icon-btn" data-hv-open="${esc(l.pl.id)}" title="Open this planting">›</button>`
         +`</div>`;
@@ -12108,6 +12126,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       const n=hvSowings(ps).length, p=ps[0];
       return new Option(`${p.crop}${p.variety?" · "+p.variety:""} — ${n>1?n+" sowings":hvSowings(ps)[0].beds}`, i);
     }));
+    selP.selectedIndex=0;                       // a list box starts with nothing chosen
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
     qty.value="";
     modal.classList.add("open");
