@@ -6617,8 +6617,11 @@ async function refreshPlantingTasks(){
   data.plantingTasks = rows.map(parsePlantingTaskRecord);
 }
 
-async function loadAll(){
-  showLoading(true);
+async function loadAll(opts){
+  // quiet: a background sync — no "reading the base…" cover, and a failure is thrown back to the
+  // sync layer (which retries) instead of dropping the user onto the sign-in gate.
+  const quiet = !!(opts && opts.quiet);
+  showLoading(!quiet);
   try{
     // The field walk tables are newer than some deployed schemas and have no Airtable origin, so
     // each one is fetched behind its own catch: a missing table (the SQL hasn't been run yet) or a
@@ -6862,6 +6865,7 @@ async function loadAll(){
     if(!uiRestored){ uiRestored=true; restoreUiState(); }
   }catch(e){
     console.error(e);
+    if(quiet) throw e;
     gate(true, "err", "Couldn't load: "+e.message);
   }finally{ showLoading(false); }
 }
@@ -12001,7 +12005,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
     selP.replaceChildren(...ready.map((p,i)=>new Option(
-      `${p.crop}${p.variety?" · "+p.variety:""}`, i)));
+      `${p.crop}${p.variety?" · "+p.variety:""} — ${plantingBedNames(p)||"no bed"}`, i)));
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
     qty.value="";
     modal.classList.add("open");
@@ -28534,7 +28538,14 @@ async function syncRefresh(){
   if (document.hidden || syncEditing() || syncBusyLoading){ syncPending = true; return; }
   syncPending = false;
   syncBusyLoading = true;
-  try { await loadAll(); }
+  try {
+    await loadAll({ quiet:true });
+    // loadAll() redraws the farm map itself but not the page on screen — do that here. Not "map":
+    // its renderViewContent refits the view, which would yank the user's pan/zoom.
+    const keepSettings = currentView==="settings" && stDirty();   // don't throw away unsaved settings
+    if (currentView && currentView!=="map" && !keepSettings) renderViewContent(currentView);
+    renderSidebar();
+  }
   catch { syncPending = true; }     // offline or a bad response — try again at the next safe moment
   finally { syncBusyLoading = false; }
 }
@@ -28579,6 +28590,66 @@ window.addEventListener("focus", syncOnReturn);
 // A refresh deferred because a dialog was open still has to happen once it closes. This costs
 // nothing unless a refresh is actually owed — it makes no network call otherwise.
 setInterval(() => { if (syncPending && !document.hidden && !syncEditing()) syncRefresh(); }, 3000);
+
+/* ---------- Live updates from other devices (Supabase Realtime) ----------
+   The two mechanisms above can't see a change made on another device while this window sits open
+   and visible. Supabase pushes a message over a websocket whenever a row in one of the app's tables
+   changes (the tables were added to the supabase_realtime publication on 2026-10-03; RLS still
+   decides who hears about what). Each message just schedules the same guarded refresh — so the
+   "never while you're typing or have a sheet open" rule applies to live updates too.
+   Spoken directly in Phoenix's wire format rather than loading supabase-js: join one channel,
+   heartbeat every 25s, pass the new token on after each session refresh. */
+let rtSock = null, rtRef = 0, rtJoinRef = "", rtBeat = null, rtToken = "", rtRetry = 0, rtRetryTimer = null, rtWasUp = false;
+const RT_TOPIC = "realtime:planner-sync";
+function rtSend(msg){ if (rtSock && rtSock.readyState === 1) rtSock.send(JSON.stringify({ ...msg, ref: String(++rtRef) })); }
+function rtStart(){
+  if (BACKEND !== "supabase" || !SB_SESSION.access_token) return;
+  if (rtSock && rtSock.readyState <= 1) return;           // already connecting or open
+  clearTimeout(rtRetryTimer);
+  const ws = new WebSocket(`${SB_URL.replace(/^http/, "ws")}/realtime/v1/websocket?apikey=${encodeURIComponent(SB_KEY)}&vsn=1.0.0`);
+  rtSock = ws;
+  ws.onopen = () => {
+    rtToken = SB_SESSION.access_token;
+    rtJoinRef = String(rtRef + 1);                         // the ref rtSend is about to give the join
+    rtSend({ topic: RT_TOPIC, event: "phx_join", join_ref: "1", payload: {
+      config: { broadcast:{ self:false }, presence:{ key:"" }, postgres_changes:[{ event:"*", schema:"public" }] },
+      access_token: rtToken } });
+    clearInterval(rtBeat);
+    rtBeat = setInterval(() => {
+      rtSend({ topic: "phoenix", event: "heartbeat", payload: {} });
+      if (SB_SESSION.access_token && SB_SESSION.access_token !== rtToken){   // the session was refreshed
+        rtToken = SB_SESSION.access_token;
+        rtSend({ topic: RT_TOPIC, event: "access_token", payload: { access_token: rtToken } });
+      }
+    }, 25000);
+  };
+  ws.onmessage = (e) => {
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    if (m.topic !== RT_TOPIC) return;
+    if (m.event === "phx_reply" && m.ref === rtJoinRef && m.payload && m.payload.status === "ok"){
+      // Joined. After a dropped connection, catch up on whatever changed while we weren't listening.
+      if (rtWasUp) syncSchedule();
+      rtWasUp = true; rtRetry = 0;
+    }
+    if (m.event === "postgres_changes") syncSchedule();
+  };
+  ws.onclose = () => {
+    clearInterval(rtBeat);
+    if (rtSock !== ws) return;
+    rtSock = null;
+    if (!SB_SESSION.access_token) return;                 // signed out — stay off
+    // Back off 2s, 4s, 8s … up to a minute. A hidden tab waits for visibility instead (below).
+    const wait = Math.min(60000, 2000 * Math.pow(2, rtRetry++));
+    rtRetryTimer = setTimeout(() => { if (!document.hidden) rtStart(); }, wait);
+  };
+  ws.onerror = () => { try { ws.close(); } catch {} };
+}
+// Start (or restart) once the data has loaded — that's the point we know we're signed in.
+const rtOriginalLoadAll = window.loadAll;
+window.loadAll = async function(...args){ const r = await rtOriginalLoadAll.apply(this, args); rtStart(); return r; };
+// A phone suspends the socket in the background; reconnect as soon as the app is back on screen.
+document.addEventListener("visibilitychange", () => { if (!document.hidden) rtStart(); });
+window.addEventListener("online", () => rtStart());
 </script>
 </body>
 </html>
