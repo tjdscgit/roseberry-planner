@@ -1556,7 +1556,6 @@
   /* crop picker is a list box, not a drop-down: a long native drop-down ran off the bottom of the screen */
   #hvAddPlanting{height:auto;max-height:min(16rem,45vh);overflow-y:auto;padding:.2rem 0}
   #hvAddPlanting option{padding:.35rem .6rem}
-  #hvAddPlanting optgroup{font-style:normal;font-weight:700;color:var(--ink-2)}
   #hvAddSearch{width:100%}
   #wkDateModal .wk-group-card,#hvAddModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
@@ -12167,18 +12166,17 @@ document.addEventListener("DOMContentLoaded",()=>{
       : `${n||0} × ${hvMoney(price)} per ${unitLabel(unit,1)||"unit"} = ${hvMoney((n||0)*price)}`;
   };
   selP.onchange=tally; qty.oninput=tally;
-  // crop list, grouped under crop type headings and narrowed by the search box
+  // crop list A–Z, narrowed by the search box
   const search=document.getElementById("hvAddSearch");
   const fillCrops=()=>{
-    const q=search.value.trim().toLowerCase(), groups=new Map();
+    const q=search.value.trim().toLowerCase(), opts=[];
     ready.forEach((ps,i)=>{
       const type=cropTypeOfPlanting(ps[0])||"Other";
       const label=`${hvCropName(ps)} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`;
       if(q && !`${label} ${type} ${ps.map(p=>p.variety).join(" ")}`.toLowerCase().includes(q)) return;
-      if(!groups.has(type)){ const og=document.createElement("optgroup"); og.label=type; groups.set(type,og); }
-      groups.get(type).append(new Option(label, i));
+      opts.push(new Option(label, i));
     });
-    selP.replaceChildren(...groups.values());
+    selP.replaceChildren(...opts);
     selP.selectedIndex=selP.options.length?0:-1;   // a list box starts with nothing chosen
     tally();
   };
@@ -12190,9 +12188,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     // one option per crop; its target covers every ready sowing of that crop
     const byCrop=new Map();
     hvReadyInWeek().forEach(p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,[]); byCrop.get(k).push(p); });
-    // crop type A–Z, then crop name
-    ready=[...byCrop.values()].sort((a,b)=>(cropTypeOfPlanting(a[0])||"~").localeCompare(cropTypeOfPlanting(b[0])||"~")
-      || hvCropName(a).localeCompare(hvCropName(b)));
+    ready=[...byCrop.values()].sort((a,b)=>hvCropName(a).localeCompare(hvCropName(b)));   // crop A–Z
     outlets=activeOutlets();
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
