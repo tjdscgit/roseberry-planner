@@ -1556,6 +1556,8 @@
   /* crop picker is a list box, not a drop-down: a long native drop-down ran off the bottom of the screen */
   #hvAddPlanting{height:auto;max-height:min(16rem,45vh);overflow-y:auto;padding:.2rem 0}
   #hvAddPlanting option{padding:.35rem .6rem}
+  #hvAddPlanting optgroup{font-style:normal;font-weight:700;color:var(--ink-2)}
+  #hvAddSearch{width:100%}
   #wkDateModal .wk-group-card,#hvAddModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
   .wk-task-form-row{display:flex;gap:.9rem}
@@ -5611,7 +5613,8 @@
     <div class="wk-group-card">
       <button class="ap-x" id="hvAddClose" title="Close">✕</button>
       <div class="wk-group-title">Add harvest line</div>
-      <label class="ap-trow-f"><span>Crop</span><select id="hvAddPlanting" size="8"></select></label>
+      <label class="ap-trow-f"><span>Crop</span><input type="search" id="hvAddSearch" placeholder="Search crop, variety, type or bed…" autocomplete="off"></label>
+      <label class="ap-trow-f"><span></span><select id="hvAddPlanting" size="8"></select></label>
       <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
       <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
       <div id="hvAddTally" class="hv-addtally"></div>
@@ -12164,25 +12167,42 @@ document.addEventListener("DOMContentLoaded",()=>{
       : `${n||0} × ${hvMoney(price)} per ${unitLabel(unit,1)||"unit"} = ${hvMoney((n||0)*price)}`;
   };
   selP.onchange=tally; qty.oninput=tally;
+  // crop list, grouped under crop type headings and narrowed by the search box
+  const search=document.getElementById("hvAddSearch");
+  const fillCrops=()=>{
+    const q=search.value.trim().toLowerCase(), groups=new Map();
+    ready.forEach((ps,i)=>{
+      const type=cropTypeOfPlanting(ps[0])||"Other";
+      const label=`${hvCropName(ps)} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`;
+      if(q && !`${label} ${type} ${ps.map(p=>p.variety).join(" ")}`.toLowerCase().includes(q)) return;
+      if(!groups.has(type)){ const og=document.createElement("optgroup"); og.label=type; groups.set(type,og); }
+      groups.get(type).append(new Option(label, i));
+    });
+    selP.replaceChildren(...groups.values());
+    selP.selectedIndex=selP.options.length?0:-1;   // a list box starts with nothing chosen
+    tally();
+  };
+  search.oninput=fillCrops;
+  // Enter in the search box jumps to the target
+  search.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); qty.focus(); } };
   const add=document.getElementById("hvAddLineBtn");
   if(add) add.onclick=()=>{
     // one option per crop; its target covers every ready sowing of that crop
     const byCrop=new Map();
     hvReadyInWeek().forEach(p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,[]); byCrop.get(k).push(p); });
-    ready=[...byCrop.values()].sort((a,b)=>hvCropName(a).localeCompare(hvCropName(b)));
+    // crop type A–Z, then crop name
+    ready=[...byCrop.values()].sort((a,b)=>(cropTypeOfPlanting(a[0])||"~").localeCompare(cropTypeOfPlanting(b[0])||"~")
+      || hvCropName(a).localeCompare(hvCropName(b)));
     outlets=activeOutlets();
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
-    selP.replaceChildren(...ready.map((ps,i)=>{
-      const p=ps[0];
-      return new Option(`${hvCropName(ps)} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`, i);
-    }));
-    selP.selectedIndex=0;                       // a list box starts with nothing chosen
+    search.value="";
+    fillCrops();
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
     qty.value="";
     tally();
     modal.classList.add("open");
-    selP.focus();
+    search.focus();
   };
   document.getElementById("hvAddOk").onclick=async ()=>{
     const ps=ready[selP.value], o=outlets[selO.value];
