@@ -1161,6 +1161,8 @@
   .hv-gline{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:.75rem;
     padding:.35rem 1rem .35rem 2.6rem;border-bottom:1px solid var(--line);background:var(--paper-2)}
   .hv-gline .hv-sub{margin-top:0;color:var(--ink)}
+  /* bed lists can be long — wrap them rather than cut them off */
+  .hv-line .hv-sub,.hv-gline .hv-sub{white-space:normal;overflow:visible}
   .hv-gline .hv-gtick{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);text-align:center}
   .hv-track{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
   .hv-daychips{display:inline-flex;gap:.2rem}
