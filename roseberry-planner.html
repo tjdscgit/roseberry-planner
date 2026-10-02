@@ -1174,6 +1174,76 @@
   .hv-track{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
   .hv-daychips{display:inline-flex;gap:.2rem}
   .hv-empty{padding:1.4rem 1rem;color:var(--ink-2);font-size:.82rem}
+  /* ---- Harvest plan — phone (2026-10-03), from HarvestPlanPhone.dc.html ---- */
+  .hv-phone{display:none}
+  @media(max-width:760px){
+    #view-harvest .vw-title,#view-harvest .vw-tools,#view-harvest .hv-stats,#view-harvest #hvList{display:none}
+    #view-harvest .hv-phone{display:flex;flex-direction:column;position:absolute;inset:0}
+    .hvp-top{flex:0 0 auto;display:flex;align-items:center;border-bottom:1px solid var(--line)}
+    .hvp-pills{flex:1 1 auto;min-width:0;display:flex;gap:7px;padding:.7rem .8rem;overflow-x:auto;scrollbar-width:none}
+    .hvp-pills::-webkit-scrollbar{display:none}
+    .hvp-pill{flex:0 0 auto;height:44px;padding:0 1rem;border-radius:999px;border:1px solid var(--line-2);
+      background:none;color:var(--ink-2);font:600 .78rem var(--mono);white-space:nowrap;cursor:pointer}
+    .hvp-pill[aria-selected="true"]{background:var(--steel);border-color:var(--steel);color:#fff}
+    .hvp-viewbtn{display:inline-flex}
+    .hvp-card{flex:0 0 auto;margin:12px 16px;padding:13px 15px;border-radius:12px;background:var(--paper-2);border:1px solid var(--line)}
+    .hvp-card-top{display:flex;align-items:baseline;gap:9px}
+    .hvp-card-top b{font:700 24px var(--mono)}
+    .hvp-card-top .of{font:12px var(--mono);color:var(--ink-2)}
+    .hvp-card-top .val{margin-left:auto;font:700 15px var(--mono);color:var(--ok)}
+    .hvp-card-bot{display:flex;gap:9px;margin-top:9px;font:11px var(--mono);color:var(--ink-2)}
+    .hvp-card-bot .short{margin-left:auto;color:var(--clay);font-weight:700}
+    .hvp-track{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:8px}
+    .hvp-track span{display:block;height:100%}
+    .hvp-card .hvp-track{height:8px}
+    .hvp-list{flex:1 1 auto;min-height:0;overflow-y:auto}
+    .hvp-gh{display:flex;align-items:center;gap:10px;height:36px;padding:0 16px;background:var(--paper-2);
+      border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+    .hvp-gh b{font-size:12.5px}
+    .hvp-gh span{margin-left:auto;font:10.5px var(--mono);color:var(--ink-2)}
+    .hvp-row{display:flex;align-items:center;gap:6px;padding:7px 16px 7px 6px;border-bottom:1px solid var(--line);cursor:pointer}
+    .hvp-row:active{background:var(--hover)}
+    .hvp-cb{flex:0 0 auto;width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+      background:none;border:none;padding:0;cursor:pointer}
+    .hvp-cb i{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-2);display:flex;align-items:center;justify-content:center}
+    .hvp-cb.done i{background:var(--ok);border-color:var(--ok)}
+    .hvp-body{flex:1 1 auto;min-width:0;padding:6px 0}
+    .hvp-nm{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .hvp-row.done .hvp-nm{color:var(--ink-2);text-decoration:line-through}
+    .hvp-sub{font:11px var(--mono);color:var(--ink-2);margin-top:4px}
+    .hvp-right{flex:0 0 auto;text-align:right;padding-left:8px}
+    .hvp-num{font:700 15px var(--mono)}
+    .hvp-num.short{color:var(--clay)}
+    .hvp-num.est{color:var(--ink-2);font-weight:600}
+    .hvp-row.done .hvp-num{color:var(--ok)}
+    .hvp-of{font:10px var(--mono);color:var(--ink-2);margin-top:3px;white-space:nowrap}
+    .hvp-val{font:10px var(--mono);color:var(--ok);margin-top:2px}
+    .hvp-empty{padding:2rem 1.2rem;color:var(--ink-2);font-size:.9rem;text-align:center;line-height:1.5}
+    .hvp-foot{flex:0 0 auto;padding:12px 16px 14px;border-top:1px solid var(--line);background:var(--paper-2)}
+    .hvp-add{display:flex;align-items:center;gap:11px;width:100%;height:52px;padding:0 16px;border:none;border-radius:12px;
+      background:var(--ok);color:#fff;font-size:15.5px;font-weight:650;cursor:pointer}
+    .hvp-add svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round}
+    /* entry sheet */
+    .hvp-sh-meta{padding:0 1.1rem .7rem;font:11.5px var(--mono);color:var(--ink-2)}
+    .hvp-step{display:flex;align-items:center;gap:.7rem;padding:.55rem 1.1rem;border-top:1px solid var(--line)}
+    .hvp-step .lab{flex:1 1 auto;min-width:0}
+    .hvp-step .lab .nm{font-size:.95rem;font-weight:600}
+    .hvp-step .lab .mt{font:11px var(--mono);color:var(--ink-2);margin-top:.2rem}
+    .hvp-step .ctl{flex:0 0 auto;display:flex;align-items:center;gap:.35rem}
+    .hvp-step .ctl button{width:44px;height:44px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper);
+      color:var(--ink);font-size:1.3rem;cursor:pointer}
+    .hvp-step .ctl input{width:64px;height:44px;text-align:center;font:700 1.05rem var(--mono)}
+    .hvp-sh-total{display:flex;align-items:baseline;gap:.5rem;padding:.8rem 1.1rem .2rem;border-top:1px solid var(--line);font-family:var(--mono)}
+    .hvp-sh-total b{font-size:1.2rem}
+    .hvp-sh-total .val{margin-left:auto;color:var(--ok);font-weight:700}
+    .hvp-sh-foot{display:flex;gap:.6rem;padding:.9rem 1.1rem 0}
+    .hvp-sh-foot .btn-primary{flex:1 1 auto;height:48px}
+    .hvp-sh-foot .btn-ghost{height:48px}
+    .hvp-week{display:flex;align-items:center;justify-content:center;gap:.8rem;padding:0 1.1rem .5rem}
+    .hvp-week b{font:700 .95rem var(--mono);min-width:13ch;text-align:center}
+    .hvp-week button{width:52px;height:44px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper);
+      color:var(--ink);font-size:1.4rem;cursor:pointer}
+  }
 
   /* ---- Beds: what is in each one and when it frees up. Setup/issues/prep history moved to their
      own Bed setup view — this page is read daily, that one is set once and read rarely. */
@@ -4958,6 +5028,22 @@
       </div>
       <div class="hv-stats" id="hvStats"></div>
       <div class="hv-list" id="hvList"></div>
+      <!-- Phone pick list (HarvestPlanPhone.dc.html): one market at a time, rows you tap to enter
+           what was picked, View sheet for the week and sort. Desktop never shows it. -->
+      <div class="hv-phone" id="hvPhone">
+        <div class="hvp-top">
+          <div class="hvp-pills" id="hvpPills" role="tablist" aria-label="Market"></div>
+          <button class="cm-view-btn hvp-viewbtn" id="hvpViewBtn" type="button" aria-haspopup="dialog" aria-label="View options">
+            <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3.6 5.6h12.8M5.8 10h8.4M8.2 14.4h3.6"/></svg>
+          </button>
+        </div>
+        <div class="hvp-card" id="hvpCard"></div>
+        <div class="hvp-list" id="hvpList"></div>
+        <div class="hvp-foot"><button type="button" class="hvp-add" id="hvpAdd">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4.2v11.6M4.2 10h11.6"/></svg><span>Add line</span></button></div>
+      </div>
+      <div class="cm-sheet-scrim" id="hvpScrim" hidden></div>
+      <div class="cm-sheet" id="hvpSheet" role="dialog" aria-modal="true" aria-labelledby="hvpSheetTitle" hidden></div>
     </section>
 
     <!-- HARVEST WHITEBOARD — photograph the picking whiteboard, read it, write it to Actuals -->
@@ -7772,6 +7858,8 @@ function backCandidates(){
   if(wbp && cmIsMobile() && wbSel && backVisible(wbp)) out.push([wbp,()=>{ wbSel=null; buildWhiteboard(); }]);
   const csh=document.getElementById("cmSheet");
   if(csh && !csh.hidden && backVisible(csh)) out.push([csh,cmCloseSheet]);
+  const hsh=document.getElementById("hvpSheet");
+  if(hsh && !hsh.hidden && backVisible(hsh)) out.push([hsh,hvpCloseSheet]);
   const cun=document.getElementById("cmUnassigned");
   if(cun && cmIsMobile() && !cmUnCollapsed && backVisible(cun)) out.push([cun,()=>cmSetUnCollapsed(true)]);
   document.querySelectorAll(".cm-pop:not([hidden]), .vw-menu:not([hidden])").forEach(el=>{
@@ -12041,7 +12129,194 @@ function buildHarvestPlanner(){
   hvRenderDayChips();
   hvRenderStats(lines);
   hvRenderList(lines);
+  if(cmIsMobile()) hvpRender(lines);
 }
+
+/* ---------- Harvest plan — phone ----------
+   One market at a time (pills), a summary card, and rows you tap to say what was picked. Picked
+   defaults to the target, so on a normal day you just tick the circle; the sheet is for short picks
+   and split sowings. Same data and save path as the desktop list. */
+const HVP_OUTLET_KEY="roseberry_hv_phone_outlet_v1";
+let hvpOutlet=null, hvpSort="crop", hvpSheetLine=null;
+try{ hvpOutlet=localStorage.getItem(HVP_OUTLET_KEY); }catch(_){}
+function hvUnitShort(u){
+  if(!u) return "";
+  const m=String(u).match(/^\s*([^(]*?)\s*(\(.*\))?\s*$/), w=m[1].toLowerCase();
+  const s={bunch:"bu",kilogram:"kg",kg:"kg",unit:"",each:"",stem:"st",head:"hd",punnet:"pun"}[w];
+  return `${s??w}${m[2]?" "+m[2]:""}`.trim();
+}
+// Markets that have something on this week, in week order; "all" when there's more than one.
+function hvpMarkets(lines){
+  const seen=new Map();
+  activeOutlets().forEach(o=>{
+    const m=hvMarketOf(o);
+    if(!lines.some(l=>l.o.id===o.id) && !m) return;
+    seen.set(o.id,{ id:o.id, label: m ? `${DAY_ABBR[m.day]} · ${o.name}` : o.name,
+      sort: m ? (m.day+6)%7 : 9, date: m ? isoAddDays(hvState.week,(m.day+6)%7) : null });
+  });
+  return [...seen.values()].sort((a,b)=>a.sort-b.sort || a.label.localeCompare(b.label));
+}
+function hvpRender(lines){
+  const markets=hvpMarkets(lines);
+  if(!markets.some(m=>m.id===hvpOutlet) && hvpOutlet!=="all"){
+    const today=todayISO();
+    hvpOutlet=(markets.find(m=>m.date && m.date>=today && lines.some(l=>l.o.id===m.id))
+      || markets.find(m=>lines.some(l=>l.o.id===m.id)) || markets[0] || {id:"all"}).id;
+  }
+  const pills=document.getElementById("hvpPills");
+  const opts=markets.length>1 ? markets.concat({id:"all",label:"All"}) : markets;
+  pills.innerHTML=opts.map(m=>`<button type="button" class="hvp-pill" role="tab" data-hvp-out="${esc(m.id)}" aria-selected="${m.id===hvpOutlet}">${esc(m.label)}</button>`).join("");
+  pills.querySelectorAll("[data-hvp-out]").forEach(b=>b.onclick=()=>{
+    hvpOutlet=b.dataset.hvpOut; try{ localStorage.setItem(HVP_OUTLET_KEY,hvpOutlet); }catch(_){}
+    hvpRender(hvLines());
+  });
+  const sel=pills.querySelector('[aria-selected="true"]');
+  // scroll only if the chosen market is off-screen (centring always clipped the first pill)
+  if(sel && sel.offsetLeft+sel.offsetWidth > pills.scrollLeft+pills.clientWidth)
+    pills.scrollLeft=sel.offsetLeft+sel.offsetWidth-pills.clientWidth+16;
+  else if(sel && sel.offsetLeft < pills.scrollLeft) pills.scrollLeft=Math.max(0,sel.offsetLeft-16);
+
+  const ls=lines.filter(l=>hvpOutlet==="all" || l.o.id===hvpOutlet);
+  // the card counts only what's been entered; lines still at their default target don't count as picked yet
+  const target=ls.reduce((n,l)=>n+l.target,0), picked=ls.reduce((n,l)=>n+(l.recorded?l.picked:0),0);
+  const value=ls.reduce((n,l)=>n+l.earned,0), est=ls.some(l=>!l.recorded && l.priced);
+  const done=ls.filter(l=>l.done).length, short=ls.filter(l=>l.recorded && l.target>0 && l.picked<l.target).length;
+  const mk=markets.find(m=>m.id===hvpOutlet);
+  const pct=target>0 ? Math.min(100,Math.round(picked/target*100)) : 0;
+  document.getElementById("hvpCard").innerHTML=
+     `<div class="hvp-card-top"><b>${picked}</b><span class="of">of ${target} picked</span><span class="val" title="${est?"Includes lines not picked yet, at their target":""}">${est?"≈ ":""}${hvMoney(value)}</span></div>`
+    +`<div class="hvp-track"><span style="width:${pct}%;background:${short?"var(--clay)":"var(--ok)"}"></span></div>`
+    +`<div class="hvp-card-bot"><span>${mk&&mk.date?DAY_ABBR[isoToDate(mk.date).getDay()]+" "+esc(fmt(mk.date)):"Week of "+esc(fmt(hvState.week))} · ${done} of ${ls.length} done</span>`
+    +(short?`<span class="short">${short} short</span>`:``)+`</div>`;
+
+  const list=document.getElementById("hvpList");
+  if(!ls.length){
+    list.innerHTML=`<div class="hvp-empty">Nothing on the list for ${mk?esc(mk.label):"this week"} yet.<br>Tap <b>Add line</b> to put a crop on it.</div>`;
+    return;
+  }
+  const order=hvpSort==="block"
+    ? (a,b)=>String(a.block).localeCompare(String(b.block)) || hvCropName(a.plantings).localeCompare(hvCropName(b.plantings))
+    : (a,b)=>hvCropName(a.plantings).localeCompare(hvCropName(b.plantings));
+  const todo=ls.filter(l=>!l.done).sort(order), fin=ls.filter(l=>l.done).sort(order);
+  const row=(l,i)=>{
+    const isShort=l.recorded && l.target>0 && l.picked<l.target;
+    const p=l.target>0 ? Math.min(100,Math.round(l.picked/l.target*100)) : 0;
+    const u=hvUnitShort(hvUnitOf(l.pl));
+    const sub=[l.beds, l.groups.length>1?`${l.groups.length} sowings`:"", hvpOutlet==="all"?l.o.name:""].filter(Boolean).join(" · ");
+    return `<div class="hvp-row${l.done?" done":""}" data-hvp-line="${i}">`
+      +`<button type="button" class="hvp-cb${l.done?" done":""}" data-hvp-tick="${i}" aria-label="${l.done?"Picked — tap to undo":"Mark picked in full"}">`
+        +`<i style="${l.done?"":`border-color:${cropColor(l.pl.cropId||l.pl.crop)}`}">${l.done?`<svg viewBox="0 0 20 20" style="width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"><path d="M5 10.4l3.2 3.2L15 6.6"/></svg>`:""}</i></button>`
+      +`<div class="hvp-body"><div class="hvp-nm">${esc(hvCropName(l.plantings))}</div>`
+        +`<div class="hvp-sub">${esc(sub)}</div>`
+        +(l.done?``:`<div class="hvp-track"><span style="width:${l.recorded?p:0}%;background:${isShort?"var(--clay)":"var(--ok)"}"></span></div>`)
+      +`</div>`
+      +`<div class="hvp-right"><div class="hvp-num${isShort?" short":l.recorded?"":" est"}">${l.picked}</div>`
+        +`<div class="hvp-of">of ${l.target||"–"}${u?" "+esc(u):""}</div>`
+        +(l.priced?`<div class="hvp-val">${hvMoney(l.earned)}</div>`:``)
+      +`</div></div>`;
+  };
+  const all=todo.concat(fin);
+  list.innerHTML=(todo.length?`<div class="hvp-gh"><b>To pick</b><span>${todo.length}</span></div>`+todo.map(l=>row(l,all.indexOf(l))).join(""):"")
+    +(fin.length?`<div class="hvp-gh"><b>Done</b><span>${fin.length}</span></div>`+fin.map(l=>row(l,all.indexOf(l))).join(""):"");
+  list.querySelectorAll("[data-hvp-line]").forEach(r=>r.onclick=e=>{
+    if(e.target.closest("[data-hvp-tick]")) return;
+    hvpOpenEntry(all[+r.dataset.hvpLine]);
+  });
+  list.querySelectorAll("[data-hvp-tick]").forEach(b=>b.onclick=async e=>{
+    e.stopPropagation();
+    const l=all[+b.dataset.hvpTick]; if(!l) return;
+    if(l.done){ for(const g of l.groups) if(g.picked) await hvSetSum(g.plantings, l.o, "actual", null); return; }
+    const g=l.groups[0];
+    hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.groups.reduce((n,x)=>n+x.picked,0)));
+  });
+}
+function hvpShowSheet(html){
+  const sh=document.getElementById("hvpSheet");
+  sh.innerHTML=html; sh.hidden=false; document.getElementById("hvpScrim").hidden=false;
+  sh.querySelectorAll('[data-hvp="close"]').forEach(b=>b.onclick=hvpCloseSheet);
+  return sh;
+}
+function hvpCloseSheet(){
+  hvpSheetLine=null;
+  const a=document.getElementById("hvpSheet"), b=document.getElementById("hvpScrim");
+  if(a) a.hidden=true;
+  if(b) b.hidden=true;
+}
+// What did you pick? Target on top, then one stepper per sowing (one for the line if there's one).
+function hvpOpenEntry(l){
+  if(!l) return;
+  hvpSheetLine=l;
+  const u=unitLabel(hvUnitOf(l.pl),2), price=l.price;
+  const step=(key,nm,mt,val,ph)=>`<div class="hvp-step"><div class="lab"><div class="nm">${esc(nm)}</div>${mt?`<div class="mt">${esc(mt)}</div>`:""}</div>`
+    +`<div class="ctl"><button type="button" data-hvp-dec="${key}" aria-label="One less">−</button>`
+    +`<input type="number" inputmode="decimal" min="0" step="any" data-hvp-in="${key}" value="${val==null?"":val}" placeholder="${ph||""}">`
+    +`<button type="button" data-hvp-inc="${key}" aria-label="One more">+</button></div></div>`;
+  const multi=l.groups.length>1, varieties=new Set(l.groups.map(g=>g.variety)).size>1;
+  const sowLabel=g=>`${varieties&&g.variety?g.variety+" · ":""}Sown ${g.sow?fmt(g.sow):"?"}`;
+  const sh=hvpShowSheet(
+     `<div class="fm-sh-grip"></div><div class="fm-sh-head"><h3 id="hvpSheetTitle">${esc(hvCropName(l.plantings))}</h3>`
+    +`<button class="fm-sh-close" type="button" data-hvp="close" aria-label="Close">✕</button></div>`
+    +`<div class="hvp-sh-meta">${esc(l.o.name)} · ${esc(l.beds)}${price!=null?` · ${esc(hvMoney(price))} per ${esc(unitLabel(hvUnitOf(l.pl),1)||"unit")}`:""}</div>`
+    +step("t","Target",u,l.target||null,"")
+    +`<div class="fm-sh-lbl" style="padding:.7rem 1.1rem .3rem">Picked${multi?" — by sowing":""}</div>`
+    +(multi
+      ? l.groups.map((g,i)=>step("g"+i, g.beds, sowLabel(g), l.recorded?(g.picked||null):null, "–")).join("")
+      : step("g0", "Picked", l.recorded?"":"Defaults to the target — change it if you picked less", l.recorded?l.picked:l.target, ""))
+    +`<div class="hvp-sh-total"><b id="hvpTot"></b><span id="hvpTotOf" style="color:var(--ink-2)"></span><span class="val" id="hvpTotVal"></span></div>`
+    +`<div class="hvp-sh-foot"><button type="button" class="btn-ghost" id="hvpOpenPl">Planting</button>`
+    +`<button type="button" class="btn-primary" id="hvpSave">Save</button></div>`);
+  const inp=k=>sh.querySelector(`[data-hvp-in="${k}"]`);
+  const val=k=>{ const v=inp(k).value; return v===""?null:Math.max(0,+v); };
+  const total=()=>{
+    const t=val("t")||0, p=l.groups.reduce((n,g,i)=>n+(val("g"+i)||0),0);
+    document.getElementById("hvpTot").textContent=p;
+    document.getElementById("hvpTotOf").textContent=`of ${t} ${u}`;
+    document.getElementById("hvpTotVal").textContent=price!=null?hvMoney(p*price):"";
+  };
+  sh.querySelectorAll("[data-hvp-in]").forEach(i=>i.oninput=total);
+  const bump=(k,d)=>{ inp(k).value=Math.max(0,(val(k)||0)+d); total(); };
+  sh.querySelectorAll("[data-hvp-dec]").forEach(b=>b.onclick=()=>bump(b.dataset.hvpDec,-1));
+  sh.querySelectorAll("[data-hvp-inc]").forEach(b=>b.onclick=()=>bump(b.dataset.hvpInc,1));
+  total();
+  sh.querySelector("#hvpOpenPl").onclick=()=>{ hvpCloseSheet(); apOpenEdit(l.pl); };
+  sh.querySelector("#hvpSave").onclick=async ()=>{
+    const t=val("t"), picks=l.groups.map((g,i)=>val("g"+i));
+    hvpCloseSheet();
+    if(t!==(l.target||null)) await hvSetSum(l.plantings, l.o, "planned", t, l.groups[0].plantings[0]);
+    for(let i=0;i<l.groups.length;i++){
+      const g=l.groups[i], was=l.recorded?(g.picked||null):null;
+      // a single sowing left at its default still counts as entered once you press Save
+      if(picks[i]!==was || (!multi && !l.recorded && picks[i]!=null)) await hvSetSum(g.plantings, l.o, "actual", picks[i]);
+    }
+  };
+}
+function hvpOpenView(){
+  const sh=hvpShowSheet(
+     `<div class="fm-sh-grip"></div><div class="fm-sh-head"><h3 id="hvpSheetTitle">Harvest plan view</h3>`
+    +`<button class="fm-sh-close" type="button" data-hvp="close" aria-label="Close">✕</button></div>`
+    +`<div class="fm-sh-lbl">Week</div>`
+    +`<div class="hvp-week"><button type="button" data-hvpv="prev" aria-label="Previous week">‹</button>`
+    +`<b>${esc(fmt(hvState.week))} – ${esc(fmt(isoAddDays(hvState.week,6)))}</b>`
+    +`<button type="button" data-hvpv="next" aria-label="Next week">›</button></div>`
+    +`<div class="fm-sh-seg"><button type="button" data-hvpv="this" aria-pressed="${hvState.week===mondayOfISO(todayISO())}">This week</button></div>`
+    +`<div class="fm-sh-lbl">Sort the list by</div><div class="fm-sh-seg">`
+    +`<button type="button" data-hvpv="sort" data-val="crop" aria-pressed="${hvpSort==="crop"}">Crop A–Z</button>`
+    +`<button type="button" data-hvpv="sort" data-val="block" aria-pressed="${hvpSort==="block"}">Block</button></div>`);
+  sh.querySelectorAll("[data-hvpv]").forEach(b=>b.onclick=()=>{
+    const a=b.dataset.hvpv;
+    if(a==="prev") hvState.week=isoAddDays(hvState.week,-7);
+    if(a==="next") hvState.week=isoAddDays(hvState.week,7);
+    if(a==="this") hvState.week=mondayOfISO(todayISO());
+    if(a==="sort") hvpSort=b.dataset.val;
+    buildHarvestPlanner(); hvpOpenView();
+  });
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const v=document.getElementById("hvpViewBtn"); if(v) v.onclick=hvpOpenView;
+  const a=document.getElementById("hvpAdd"); if(a) a.onclick=()=>document.getElementById("hvAddLineBtn").click();
+  const s=document.getElementById("hvpScrim"); if(s) s.onclick=hvpCloseSheet;
+  window.matchMedia("(max-width:760px)").addEventListener("change",()=>{ if(currentView==="harvest") buildHarvestPlanner(); });
+});
 
 function hvRenderDayChips(){
   const box=document.getElementById("hvDayChips"); if(!box) return;
