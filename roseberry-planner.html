@@ -1161,6 +1161,8 @@
   .hv-qty{font-family:var(--mono);font-size:.74rem;white-space:nowrap;display:flex;align-items:center;gap:.3rem}
   .hv-qty input{width:52px;font-family:var(--mono);font-size:.74rem;text-align:right}
   .hv-qty.short{color:var(--clay)}
+  .hv-qty input.hv-default{color:var(--ink-2);font-style:italic}
+  .hv-addtally{font-family:var(--mono);font-size:.74rem;color:var(--ok);text-align:right;margin:.3rem 0 .2rem;min-height:1.1em}
   .hv-earn{color:var(--ok);font-weight:600;min-width:3.2em;text-align:right}
   /* a crop with more than one planting ready: one row per sowing under the crop line */
   .hv-gline{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:.75rem;
@@ -5612,6 +5614,7 @@
       <label class="ap-trow-f"><span>Crop</span><select id="hvAddPlanting" size="8"></select></label>
       <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
       <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
+      <div id="hvAddTally" class="hv-addtally"></div>
       <div class="ap-actions">
         <span class="spacer"></span>
         <button class="btn-ghost" id="hvAddCancel">Cancel</button>
@@ -11889,6 +11892,8 @@ function plantingTotalUnits(p){            // total yield in harvest units, or n
 }
 function unitLabel(unit,n){
   if(!unit) return "";
+  const tail=unit.match(/\s*\(.*\)$/);                    // "Bunch (3)" → pluralise "bunch", keep " (3)"
+  if(tail) return unitLabel(unit.slice(0,tail.index),n)+tail[0];
   const u=unit.toLowerCase();
   if(Math.abs((n||0)-1)<.005) return u;                 // singular
   if(u==="each") return "each";                          // uncountable-style unit
@@ -11953,21 +11958,24 @@ function hvLines(){
       const recOf=p=>hrFor(p.id,o.id,week);
       const target=pls.reduce((n,p)=>n+((recOf(p)||{}).planned||0),0);
       const groups=hvSowings(pls).map(g=>({ ...g, picked:g.plantings.reduce((n,p)=>n+((recOf(p)||{}).actual||0),0) }));
-      const picked=groups.reduce((n,g)=>n+g.picked,0);
+      const recorded=pls.some(p=>{ const r=recOf(p); return r && r.actual!=null; });
+      // Until something is entered, picked defaults to the target — you only type when it came up short.
+      const picked=recorded ? groups.reduce((n,g)=>n+g.picked,0) : target;
       if(!target && !picked) return;
       const pl=groups[0].plantings[0];
+      const price=hvPriceOf(pl);
       // what the picked amount is worth: each record's price override, else the planting/crop price
       let earned=0, priced=false;
-      pls.forEach(p=>{ const r=recOf(p); if(!r||!r.actual) return;
+      if(!recorded){ if(price!=null){ earned=target*price; priced=true; } }
+      else pls.forEach(p=>{ const r=recOf(p); if(!r||!r.actual) return;
         const pr=r.priceOverride!=null ? r.priceOverride : hvPriceOf(p);
         if(pr!=null){ earned+=r.actual*pr; priced=true; } });
-      const price=hvPriceOf(pl);
-      out.push({ id:`${hvCropKey(pl)}|${o.id}`, pl, o, plantings:pls, groups, target, picked,
-        beds: groups.length>1 ? `${groups.length} sowings` : groups[0].beds,
+      out.push({ id:`${hvCropKey(pl)}|${o.id}`, pl, o, plantings:pls, groups, target, picked, recorded,
+        beds: groups.map(g=>g.beds).join(", "),
         block:(data.beds||[]).find(b=>(pl.bedIds||[]).includes(b.id))?.block || "—",
         unit: unitLabel(hvUnitOf(pl), target||picked),
         earned, priced: priced || price!=null, price,
-        done: target>0 && picked>=target });
+        done: recorded && target>0 && picked>=target });
     });
   });
   return out;
@@ -12087,7 +12095,7 @@ function hvRenderList(lines){
         +`<span class="hv-qty${isShort?" short":""}">`
           // with several sowings the line shows the total; picked numbers go in on the rows below
           +(multi ? `<b>${l.picked}</b>`
-                  : `<input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="0" value="${l.picked||""}" title="How many picked">`)
+                  : `<input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="0" value="${l.picked||""}"${l.recorded?"":` class="hv-default"`} title="${l.recorded?"How many picked":"Defaults to the target — change it if you picked less"}">`)
           +`<span>/ ${l.target||"–"} ${esc(l.unit)}</span>`
           +(l.priced ? `<span class="hv-earn" title="${l.price!=null?esc(hvMoney(l.price))+" per "+esc(unitLabel(hvUnitOf(l.pl),1)||"unit"):""}">${hvMoney(l.earned)}</span>` : ``)
           +`</span>`
@@ -12098,7 +12106,7 @@ function hvRenderList(lines){
         html+=`<div class="hv-gline">`
           +`<span class="hv-gtick">${gi+1}</span>`
           +`<div class="hv-sub" style="min-width:0">Sown ${g.sow?esc(fmt(g.sow)):"?"} · ${esc(g.beds)}</div>`
-          +`<span class="hv-qty"><input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="${gi}" value="${g.picked||""}" title="How many picked from this sowing"></span>`
+          +`<span class="hv-qty"><input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="${gi}" value="${g.picked||""}" placeholder="${l.recorded?"":"–"}" title="How many picked from this sowing"></span>`
           +`</div>`;
       });
     });
@@ -12111,7 +12119,7 @@ function hvRenderList(lines){
     const l=lineOf(b.dataset.pickFull); if(!l) return;
     if(l.done){ for(const g of l.groups) if(g.picked) await hvSetSum(g.plantings, l.o, "actual", null); return; }
     const g=l.groups[0];
-    hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.picked));
+    hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.groups.reduce((n,x)=>n+x.picked,0)));
   });
   box.querySelectorAll("[data-actual]").forEach(inp=>inp.onchange=()=>{
     const l=lineOf(inp.dataset.actual); if(!l) return;
@@ -12139,6 +12147,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   const close=()=>modal.classList.remove("open");
   document.getElementById("hvAddClose").onclick=close;
   document.getElementById("hvAddCancel").onclick=close;
+  // live "target × price = $" under the target box
+  const tallyBox=document.getElementById("hvAddTally");
+  const tally=()=>{
+    const ps=ready[selP.value]; if(!ps){ tallyBox.textContent=""; return; }
+    const p=ps[0], price=hvPriceOf(p), unit=hvUnitOf(p), n=qty.value===""?0:+qty.value;
+    tallyBox.textContent = price==null ? "No price set for this crop"
+      : `${n||0} × ${hvMoney(price)} per ${unitLabel(unit,1)||"unit"} = ${hvMoney((n||0)*price)}`;
+  };
+  selP.onchange=tally; qty.oninput=tally;
   const add=document.getElementById("hvAddLineBtn");
   if(add) add.onclick=()=>{
     // one option per crop; its target covers every ready sowing of that crop
@@ -12149,12 +12166,13 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
     selP.replaceChildren(...ready.map((ps,i)=>{
-      const n=hvSowings(ps).length, p=ps[0];
-      return new Option(`${p.crop}${p.variety?" · "+p.variety:""} — ${n>1?n+" sowings":hvSowings(ps)[0].beds}`, i);
+      const p=ps[0];
+      return new Option(`${p.crop}${p.variety?" · "+p.variety:""} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`, i);
     }));
     selP.selectedIndex=0;                       // a list box starts with nothing chosen
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
     qty.value="";
+    tally();
     modal.classList.add("open");
     selP.focus();
   };
