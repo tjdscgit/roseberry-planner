@@ -7002,7 +7002,7 @@ let placedCache = [];
 
 /* ---------- Satellite underlay (localStorage — per-device, not synced to Airtable) ---------- */
 const FM_SAT_KEY="roseberry_satmap_v1";
-let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false;
+let fmSat=null, fmSatEl=null, fmMoveMode=false, fmViewInitialized=false, fmLastBox=null;
 let fmInactiveOn=false;   // "Inactive" toggle — greys out beds whose planting should be in the ground by now but isn't (see plantingInactive)
 // Farm Map infrastructure overlay — irrigation lines + point markers. fmInfraMode is null while
 // just browsing (click an existing feature to edit it); "point"/"line" while placing a new one,
@@ -7602,6 +7602,8 @@ function fmRefreshInfraLayer(){
 }
 
 function applyView(){
+  const mw=document.getElementById("mapWrap");     // remembered so a window resize can keep the centre
+  if(mw && mw.clientWidth) fmLastBox={W:mw.clientWidth, H:mw.clientHeight};
   document.getElementById("mapG").setAttribute("transform",
     `translate(${view.tx},${view.ty}) scale(${view.k})`);
   const px = view.k*10; // 10 m in px
@@ -9032,11 +9034,15 @@ function applyBackendFieldVisibility(){
 document.getElementById("backendSelect").onchange=applyBackendFieldVisibility;
 
 function gate(show,cls,msg){
+  // loadAll() calls gate(false) on every load — now including every live sync — so refitting here
+  // unconditionally snapped a zoomed-in farm map back to the whole farm. Only refit when the gate
+  // was actually up (first sign-in), i.e. when there's no view of the user's to preserve.
+  const wasUp = document.getElementById("gate").style.display !== "none";
   document.getElementById("gate").style.display = show?"flex":"none";
   const s=document.getElementById("gateStatus");
   s.className="status"+(cls?(" "+cls):"");s.textContent=msg||"";
   document.getElementById("clearBtn").style.display = connected()?"block":"none";
-  if(!show) fitView();
+  if(!show && wasUp) fitView();
 }
 document.getElementById("connectBtn").onclick=async()=>{
   const backend = document.getElementById("backendSelect").value;
@@ -9266,11 +9272,18 @@ document.getElementById("reloadBtn").onclick=loadAll;
 document.getElementById("themeBtn").onclick=()=>setTheme(theme==="dark"?"light":"dark");
 // Refit only when the WIDTH changes (rotating the phone, resizing the window). Height-only resizes
 // — Android's nav/status bar, the keyboard — used to snap the map back to the whole farm mid-pan.
+// Resizing the window (snapping a second window beside it, say) keeps whatever point was in the
+// middle of the map in the middle, at the same zoom — it used to refit to the whole farm.
 let fmLastW=window.innerWidth;
 window.addEventListener("resize",()=>{
   if(window.innerWidth===fmLastW) return;
   fmLastW=window.innerWidth;
-  if(document.getElementById("view-map").classList.contains("active"))fitView();
+  const wrap=document.getElementById("mapWrap");
+  if(!wrap || !document.getElementById("view-map").classList.contains("active")) return;
+  const W=wrap.clientWidth, H=wrap.clientHeight;
+  if(fmLastBox && fmViewInitialized){
+    view.tx += (W-fmLastBox.W)/2; view.ty += (H-fmLastBox.H)/2; applyView();
+  } else fitView();
 });
 
 /* ---------- utils ---------- */
@@ -9460,7 +9473,7 @@ function tarpRefreshViews(){
   const id=v?v.id:"";
   if(id==="view-cropmap") buildCropMap();
   else if(id==="view-timeline") buildTimeline();
-  else if(id==="view-map") layoutAndDraw({forceFit:true});
+  else if(id==="view-map") layoutAndDraw();   // keep the user's zoom
   else if(id==="view-misc") trpRenderList();
   else if(id==="view-week") buildWeekPlanner();
 }
@@ -15371,7 +15384,7 @@ async function apDoCreate(){
     }
     apClose();
     await loadAll();
-    renderViewContent(currentView);
+    if(currentView!=="map") renderViewContent(currentView);   // map: loadAll redrew it; renderViewContent would refit
   }catch(e){
     console.error(e); msg.style.color="var(--clay)";
     msg.textContent="Couldn't create: "+e.message;
@@ -15381,7 +15394,7 @@ async function apDoCreate(){
 async function apReloadAndClose(){
   apClose();
   await loadAll();
-  renderViewContent(currentView);
+  if(currentView!=="map") renderViewContent(currentView);
 }
 
 async function apDoSave(){
