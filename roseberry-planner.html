@@ -8972,19 +8972,31 @@ document.querySelectorAll(".railbtn[data-rail]").forEach(b=>b.onclick=()=>{
 (function(){
   const zone=document.getElementById("railzone"); if(!zone) return;
   const wrap=document.getElementById("sbwrap");
-  let hoverRail=null;
+  let hoverRail=null, pendingSwitch=null;
 
   function preview(rail){
+    clearTimeout(pendingSwitch);
     if(hoverRail!==rail){ paintSidebar(rail); hoverRail=rail; }
     wrap.classList.add("open");
   }
+  // Hover intent. Heading from an icon to its list, the cursor nearly always clips a neighbouring
+  // icon or the gap between icons on the way — switching instantly on those flipped the list out
+  // from under it. So once a list is showing, a switch waits a beat, and reaching the panel (or
+  // coming back to the icon already shown) cancels it. The very first open stays instant.
+  function previewSoon(rail, delay){
+    if(hoverRail===null || !wrap.classList.contains("open")){ preview(rail); return; }
+    clearTimeout(pendingSwitch);
+    if(rail===hoverRail) return;
+    pendingSwitch=setTimeout(()=>preview(rail), delay);
+  }
   zone.addEventListener("mouseover",e=>{
     const btn=e.target.closest(".railbtn[data-rail]");
-    if(btn){ preview(btn.dataset.rail); return; }
-    if(e.target.closest("#sbwrap")) return;              // inside the panel: sticky
-    if(e.target.closest(".rail")) preview(currentRail);  // open rail space
+    if(btn){ previewSoon(btn.dataset.rail, 140); return; }
+    if(e.target.closest("#sbwrap")){ clearTimeout(pendingSwitch); return; }   // inside the panel: sticky
+    if(e.target.closest(".rail")) previewSoon(currentRail, 350);              // open rail space
   });
   zone.addEventListener("mouseleave",()=>{
+    clearTimeout(pendingSwitch);
     wrap.classList.remove("open");
     hoverRail=null;
     paintSidebar(currentRail);   // reset so the next open (hover or tap) reflects reality
