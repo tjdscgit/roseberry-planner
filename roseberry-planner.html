@@ -739,6 +739,10 @@
     justify-content:center;background:rgba(247,245,239,.7);font-family:var(--mono);
     font-size:.78rem;color:var(--ink-2);letter-spacing:.06em}
   #loading.show{display:flex}
+  .sw-update{position:fixed;left:76px;bottom:16px;z-index:900;border:1px solid var(--line-2);border-radius:999px;
+    background:var(--steel);color:#fff;font:600 12.5px var(--sans);padding:8px 14px;cursor:pointer;
+    box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  @media (max-width:760px){ .sw-update{left:16px;bottom:72px} }
   .nw-menu{position:fixed;z-index:1000;min-width:190px;padding:4px;border:1px solid var(--line-2);border-radius:9px;
     background:var(--paper-2);box-shadow:0 8px 24px rgba(0,0,0,.28)}
   .nw-menu button{display:block;width:100%;text-align:left;border:none;background:none;color:var(--ink);
@@ -6655,6 +6659,8 @@ async function refreshPlantingTasks(){
   data.plantingTasks = rows.map(parsePlantingTaskRecord);
 }
 
+// Read once at startup, before anything can rewrite the URL.
+const START_VIEW = new URLSearchParams(location.search).get("view");
 async function loadAll(opts){
   // quiet: a background sync — no "reading the base…" cover, and a failure is thrown back to the
   // sync layer (which retries) instead of dropping the user onto the sign-in gate.
@@ -6903,8 +6909,8 @@ async function loadAll(opts){
     if(!uiRestored){
       uiRestored=true; restoreUiState();
       // A window opened with "Open in new window" names its page in the URL; that beats the saved one.
-      const startView=new URLSearchParams(location.search).get("view");
-      if(startView && VIEW_RAIL[startView]) showView(startView);
+      if(START_VIEW && VIEW_RAIL[START_VIEW]) showView(START_VIEW);
+      else if(currentView) showView(currentView);   // writes ?view= for this window
     }
   }catch(e){
     console.error(e);
@@ -8927,6 +8933,13 @@ function showView(view){
   const el=document.getElementById("view-"+view); if(el) el.classList.add("active");
 
   currentView = view;
+  // Each window keeps its own page in its URL (?view=), so a reload — a new version arriving, say —
+  // brings THIS window back to THIS page. The saved UI state in localStorage is shared by every
+  // window, so it used to hand a reloaded window whichever page another window had open last.
+  if(uiRestored){ try{
+    const u=new URL(location.href);
+    if(u.searchParams.get("view")!==view){ u.searchParams.set("view",view); history.replaceState(history.state,"",u); }
+  }catch(_){} }
   const rail = VIEW_RAIL[view];
   if(rail && rail!==currentRail){ currentRail=rail; renderSidebar(); }
   else { renderSidebar(); }                    // same rail, different row: just refresh highlights
@@ -28496,12 +28509,30 @@ if ('serviceWorker' in navigator) {
       setInterval(check, 10 * 60 * 1000);
     }).catch((e) => console.error('SW registration failed:', e));
   });
-  let swReloaded = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (swReloaded) return;
-    swReloaded = true;
-    location.reload();
+  // A new version used to reload every open window the instant it landed — mid-task, in both
+  // windows, every deploy. Now it applies itself only when nobody's looking: as soon as the window
+  // goes to the background, or straight away if it lands just after reopening the app (that reads
+  // as "opening the app", not an interruption). Otherwise a small "Update ready" button waits.
+  let swUpdateReady = false, swResumedAt = 0, swReloaded = false;
+  const swReload = () => { if (swReloaded) return; swReloaded = true; location.reload(); };
+  const swTryApply = () => {
+    if (!swUpdateReady) return;
+    if (document.hidden) return swReload();
+    if (Date.now() - swResumedAt < 15000 && !syncEditing()) return swReload();
+    if (!document.getElementById('swUpdateBtn')){
+      const b = document.createElement('button');
+      b.id = 'swUpdateBtn'; b.type = 'button'; b.className = 'sw-update';
+      b.textContent = 'Update ready — reload';
+      b.onclick = swReload;
+      document.body.appendChild(b);
+    }
+  };
+  let swHiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden){ swHiddenAt = Date.now(); swTryApply(); return; }
+    if (swHiddenAt && Date.now() - swHiddenAt > 10*60*1000) swResumedAt = Date.now();
   });
+  navigator.serviceWorker.addEventListener('controllerchange', () => { swUpdateReady = true; swTryApply(); });
 }
 
 /* ---------- Push notifications ----------
@@ -28629,7 +28660,8 @@ pushRenderState();
 let wkHiddenAt = null;
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden'){ wkHiddenAt = Date.now(); return; }
-  if (wkHiddenAt && Date.now() - wkHiddenAt > 10*60*1000) location.reload();
+  // (Used to force a reload after 10 min hidden. The live sync keeps the data fresh and the
+  // service-worker block applies new versions, so that only ever cost people their place.)
   wkHiddenAt = null;
 });
 
