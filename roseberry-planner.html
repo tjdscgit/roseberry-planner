@@ -12510,7 +12510,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     qty.value="";
     tally();
     modal.classList.add("open");
-    search.focus();
+    // desktop: straight into the search box. Phone: no — focusing it throws the keyboard up over the
+    // list; the crop list scrolls, and the keyboard only appears when you tap Search.
+    if(!cmIsMobile()) search.focus();
   };
   document.getElementById("hvAddOk").onclick=async ()=>{
     const ps=ready[selP.value], o=outlets[selO.value];
