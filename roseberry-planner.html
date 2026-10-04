@@ -20332,9 +20332,11 @@ function wkBlockHTML(g, dayISO){
   // pass can be overridden across the beds it covers (bpp_minutesOverride) — see
   // wkResizeOnPointerUp. Bed prep's common case bundles several operations under one calendar
   // slot ("×5"); resizing THAT spreads the change proportionally across all of them rather than
-  // picking one, so — unlike task/milestone — it stays resizable even grouped. tarp/spray have no
-  // duration field at all.
-  const resizable = g.kind==="bedprep" || (total===1 && (!g.kind || g.kind==="milestone" || g.kind==="spray"));
+  // picking one.
+  // Every kind now has somewhere to write a length (tarps got per-step "Lay/Pull minutes" on
+  // 2026-10-04), and a grouped block ("Direct sow ×2") spreads the change across its members the
+  // same way bed prep always has — so the handle shows on every block.
+  const resizable = true;
   return `<div class="wk-block${allDone?" done":""}${total>1?" wk-block-grouped":""}${selected?" wk-selected":""}" style="top:${top}px;height:${h}px;background:${col.bg}" `
     +`data-grp="${esc(g.key)}" data-day="${dayISO}" data-total="${total}" data-min="${Math.round(g.dispMin)}">`
     +`<div class="wk-block-h" data-drag="1" title="${g.kind==="bedprep"?(total>1?"Drag to set a time · click for full details":"Drag to set a time"):(total>1?"Drag to reschedule · click for full details":"Drag to reschedule")}">`
@@ -21390,9 +21392,6 @@ function wkResizeOnPointerDown(e){
   const {rows}=wkCollect();
   const members=rows.filter(r=>wkCalGroupKey(r)===block.dataset.grp && wkSameDay(r.due,wkParse(block.dataset.day)));
   if(!members.length) return;
-  const resizableKind = members.length===1 ? (!members[0].kind || members[0].kind==="milestone" || members[0].kind==="bedprep" || members[0].kind==="spray")
-    : members.every(r=>r.kind==="bedprep");
-  if(!resizableKind) return;
   e.preventDefault(); e.stopPropagation();
   const rect=block.getBoundingClientRect();
   try{ handle.setPointerCapture(e.pointerId); }catch(_){}
@@ -21419,6 +21418,13 @@ async function wkResizeCommitOne(r, newMin){
     planRecs.forEach(p=>{ p.minutesOverride=newMin; });
     try{ await Promise.all(planRecs.map(p=>atPatch(CFG.farmBase,CFG.tables.bedPrepPlan,p.id,{[CFG.f.bpp_minutesOverride]:newMin}))); }
     catch(err){ planRecs.forEach((p,i)=>{ p.minutesOverride=prev[i]; }); throw err; }
+    return;
+  }
+  if(r.kind==="tarp"){
+    const tp=r.tarp, key=r.step.minutes, prev=tp[key];
+    tp[key]=newMin;
+    try{ await atPatch(CFG.farmBase,CFG.tables.tarpings,tp.id,{[CFG.f[r.step.fMin]]:newMin}); }
+    catch(err){ tp[key]=prev; throw err; }
     return;
   }
   if(r.kind==="spray"){

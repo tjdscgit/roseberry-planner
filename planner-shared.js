@@ -223,6 +223,7 @@
       // below maps each step to its own set, so nothing else has to branch on lay-vs-pull.
       tr_layAssignee:"Lay assignee", tr_pullAssignee:"Pull assignee",
       tr_layStart:"Lay start minute", tr_pullStart:"Pull start minute",
+      tr_layMin:"Lay minutes", tr_pullMin:"Pull minutes",   // per-tarp override of the job's length (resized on This week)
       tr_layTtId:"Lay TickTick Task ID", tr_pullTtId:"Pull TickTick Task ID",
       tr_layGcalId:"Lay Google Cal Event ID", tr_pullGcalId:"Pull Google Cal Event ID",
       tr_layOpsId:"Lay Ops Task ID", tr_pullOpsId:"Pull Ops Task ID",
@@ -765,7 +766,8 @@
               variety:"", bedIds:[tarp.bedId], bm, cropId:null },
           task: task || {name:s.label, category:"Bed prep"},
           due, overdue, inWeek,
-          minutes: task && task.duration!=null ? task.duration*bm/15 : null,
+          minutes: tarp[s.minutes]!=null ? tarp[s.minutes]
+            : task && task.duration!=null ? task.duration*bm/15 : null,
         });
       });
     });
@@ -1915,6 +1917,7 @@
       // per-job scheduling + sync state; keys match TARP_STEPS' assignee/startMin/ttId/gcalId
       layAssignee:t.fields[F.tr_layAssignee]||"", pullAssignee:t.fields[F.tr_pullAssignee]||"",
       layStart:num(t.fields[F.tr_layStart]), pullStart:num(t.fields[F.tr_pullStart]),
+      layMin:num(t.fields[F.tr_layMin]), pullMin:num(t.fields[F.tr_pullMin]),
       layTtId:t.fields[F.tr_layTtId]||"", pullTtId:t.fields[F.tr_pullTtId]||"",
       layGcalId:t.fields[F.tr_layGcalId]||"", pullGcalId:t.fields[F.tr_pullGcalId]||"",
       layOpsId:t.fields[F.tr_layOpsId]||"", pullOpsId:t.fields[F.tr_pullOpsId]||"",
@@ -2003,12 +2006,12 @@
   const TARP_STEPS=[
     {step:"lay",  label:"Lay tarp",  stage:"On",      df:"start", actual:"laidActual",
      assignee:"layAssignee",  startMin:"layStart",  ttId:"layTtId",  gcalId:"layGcalId",
-     opsId:"layOpsId",
+     opsId:"layOpsId", minutes:"layMin", fMin:"tr_layMin",
      fAssignee:"tr_layAssignee",  fStart:"tr_layStart",  fTt:"tr_layTtId",  fGcal:"tr_layGcalId",
      fOps:"tr_layOpsId"},
     {step:"pull", label:"Pull tarp", stage:"Removed", df:"end",   actual:"pulledActual",
      assignee:"pullAssignee", startMin:"pullStart", ttId:"pullTtId", gcalId:"pullGcalId",
-     opsId:"pullOpsId",
+     opsId:"pullOpsId", minutes:"pullMin", fMin:"tr_pullMin",
      fAssignee:"tr_pullAssignee", fStart:"tr_pullStart", fTt:"tr_pullTtId", fGcal:"tr_pullGcalId",
      fOps:"tr_pullOpsId"},
   ];
