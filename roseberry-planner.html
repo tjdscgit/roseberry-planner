@@ -1452,6 +1452,13 @@
   .wk-check:checked::after{content:"";position:absolute;left:50%;top:44%;width:.28rem;height:.5rem;
     border:solid #fff;border-width:0 1.6px 1.6px 0;transform:translate(-50%,-50%) rotate(45deg)}
   .wk-check:disabled{opacity:.5;cursor:default}
+  /* Phone: a thumb-sized tick circle on Today and the This week list. The invisible ::before widens
+     the tap area further without pushing the row's text over. */
+  @media (max-width:760px){
+    .td-task .wk-check, .wk-group-row .wk-check{width:1.6rem;height:1.6rem;border-width:2px}
+    .td-task .wk-check::before, .wk-group-row .wk-check::before{content:"";position:absolute;inset:-10px}
+    .td-task .wk-check:checked::after, .wk-group-row .wk-check:checked::after{width:.42rem;height:.78rem;border-width:0 2.4px 2.4px 0}
+  }
   .wk-task-main{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;cursor:pointer}
   .wk-task-name{font-size:.82rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .wk-ctx{font-size:.72rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
