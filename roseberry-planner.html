@@ -1599,6 +1599,7 @@
   .wk-block-resize::after{content:"";position:absolute;left:50%;bottom:2px;width:22px;height:3px;
     border-radius:2px;background:rgba(255,255,255,.55);transform:translateX(-50%)}
   .wk-block-resize:hover::after{background:#fff}
+  @media (max-width:760px){ .wk-block-resize{height:18px} }   /* finger-sized grab strip on a phone */
   .wk-block-name{font-size:.656rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
   .wk-block-meta{font-family:var(--mono);font-size:.53rem;color:rgba(255,255,255,.85);flex:0 0 auto;white-space:nowrap}
   .wk-block-mems{padding:.12rem .3rem .2rem;display:flex;flex-direction:column;gap:.08rem}
