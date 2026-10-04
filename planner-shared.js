@@ -713,7 +713,10 @@
       if(!overdue && !inWeek) return;
       const dur=t.duration||task.duration||0;
       // manual tasks have no bed to scale against — their duration IS the minutes estimate.
-      const minutes = manual ? dur : dur*(p.bm||0)/15;
+      // No bed length on record → read the duration as plain minutes (the resize handle on This week
+      // writes it that way — see wkResizeCommitOne). Multiplying by a zero length used to make
+      // every such job 0 minutes, so a resize saved fine and then snapped straight back.
+      const minutes = (manual || !(p.bm>0)) ? dur : dur*p.bm/15;
       rows.push({ id:t.id, t, p, task, due, overdue, inWeek, minutes, manual });
     });
     (data.plantings||[]).forEach(p=>{
@@ -729,7 +732,7 @@
         // default — same unit (minutes per 15m bed) either way, so the scaling below is unchanged.
         const msDurOverride = step.df==="tp" ? p.tpDuration : p.sowDuration;
         const msDur = msDurOverride!=null ? msDurOverride : (msTask && msTask.duration!=null ? msTask.duration : null);
-        const msMinutes = msDur!=null ? msDur*(p.bm||0)/15 : null;
+        const msMinutes = msDur==null ? null : p.bm>0 ? msDur*p.bm/15 : msDur;   // no bed length: plain minutes, as above
         const msStart = step.df==="tp" ? p.tpStart : p.sowStart;
         rows.push({
           id:`ms:${p.id}:${step.df}`, kind:"milestone", msDf:step.df, msLocked:cur>sr,
@@ -767,7 +770,7 @@
           task: task || {name:s.label, category:"Bed prep"},
           due, overdue, inWeek,
           minutes: tarp[s.minutes]!=null ? tarp[s.minutes]
-            : task && task.duration!=null ? task.duration*bm/15 : null,
+            : task && task.duration!=null ? (bm>0 ? task.duration*bm/15 : task.duration) : null,
         });
       });
     });

@@ -20306,31 +20306,36 @@ function wkPackDay(dayRows){
 // ~header row's own rendered height; the block still carries the real duration in its own height
 // and tooltip, this only decides whether there's room to also show a preview line under it.
 const WK_BLOCK_MEMS_MIN_H=34;
+const WK_BLOCK_HEAD_H=20, WK_BLOCK_ROW_H=19;   // header line and one member line, px — for how many members fit
 function wkBlockHTML(g, dayISO){
   const top=(g.start-WK_T0)*WK_PXMIN, h=g.dispMin*WK_PXMIN;
   const total=g.members.length, doneN=g.members.filter(m=>m.t.done).length, allDone=total>0&&doneN===total;
   const col=wkBlockColor(g);
-  // a 30min-tall block only has room for the header + one row, so show just the first (soonest)
-  // member as a preview — the rest (when grouped) are one click away via the group details dialog
+  // List as many members (each with its own tick box) as the block's height has room for; when
+  // they don't all fit, the last line becomes "+N more…" and the rest are one click away in the
+  // group panel. (Used to list only the first, and with exactly two the second just vanished.)
   const sorted=g.members.slice().sort((a,b)=>a.p.crop.localeCompare(b.p.crop));
   const soonest=sorted[0];
-  const soonestLock=soonest.kind==="milestone"&&soonest.msLocked;
   // manual tasks have no crop/bed — the block header already carries their name, so show the
   // assignee (if any) here instead of repeating it.
-  const soonestTxt = soonest.manual ? (soonest.t.assignee?esc(soonest.t.assignee):"")
-    : soonest.kind==="bedprep" ? `${esc(soonest.task.name)} · ${esc(wkBedPrepCtx(soonest).split(" · ").slice(1).join(" · "))}`
-    : `${esc(soonest.p.crop)}${soonest.p.variety?" · "+esc(soonest.p.variety):""}${bedNameOf(soonest.p)?" · "+esc(bedNameOf(soonest.p)):""}`;
+  const memTxt = m => m.manual ? (m.t.assignee?esc(m.t.assignee):"")
+    : m.kind==="bedprep" ? `${esc(m.task.name)} · ${esc(wkBedPrepCtx(m).split(" · ").slice(1).join(" · "))}`
+    : `${esc(m.p.crop)}${m.p.variety?" · "+esc(m.p.variety):""}${bedNameOf(m.p)?" · "+esc(bedNameOf(m.p)):""}`;
+  const soonestTxt = memTxt(soonest);
   // Too short for the preview as its own row (see WK_BLOCK_MEMS_MIN_H) — rather than dropping it,
   // fold it into the name line itself, one line, ellipsis-truncated same as the name alone was.
   // Still real, still there — just not on its own row when there isn't room for one.
   const tooShortForOwnRow = h<WK_BLOCK_MEMS_MIN_H;
-  const mems = (tooShortForOwnRow || !soonestTxt) ? "" : sorted.slice(0,1).map(m=>{
+  const fitRows = tooShortForOwnRow ? 0 : Math.max(1, Math.floor((h-WK_BLOCK_HEAD_H)/WK_BLOCK_ROW_H));
+  const shown = fitRows>=total ? total : Math.max(1, fitRows-1);   // leave a line for "+N more…"
+  const mems = (tooShortForOwnRow || !soonestTxt) ? "" : sorted.slice(0,shown).map(m=>{
+    const lock=m.kind==="milestone"&&m.msLocked;
     return `<div class="wk-mem${m.t.done?" done":""}">`
-      +`<input type="checkbox" class="wk-check" ${m.t.done?"checked":""} ${soonestLock?"disabled":""} `
+      +`<input type="checkbox" class="wk-check" ${m.t.done?"checked":""} ${lock?"disabled":""} `
         +`data-id="${m.id}" data-plid="${m.p.id}"${m.kind==="milestone"?` data-kind="milestone" data-df="${m.msDf}"`:""}>`
-      +`<span class="wk-mem-txt" data-pl="${m.p.id}">${soonestTxt}</span>`
+      +`<span class="wk-mem-txt" data-pl="${m.p.id}">${memTxt(m)}</span>`
       +`</div>`;
-  }).join("") + (total>2?`<div class="wk-mem-more">+${total-1} more…</div>`:"");
+  }).join("") + (total>shown?`<div class="wk-mem-more">+${total-shown} more…</div>`:"");
   // Ringing only makes sense for an ungrouped block — a grouped one's header opens the group modal,
   // not either detail panel, so there's no single selection state for it to reflect.
   const selected = total===1 && (g.members[0].id===wkSelectedJobId || g.members[0].p.id===wkSelectedPlantingId);
