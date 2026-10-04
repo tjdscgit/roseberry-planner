@@ -1162,6 +1162,8 @@
   .hv-qty input{width:52px;font-family:var(--mono);font-size:.74rem;text-align:right}
   .hv-qty.short{color:var(--clay)}
   .hv-qty input.hv-default{color:var(--ink-2);font-style:italic}
+  .hv-weigh{color:#C98A1B;font-weight:700}
+  .hv-line.done.weigh .hv-nm{text-decoration:none}
   .hv-addtally{font-family:var(--mono);font-size:.74rem;color:var(--ok);text-align:right;margin:.3rem 0 .2rem;min-height:1.1em}
   .hv-earn{color:var(--ok);font-weight:600;min-width:3.2em;text-align:right}
   /* a crop with more than one planting ready: one row per sowing under the crop line */
@@ -1210,6 +1212,8 @@
     .hvp-body{flex:1 1 auto;min-width:0;padding:6px 0}
     .hvp-nm{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .hvp-row.done .hvp-nm{color:var(--ink-2);text-decoration:line-through}
+    .hvp-weigh{color:#C98A1B;font-weight:700}
+    .hvp-row.weigh .hvp-nm{color:var(--ink);text-decoration:none}
     .hvp-sub{font:11px var(--mono);color:var(--ink-2);margin-top:4px}
     .hvp-right{flex:0 0 auto;text-align:right;padding-left:8px}
     .hvp-num{font:700 15px var(--mono)}
@@ -5701,7 +5705,7 @@
       <label class="ap-trow-f"><span>Crop</span><input type="search" id="hvAddSearch" placeholder="Search crop, variety, type or bed…" autocomplete="off"></label>
       <label class="ap-trow-f"><span></span><select id="hvAddPlanting" size="8"></select></label>
       <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
-      <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="planned qty"></label>
+      <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="blank = whatever's ready"></label>
       <div id="hvAddTally" class="hv-addtally"></div>
       <div class="ap-actions">
         <span class="spacer"></span>
@@ -12049,17 +12053,21 @@ function hvLines(){
   activeOutlets().forEach(o=>{
     const byCrop=new Map();
     const add=p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,new Set()); byCrop.get(k).add(p); };
-    (data.plantings||[]).forEach(p=>{ const r=hrFor(p.id,o.id,week); if(r && (r.planned||r.actual)) add(p); });
+    // a record counts once it holds anything — including 0 ("no target" / "picked, not weighed yet")
+    (data.plantings||[]).forEach(p=>{ const r=hrFor(p.id,o.id,week); if(r && (r.planned!=null||r.actual!=null)) add(p); });
     [...byCrop.keys()].forEach(k=>ready.filter(p=>hvCropKey(p)===k).forEach(add));   // other ready sowings of a listed crop
     byCrop.forEach((set)=>{
       const pls=[...set];
       const recOf=p=>hrFor(p.id,o.id,week);
       const target=pls.reduce((n,p)=>n+((recOf(p)||{}).planned||0),0);
-      const groups=hvSowings(pls).map(g=>({ ...g, picked:g.plantings.reduce((n,p)=>n+((recOf(p)||{}).actual||0),0) }));
-      const recorded=pls.some(p=>{ const r=recOf(p); return r && r.actual!=null; });
+      const groups=hvSowings(pls).map(g=>({ ...g, picked:g.plantings.reduce((n,p)=>n+((recOf(p)||{}).actual||0),0),
+        recorded:g.plantings.some(p=>{ const r=recOf(p); return r && r.actual!=null; }) }));
+      const recorded=groups.some(g=>g.recorded);
       // Until something is entered, picked defaults to the target — you only type when it came up short.
       const picked=recorded ? groups.reduce((n,g)=>n+g.picked,0) : target;
-      if(!target && !picked) return;
+      /* No target (planned 0 or blank): "pick whatever's ready". Ticking it records 0 = harvested,
+         not weighed yet; the real amount goes in later and replaces the 0. */
+      const noTarget=!(target>0), weighLater=noTarget && recorded && picked===0;
       const pl=groups[0].plantings[0];
       const price=hvPriceOf(pl);
       // what the picked amount is worth: each record's price override, else the planting/crop price
@@ -12073,16 +12081,27 @@ function hvLines(){
         block:(data.beds||[]).find(b=>(pl.bedIds||[]).includes(b.id))?.block || "—",
         unit: unitLabel(hvUnitOf(pl), target||picked),
         earned, priced: priced || price!=null, price,
-        done: recorded && target>0 && picked>=target });
+        noTarget, weighLater,
+        done: recorded && (noTarget || picked>=target) });
     });
   });
   return out;
+}
+/* The tick circle. Done → undo (clear what was picked). Target → picked in full (one sowing gets
+   the target; with several, the shortfall goes on the oldest). No target → "harvested, weigh later"
+   (0 on the oldest sowing), unless an amount is already in. */
+async function hvTick(l){
+  if(!l) return;
+  if(l.done){ for(const g of l.groups) if(g.recorded) await hvSetSum(g.plantings, l.o, "actual", null); return; }
+  const g=l.groups[0];
+  if(l.noTarget) return hvSetSum(g.plantings, l.o, "actual", g.picked||0);
+  hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.groups.reduce((n,x)=>n+x.picked,0)));
 }
 /* Put `value` in one record's field and clear that field on the rest, so a sum over the set reads
    back as `value`. Keeps the record that already holds a number, else uses `anchor`. */
 async function hvSetSum(pls, o, field, value, anchor){
   const week=hvState.week;
-  const holders=pls.filter(p=>{ const r=hrFor(p.id,o.id,week); return r && r[field]; });
+  const holders=pls.filter(p=>{ const r=hrFor(p.id,o.id,week); return r && r[field]!=null; });
   const keep=holders[0] || anchor || pls[0];
   for(const p of holders) if(p!==keep) await upsertHarvest(p, o, week, field, null, true);
   await upsertHarvest(keep, o, week, field, value, true);
@@ -12181,13 +12200,15 @@ function hvpRender(lines){
   const target=ls.reduce((n,l)=>n+l.target,0), picked=ls.reduce((n,l)=>n+(l.recorded?l.picked:0),0);
   const value=ls.reduce((n,l)=>n+l.earned,0), est=ls.some(l=>!l.recorded && l.priced);
   const done=ls.filter(l=>l.done).length, short=ls.filter(l=>l.recorded && l.target>0 && l.picked<l.target).length;
+  const toWeigh=ls.filter(l=>l.weighLater).length;
   const mk=markets.find(m=>m.id===hvpOutlet);
   const pct=target>0 ? Math.min(100,Math.round(picked/target*100)) : 0;
   document.getElementById("hvpCard").innerHTML=
      `<div class="hvp-card-top"><b>${picked}</b><span class="of">of ${target} picked</span><span class="val" title="${est?"Includes lines not picked yet, at their target":""}">${est?"≈ ":""}${hvMoney(value)}</span></div>`
     +`<div class="hvp-track"><span style="width:${pct}%;background:${short?"var(--clay)":"var(--ok)"}"></span></div>`
     +`<div class="hvp-card-bot"><span>${mk&&mk.date?DAY_ABBR[isoToDate(mk.date).getDay()]+" "+esc(fmt(mk.date)):"Week of "+esc(fmt(hvState.week))} · ${done} of ${ls.length} done</span>`
-    +(short?`<span class="short">${short} short</span>`:``)+`</div>`;
+    +(toWeigh?`<span class="hvp-weigh"${short?"":` style="margin-left:auto"`}>${toWeigh} to weigh</span>`:``)
+    +(short?`<span class="short"${toWeigh?` style="margin-left:0"`:""}>${short} short</span>`:``)+`</div>`;
 
   const list=document.getElementById("hvpList");
   if(!ls.length){
@@ -12197,26 +12218,31 @@ function hvpRender(lines){
   const order=hvpSort==="block"
     ? (a,b)=>String(a.block).localeCompare(String(b.block)) || hvCropName(a.plantings).localeCompare(hvCropName(b.plantings))
     : (a,b)=>hvCropName(a.plantings).localeCompare(hvCropName(b.plantings));
-  const todo=ls.filter(l=>!l.done).sort(order), fin=ls.filter(l=>l.done).sort(order);
+  const todo=ls.filter(l=>!l.done).sort(order), weigh=ls.filter(l=>l.weighLater).sort(order),
+        fin=ls.filter(l=>l.done && !l.weighLater).sort(order);
   const row=(l,i)=>{
     const isShort=l.recorded && l.target>0 && l.picked<l.target;
     const p=l.target>0 ? Math.min(100,Math.round(l.picked/l.target*100)) : 0;
     const u=hvUnitShort(hvUnitOf(l.pl));
     const sub=[l.beds, l.groups.length>1?`${l.groups.length} sowings`:"", hvpOutlet==="all"?l.o.name:""].filter(Boolean).join(" · ");
-    return `<div class="hvp-row${l.done?" done":""}" data-hvp-line="${i}">`
-      +`<button type="button" class="hvp-cb${l.done?" done":""}" data-hvp-tick="${i}" aria-label="${l.done?"Picked — tap to undo":"Mark picked in full"}">`
+    return `<div class="hvp-row${l.done?" done":""}${l.weighLater?" weigh":""}" data-hvp-line="${i}">`
+      +`<button type="button" class="hvp-cb${l.done?" done":""}" data-hvp-tick="${i}" aria-label="${l.done?"Picked — tap to undo":l.noTarget?"Mark harvested, weigh later":"Mark picked in full"}">`
         +`<i style="${l.done?"":`border-color:${cropColor(l.pl.cropId||l.pl.crop)}`}">${l.done?`<svg viewBox="0 0 20 20" style="width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"><path d="M5 10.4l3.2 3.2L15 6.6"/></svg>`:""}</i></button>`
       +`<div class="hvp-body"><div class="hvp-nm">${esc(hvCropName(l.plantings))}</div>`
         +`<div class="hvp-sub">${esc(sub)}</div>`
-        +(l.done?``:`<div class="hvp-track"><span style="width:${l.recorded?p:0}%;background:${isShort?"var(--clay)":"var(--ok)"}"></span></div>`)
+        +(l.done||l.noTarget?``:`<div class="hvp-track"><span style="width:${l.recorded?p:0}%;background:${isShort?"var(--clay)":"var(--ok)"}"></span></div>`)
       +`</div>`
-      +`<div class="hvp-right"><div class="hvp-num${isShort?" short":l.recorded?"":" est"}">${l.picked}</div>`
-        +`<div class="hvp-of">of ${l.target||"–"}${u?" "+esc(u):""}</div>`
-        +(l.priced?`<div class="hvp-val">${hvMoney(l.earned)}</div>`:``)
+      +(l.noTarget
+        ? `<div class="hvp-right"><div class="hvp-num${l.picked?"":" est"}">${l.picked||"–"}</div>`
+          +`<div class="hvp-of">${l.weighLater?`<span class="hvp-weigh">weigh later</span>`:l.picked?esc(u):"as ready"}</div>`
+        : `<div class="hvp-right"><div class="hvp-num${isShort?" short":l.recorded?"":" est"}">${l.picked}</div>`
+          +`<div class="hvp-of">of ${l.target||"–"}${u?" "+esc(u):""}</div>`)
+        +(l.priced && !l.weighLater && (l.picked || !l.noTarget)?`<div class="hvp-val">${hvMoney(l.earned)}</div>`:``)
       +`</div></div>`;
   };
-  const all=todo.concat(fin);
+  const all=todo.concat(weigh,fin);
   list.innerHTML=(todo.length?`<div class="hvp-gh"><b>To pick</b><span>${todo.length}</span></div>`+todo.map(l=>row(l,all.indexOf(l))).join(""):"")
+    +(weigh.length?`<div class="hvp-gh"><b>To weigh</b><span>${weigh.length}</span></div>`+weigh.map(l=>row(l,all.indexOf(l))).join(""):"")
     +(fin.length?`<div class="hvp-gh"><b>Done</b><span>${fin.length}</span></div>`+fin.map(l=>row(l,all.indexOf(l))).join(""):"");
   list.querySelectorAll("[data-hvp-line]").forEach(r=>r.onclick=e=>{
     if(e.target.closest("[data-hvp-tick]")) return;
@@ -12224,10 +12250,7 @@ function hvpRender(lines){
   });
   list.querySelectorAll("[data-hvp-tick]").forEach(b=>b.onclick=async e=>{
     e.stopPropagation();
-    const l=all[+b.dataset.hvpTick]; if(!l) return;
-    if(l.done){ for(const g of l.groups) if(g.picked) await hvSetSum(g.plantings, l.o, "actual", null); return; }
-    const g=l.groups[0];
-    hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.groups.reduce((n,x)=>n+x.picked,0)));
+    hvTick(all[+b.dataset.hvpTick]);
   });
 }
 function hvpShowSheet(html){
@@ -12257,20 +12280,24 @@ function hvpOpenEntry(l){
      `<div class="fm-sh-grip"></div><div class="fm-sh-head"><h3 id="hvpSheetTitle">${esc(hvCropName(l.plantings))}</h3>`
     +`<button class="fm-sh-close" type="button" data-hvp="close" aria-label="Close">✕</button></div>`
     +`<div class="hvp-sh-meta">${esc(l.o.name)} · ${esc(l.beds)}${price!=null?` · ${esc(hvMoney(price))} per ${esc(unitLabel(hvUnitOf(l.pl),1)||"unit")}`:""}</div>`
-    +step("t","Target",u,l.target||null,"")
+    +step("t","Target",l.noTarget?"Leave blank to pick whatever's ready":u,l.target||null,"none")
     +`<div class="fm-sh-lbl" style="padding:.7rem 1.1rem .3rem">Picked${multi?" — by sowing":""}</div>`
     +(multi
-      ? l.groups.map((g,i)=>step("g"+i, g.beds, sowLabel(g), l.recorded?(g.picked||null):null, "–")).join("")
-      : step("g0", "Picked", l.recorded?"":"Defaults to the target — change it if you picked less", l.recorded?l.picked:l.target, ""))
+      ? l.groups.map((g,i)=>step("g"+i, g.beds, sowLabel(g), l.recorded?(g.picked||null):null, g.recorded&&!g.picked?"weigh":"–")).join("")
+      : l.noTarget
+        ? step("g0", "Picked", l.weighLater?"Harvested — put the weight in when you have it":"Enter what you picked, or mark it harvested and weigh later",
+            l.picked||null, l.weighLater?"weigh":"")
+        : step("g0", "Picked", l.recorded?"":"Defaults to the target — change it if you picked less", l.recorded?l.picked:l.target, ""))
     +`<div class="hvp-sh-total"><b id="hvpTot"></b><span id="hvpTotOf" style="color:var(--ink-2)"></span><span class="val" id="hvpTotVal"></span></div>`
     +`<div class="hvp-sh-foot"><button type="button" class="btn-ghost" id="hvpOpenPl">Planting</button>`
+    +(l.noTarget && !l.recorded ? `<button type="button" class="btn-ghost" id="hvpWeighLater">Harvested — weigh later</button>` : ``)
     +`<button type="button" class="btn-primary" id="hvpSave">Save</button></div>`);
   const inp=k=>sh.querySelector(`[data-hvp-in="${k}"]`);
   const val=k=>{ const v=inp(k).value; return v===""?null:Math.max(0,+v); };
   const total=()=>{
     const t=val("t")||0, p=l.groups.reduce((n,g,i)=>n+(val("g"+i)||0),0);
     document.getElementById("hvpTot").textContent=p;
-    document.getElementById("hvpTotOf").textContent=`of ${t} ${u}`;
+    document.getElementById("hvpTotOf").textContent=t?`of ${t} ${u}`:`${u} · no target`;
     document.getElementById("hvpTotVal").textContent=price!=null?hvMoney(p*price):"";
   };
   sh.querySelectorAll("[data-hvp-in]").forEach(i=>i.oninput=total);
@@ -12279,10 +12306,18 @@ function hvpOpenEntry(l){
   sh.querySelectorAll("[data-hvp-inc]").forEach(b=>b.onclick=()=>bump(b.dataset.hvpInc,1));
   total();
   sh.querySelector("#hvpOpenPl").onclick=()=>{ hvpCloseSheet(); apOpenEdit(l.pl); };
+  const wl=sh.querySelector("#hvpWeighLater");
+  if(wl) wl.onclick=()=>{ hvpCloseSheet(); hvTick(l); };
   sh.querySelector("#hvpSave").onclick=async ()=>{
     const t=val("t"), picks=l.groups.map((g,i)=>val("g"+i));
     hvpCloseSheet();
-    if(t!==(l.target||null)) await hvSetSum(l.plantings, l.o, "planned", t, l.groups[0].plantings[0]);
+    // a blank target is stored as 0 ("no target"), so the line stays on the list
+    if((t||0)!==(l.target||0)) await hvSetSum(l.plantings, l.o, "planned", t||0, l.groups[0].plantings[0]);
+    // gave a "weigh later" line a target but no weight: drop the 0 so it isn't read as "picked none"
+    if(t>0 && l.weighLater && picks.every(v=>v==null)){
+      for(const g of l.groups) if(g.recorded) await hvSetSum(g.plantings, l.o, "actual", null);
+      return;
+    }
     for(let i=0;i<l.groups.length;i++){
       const g=l.groups[i], was=l.recorded?(g.picked||null):null;
       // a single sowing left at its default still counts as entered once you press Save
@@ -12335,11 +12370,13 @@ function hvRenderStats(lines){
   const picked=lines.reduce((n,l)=>n+l.picked,0);
   const target=lines.reduce((n,l)=>n+l.target,0);
   const short=lines.filter(l=>l.target>0 && l.picked<l.target).length;
+  const weigh=lines.filter(l=>l.weighLater).length;
   box.innerHTML=
      `<div class="hv-stat"><span class="v">${picked}</span><span class="lbl">Picked</span></div>`
     +`<div class="hv-stat"><span class="v">${target}</span><span class="lbl">Target</span></div>`
     +`<div class="hv-stat"><span class="v">${hvMoney(lines.reduce((n,l)=>n+l.earned,0))}</span><span class="lbl">Picked value</span></div>`
     +`<div class="hv-stat${short?" short":""}"><span class="v">${short}</span><span class="lbl">Short</span></div>`
+    +(weigh?`<div class="hv-stat"><span class="v hv-weigh">${weigh}</span><span class="lbl">To weigh</span></div>`:``)
     +`<span class="spacer" style="flex:1"></span>`
     +(hvGroupMode==="outlet" && !marketDays().length
       ? `<span class="note">No market days set — <a href="#" data-hv-settings>add them in Settings</a> to group by day</span>`
@@ -12369,8 +12406,9 @@ function hvRenderList(lines){
       const pct = l.target>0 ? Math.min(100, Math.round(l.picked/l.target*100)) : 0;
       const isShort = l.target>0 && l.picked<l.target;
       const multi=l.groups.length>1;
-      html+=`<div class="hv-line${l.done?" done":""}">`
-        +`<button type="button" class="hv-cb${l.done?" done":""}" data-pick-full="${esc(l.id)}" title="${l.done?"Picked":"Mark picked in full"}">`
+      const tickTitle=l.done?"Picked — click to undo":l.noTarget?"Mark harvested (weigh later)":"Mark picked in full";
+      html+=`<div class="hv-line${l.done?" done":""}${l.weighLater?" weigh":""}">`
+        +`<button type="button" class="hv-cb${l.done?" done":""}" data-pick-full="${esc(l.id)}" title="${tickTitle}">`
           +(l.done?`<svg viewBox="0 0 20 20" style="width:12px;height:12px;stroke:#fff;fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round"><path d="M5 10.4l3.2 3.2L15 6.6"/></svg>`:``)
         +`</button>`
         +`<div style="min-width:0">`
@@ -12380,9 +12418,10 @@ function hvRenderList(lines){
         +`<span class="hv-qty${isShort?" short":""}">`
           // with several sowings the line shows the total; picked numbers go in on the rows below
           +(multi ? `<b>${l.picked}</b>`
-                  : `<input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="0" value="${l.picked||""}"${l.recorded?"":` class="hv-default"`} title="${l.recorded?"How many picked":"Defaults to the target — change it if you picked less"}">`)
-          +`<span>/ ${l.target||"–"} ${esc(l.unit)}</span>`
-          +(l.priced ? `<span class="hv-earn" title="${l.price!=null?esc(hvMoney(l.price))+" per "+esc(unitLabel(hvUnitOf(l.pl),1)||"unit"):""}">${hvMoney(l.earned)}</span>` : ``)
+                  : `<input type="number" min="0" step="any" data-actual="${esc(l.id)}" data-g="0" value="${l.picked||""}"${l.recorded||l.noTarget?"":` class="hv-default"`}${l.weighLater?` placeholder="weigh"`:""} title="${l.noTarget?"How much you picked — fill in once it's weighed":l.recorded?"How many picked":"Defaults to the target — change it if you picked less"}">`)
+          +(l.noTarget ? `<span>${esc(l.unit)}${l.weighLater?` · <b class="hv-weigh">weigh later</b>`:l.recorded?"":" · pick what's ready"}</span>`
+                       : `<span>/ ${l.target||"–"} ${esc(l.unit)}</span>`)
+          +(l.priced && !l.weighLater ? `<span class="hv-earn" title="${l.price!=null?esc(hvMoney(l.price))+" per "+esc(unitLabel(hvUnitOf(l.pl),1)||"unit"):""}">${hvMoney(l.earned)}</span>` : ``)
           +`</span>`
         +`<div class="hv-track-cell"><div class="hv-track"><div style="width:${pct}%;height:100%;background:${isShort?"var(--clay)":"var(--ok)"}"></div></div></div>`
         +`<button type="button" class="icon-btn" data-hv-open="${esc(l.pl.id)}" title="Open this planting">›</button>`
@@ -12391,7 +12430,7 @@ function hvRenderList(lines){
         html+=`<div class="hv-gline">`
           +`<span class="hv-gtick">${gi+1}</span>`
           +`<div class="hv-sub" style="min-width:0">${new Set(l.groups.map(x=>x.variety)).size>1&&g.variety?esc(g.variety)+" · ":""}Sown ${g.sow?esc(fmt(g.sow)):"?"} · ${esc(g.beds)}</div>`
-          +`<span class="hv-qty"><input type="number" min="0" step="1" data-actual="${esc(l.id)}" data-g="${gi}" value="${g.picked||""}" placeholder="${l.recorded?"":"–"}" title="How many picked from this sowing"></span>`
+          +`<span class="hv-qty"><input type="number" min="0" step="any" data-actual="${esc(l.id)}" data-g="${gi}" value="${g.picked||""}" placeholder="${g.recorded&&!g.picked?"weigh":l.recorded?"":"–"}" title="How many picked from this sowing"></span>`
           +`</div>`;
       });
     });
@@ -12399,13 +12438,7 @@ function hvRenderList(lines){
   box.innerHTML=html;
 
   const lineOf=id=>lines.find(x=>x.id===id);
-  // Picked in full: one sowing → it gets the target. Several → the shortfall goes on the oldest.
-  box.querySelectorAll("[data-pick-full]").forEach(b=>b.onclick=async ()=>{
-    const l=lineOf(b.dataset.pickFull); if(!l) return;
-    if(l.done){ for(const g of l.groups) if(g.picked) await hvSetSum(g.plantings, l.o, "actual", null); return; }
-    const g=l.groups[0];
-    hvSetSum(g.plantings, l.o, "actual", g.picked + Math.max(0, l.target-l.groups.reduce((n,x)=>n+x.picked,0)));
-  });
+  box.querySelectorAll("[data-pick-full]").forEach(b=>b.onclick=()=>hvTick(lineOf(b.dataset.pickFull)));
   box.querySelectorAll("[data-actual]").forEach(inp=>inp.onchange=()=>{
     const l=lineOf(inp.dataset.actual); if(!l) return;
     const g=l.groups[+inp.dataset.g]; if(!g) return;
@@ -12437,8 +12470,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   const tally=()=>{
     const ps=ready[selP.value]; if(!ps){ tallyBox.textContent=""; return; }
     const p=ps[0], price=hvPriceOf(p), unit=hvUnitOf(p), n=qty.value===""?0:+qty.value;
-    tallyBox.textContent = price==null ? "No price set for this crop"
-      : `${n||0} × ${hvMoney(price)} per ${unitLabel(unit,1)||"unit"} = ${hvMoney((n||0)*price)}`;
+    tallyBox.textContent = !n ? "No target — pick whatever's ready, weigh it later if you like"
+      : price==null ? "No price set for this crop"
+      : `${n} × ${hvMoney(price)} per ${unitLabel(unit,1)||"unit"} = ${hvMoney(n*price)}`;
   };
   selP.onchange=tally; qty.oninput=tally;
   // crop list A–Z, narrowed by the search box
@@ -12470,6 +12504,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     search.value="";
     fillCrops();
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
+    // on the phone, start on the market you're looking at
+    const oi=outlets.findIndex(o=>o.id===hvpOutlet);
+    if(cmIsMobile() && oi>=0) selO.selectedIndex=oi;
     qty.value="";
     tally();
     modal.classList.add("open");
@@ -12479,12 +12516,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     const ps=ready[selP.value], o=outlets[selO.value];
     const v=qty.value===""?null:Number(qty.value);
     if(!ps||!o) return;
-    if(v==null || !(v>=0)){ qty.focus(); return; }
+    if(v!=null && !(v>=0)){ qty.focus(); return; }   // blank is fine: no target
     close();
     // include any of this crop's records already on the outlet this week, so the target is replaced, not doubled
     const all=new Set(ps);
     (data.plantings||[]).forEach(p=>{ if(hvCropKey(p)===hvCropKey(ps[0]) && hrFor(p.id,o.id,hvState.week)) all.add(p); });
-    await hvSetSum([...all], o, "planned", v, hvSowings(ps)[0].plantings[0]);
+    await hvSetSum([...all], o, "planned", v??0, hvSowings(ps)[0].plantings[0]);   // 0 = no target
   };
 });
 
