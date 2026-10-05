@@ -6924,6 +6924,9 @@ async function loadAll(opts){
       sow:p.fields[F.pl_sow], tp:p.fields[F.pl_tp],
       h1:p.fields[F.pl_h1], h2:p.fields[F.pl_h2],
       sowStart:num(p.fields[F.pl_sowStart]), tpStart:num(p.fields[F.pl_tpStart]),
+      // The per-planting length a This week resize writes. Wasn't read back here (only in
+      // planner-shared's parser), so every resized sow/transplant snapped back on the next load.
+      sowDuration:num(p.fields[F.pl_sowDuration]), tpDuration:num(p.fields[F.pl_tpDuration]),
       sowAssignee:p.fields[F.pl_sowAssignee]||"", tpAssignee:p.fields[F.pl_tpAssignee]||"",
       h1Assignee:p.fields[F.pl_h1Assignee]||"", h2Assignee:p.fields[F.pl_h2Assignee]||"",
       sowTtId:p.fields[F.pl_sowTtId]||"", tpTtId:p.fields[F.pl_tpTtId]||"",
