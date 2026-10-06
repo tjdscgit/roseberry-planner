@@ -1686,6 +1686,16 @@
   .hv-addrow.on-already{opacity:.55;cursor:default}
   .hv-addempty{padding:.8rem;color:var(--ink-2);font-size:.85rem}
   @media (max-width:760px){ .hv-addrow{padding:.8rem .8rem;font-size:1rem} .hv-addrow input{width:22px;height:22px} }
+  /* The list sits inside .ap-trow-f, whose input/span rules (full-width 2.6rem fields, uppercase mono
+     labels) are meant for the form's own fields — undo them for the rows. */
+  #hvAddModal .hv-addlist .hv-addrow input{width:18px;height:18px;padding:0;margin:0;border:none;background:none;box-sizing:border-box}
+  #hvAddModal .hv-addlist .hv-addrow span{font-family:var(--sans);font-size:.9rem;text-transform:none;letter-spacing:normal;color:var(--ink)}
+  #hvAddModal .hv-addlist .hv-addrow .hv-addbeds{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);white-space:nowrap}
+  #hvAddModal .hv-addlist{overflow-x:hidden}
+  @media (max-width:760px){
+    #hvAddModal .hv-addlist .hv-addrow input{width:22px;height:22px}
+    #hvAddModal .hv-addlist .hv-addrow span{font-size:1rem}
+  }
   #hvAddSearch{width:100%}
   #wkDateModal .wk-group-card,#hvAddModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
