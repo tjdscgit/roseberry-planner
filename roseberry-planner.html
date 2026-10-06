@@ -2145,6 +2145,27 @@
      neither of which the Planting panel (tlRenderPanel) needed. */
   .wk-job-bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin:.3rem 0 .8rem}
   .wk-job-bar-fill{height:100%;background:var(--ok);border-radius:999px}
+  /* Status is one card: name + "step n of N" on top, the progress bar inside along its bottom
+     (the bar used to hang below a card that had its bottom padding stripped). */
+  .kv.wk-job-status{flex-wrap:wrap;row-gap:.45rem}
+  .kv.wk-job-status .v{color:var(--ink-2);font-size:.75rem}
+  .kv.wk-job-status .wk-job-bar{flex:1 1 100%;margin:0;height:5px}
+  /* Phone: the job panel fills the screen, so give it room — taller rows, bigger text, and the
+     actions pinned to the bottom where a thumb is, instead of everything crammed into the top half. */
+  @media (max-width:760px){
+    [data-role="job-panel"] .tl-panel-meta{margin:.4rem 0 1.1rem;font-size:.85rem}
+    [data-role="job-panel"] .kv{padding:.85rem 1rem;margin-bottom:.5rem;border-radius:11px;font-size:.98rem;min-height:50px;box-sizing:border-box;align-items:center}
+    [data-role="job-panel"] .kv .v{font-size:.95rem}
+    [data-role="job-panel"] .kv.wk-job-status .v{font-size:.8rem}
+    [data-role="job-panel"] .kv.wk-job-status .wk-job-bar{height:6px}
+    [data-role="job-panel"] .sect-h{margin:1.5rem 0 .6rem;font-size:.72rem}
+    [data-role="job-panel"] .tl-notes{font-size:1rem;padding:.8rem .9rem;border-radius:11px;min-height:110px}
+    [data-role="job-panel"].open{display:flex;flex-direction:column;padding-bottom:0}
+    [data-role="job-panel"].open > *{flex:0 0 auto}
+    [data-role="job-panel"] .tl-panel-actions{position:sticky;bottom:0;margin:auto -1.1rem 0;padding:.9rem 1.1rem calc(.9rem + env(safe-area-inset-bottom));
+      background:var(--paper-2);border-top:1px solid var(--line);gap:.7rem}
+    [data-role="job-panel"] .tl-panel-actions button{flex:1 1 auto;min-height:50px;font-size:.95rem;border-radius:12px;white-space:nowrap;padding-left:.8rem;padding-right:.8rem}
+  }
   .wk-job-week-row{display:flex;align-items:center;gap:.6rem;height:30px}
   .wk-job-week-day{width:2rem;flex:0 0 auto;font-size:.66rem;color:var(--ink-2)}
   .wk-job-week-name{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.78rem}
@@ -21226,8 +21247,8 @@ function wkOpenJobPanel(r){
 
   const statusHTML = statusPct==null ? "" : `
     <div class="sect-h">Status</div>
-    <div class="kv" style="border-bottom:none;padding-bottom:0"><span class="k">${esc(r.p.status)}</span><span class="v"></span></div>
-    <div class="wk-job-bar"><div class="wk-job-bar-fill" style="width:${statusPct}%"></div></div>`;
+    <div class="kv wk-job-status"><span class="k">${esc(r.p.status)}</span><span class="v">step ${statusRank(r.p.status)+1} of ${STATUS_ORDER.length}</span>
+      <div class="wk-job-bar"><div class="wk-job-bar-fill" style="width:${statusPct}%"></div></div></div>`;
 
   const sprayHTML = !sp ? "" : (spItems.length ? `
     <div class="sect-h">Products</div>
