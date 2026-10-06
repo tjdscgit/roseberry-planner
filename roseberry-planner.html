@@ -1587,6 +1587,11 @@
     overflow:hidden;font-size:.72rem;line-height:1.15;color:#fff;
     user-select:none;-webkit-user-select:none}
   .wk-block.done{opacity:.5}
+  .wk-rs{display:flex;gap:6px;padding:4px 6px}
+  .wk-rs input{border:1px solid var(--line-2);border-radius:7px;background:var(--paper-3);color:var(--ink);padding:5px 7px;font:12.5px var(--mono);color-scheme:dark light}
+  .wk-rs-btns{display:flex;justify-content:flex-end;gap:4px;padding:4px 6px 2px}
+  #wkCtxMenu .wk-rs-btns button{width:auto;padding:5px 12px}
+  #wkCtxMenu .wk-rs-btns .wk-rs-save{background:var(--steel);color:#fff;border-radius:6px}
   .wk-person{appearance:none;-webkit-appearance:none;height:30px;max-width:170px;padding:0 26px 0 12px;margin-right:8px;
     border:1px solid var(--line-2);border-radius:999px;color:var(--ink);font:12.5px var(--sans);cursor:pointer;
     background:var(--paper-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 8l4 4 4-4' fill='none' stroke='%238a8f98' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center/14px;
@@ -21358,7 +21363,13 @@ let wkLongPressTimer=null;
 const WK_LONG_PRESS_MS=450, WK_LONG_PRESS_SLOP=10;
 function wkOnPointerDown(e){
   if(e.button!=null && e.button!==0) return;                    // primary button / touch only
-  const h=e.target.closest(".wk-block-h[data-drag]"); if(!h) return;
+  // Desktop drags by the header strip only. On a phone a long-press anywhere on the block works —
+  // a bed prep block is mostly its list of passes, so header-only made it nearly impossible to grab.
+  let h=e.target.closest(".wk-block-h[data-drag]");
+  if(!h && cmIsMobile() && !e.target.closest(".wk-check,.wk-block-resize")){
+    const b=e.target.closest(".wk-block"); h=b && b.querySelector(".wk-block-h[data-drag]");
+  }
+  if(!h) return;
   // matches either a calendar block (grouped, same-day) or an overdue-sidebar item (single row,
   // no shared "from day" — dragging it in from outside the grid entirely)
   const block=h.closest(".wk-block")||h.closest(".wk-odsb-block"); if(!block) return;
@@ -21814,7 +21825,9 @@ function wkShowCtxMenu(ev,target){
   }else{
   const names=knownAssignees();
   const taskCount=wkCtxDescs(target).filter(d=>d.taskId||d.sprayId).length;
-  menu.innerHTML=`<div class="tl-ctx-label">Assign to…</div>`
+  menu.innerHTML=`<button data-act="reschedule">Change date &amp; time…</button>`
+    +(target.grp==="bedprep"?`<button data-act="openBedPrep">Open Bed prep</button>`:"")
+    +`<div class="tl-ctx-sep"></div><div class="tl-ctx-label">Assign to…</div>`
     +`<button data-act="unassign">— Unassign —</button>`
     +(names.length?`<div class="tl-ctx-sep"></div>`+names.map(n=>`<button data-assign="${esc(n)}">${esc(n)}</button>`).join(""):"")
     +`<div class="tl-ctx-sep"></div><button data-act="addnew">+ Add new…</button>`
@@ -21826,6 +21839,37 @@ function wkShowCtxMenu(ev,target){
   const x=Math.min(ev.clientX-sec.left, sec.width-190), y=Math.min(ev.clientY-sec.top, sec.height-90);
   menu.style.left=Math.max(4,x)+"px"; menu.style.top=Math.max(4,y)+"px";
   menu.classList.add("open");
+}
+// "Change date & time…": the same move a drag makes, typed instead — the menu turns into a date +
+// time form in place. A block moves every member (wkCommitMove, same as dragging the block); a
+// right-clicked member row moves just that one job (wkCommitOverdueMove, which moves by row id).
+// Milestones still get the usual "shift what comes after?" offer.
+function wkCtxRows(target){
+  const {rows}=wkCollect();
+  if(target.kind==="member") return rows.filter(r=>r.id===target.rowId);
+  return rows.filter(r=>wkCalGroupKey(r)===target.grp && wkSameDay(r.due,wkParse(target.day)));
+}
+function wkCtxReschedule(){
+  const target=wkCtxTarget; if(!target) return;
+  const rows=wkCtxRows(target); if(!rows.length){ wkHideCtxMenu(); return; }
+  const starts=rows.map(r=>r.t&&r.t.start).filter(v=>v!=null);
+  const startMin=starts.length?Math.min(...starts):null;
+  const hhmm=startMin==null?"":`${String(Math.floor(startMin/60)).padStart(2,"0")}:${String(startMin%60).padStart(2,"0")}`;
+  const menu=document.getElementById("wkCtxMenu");
+  menu.innerHTML=`<div class="tl-ctx-label">Change date &amp; time${rows.length>1?` (${rows.length} jobs)`:""}</div>`
+    +`<div class="wk-rs"><input type="date" id="wkRsDate" value="${esc(target.day||wkISO(rows[0].due))}">`
+    +`<input type="time" id="wkRsTime" step="900" value="${hhmm}"></div>`
+    +`<div class="wk-rs-btns"><button data-act="rsCancel">Cancel</button><button data-act="rsSave" class="wk-rs-save">Save</button></div>`;
+  menu.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",e=>{ if(e.key==="Enter") wkCtxRescheduleSave(); }));
+}
+async function wkCtxRescheduleSave(){
+  const target=wkCtxTarget; if(!target) return;
+  const day=document.getElementById("wkRsDate").value, tm=document.getElementById("wkRsTime").value;
+  if(!day){ alert("Pick a date."); return; }
+  const startMin = tm ? (+tm.slice(0,2))*60+(+tm.slice(3,5)) : null;   // blank time = untimed, like before it was ever dragged
+  wkHideCtxMenu();
+  if(target.kind==="member") await wkCommitOverdueMove(target.rowId, day, startMin);
+  else await wkCommitMove(target.grp, target.day, day, startMin);
 }
 function wkHideCtxMenu(){ document.getElementById("wkCtxMenu").classList.remove("open"); wkCtxTarget=null; }
 async function wkSetAssigneeFor(desc,name){
@@ -21888,11 +21932,18 @@ async function wkApplyCtxDelete(){
   buildWeekPlanner();
 }
 document.getElementById("wkCtxMenu").addEventListener("click",e=>{
+  // Clicks inside the menu never count as "clicked away" — the reschedule form replaces the
+  // menu's contents mid-click, and the detached button would otherwise fail the outside check below.
+  e.stopPropagation();
   const btn=e.target.closest("button"); if(!btn) return;
   if(btn.dataset.act==="addTaskAt"){
     const target=wkCtxTarget; wkHideCtxMenu();
     if(target) wkTaskOpen(null, {due:target.day, startMin:target.startMin});
   }
+  else if(btn.dataset.act==="reschedule") wkCtxReschedule();
+  else if(btn.dataset.act==="openBedPrep"){ wkHideCtxMenu(); showView("bedprep"); }
+  else if(btn.dataset.act==="rsCancel") wkHideCtxMenu();
+  else if(btn.dataset.act==="rsSave") wkCtxRescheduleSave();
   else if(btn.dataset.act==="unassign") wkApplyCtxAssign("");
   else if(btn.dataset.act==="addnew"){
     const name=(prompt("New assignee name:")||"").trim();
@@ -21972,6 +22023,9 @@ function wkSetOdCollapsed(val){
   wrap.addEventListener("pointerdown", wkBoardOnPointerDown);
   wrap.addEventListener("pointerdown", wkResizeOnPointerDown);
   wrap.addEventListener("contextmenu",e=>{
+    // Android fires contextmenu on a long-press. That gesture means "move this" on a phone, so
+    // swallow it here — it used to tick a bed prep pass done or jump to the Bed prep page mid-drag.
+    if((e.pointerType==="touch" || cmIsMobile()) && e.target.closest(".wk-block")){ e.preventDefault(); return; }
     const mem=e.target.closest(".wk-mem");
     if(mem){
       const cb=mem.querySelector(".wk-check");
@@ -21979,7 +22033,12 @@ function wkSetOdCollapsed(val){
         // A scheduled spray has no assignee/reschedule context menu — right-click just opens its
         // plan editor, same as a left-click on the row.
         if(wkIsSprayRowId(cb.dataset.id)){ e.preventDefault(); sprayOpenPlan(cb.dataset.id.slice(6)); return; }
-        if(wkIsBedPrepRowId(cb.dataset.id)){ e.preventDefault(); wkToggleBedPrep(cb.dataset.id); return; }
+        if(wkIsBedPrepRowId(cb.dataset.id)){
+          e.preventDefault();
+          const blk=mem.closest(".wk-block");
+          wkShowCtxMenu(e, {kind:"block", grp:"bedprep", day:blk?blk.dataset.day:null});
+          return;
+        }
         e.preventDefault();
         // data-id is a real Planting Task id for a task row, but a synthetic id for the derived
         // kinds — "ms:<pid>:<df>" for a milestone, "tarp:<recId>:<step>" for a tarp job (see
@@ -21989,16 +22048,11 @@ function wkSetOdCollapsed(val){
           : wkIsTarpRowId(cb.dataset.id)
             ? {isTarp:true, tarpId:cb.dataset.id.split(":")[1], tarpStep:cb.dataset.id.split(":")[2]}
             : {isMilestone:false, taskId:cb.dataset.id};
-        wkShowCtxMenu(e, {kind:"member", desc});
+        wkShowCtxMenu(e, {kind:"member", desc, rowId:cb.dataset.id, day:mem.closest(".wk-block")?.dataset.day});
       }
       return;
     }
     const block=e.target.closest(".wk-block");
-    if(block && block.dataset.grp==="bedprep"){
-      e.preventDefault();
-      showView("bedprep");
-      return;
-    }
     if(block && block.dataset.grp){
       e.preventDefault();
       wkShowCtxMenu(e, {kind:"block", grp:block.dataset.grp, day:block.dataset.day});
