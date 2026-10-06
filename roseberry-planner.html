@@ -1586,6 +1586,9 @@
     overflow:hidden;font-size:.72rem;line-height:1.15;color:#fff;
     user-select:none;-webkit-user-select:none}
   .wk-block.done{opacity:.5}
+  /* overlapping blocks share the column side by side (wkAssignLanes) */
+  .wk-block.wk-lane{--l0:3px;right:auto;left:calc(var(--l0) + (100% - var(--l0) - 3px) * var(--lane) / var(--lanes));
+    width:calc((100% - var(--l0) - 3px) / var(--lanes) - 2px)}
   /* Matches the artboard's exact selected-block treatment — the same 2px steel ring, just on the
      calendar's block shape instead of Board's card (see .wk-bcol-body .wk-task.wk-selected). */
   .wk-block.wk-selected{box-shadow:0 0 0 2px var(--steel)}
@@ -2493,6 +2496,7 @@
        task card starting flush at the left edge sits right on top of it. Give the card room to
        start clear of the label instead. */
     .wk-block{left:44px}
+    .wk-block.wk-lane{--l0:44px}
     /* Calendar mode's day header repeats the day the wk-day-picker tab strip above it already
        shows (mobile only ever renders the one selected day) — pure dead space at this width. */
     .wk-cal-headrow{display:none}
@@ -19828,7 +19832,9 @@ function wkTypeKey(r){
 // type" groups by, and telling the passes apart is the whole point of that view — so the merge
 // lives here instead, used only by the day/calendar rendering and everything a calendar block's
 // click, drag or context menu resolves back through (wkOpenGroupPanel, wkCommitMove, wkCtxDescs).
-function wkCalGroupKey(r){ return r.kind==="bedprep" ? "bedprep" : wkTypeKey(r); }
+// Also split by who it's assigned to: the calendar is shared by several people, so Kim's 9am
+// transplant and Sam's 9am transplant are two jobs side by side, not one "Transplant ×2".
+function wkCalGroupKey(r){ return r.kind==="bedprep" ? "bedprep" : wkTypeKey(r)+"|"+(rowAssignee(r)||""); }
 /* ---- Row accessors: one place that knows how each KIND of week-planner row stores its
    assignee, its pinned clock time and its outbound sync ids.
 
@@ -19903,10 +19909,22 @@ function wkBlockColor(g){ return {bg: taskTypeColor(g.members[0])}; }
 // overdue from before it. Enriches each with its planting + library task + a minutes estimate.
 // Real logic lives in planner-shared.js (so an MCP server can compute the identical "this week" /
 // overdue set) — this is just a thin wrapper binding it to the app's own `data`/`wkStartISO`.
-function wkCollect(){
+function wkCollectAll(){
   // bpOps is threaded through so wkCollect can derive this week's bed prep passes — the seed list
   // lives in the app, not in the shared module.
   return PlannerShared.wkCollect(data, wkStartISO, new Date(), {bpOps:BP_OPS});
+}
+// This week's "People" filter: "" = everyone, WK_UNASSIGNED = nobody yet, else one person's name.
+// Applied here so everything This week draws — and everything a click/drag/resize resolves back
+// through — sees the same filtered set. Remembered per device.
+const WK_PERSON_KEY="roseberry_wk_person", WK_UNASSIGNED="(unassigned)";
+let wkPerson=(()=>{ try{ return localStorage.getItem(WK_PERSON_KEY)||""; }catch(_){ return ""; } })();
+// An assignee field can hold more than one name ("Kim, Sam") — a job counts for each of them.
+function wkPeopleOf(r){ return String(rowAssignee(r)||"").split(/\s*(?:,|&|\/|\band\b)\s*/i).map(x=>x.trim()).filter(Boolean); }
+function wkCollect(){
+  const res=wkCollectAll();
+  if(wkPerson) res.rows=res.rows.filter(r=>{ const ps=wkPeopleOf(r); return wkPerson===WK_UNASSIGNED ? !ps.length : ps.includes(wkPerson); });
+  return res;
 }
 
 // ThisWeek.dc.html's sidebar also has a Today/Next-7-days/Overdue/Bed-prep quick-filter group and a
@@ -20046,6 +20064,16 @@ function buildTodayView(){
   document.getElementById("tdTodayBtn").onclick=()=>{ tdDate=wkISO(new Date()); buildTodayView(); };
 })();
 SIDEBAR_EXTRAS.week = ()=>{
+  if(!wkStartISO) wkStartISO=wkISO(wkMonday(new Date()));   // the sidebar can draw before the first buildWeekPlanner
+  // People: who has jobs this week (from the unfiltered list, so every name stays pickable).
+  const all=wkCollectAll().rows.filter(r=>r.inWeek||r.overdue);
+  const per=new Map(); let none=0;
+  all.forEach(r=>{ const ps=wkPeopleOf(r); if(!ps.length) none++; ps.forEach(n=>per.set(n,(per.get(n)||0)+1)); });
+  if(wkPerson && wkPerson!==WK_UNASSIGNED && !per.has(wkPerson)) per.set(wkPerson,0);   // keep the active pick visible
+  const peopleHTML = sbGroup("People")
+    + sbFilter({label:"Everyone", count:all.length, act:"p:", on:!wkPerson})
+    + [...per.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([n,k])=>sbFilter({label:n, count:k, act:"p:"+n, on:wkPerson===n})).join("")
+    + (none ? sbFilter({label:"Unassigned", count:none, act:"p:"+WK_UNASSIGNED, on:wkPerson===WK_UNASSIGNED}) : "");
   const {rows} = wkCollect();
   const counts = {};
   rows.filter(r=>r.inWeek).forEach(r=>{
@@ -20059,13 +20087,19 @@ SIDEBAR_EXTRAS.week = ()=>{
     .map(b=>`<div class="navrow"><span class="sb-swatch" style="background:${esc(cropColor(b.name))}"></span>`
       +`<span class="navname">${esc(b.name)}</span><span class="navn">${b.n}</span></div>`)
     .join("");
-  return (blocksHTML ? sbGroup("Blocks") + blocksHTML : "")
+  return peopleHTML + (blocksHTML ? sbGroup("Blocks") + blocksHTML : "")
     + sbGroup("Records")
     + `<button type="button" class="navrow" data-view="sprayrec"><span class="navname">Spray records</span></button>`
     + `<button type="button" class="navrow" data-view="fertrec"><span class="navname">Fert records</span></button>`
     + `<button type="button" class="navrow" data-view="fieldwalk"><span class="navname">Field walk</span></button>`;
 };
 
+SIDEBAR_ACTIONS.week = act=>{
+  if(!act.startsWith("p:")) return;
+  wkPerson=act.slice(2);
+  try{ localStorage.setItem(WK_PERSON_KEY, wkPerson); }catch(_){}
+  buildWeekPlanner(); renderSidebar();
+};
 function buildWeekPlanner(){
   const body=document.getElementById("wkBody"); if(!body) return;
   if(!wkStartISO) wkStartISO=wkISO(wkMonday(new Date()));
@@ -20289,11 +20323,12 @@ function wkPackDay(dayRows){
   const pinned=groups.filter(g=>g.explicit!=null).sort((a,b)=>a.explicit-b.explicit);
   const unpinned=groups.filter(g=>g.explicit==null)
     .sort((a,b)=>((b.kind==="milestone")-(a.kind==="milestone")) || a.name.localeCompare(b.name));
-  let pinCursor=WK_T0;
+  // A pinned block sits exactly where it was put, even on top of another one — the calendar is
+  // for several people, so two jobs at 9am is normal (they used to get shunted one after the other).
   pinned.forEach(g=>{
-    let s=g.explicit; if(s<pinCursor) s=pinCursor;
+    let s=g.explicit;
     if(s+g.dispMin>WK_T1) s=Math.max(WK_T0, WK_T1-g.dispMin);
-    g.start=s; pinCursor=s+g.dispMin;
+    g.start=s;
   });
   let cursor=WK_T0;
   unpinned.forEach(g=>{
@@ -20302,7 +20337,24 @@ function wkPackDay(dayRows){
     if(s+g.dispMin>WK_T1) s=Math.max(WK_T0, WK_T1-g.dispMin);
     g.start=s; cursor=s+g.dispMin;
   });
+  wkAssignLanes(groups);
   return groups;
+}
+// Side-by-side columns for blocks that overlap in time (calendar-app style): each cluster of
+// mutually-overlapping blocks gets as many lanes as it needs at its busiest, and each block takes
+// the first free lane. g.lane / g.lanes feed the block's left/width (see .wk-block.wk-lane).
+function wkAssignLanes(groups){
+  const sorted=groups.slice().sort((a,b)=>a.start-b.start || b.dispMin-a.dispMin);
+  let cluster=[], clusterEnd=-1;
+  const close=()=>{ const n=Math.max(1,...cluster.map(g=>g.lane+1)); cluster.forEach(g=>g.lanes=n); cluster=[]; };
+  sorted.forEach(g=>{
+    if(cluster.length && g.start>=clusterEnd) close();
+    const laneEnds=[];
+    cluster.forEach(c=>{ laneEnds[c.lane]=Math.max(laneEnds[c.lane]||0, c.start+c.dispMin); });
+    let lane=0; while(laneEnds[lane]!=null && laneEnds[lane]>g.start) lane++;
+    g.lane=lane; cluster.push(g); clusterEnd=Math.max(clusterEnd, g.start+g.dispMin);
+  });
+  if(cluster.length) close();
 }
 // Below this, the header row alone (name + time) already fills the block — a member-preview row
 // underneath it wouldn't clip cleanly, it'd overlap into unreadable overlapping text, which is what
@@ -20353,7 +20405,8 @@ function wkBlockHTML(g, dayISO){
   // 2026-10-04), and a grouped block ("Direct sow ×2") spreads the change across its members the
   // same way bed prep always has — so the handle shows on every block.
   const resizable = true;
-  return `<div class="wk-block${allDone?" done":""}${total>1?" wk-block-grouped":""}${selected?" wk-selected":""}" style="top:${top}px;height:${h}px;background:${col.bg}" `
+  const laneCss = g.lanes>1 ? `;--lane:${g.lane};--lanes:${g.lanes}` : "";
+  return `<div class="wk-block${allDone?" done":""}${total>1?" wk-block-grouped":""}${selected?" wk-selected":""}${g.lanes>1?" wk-lane":""}" style="top:${top}px;height:${h}px;background:${col.bg}${laneCss}" `
     +`data-grp="${esc(g.key)}" data-day="${dayISO}" data-total="${total}" data-min="${Math.round(g.dispMin)}">`
     +`<div class="wk-block-h" data-drag="1" title="${g.kind==="bedprep"?(total>1?"Drag to set a time · click for full details":"Drag to set a time"):(total>1?"Drag to reschedule · click for full details":"Drag to reschedule")}">`
       +`<span class="wk-block-name">${esc(g.name)}${(tooShortForOwnRow&&soonestTxt)?` · ${soonestTxt}`:""}</span>`
