@@ -1590,8 +1590,21 @@
   .wk-rs{display:flex;gap:6px;padding:4px 6px}
   .wk-rs input{border:1px solid var(--line-2);border-radius:7px;background:var(--paper-3);color:var(--ink);padding:5px 7px;font:12.5px var(--mono);color-scheme:dark light}
   .wk-rs-btns{display:flex;justify-content:flex-end;gap:4px;padding:4px 6px 2px}
-  #wkCtxMenu .wk-rs-btns button{width:auto;padding:5px 12px}
-  #wkCtxMenu .wk-rs-btns .wk-rs-save{background:var(--steel);color:#fff;border-radius:6px}
+  .wk-rs-btns button{width:auto;padding:5px 12px;border:none;background:none;color:var(--ink);font:13px var(--sans);cursor:pointer;border-radius:6px}
+  .wk-rs-btns .wk-rs-save{background:var(--steel);color:#fff}
+  .wk-rs-back{display:none;position:fixed;inset:0;z-index:950;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+  .wk-rs-back.open{display:flex}
+  .wk-rs-sheet{background:var(--paper-2);border:1px solid var(--line-2);border-radius:12px;padding:10px 8px;min-width:300px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+  .wk-rs-sheet .tl-ctx-label{padding:4px 6px 8px;font-size:12px;color:var(--ink-2)}
+  @media (max-width:760px){
+    .wk-rs-back{align-items:flex-end}
+    .wk-rs-sheet{width:100%;min-width:0;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+    .wk-rs-sheet .wk-rs{flex-direction:column;gap:10px}
+    .wk-rs-sheet .wk-rs input{font-size:16px;padding:12px;width:100%;box-sizing:border-box}
+    .wk-rs-sheet .wk-rs-btns{gap:10px;padding-top:12px}
+    .wk-rs-sheet .wk-rs-btns button{flex:1 1 0;padding:12px;font-size:15px;border:1px solid var(--line-2)}
+    .wk-rs-sheet .wk-rs-btns .wk-rs-save{border-color:var(--steel)}
+  }
   .wk-person{appearance:none;-webkit-appearance:none;height:30px;max-width:170px;padding:0 26px 0 12px;margin-right:8px;
     border:1px solid var(--line-2);border-radius:999px;color:var(--ink);font:12.5px var(--sans);cursor:pointer;
     background:var(--paper-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 8l4 4 4-4' fill='none' stroke='%238a8f98' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center/14px;
@@ -20501,8 +20514,12 @@ function wkOpenGroupPanel(key,dayISO){
       <div class="tl-panel-title"><div class="tl-panel-crop">${esc(title)}</div></div>
       <button type="button" class="tl-panel-x" title="Close">✕</button>
     </div>
-    <div class="wk-group-list">${listHTML}</div>`;
+    <div class="wk-group-list">${listHTML}</div>
+    <div class="tl-panel-actions">
+      <button type="button" class="btn-ghost" id="wkGrpReschedule">Change date &amp; time${members.length>1?` (all ${members.length})`:""}</button>
+    </div>`;
   panel.classList.add("open");
+  panel.querySelector("#wkGrpReschedule").onclick=()=>wkOpenRescheduleSheet({kind:"block", grp:key, day:dayISO});
   panel.querySelector(".tl-panel-x").onclick=wkClosePlantingPanel;
   panel.querySelectorAll(".wk-check").forEach(cb=>cb.onchange=()=>{
     const ds=cb.dataset;
@@ -21156,10 +21173,12 @@ function wkOpenBedPrepPanel(r){
     <div class="kv" style="display:block;padding-top:0"><span class="v" style="font-family:var(--sans);text-align:left;color:var(--ink-2);font-size:.82rem;line-height:1.5">${esc(shown)}</span></div>
     <div class="tl-panel-actions">
       <button type="button" class="btn-primary" id="wkBpOpenPage">Log this pass</button>
+      <button type="button" class="btn-ghost" id="wkBpReschedule">Change date &amp; time</button>
     </div>`;
   panel.classList.add("open");
   panel.querySelector(".tl-panel-x").onclick=wkClosePlantingPanel;
   panel.querySelector("#wkBpOpenPage").onclick=()=>{ wkClosePlantingPanel(); bppOpenPass(r.bpAttach); };
+  panel.querySelector("#wkBpReschedule").onclick=()=>wkOpenRescheduleSheet({kind:"member", rowId:r.id, day:wkISO(r.due)});
   wkRerenderSelectionMarkup();
 }
 // don't), so Assignee/Category/Repeats stand in as the fields that ARE real.
@@ -21238,7 +21257,7 @@ function wkOpenJobPanel(r){
     ${notesHTML}
     <div class="tl-panel-actions">
       <button type="button" class="btn-primary" id="wkJobMarkDone">${r.t.done?"Mark not done":"Mark done"}</button>
-      <button type="button" class="btn-ghost" id="wkJobReschedule">${sp?"Edit spray":"Reschedule"}</button>
+      <button type="button" class="btn-ghost" id="wkJobReschedule">${sp?"Edit spray":"Change date &amp; time"}</button>
     </div>`;
   panel.classList.add("open");
   panel.querySelector(".tl-panel-x").onclick=wkClosePlantingPanel;
@@ -21276,21 +21295,11 @@ function wkOpenJobPanel(r){
     else wkToggleDoneInteractive(r.id, !r.t.done);
     wkClosePlantingPanel();
   };
-  panel.querySelector("#wkJobReschedule").onclick=async()=>{
-    // A milestone has no Planting Task record to edit — wkTaskOpen(null,...) would just open the
-    // Add-task dialog. Its due date IS the planting's own sow/transplant date, so this drives the
-    // same move+cascade-shift path a calendar/board drag uses (wkCommitOverdueMove), just entered
-    // via a date picker instead of a drag.
-    if(r.kind==="milestone"){
-      const iso=await wkPromptDate(`New date for "${r.task.name}"`, wkISO(r.due));
-      if(!iso) return;
-      wkClosePlantingPanel();
-      wkCommitOverdueMove(r.id, iso, r.t.start);
-      return;
-    }
-    wkClosePlantingPanel();
-    if(sp){ sprayOpenPlan(sp.id); return; }
-    wkTaskOpen(r.t.id, {due:wkISO(r.due)});
+  panel.querySelector("#wkJobReschedule").onclick=()=>{
+    if(sp){ wkClosePlantingPanel(); sprayOpenPlan(sp.id); return; }
+    // Same date + time form as the calendar's right-click "Change date & time…" — one way to move
+    // any job, typed instead of dragged (and the only way on a phone short of a long-press drag).
+    wkOpenRescheduleSheet({kind:"member", rowId:r.id, day:wkISO(r.due)});
   };
   wkRerenderSelectionMarkup();
 }
@@ -21845,31 +21854,64 @@ function wkShowCtxMenu(ev,target){
 // right-clicked member row moves just that one job (wkCommitOverdueMove, which moves by row id).
 // Milestones still get the usual "shift what comes after?" offer.
 function wkCtxRows(target){
+  if(target.kind==="member"){
+    // Today can show a day outside the week This week is on, so look there too.
+    const r=wkCollect().rows.find(x=>x.id===target.rowId) || (typeof tdCollect==="function" ? tdCollect().find(x=>x.id===target.rowId) : null);
+    return r ? [r] : [];
+  }
   const {rows}=wkCollect();
-  if(target.kind==="member") return rows.filter(r=>r.id===target.rowId);
   return rows.filter(r=>wkCalGroupKey(r)===target.grp && wkSameDay(r.due,wkParse(target.day)));
 }
-function wkCtxReschedule(){
-  const target=wkCtxTarget; if(!target) return;
-  const rows=wkCtxRows(target); if(!rows.length){ wkHideCtxMenu(); return; }
+// Builds the date + time form into `box` (the right-click menu on desktop, or the bottom sheet a
+// panel's "Change date & time" button opens) and wires its own Save/Cancel.
+function wkRsBuild(box, target, close){
+  const rows=wkCtxRows(target); if(!rows.length){ close(); return; }
   const starts=rows.map(r=>r.t&&r.t.start).filter(v=>v!=null);
   const startMin=starts.length?Math.min(...starts):null;
   const hhmm=startMin==null?"":`${String(Math.floor(startMin/60)).padStart(2,"0")}:${String(startMin%60).padStart(2,"0")}`;
-  const menu=document.getElementById("wkCtxMenu");
-  menu.innerHTML=`<div class="tl-ctx-label">Change date &amp; time${rows.length>1?` (${rows.length} jobs)`:""}</div>`
-    +`<div class="wk-rs"><input type="date" id="wkRsDate" value="${esc(target.day||wkISO(rows[0].due))}">`
-    +`<input type="time" id="wkRsTime" step="900" value="${hhmm}"></div>`
-    +`<div class="wk-rs-btns"><button data-act="rsCancel">Cancel</button><button data-act="rsSave" class="wk-rs-save">Save</button></div>`;
-  menu.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",e=>{ if(e.key==="Enter") wkCtxRescheduleSave(); }));
+  box.innerHTML=`<div class="tl-ctx-label">Change date &amp; time${rows.length>1?` (${rows.length} jobs)`:""}</div>`
+    +`<div class="wk-rs"><input type="date" class="wk-rs-date" value="${esc(target.day||wkISO(rows[0].due))}">`
+    +`<input type="time" class="wk-rs-time" step="900" value="${hhmm}"></div>`
+    +`<div class="wk-rs-btns"><button type="button" class="wk-rs-cancel">Cancel</button><button type="button" class="wk-rs-save">Save</button></div>`;
+  const save=async()=>{
+    const day=box.querySelector(".wk-rs-date").value, tm=box.querySelector(".wk-rs-time").value;
+    if(!day){ alert("Pick a date."); return; }
+    const startMin = tm ? (+tm.slice(0,2))*60+(+tm.slice(3,5)) : null;   // blank time = untimed, like before it was ever dragged
+    close();
+    await wkRescheduleRows(rows, day, startMin);
+  };
+  box.querySelector(".wk-rs-cancel").onclick=e=>{ e.stopPropagation(); close(); };
+  box.querySelector(".wk-rs-save").onclick=e=>{ e.stopPropagation(); save(); };
+  box.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",e=>{ if(e.key==="Enter") save(); }));
 }
-async function wkCtxRescheduleSave(){
+// Same writes a drag makes (wkMoveOneRow), plus the milestone "shift what comes after?" offer.
+async function wkRescheduleRows(rows, toDayISO, startMin){
+  const redraw=()=>{ if(currentView==="today") buildTodayView(); else buildWeekPlanner(); };
+  const moves=rows.map(r=>({r, from:wkISO(r.due), mv:wkMoveOneRow(r,toDayISO,startMin)}));
+  redraw();
+  try{ await Promise.all(moves.map(m=>m.mv.patch)); }
+  catch(err){ moves.forEach(m=>m.mv.rollback()); redraw(); alert("Couldn't move that: "+err.message); return; }
+  const seen=new Set();
+  const bundles=moves.filter(m=>m.r.kind==="milestone" && !seen.has(m.r.p.id) && seen.add(m.r.p.id)).map(m=>({p:m.r.p,
+    dateShifts:wkPlantingDateShiftsFor(m.r.p,m.r.msDf,m.from,toDayISO), taskShifts:wkTaskShiftsFor(m.r.p,m.from,toDayISO)}));
+  if(bundles.length && await wkConfirmAndShift(bundles)) redraw();
+}
+function wkCtxReschedule(){
   const target=wkCtxTarget; if(!target) return;
-  const day=document.getElementById("wkRsDate").value, tm=document.getElementById("wkRsTime").value;
-  if(!day){ alert("Pick a date."); return; }
-  const startMin = tm ? (+tm.slice(0,2))*60+(+tm.slice(3,5)) : null;   // blank time = untimed, like before it was ever dragged
-  wkHideCtxMenu();
-  if(target.kind==="member") await wkCommitOverdueMove(target.rowId, day, startMin);
-  else await wkCommitMove(target.grp, target.day, day, startMin);
+  wkRsBuild(document.getElementById("wkCtxMenu"), target, wkHideCtxMenu);
+}
+// Phone (and the panels on any screen): the same form as a bottom sheet over a dimmed page.
+function wkOpenRescheduleSheet(target){
+  let back=document.getElementById("wkRsBack");
+  if(!back){
+    back=document.createElement("div"); back.id="wkRsBack"; back.className="wk-rs-back";
+    back.innerHTML=`<div class="wk-rs-sheet" role="dialog" aria-label="Change date and time"></div>`;
+    back.addEventListener("click",e=>{ if(e.target===back) back.classList.remove("open"); });
+    document.body.appendChild(back);
+  }
+  const close=()=>back.classList.remove("open");
+  wkRsBuild(back.firstElementChild, target, close);
+  back.classList.add("open");
 }
 function wkHideCtxMenu(){ document.getElementById("wkCtxMenu").classList.remove("open"); wkCtxTarget=null; }
 async function wkSetAssigneeFor(desc,name){
@@ -21942,8 +21984,6 @@ document.getElementById("wkCtxMenu").addEventListener("click",e=>{
   }
   else if(btn.dataset.act==="reschedule") wkCtxReschedule();
   else if(btn.dataset.act==="openBedPrep"){ wkHideCtxMenu(); showView("bedprep"); }
-  else if(btn.dataset.act==="rsCancel") wkHideCtxMenu();
-  else if(btn.dataset.act==="rsSave") wkCtxRescheduleSave();
   else if(btn.dataset.act==="unassign") wkApplyCtxAssign("");
   else if(btn.dataset.act==="addnew"){
     const name=(prompt("New assignee name:")||"").trim();
