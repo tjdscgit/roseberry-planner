@@ -1586,6 +1586,12 @@
     overflow:hidden;font-size:.72rem;line-height:1.15;color:#fff;
     user-select:none;-webkit-user-select:none}
   .wk-block.done{opacity:.5}
+  .wk-person{appearance:none;-webkit-appearance:none;height:30px;max-width:170px;padding:0 26px 0 12px;margin-right:8px;
+    border:1px solid var(--line-2);border-radius:999px;color:var(--ink);font:12.5px var(--sans);cursor:pointer;
+    background:var(--paper-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M6 8l4 4 4-4' fill='none' stroke='%238a8f98' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 8px center/14px;
+    text-overflow:ellipsis;white-space:nowrap}
+  .wk-person.on{background-color:var(--steel);border-color:var(--steel);color:#fff}
+  .wk-daily-icons .wk-person{align-self:center;max-width:130px;margin-right:4px}
   /* overlapping blocks share the column side by side (wkAssignLanes) */
   .wk-block.wk-lane{--l0:3px;right:auto;left:calc(var(--l0) + (100% - var(--l0) - 3px) * var(--lane) / var(--lanes));
     width:calc((100% - var(--l0) - 3px) / var(--lanes) - 2px)}
@@ -4919,6 +4925,7 @@
             <div class="wk-daily-stats" id="wkDailyStats"></div>
           </div>
           <div class="wk-daily-icons">
+            <select class="wk-person" id="wkPersonSelM" title="Whose jobs to show" aria-label="Whose jobs to show"></select>
             <button type="button" class="railbtn" id="wkFilterBtn" title="Layout" aria-label="Layout" aria-expanded="false">
               <svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M3 5.5h14M6 10h8M9 14.5h2"/></svg>
             </button>
@@ -4933,6 +4940,7 @@
         <span class="vw-name">This week</span>
         <span class="sub" id="wkSummary"></span>
         <span class="spacer"></span>
+        <select class="wk-person" id="wkPersonSel" title="Whose jobs to show" aria-label="Whose jobs to show"></select>
         <div class="seg" id="wkModeToggle">
           <button data-wkmode="board" aria-pressed="true">Board</button>
           <button data-wkmode="day" aria-pressed="false">Calendar</button>
@@ -20065,15 +20073,6 @@ function buildTodayView(){
 })();
 SIDEBAR_EXTRAS.week = ()=>{
   if(!wkStartISO) wkStartISO=wkISO(wkMonday(new Date()));   // the sidebar can draw before the first buildWeekPlanner
-  // People: who has jobs this week (from the unfiltered list, so every name stays pickable).
-  const all=wkCollectAll().rows.filter(r=>r.inWeek||r.overdue);
-  const per=new Map(); let none=0;
-  all.forEach(r=>{ const ps=wkPeopleOf(r); if(!ps.length) none++; ps.forEach(n=>per.set(n,(per.get(n)||0)+1)); });
-  if(wkPerson && wkPerson!==WK_UNASSIGNED && !per.has(wkPerson)) per.set(wkPerson,0);   // keep the active pick visible
-  const peopleHTML = sbGroup("People")
-    + sbFilter({label:"Everyone", count:all.length, act:"p:", on:!wkPerson})
-    + [...per.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([n,k])=>sbFilter({label:n, count:k, act:"p:"+n, on:wkPerson===n})).join("")
-    + (none ? sbFilter({label:"Unassigned", count:none, act:"p:"+WK_UNASSIGNED, on:wkPerson===WK_UNASSIGNED}) : "");
   const {rows} = wkCollect();
   const counts = {};
   rows.filter(r=>r.inWeek).forEach(r=>{
@@ -20087,22 +20086,44 @@ SIDEBAR_EXTRAS.week = ()=>{
     .map(b=>`<div class="navrow"><span class="sb-swatch" style="background:${esc(cropColor(b.name))}"></span>`
       +`<span class="navname">${esc(b.name)}</span><span class="navn">${b.n}</span></div>`)
     .join("");
-  return peopleHTML + (blocksHTML ? sbGroup("Blocks") + blocksHTML : "")
+  return (blocksHTML ? sbGroup("Blocks") + blocksHTML : "")
     + sbGroup("Records")
     + `<button type="button" class="navrow" data-view="sprayrec"><span class="navname">Spray records</span></button>`
     + `<button type="button" class="navrow" data-view="fertrec"><span class="navname">Fert records</span></button>`
     + `<button type="button" class="navrow" data-view="fieldwalk"><span class="navname">Field walk</span></button>`;
 };
 
-SIDEBAR_ACTIONS.week = act=>{
-  if(!act.startsWith("p:")) return;
-  wkPerson=act.slice(2);
-  try{ localStorage.setItem(WK_PERSON_KEY, wkPerson); }catch(_){}
-  buildWeekPlanner(); renderSidebar();
-};
+// The People picker in the page header (desktop title row + phone daily head): Everyone, each
+// person with jobs this week, Unassigned. Lives in the header rather than the hover sidebar so it's
+// one tap away and always shows whose jobs you're looking at — it turns blue when filtered.
+function wkRenderPersonPicker(){
+  const all=wkCollectAll().rows.filter(r=>r.inWeek||r.overdue);
+  const per=new Map(); let none=0;
+  all.forEach(r=>{ const ps=wkPeopleOf(r); if(!ps.length) none++; ps.forEach(n=>per.set(n,(per.get(n)||0)+1)); });
+  if(wkPerson && wkPerson!==WK_UNASSIGNED && !per.has(wkPerson)) per.set(wkPerson,0);   // keep the active pick listed
+  const opt=(v,label)=>`<option value="${esc(v)}">${esc(label)}</option>`;
+  const html = opt("", `Everyone (${all.length})`)
+    + [...per.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([n,k])=>opt(n, `${n} (${k})`)).join("")
+    + (none || wkPerson===WK_UNASSIGNED ? opt(WK_UNASSIGNED, `Unassigned (${none})`) : "");
+  ["wkPersonSel","wkPersonSelM"].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    if(document.activeElement!==sel){ sel.innerHTML=html; sel.value=wkPerson; }
+    sel.classList.toggle("on", !!wkPerson);
+  });
+}
+["wkPersonSel","wkPersonSelM"].forEach(id=>{
+  const sel=document.getElementById(id); if(!sel) return;
+  sel.addEventListener("change",()=>{
+    wkPerson=sel.value;
+    try{ localStorage.setItem(WK_PERSON_KEY, wkPerson); }catch(_){}
+    sel.blur();          // a focused select counts as "editing" and would hold back live sync
+    buildWeekPlanner(); renderSidebar();
+  });
+});
 function buildWeekPlanner(){
   const body=document.getElementById("wkBody"); if(!body) return;
   if(!wkStartISO) wkStartISO=wkISO(wkMonday(new Date()));
+  wkRenderPersonPicker();
   const {rows,start}=wkCollect();
 
   if(wkMode==="day"||wkMode==="board"){
