@@ -817,6 +817,11 @@
   .vw-title .btn-primary,.vw-title .btn-ghost,.vw-title .btn-danger{flex:0 0 auto;white-space:nowrap}
   .lbl-inline{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;
     text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+  /* The artboards' shared label/mono utilities. Today, Harvest plan and Beds use them bare; until
+     2026-10-07 only #view-whiteboard had a .lbl rule, so those labels rendered as body text.
+     :not(text) keeps the fert calc chart's SVG labels (.fc-chart .lbl) out of the uppercase. */
+  .lbl:not(text){font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+  .mono{font-family:var(--mono)}
 
   /* ---- Crop defaults: 21 columns will not fit any screen honestly. The table carries the groups
      you are scanning; the panel holds the full set for whichever crop is selected. Both edit the
@@ -1410,7 +1415,7 @@
      outlined ones) — those are shared by other views already verified against their own artboards,
      so this stays a parallel set scoped to #view-today instead of changing them underneath those. */
   .td-block-h{display:flex;align-items:center;gap:10px;height:32px;margin-top:.4rem}
-  .td-block-h .lbl{white-space:nowrap}
+  .td-block-h .lbl{white-space:nowrap;font-size:10.5px}
   .td-block-rule{flex:1 1 auto;height:1px;background:var(--line)}
   .td-task{display:flex;align-items:center;gap:12px;height:46px;padding:0 10px;border-radius:9px;cursor:pointer}
   .td-task:hover{background:var(--hover)}
@@ -1419,6 +1424,9 @@
   .td-meta{font-family:var(--mono);font-size:.6875rem;color:var(--ink-2);margin-top:3px;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .td-due{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);width:54px;text-align:right;flex:0 0 auto}
+  /* the artboard's .chip; tdTaskRow() sets border-color and color inline per task type */
+  .td-chip{flex:0 0 auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;
+    border:1px solid var(--line-2);color:var(--ink-2);border-radius:999px;padding:3px 7px;white-space:nowrap}
   .td-sort-select{border:none;background:none;color:var(--ink-2);font-family:var(--sans);
     font-size:.78rem;padding:.2rem .9rem .2rem 0;cursor:pointer;appearance:none;-webkit-appearance:none;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.6 8l4.4 4.4L14.4 8' stroke='%239aa39b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -2242,7 +2250,9 @@
   .btn-danger{border:1px solid var(--clay);border-radius:8px;background:none;
     color:var(--clay);font-size:.78rem;padding:.42rem .8rem;cursor:pointer}
   .btn-danger:hover{background:var(--clay);color:#fff}
-  .wk-qa-label-short{display:none}
+  /* display lives here, not inline, so the phone rule (#view-week #wkQuickAddBtn{display:none})
+     can win — on phones Quick add is the ⋯ menu's "From Claude chat" row instead */
+  #wkQuickAddBtn{display:flex}
   .wk-menu-mobile-only{display:none}
   /* .vw-menu-row's own display:flex otherwise beats the [hidden] attribute's display:none at equal
      specificity (author beats UA), same issue .vw-menu[hidden] etc. already work around elsewhere
@@ -4134,7 +4144,7 @@
           </button>
           <div class="cm-pop cm-pop-r" id="fmSatPop" hidden>
             <div class="cm-pop-head">Satellite underlay</div>
-            <label class="ghost" style="display:block;text-align:center;cursor:pointer;margin-bottom:.5rem">
+            <label class="btn-ghost" style="display:block;text-align:center;cursor:pointer;margin-bottom:.5rem">
               Upload image<input type="file" id="fmSatFile" accept="image/*" hidden>
             </label>
             <div id="fmSatControls" style="display:none">
@@ -5014,7 +5024,7 @@
         <button class="icon-btn" id="wkCalFitBtn" style="display:none;margin-left:.2rem"></button>
         <span class="spacer"></span>
         <div class="wk-add-group">
-          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="display:flex;align-items:center;gap:.4rem;color:var(--ink-2);white-space:nowrap"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg><span class="wk-qa-label-full">From Claude chat</span><span class="wk-qa-label-short">Claude</span></button>
+          <button class="btn-ghost" id="wkQuickAddBtn" title="Paste a suggestion from your Claude chat" style="align-items:center;gap:.4rem;color:var(--ink-2);white-space:nowrap"><svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l1.5 4.1 4.1 1.5-4.1 1.5L10 14.4 8.5 10.3 4.4 8.8l4.1-1.5z"/></svg><span class="wk-qa-label-full">From Claude chat</span></button>
           <button class="btn-ghost" id="wkAddTaskBtn">+ Add task</button>
           <button class="btn-primary" id="wkAddBtn">+ Add planting</button>
         </div>
