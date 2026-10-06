@@ -1424,6 +1424,7 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5.6 8l4.4 4.4L14.4 8' stroke='%239aa39b' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:right center;background-size:14px}
   .td-sort-select:hover{color:var(--ink)}
+  .td-head-ctl{display:flex;align-items:center;gap:6px}
   /* The popup option list is native chrome the page can't fully restyle, but Chromium/Edge do
      honour an explicit background/color on <option> — without it the list falls back to the OS's
      (light) native background while inheriting our dark --ink-2 text, unreadable either theme. */
@@ -2534,8 +2535,9 @@
        move into the exact fixed top-right corner the reload icon vacated when it was hidden on
        these two views (see showView's reloadBtn toggle) — pulling them fully out of the title row
        rather than leaving them in place once nothing else shares that corner. */
-    #view-today .vw-title #tdSortSelect{position:fixed;top:0;right:4px;height:44px;
-      line-height:44px;padding-left:.7rem;z-index:41}
+    #view-today .vw-title .td-head-ctl{position:fixed;top:0;right:4px;height:44px;z-index:41}
+    #view-today .vw-title #tdSortSelect{height:44px;line-height:44px;padding-left:.5rem}
+    #view-today .td-head-ctl .wk-person{max-width:110px;margin-right:0}
     #view-week .vw-title #wkMoreBtn{position:fixed;top:0;right:4px;height:40px;z-index:41}
     #view-week .wk-daily-icons{position:fixed;top:0;right:4px;height:40px;margin-top:0;z-index:41}
     /* NOTE: the Field walk phone rules are NOT here — they live in their own trailing
@@ -4874,11 +4876,14 @@
         <span class="vw-name">Today</span>
         <span class="sub" id="tdSummary"></span>
         <span class="spacer"></span>
+        <span class="td-head-ctl">
+        <select class="wk-person" id="tdPersonSel" title="Whose jobs to show" aria-label="Whose jobs to show"></select>
         <select class="td-sort-select" id="tdSortSelect" aria-label="Sort by">
           <option value="block">Sort: by block</option>
           <option value="task">Sort: by task type</option>
           <option value="time">Sort: by time</option>
         </select>
+        </span>
       </div>
       <div class="vw-tools">
         <!-- Not in Main.dc.html (it only ever shows one fixed day) — added so Today can be
@@ -19929,9 +19934,13 @@ const WK_PERSON_KEY="roseberry_wk_person", WK_UNASSIGNED="(unassigned)";
 let wkPerson=(()=>{ try{ return localStorage.getItem(WK_PERSON_KEY)||""; }catch(_){ return ""; } })();
 // An assignee field can hold more than one name ("Kim, Sam") — a job counts for each of them.
 function wkPeopleOf(r){ return String(rowAssignee(r)||"").split(/\s*(?:,|&|\/|\band\b)\s*/i).map(x=>x.trim()).filter(Boolean); }
+function wkMatchesPerson(r){
+  if(!wkPerson) return true;
+  const ps=wkPeopleOf(r); return wkPerson===WK_UNASSIGNED ? !ps.length : ps.includes(wkPerson);
+}
 function wkCollect(){
   const res=wkCollectAll();
-  if(wkPerson) res.rows=res.rows.filter(r=>{ const ps=wkPeopleOf(r); return wkPerson===WK_UNASSIGNED ? !ps.length : ps.includes(wkPerson); });
+  res.rows=res.rows.filter(wkMatchesPerson);
   return res;
 }
 
@@ -19947,13 +19956,15 @@ function wkCollect(){
 // shows one fixed day with no way to browse — tdDate/the prev/next/Today controls are an addition
 // on top of the artboard, not a port of it.
 let tdDate=null;   // ISO yyyy-mm-dd; null until first build (defaults to real today)
-function tdCollect(){
+function tdCollectAll(){
   const day=wkParse(tdDate||wkISO(new Date())), monday=wkMonday(day);
   // `now` stays the real current moment (not the browsed day) — that's what gates whether overdue
   // items surface at all (see wkCollect's isCurrent), same rule This week's own browsing uses.
   const {rows}=PlannerShared.wkCollect(data, wkISO(monday), new Date(), {bpOps:BP_OPS});
   return rows.filter(r=>wkSameDay(r.due,day));
 }
+// Today shares This week's People filter (one setting, so switching to Kim follows you between them).
+function tdCollect(){ return tdCollectAll().filter(wkMatchesPerson); }
 // Row markup transcribed straight from Main.dc.html's .task/.cb/.chip/.tname/.tmeta (see the CSS
 // note by .td-block-h) — a per-row colour on both the checkbox border and the chip, matching the
 // artboard exactly, using the same cropColor() the rest of the app already colours by.
@@ -19984,6 +19995,7 @@ function buildTodayView(){
   if(!tdDate) tdDate=wkISO(new Date());
   const day=wkParse(tdDate);
   document.getElementById("tdDateLabel").textContent=`${day.getDate()} ${WK_MON[day.getMonth()]} ${day.getFullYear()}`;
+  wkFillPersonPicker(["tdPersonSel"], tdCollectAll());
   const rows=tdCollect();
   const done=rows.filter(r=>r.t.done).length;
   document.getElementById("tdSummary").textContent =
@@ -20096,8 +20108,8 @@ SIDEBAR_EXTRAS.week = ()=>{
 // The People picker in the page header (desktop title row + phone daily head): Everyone, each
 // person with jobs this week, Unassigned. Lives in the header rather than the hover sidebar so it's
 // one tap away and always shows whose jobs you're looking at — it turns blue when filtered.
-function wkRenderPersonPicker(){
-  const all=wkCollectAll().rows.filter(r=>r.inWeek||r.overdue);
+function wkRenderPersonPicker(){ wkFillPersonPicker(["wkPersonSel","wkPersonSelM"], wkCollectAll().rows.filter(r=>r.inWeek||r.overdue)); }
+function wkFillPersonPicker(ids, all){
   const per=new Map(); let none=0;
   all.forEach(r=>{ const ps=wkPeopleOf(r); if(!ps.length) none++; ps.forEach(n=>per.set(n,(per.get(n)||0)+1)); });
   if(wkPerson && wkPerson!==WK_UNASSIGNED && !per.has(wkPerson)) per.set(wkPerson,0);   // keep the active pick listed
@@ -20105,19 +20117,20 @@ function wkRenderPersonPicker(){
   const html = opt("", `Everyone (${all.length})`)
     + [...per.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([n,k])=>opt(n, `${n} (${k})`)).join("")
     + (none || wkPerson===WK_UNASSIGNED ? opt(WK_UNASSIGNED, `Unassigned (${none})`) : "");
-  ["wkPersonSel","wkPersonSelM"].forEach(id=>{
+  ids.forEach(id=>{
     const sel=document.getElementById(id); if(!sel) return;
     if(document.activeElement!==sel){ sel.innerHTML=html; sel.value=wkPerson; }
     sel.classList.toggle("on", !!wkPerson);
   });
 }
-["wkPersonSel","wkPersonSelM"].forEach(id=>{
+["wkPersonSel","wkPersonSelM","tdPersonSel"].forEach(id=>{
   const sel=document.getElementById(id); if(!sel) return;
   sel.addEventListener("change",()=>{
     wkPerson=sel.value;
     try{ localStorage.setItem(WK_PERSON_KEY, wkPerson); }catch(_){}
     sel.blur();          // a focused select counts as "editing" and would hold back live sync
-    buildWeekPlanner(); renderSidebar();
+    if(currentView==="today") buildTodayView(); else buildWeekPlanner();
+    renderSidebar();
   });
 });
 function buildWeekPlanner(){
