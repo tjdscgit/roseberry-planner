@@ -2164,8 +2164,12 @@
   .wk-st-row.done .wk-st-box{background:var(--ok);border-color:var(--ok)}
   .wk-st-row.done .wk-st-box::after{content:"";position:absolute;left:50%;top:44%;width:.26rem;height:.48rem;
     border:solid #fff;border-width:0 1.6px 1.6px 0;transform:translate(-50%,-50%) rotate(45deg)}
-  .wk-st-cur{margin-left:auto;font:11px var(--mono);color:var(--ink-2)}
+  .wk-st-cur{font:11px var(--mono);color:var(--ink-2);font-weight:400}
+  .wk-st-date{margin-left:auto;font:.78rem var(--mono);color:var(--ink-2);opacity:.75}
+  .wk-st-date.actual{opacity:1;color:var(--ink)}
+  .tl-panel-actions .btn-primary,.tl-panel-actions .btn-ghost{font-family:var(--sans);font-weight:600}
   @media (max-width:760px){
+    [data-role="job-panel"] .wk-st-date{font-size:.88rem}
     [data-role="job-panel"] .wk-st-list{border-radius:11px}
     [data-role="job-panel"] .wk-st-row{font-size:1rem;padding:.85rem 1rem;min-height:50px}
     [data-role="job-panel"] .wk-st-box{width:24px;height:24px;border-width:2px}
@@ -21258,7 +21262,7 @@ function wkOpenJobPanel(r){
     + (spTime ? tlKv("Time", esc(spTime)) : "")
     + (sp && sp.method ? tlKv("Method", esc(sp.method)) : "")
     + (sp && sp.whp!=null ? tlKv("WHP", `${sp.whp} days`) : "")
-    + (r.t.assignee ? tlKv("Assignee", esc(r.t.assignee)) : "")
+    + (wkJobDesc(r) ? tlKv("Assigned", wkAssigneeSelectHTML(rowAssignee(r))) : (r.t.assignee ? tlKv("Assignee", esc(r.t.assignee)) : ""))
     + (r.task.category ? tlKv("Category", esc(r.task.category)) : "")
     + (r.t.repeat ? tlKv("Repeats", `every ${r.t.repeat}d`) : "")
     // Main.dc.html's Sown/First pick — real fields (p.sow/p.h1), already used by the milestone
@@ -21269,9 +21273,10 @@ function wkOpenJobPanel(r){
   const statusHTML = statusPct==null ? "" : `
     <div class="sect-h">Status</div>
     <div class="wk-st-list" id="wkJobStatus">${STATUS_ORDER.map((st,i)=>{
-      const cur=statusRank(r.p.status);
+      const cur=statusRank(r.p.status), d=wkStageDate(r.p, st);
       return `<button type="button" class="wk-st-row${i<=cur?" done":""}${i===cur?" on":""}" data-st="${esc(st)}">`
-        +`<span class="wk-st-box"></span><span class="wk-st-name">${esc(st)}</span>${i===cur?`<span class="wk-st-cur">current</span>`:""}</button>`;
+        +`<span class="wk-st-box"></span><span class="wk-st-name">${esc(st)}${i===cur?` <span class="wk-st-cur">· current</span>`:""}</span>`
+        +`<span class="wk-st-date${d&&d.actual?" actual":""}" title="${d?(d.actual?"Recorded":"Planned"):""}">${d?esc(fmt(d.iso)):""}</span></button>`;
     }).join("")}</div>`;
 
   const sprayHTML = !sp ? "" : (spItems.length ? `
@@ -21339,6 +21344,19 @@ function wkOpenJobPanel(r){
     else if(wkIsBedPrepRowId(r.id)) wkToggleBedPrep(r.id);
     else wkToggleDoneInteractive(r.id, !r.t.done);
     wkClosePlantingPanel();
+  };
+  const asg=panel.querySelector("#wkJobAssignee");
+  if(asg) asg.onchange=async()=>{
+    let name=asg.value;
+    if(name==="__new__"){
+      name=(prompt("New assignee name:")||"").trim();
+      if(!name){ asg.value=rowAssignee(r)||""; return; }
+    }
+    try{ await wkSetAssigneeFor(wkJobDesc(r), name); }
+    catch(e){ alert("Couldn't save assignee: "+e.message); }
+    if(currentView==="today") buildTodayView(); else buildWeekPlanner();
+    const fresh=(currentView==="today"?tdCollect():wkCollect().rows).find(x=>x.id===r.id);
+    if(fresh) wkOpenJobPanel(fresh); else wkClosePlantingPanel();   // a People filter may now hide it
   };
   // Stage checklist: tap a stage to set the planting to it (ticked up to and including the current
   // one). Sets Status only — the sow/transplant "actual" dates stay as they are.
@@ -21882,6 +21900,32 @@ function wkCtxDescs(target){
   : r.kind==="spray"     ? {isSpray:true, sprayId:r.app.id}
   : r.kind==="bedprep"   ? {isBedPrep:true}
   :                        {isMilestone:false, taskId:r.t.id});
+}
+// The assign descriptor for one row (same shapes wkCtxDescs builds) — null for kinds with no
+// assignee field (bed prep).
+// The date that goes with each stage of a planting: when it's sown (tray-started crops) or goes in
+// the ground, and its first/last pick. A recorded "actual" date wins over the planned one.
+function wkStageDate(p, st){
+  const pick=(actual,planned)=> actual ? {iso:actual, actual:true} : planned ? {iso:planned, actual:false} : null;
+  if(st==="Seeded") return p.tp ? pick(p.sowActual, p.sow) : null;           // direct-sown skips this stage
+  if(st==="In ground") return p.tp ? pick(p.tpActual, p.tp) : pick(p.sowActual, p.sow);
+  if(st==="Harvesting") return pick(null, p.h1);
+  if(st==="Finished") return pick(null, p.h2);
+  return null;
+}
+function wkJobDesc(r){
+  return r.kind==="milestone" ? {isMilestone:true, msDf:r.msDf, plantingId:r.p.id}
+    : r.kind==="tarp" ? {isTarp:true, tarpId:r.tarp.id, tarpStep:r.tarpStep}
+    : r.kind==="spray" ? {isSpray:true, sprayId:r.app.id}
+    : r.kind==="bedprep" ? null
+    : {isMilestone:false, taskId:r.t.id};
+}
+function wkAssigneeSelectHTML(cur){
+  const names=knownAssignees(); if(cur && !names.includes(cur)) names.push(cur);
+  return `<select class="tl-qa-assignee-select" id="wkJobAssignee" style="max-width:10rem">`
+    + `<option value="">Unassigned</option>`
+    + names.sort((a,b)=>a.localeCompare(b)).map(n=>`<option value="${esc(n)}"${n===cur?" selected":""}>${esc(n)}</option>`).join("")
+    + `<option value="__new__">+ Add new…</option></select>`;
 }
 function wkShowCtxMenu(ev,target){
   wkCtxTarget=target;
