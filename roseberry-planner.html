@@ -1169,8 +1169,6 @@
   .hv-qty input.hv-default{color:var(--ink-2);font-style:italic}
   .hv-weigh{color:#C98A1B;font-weight:700}
   .hv-line.done.weigh .hv-nm{text-decoration:none}
-  .hv-addtally{font-family:var(--mono);font-size:.72rem;color:var(--ok);line-height:1.35}
-  .hv-addtally:empty{display:none}
   /* one height for every box in the dialog (search, outlet, target were 36/38/36px) */
   #hvAddModal .wk-task-form input,#hvAddModal .wk-task-form select:not([size]){height:2.6rem;box-sizing:border-box}
   .hv-earn{color:var(--ok);font-weight:600;min-width:3.2em;text-align:right}
@@ -1678,8 +1676,16 @@
     background:rgba(0,0,0,.45);padding:1rem}
   #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open,#hvAddModal.open{display:flex}
   /* crop picker is a list box, not a drop-down: a long native drop-down ran off the bottom of the screen */
-  #hvAddPlanting{height:auto;max-height:min(14rem,36vh);overflow-y:auto;padding:.2rem 0}
-  #hvAddPlanting option{padding:.35rem .6rem}
+  .hv-addlist{max-height:min(20rem,46vh);overflow-y:auto;border:1px solid var(--line-2);border-radius:9px;background:var(--paper)}
+  .hv-addrow{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-bottom:1px solid var(--line);cursor:pointer;font-size:.88rem}
+  .hv-addrow:last-child{border-bottom:none}
+  .hv-addrow:hover{background:var(--hover)}
+  .hv-addrow input{width:18px;height:18px;flex:0 0 auto;accent-color:var(--ok);margin:0}
+  .hv-addrow .hv-addname{flex:1 1 auto;min-width:0}
+  .hv-addrow .hv-addbeds{font:.72rem var(--mono);color:var(--ink-2)}
+  .hv-addrow.on-already{opacity:.55;cursor:default}
+  .hv-addempty{padding:.8rem;color:var(--ink-2);font-size:.85rem}
+  @media (max-width:760px){ .hv-addrow{padding:.8rem .8rem;font-size:1rem} .hv-addrow input{width:22px;height:22px} }
   #hvAddSearch{width:100%}
   #wkDateModal .wk-group-card,#hvAddModal .wk-group-card,#tlRemoveModal .wk-group-card,#tlSuccessionModal .wk-group-card{width:min(360px,100%)}
   .wk-task-form{display:flex;flex-direction:column;gap:.9rem;margin-bottom:.2rem}
@@ -5802,15 +5808,13 @@
              send every tap on the list to the search box and bring the keyboard up on a phone) -->
         <div class="ap-trow-f"><span>Crop</span>
           <input type="search" id="hvAddSearch" placeholder="Search crop, variety, type or bed…" autocomplete="off" aria-label="Search crops">
-          <select id="hvAddPlanting" size="8" aria-label="Crop"></select></div>
+          <div id="hvAddPlanting" class="hv-addlist" role="group" aria-label="Crops"></div></div>
         <label class="ap-trow-f"><span>Outlet</span><select id="hvAddOutlet"></select></label>
-        <label class="ap-trow-f"><span>Target (total)</span><input type="number" id="hvAddQty" min="0" step="any" placeholder="blank = whatever's ready">
-          <div id="hvAddTally" class="hv-addtally"></div></label>
       </div>
       <div class="ap-actions">
         <span class="spacer"></span>
         <button class="btn-ghost" id="hvAddCancel">Cancel</button>
-        <button class="btn-primary" id="hvAddOk">Add</button>
+        <button class="btn-primary" id="hvAddOk" disabled>Add</button>
       </div>
     </div>
   </div>
@@ -12553,8 +12557,8 @@ function hvRenderList(lines){
   });
 }
 
-// Wired once at load. "+ Add line" opens #hvAddModal: pick a ready planting + outlet + target, and
-// it goes through upsertHarvest like an inline edit would.
+// Wired once at load. "+ Add line" opens #hvAddModal: tick the ready crops + pick an outlet, and
+// each goes through upsertHarvest like an inline edit would.
 document.addEventListener("DOMContentLoaded",()=>{
   document.querySelectorAll("#hvGroupToggle button").forEach(b=>b.onclick=()=>{
     hvGroupMode=b.dataset.hvgrp; buildHarvestPlanner();
@@ -12562,71 +12566,66 @@ document.addEventListener("DOMContentLoaded",()=>{
   const pr=document.getElementById("hvPrintBtn");
   if(pr) pr.onclick=()=>window.print();
   const modal=document.getElementById("hvAddModal");
-  const selP=document.getElementById("hvAddPlanting"), selO=document.getElementById("hvAddOutlet"),
-        qty=document.getElementById("hvAddQty");
-  let ready=[], outlets=[];
+  // A tick-box list of every crop ready this week: tick as many as you like, Add puts each on the
+  // chosen outlet with no target — the amounts get typed on the main page, not one dialog per crop.
+  const list=document.getElementById("hvAddPlanting"), selO=document.getElementById("hvAddOutlet"),
+        okBtn=document.getElementById("hvAddOk");
+  let ready=[], outlets=[], picked=new Set();
   const close=()=>modal.classList.remove("open");
   document.getElementById("hvAddClose").onclick=close;
   document.getElementById("hvAddCancel").onclick=close;
-  // live "target × price = $" under the target box
-  const tallyBox=document.getElementById("hvAddTally");
-  const tally=()=>{
-    const ps=ready[selP.value]; if(!ps){ tallyBox.textContent=""; return; }
-    const p=ps[0], price=hvPriceOf(p), unit=hvUnitOf(p), n=qty.value===""?0:+qty.value;
-    tallyBox.textContent = !n ? "No target — pick whatever's ready, weigh it later if you like"
-      : price==null ? "No price set for this crop"
-      : `${n} × ${hvMoney(price)} per ${unitLabel(unit,1)||"unit"} = ${hvMoney(n*price)}`;
-  };
-  selP.onchange=tally; qty.oninput=tally;
-  // crop list A–Z, narrowed by the search box
+  const onOutlet=ps=>{ const o=outlets[selO.value]; return !!o && ps.some(p=>hrFor(p.id,o.id,hvState.week)); };
+  const syncOk=()=>{ okBtn.disabled=!picked.size; okBtn.textContent=picked.size?`Add ${picked.size}`:"Add"; };
   const search=document.getElementById("hvAddSearch");
   const fillCrops=()=>{
-    const q=search.value.trim().toLowerCase(), opts=[];
+    const q=search.value.trim().toLowerCase();
+    const rows=[];
     ready.forEach((ps,i)=>{
       const type=cropTypeOfPlanting(ps[0])||"Other";
-      const label=`${hvCropName(ps)} — ${hvSowings(ps).map(g=>g.beds).join(", ")}`;
-      if(q && !`${label} ${type} ${ps.map(p=>p.variety).join(" ")}`.toLowerCase().includes(q)) return;
-      opts.push(new Option(label, i));
+      const name=hvCropName(ps), beds=hvSowings(ps).map(g=>g.beds).join(", ");
+      if(q && !`${name} ${beds} ${type} ${ps.map(p=>p.variety).join(" ")}`.toLowerCase().includes(q)) return;
+      const already=onOutlet(ps);
+      rows.push(`<label class="hv-addrow${already?" on-already":""}"><input type="checkbox" data-i="${i}"${already?" checked disabled":picked.has(i)?" checked":""}>`
+        +`<span class="hv-addname">${esc(name)}</span><span class="hv-addbeds">${already?"already on":esc(beds)}</span></label>`);
     });
-    selP.replaceChildren(...opts);
-    selP.selectedIndex=selP.options.length?0:-1;   // a list box starts with nothing chosen
-    tally();
+    list.innerHTML = rows.join("") || `<div class="hv-addempty">Nothing matches.</div>`;
+    list.querySelectorAll("input[data-i]:not([disabled])").forEach(cb=>cb.onchange=()=>{
+      const i=+cb.dataset.i; if(cb.checked) picked.add(i); else picked.delete(i); syncOk();
+    });
+    syncOk();
   };
   search.oninput=fillCrops;
-  // Enter in the search box jumps to the target
-  search.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); qty.focus(); } };
+  search.onkeydown=e=>{ if(e.key==="Enter") e.preventDefault(); };
+  selO.onchange=()=>{ picked=new Set([...picked].filter(i=>!onOutlet(ready[i]))); fillCrops(); };
   const add=document.getElementById("hvAddLineBtn");
   if(add) add.onclick=()=>{
-    // one option per crop; its target covers every ready sowing of that crop
+    // one row per crop; its line covers every ready sowing of that crop
     const byCrop=new Map();
     hvReadyInWeek().forEach(p=>{ const k=hvCropKey(p); if(!byCrop.has(k)) byCrop.set(k,[]); byCrop.get(k).push(p); });
     ready=[...byCrop.values()].sort((a,b)=>hvCropName(a).localeCompare(hvCropName(b)));   // crop A–Z
     outlets=activeOutlets();
     if(!ready.length){ alert("No plantings are inside their harvest window this week."); return; }
     if(!outlets.length){ showView("outlets"); return; }
-    search.value="";
-    fillCrops();
+    search.value=""; picked=new Set();
     selO.replaceChildren(...outlets.map((o,i)=>new Option(o.name, i)));
     // on the phone, start on the market you're looking at
     const oi=outlets.findIndex(o=>o.id===hvpOutlet);
     if(cmIsMobile() && oi>=0) selO.selectedIndex=oi;
-    qty.value="";
-    tally();
+    fillCrops();
     modal.classList.add("open");
-    // desktop: straight into the search box. Phone: no — focusing it throws the keyboard up over the
-    // list; the crop list scrolls, and the keyboard only appears when you tap Search.
+    // desktop: straight into the search box. Phone: no — focusing it throws the keyboard up over the list.
     if(!cmIsMobile()) search.focus();
   };
-  document.getElementById("hvAddOk").onclick=async ()=>{
-    const ps=ready[selP.value], o=outlets[selO.value];
-    const v=qty.value===""?null:Number(qty.value);
-    if(!ps||!o) return;
-    if(v!=null && !(v>=0)){ qty.focus(); return; }   // blank is fine: no target
+  okBtn.onclick=async ()=>{
+    const o=outlets[selO.value]; if(!o || !picked.size) return;
+    const groups=[...picked].map(i=>ready[i]).filter(ps=>ps && !onOutlet(ps));
     close();
-    // include any of this crop's records already on the outlet this week, so the target is replaced, not doubled
-    const all=new Set(ps);
-    (data.plantings||[]).forEach(p=>{ if(hvCropKey(p)===hvCropKey(ps[0]) && hrFor(p.id,o.id,hvState.week)) all.add(p); });
-    await hvSetSum([...all], o, "planned", v??0, hvSowings(ps)[0].plantings[0]);   // 0 = no target
+    okBtn.disabled=true;
+    try{
+      // no target (0) — same as leaving the old Target box blank; amounts go in on the main page
+      for(const ps of groups) await upsertHarvest(hvSowings(ps)[0].plantings[0], o, hvState.week, "planned", 0, true);
+    }catch(e){ alert("Couldn't add: "+e.message); }
+    buildHarvestPlanner();
   };
 });
 
