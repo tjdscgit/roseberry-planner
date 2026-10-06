@@ -12636,6 +12636,9 @@ function wireHarvestWeekNav(){
   if(next) next.onclick=()=>{ hvState.week=isoAddDays(hvState.week,7); buildHarvestPlanner(); };
   if(tw) tw.onclick=()=>{ hvState.week=mondayOfISO(todayISO()); buildHarvestPlanner(); };
 }
+// The buttons are static markup, so wire them once here. The old per-render call was lost in the
+// redesign rewrite of buildHarvestPlanner, which left the week arrows and "This week" dead.
+wireHarvestWeekNav();
 async function upsertHarvest(p, o, week, field, value, noRedraw){
   const fieldMap={planned:CFG.f.hr_planned, actual:CFG.f.hr_actual, priceOverride:CFG.f.hr_priceOverride};
   let rec=hrFor(p.id,o.id,week);
