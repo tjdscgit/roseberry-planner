@@ -2150,6 +2150,19 @@
   .kv.wk-job-status{flex-wrap:wrap;row-gap:.45rem}
   .kv.wk-job-status .v{color:var(--ink-2);font-size:.75rem}
   .kv.wk-job-status .wk-job-bar{flex:1 1 100%;margin:0;height:5px}
+  .kv.wk-job-status{cursor:pointer}
+  .kv.wk-job-status:hover{background:var(--hover)}
+  .kv.wk-job-status .v{display:inline-flex;align-items:center;gap:.3rem}
+  .wk-job-status-chev{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .wk-st-opt{display:flex;align-items:center;gap:.7rem;width:100%;border:none;background:none;color:var(--ink);
+    font:14px var(--sans);text-align:left;padding:.65rem .6rem;border-radius:8px;cursor:pointer}
+  .wk-st-opt:hover{background:var(--hover)}
+  .wk-st-opt.on{background:var(--sel)}
+  .wk-st-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--line-2);font:11px var(--mono);color:var(--ink-2);flex:0 0 auto}
+  .wk-st-opt.on .wk-st-n{background:var(--ok);border-color:var(--ok);color:#fff}
+  .wk-st-cur{margin-left:auto;font:11px var(--mono);color:var(--ink-2)}
+  @media (max-width:760px){ .wk-st-opt{font-size:16px;padding:.9rem .7rem} }
   /* Phone: the job panel fills the screen, so give it room — taller rows, bigger text, and the
      actions pinned to the bottom where a thumb is, instead of everything crammed into the top half. */
   @media (max-width:760px){
@@ -21247,7 +21260,7 @@ function wkOpenJobPanel(r){
 
   const statusHTML = statusPct==null ? "" : `
     <div class="sect-h">Status</div>
-    <div class="kv wk-job-status"><span class="k">${esc(r.p.status)}</span><span class="v">step ${statusRank(r.p.status)+1} of ${STATUS_ORDER.length}</span>
+    <div class="kv wk-job-status" id="wkJobStatus" role="button" tabindex="0" title="Change the planting's stage"><span class="k">${esc(r.p.status)}</span><span class="v">step ${statusRank(r.p.status)+1} of ${STATUS_ORDER.length}<svg viewBox="0 0 20 20" class="wk-job-status-chev" aria-hidden="true"><path d="M8 5l5 5-5 5"/></svg></span>
       <div class="wk-job-bar"><div class="wk-job-bar-fill" style="width:${statusPct}%"></div></div></div>`;
 
   const sprayHTML = !sp ? "" : (spItems.length ? `
@@ -21316,6 +21329,18 @@ function wkOpenJobPanel(r){
     else wkToggleDoneInteractive(r.id, !r.t.done);
     wkClosePlantingPanel();
   };
+  const stEl=panel.querySelector("#wkJobStatus");
+  if(stEl){
+    const open=()=>wkOpenStatusSheet(r.p, ()=>{
+      if(currentView==="today") buildTodayView(); else buildWeekPlanner();
+      if(currentView==="timeline") buildTimeline();
+      // the row's own done/locked state follows the planting's stage, so re-find it fresh
+      const fresh=(currentView==="today"?tdCollect():wkCollect().rows).find(x=>x.id===r.id);
+      wkOpenJobPanel(fresh||r);
+    });
+    stEl.onclick=open;
+    stEl.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); open(); } };
+  }
   panel.querySelector("#wkJobReschedule").onclick=()=>{
     if(sp){ wkClosePlantingPanel(); sprayOpenPlan(sp.id); return; }
     // Same date + time form as the calendar's right-click "Change date & time…" — one way to move
@@ -21886,6 +21911,7 @@ function wkCtxRows(target){
 // Builds the date + time form into `box` (the right-click menu on desktop, or the bottom sheet a
 // panel's "Change date & time" button opens) and wires its own Save/Cancel.
 function wkRsBuild(box, target, close){
+  if(target.kind==="none") return;   // just creating the sheet for another use (wkOpenStatusSheet)
   const rows=wkCtxRows(target); if(!rows.length){ close(); return; }
   const starts=rows.map(r=>r.t&&r.t.start).filter(v=>v!=null);
   const startMin=starts.length?Math.min(...starts):null;
@@ -21917,6 +21943,28 @@ async function wkRescheduleRows(rows, toDayISO, startMin){
     dateShifts:wkPlantingDateShiftsFor(m.r.p,m.r.msDf,m.from,toDayISO), taskShifts:wkTaskShiftsFor(m.r.p,m.from,toDayISO)}));
   if(bundles.length && await wkConfirmAndShift(bundles)) redraw();
 }
+// Tapping the job panel's Status card: pick the planting's stage directly. Sets Status only —
+// the sow/transplant "actual" dates are left as they are (ticking the milestone job still stamps
+// those); this is for putting a planting that's on the wrong stage right.
+function wkOpenStatusSheet(p, after){
+  let back=document.getElementById("wkRsBack");
+  if(!back){ wkOpenRescheduleSheet({kind:"none"}); back=document.getElementById("wkRsBack"); }
+  const box=back.firstElementChild, close=()=>back.classList.remove("open");
+  const cur=statusRank(p.status);
+  box.innerHTML=`<div class="tl-ctx-label">${esc(p.crop)}${p.variety?` · ${esc(p.variety)}`:""} — stage</div>`
+    + STATUS_ORDER.map((st,i)=>`<button type="button" class="wk-st-opt${i===cur?" on":""}" data-st="${esc(st)}">`
+      + `<span class="wk-st-n">${i+1}</span><span>${esc(st)}</span>${i===cur?`<span class="wk-st-cur">current</span>`:""}</button>`).join("")
+    + `<div class="wk-rs-btns"><button type="button" class="wk-rs-cancel">Cancel</button></div>`;
+  box.querySelector(".wk-rs-cancel").onclick=close;
+  box.querySelectorAll(".wk-st-opt").forEach(b=>b.onclick=async()=>{
+    const st=b.dataset.st; close();
+    if(st===p.status) return;
+    const prev=p.status; p.status=st; after();
+    try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[CFG.f.pl_status]:st}); }
+    catch(e){ p.status=prev; after(); alert("Couldn't change the stage: "+e.message); }
+  });
+  back.classList.add("open");
+}
 function wkCtxReschedule(){
   const target=wkCtxTarget; if(!target) return;
   wkRsBuild(document.getElementById("wkCtxMenu"), target, wkHideCtxMenu);
@@ -21932,7 +21980,7 @@ function wkOpenRescheduleSheet(target){
   }
   const close=()=>back.classList.remove("open");
   wkRsBuild(back.firstElementChild, target, close);
-  back.classList.add("open");
+  if(target.kind!=="none") back.classList.add("open");
 }
 function wkHideCtxMenu(){ document.getElementById("wkCtxMenu").classList.remove("open"); wkCtxTarget=null; }
 async function wkSetAssigneeFor(desc,name){
