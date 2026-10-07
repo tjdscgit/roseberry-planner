@@ -663,7 +663,8 @@
   // Driving order: up one block at a time, in bed order within it. Mirrors bedGroups()' sort.
   function bpBedOrder(a,b){
     const x=a.bed||{}, y=b.bed||{};
-    const bl=String(x.block||"").localeCompare(String(y.block||""), undefined, {numeric:true});
+    const xb=String(x.block||""), yb=String(y.block||""), bp=v=>/^back paddock/i.test(v.trim())?1:0;
+    const bl=bp(xb)-bp(yb) || xb.localeCompare(yb, undefined, {numeric:true});   // Back Paddock blocks last
     if(bl) return bl;
     if(x.order!=null && y.order!=null && x.order!==y.order) return x.order-y.order;
     return String(x.name||"").localeCompare(String(y.name||""), undefined, {numeric:true});

@@ -7153,7 +7153,7 @@ function layoutAndDraw(opts){
   data.blocks.forEach(bl=> blkByName[String(bl.name).trim()] = bl);
 
   // auto-grid fallback for blocks lacking coords
-  const blockKeys = Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const blockKeys = Object.keys(groups).sort((a,b)=>blockCmp(a,b));
   const anyCoords = data.blocks.some(b=>b.x!=null && b.y!=null);
   let gx=0, gy=0, rowH=0, colW=140; // metres, for auto layout
   const perRow = Math.max(1, Math.ceil(Math.sqrt(blockKeys.length)));
@@ -9616,6 +9616,12 @@ function cmToday(){
   return Math.max(0,Math.min(1,(now-start)/(end-start)))*CM_H;
 }
 
+// Block order everywhere: natural A–Z (numeric-aware), except the Back Paddock blocks always go last.
+function blockCmp(a,b){
+  a=String(a||""); b=String(b||"");
+  const bp=x=>/^back paddock/i.test(x.trim())?1:0;
+  return bp(a)-bp(b) || a.localeCompare(b,undefined,{numeric:true,sensitivity:"base"});
+}
 function bedGroups(){
   const groups={};
   data.beds.forEach(b=>{(groups[b.block||"—"] ||= []).push(b);});
@@ -9969,7 +9975,7 @@ function $trp(id){ return document.getElementById(id); }
 function trpFillBedSelect(sel, bedId){
   sel.innerHTML="";
   const groups=bedGroups();
-  Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(block=>{
+  Object.keys(groups).sort((a,b)=>blockCmp(a,b)).forEach(block=>{
     const og=document.createElement("optgroup"); og.label="Block "+block;
     groups[block].forEach(b=>{
       const o=document.createElement("option"); o.value=b.id; o.textContent=b.name;
@@ -10596,7 +10602,7 @@ function buildCropMap(){
   document.getElementById("cmYearLabel").textContent=cmYear;
   const yp=document.getElementById("cmYearPop"); if(yp) yp.textContent=cmYear;
   const groups=bedGroups();
-  const keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const keys=Object.keys(groups).sort((a,b)=>blockCmp(a,b));
 
   if(cmSelectedBlock && !keys.includes(cmSelectedBlock)) cmSelectedBlock=null; // stale (renamed/removed) → fall back to "All"
   const phone=cmIsMobile();
@@ -13987,7 +13993,7 @@ function tlGroupsByBed(){
     if(!p.sow) return;
     (p.bedIds||[]).forEach(bid=>{ if(bid) (perBed[bid] ||= []).push(p); });
   });
-  return Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(block=>({
+  return Object.keys(groups).sort((a,b)=>blockCmp(a,b)).map(block=>({
     key:block, label:"Block "+block,
     // bedId is carried through so the row can also draw that bed's tarped spans (see tlAddTarp) —
     // By-crop rows have no single bed and so get none.
@@ -15061,7 +15067,7 @@ function apFillBeds(){
   const un=document.createElement("option"); un.value=""; un.textContent="— Unassigned —"; s.appendChild(un);
   const byBlock={};
   (data.beds||[]).forEach(bd=>{ (byBlock[bd.block||"—"] ||= []).push(bd); });
-  Object.keys(byBlock).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(blk=>{
+  Object.keys(byBlock).sort((a,b)=>blockCmp(a,b)).forEach(blk=>{
     const og=document.createElement("optgroup"); og.label="Block "+blk;
     byBlock[blk].sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}))
       .forEach(bd=>{
@@ -16798,7 +16804,7 @@ function buildBedSetupTab(){
   // to edit or grow from here, not just blocks that already have beds grouping them into view.
   const blockNames=new Set(Object.keys(groups));
   (data.blocks||[]).forEach(b=>{ const n=String(b.name||"").trim(); if(n) blockNames.add(n); });
-  const keys=Array.from(blockNames).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const keys=Array.from(blockNames).sort((a,b)=>blockCmp(a,b));
   if(!keys.length){
     body.innerHTML=`<tr><td colspan="9"><div class="cr-empty">No beds yet.</div></td></tr>`;
     return;
@@ -17609,7 +17615,7 @@ function bpOverdueOps(bedId, map, iv){
 function bpRenderHistory(){
   const box=document.getElementById("bpBody"); if(!box) return;
   const map=bpLastDone(), iv=bpIntervals();
-  const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>blockCmp(a,b));
   const overdueCount=(data.beds||[]).filter(b=>bpOverdueOps(b.id,map,iv).length).length;
   const prepBtn=document.getElementById("bdPrepBtn");
   if(prepBtn) prepBtn.textContent = overdueCount ? `Prep (${overdueCount})` : "Prep";
@@ -18081,7 +18087,7 @@ function bppItems(P){
     .concat(P.suggestions.map(x=>Object.assign({}, x,
       {planned:false, ops:[], remaining:0, carried:false, planId:null})));
   const rank={late:0, this:1, next:2, other:3};
-  const blk=(a,b)=>String(a.bed.block||"").localeCompare(String(b.bed.block||""),undefined,{numeric:true})
+  const blk=(a,b)=>blockCmp(a.bed.block,b.bed.block)
     || ((a.bed.order??1e9)-(b.bed.order??1e9))
     || String(a.bed.name||"").localeCompare(String(b.bed.name||""),undefined,{numeric:true});
   return items.sort((a,b)=> rank[a.when]-rank[b.when]
@@ -18538,7 +18544,7 @@ function bdBuildMobile(){
   const box=document.getElementById("bdMobile"); if(!box) return;
   const bed=bdMobileBed ? (data.beds||[]).find(b=>b.id===bdMobileBed) : null;
   if(!bed){
-    const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+    const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>blockCmp(a,b));
     box.innerHTML=keys.map(blk=>
       `<div class="bd-mob-block">Block ${esc(blk)}</div>`
       + groups[blk].map(b=>{
@@ -20108,7 +20114,7 @@ function buildTodayView(){
       groups.get(block).push(r);
     });
     const order=[...groups.keys()].sort((a,b)=>
-      a==="Unassigned"?1 : b==="Unassigned"?-1 : a.localeCompare(b,undefined,{numeric:true}));
+      a==="Unassigned"?1 : b==="Unassigned"?-1 : blockCmp(a,b));
     list.innerHTML = order.map(block=>{
       const items=groups.get(block).slice().sort((a,b)=>(a.t.start??9999)-(b.t.start??9999));
       const color = block==="Unassigned" ? "var(--ink-2)" : cropColor(block);
@@ -20777,7 +20783,7 @@ function wkFillTaskLink(){
   if(type==="bed"){ lbl.textContent="Bed"; trpFillBedSelect(sel, wkTaskLinkPre.bedId); }
   else if(type==="block"){
     lbl.textContent="Block";
-    sel.innerHTML=(data.blocks||[]).slice().sort((a,b)=>String(a.name).localeCompare(String(b.name),undefined,{numeric:true}))
+    sel.innerHTML=(data.blocks||[]).slice().sort((a,b)=>blockCmp(a.name,b.name))
       .map(b=>`<option value="${esc(b.id)}"${b.id===wkTaskLinkPre.blockId?" selected":""}>Block ${esc(b.name)}</option>`).join("");
   }
   else {
@@ -21259,7 +21265,7 @@ function wkOpenJobPanel(r){
   const bedRowHTML = !canEditBed ? tlKv("Bed", bed ? `${esc(bed.name)}${bed.len?` · ${bed.len} m`:""}` : "unassigned")
     : tlKv("Bed", `<select class="tl-qa-assignee-select" id="wkJobBedSelect" style="max-width:9rem">`
       + `<option value=""${!bed?" selected":""}>unassigned</option>`
-      + Object.entries(bedGroups()).sort((a,b)=>a[0].localeCompare(b[0],undefined,{numeric:true}))
+      + Object.entries(bedGroups()).sort((a,b)=>blockCmp(a[0],b[0]))
         .map(([blk,beds])=>`<optgroup label="${esc(blk)}">${beds.map(b=>
           `<option value="${esc(b.id)}"${bed&&bed.id===b.id?" selected":""}>${esc(b.name)}</option>`).join("")}</optgroup>`).join("")
       + `</select>`);
@@ -25822,7 +25828,7 @@ function fpBlocksOf(progId){
   // order rows came back from the backend, which is arbitrary — using it put GH2 above AB.
   return [...seen.values()].sort((a,b)=>{
     if(a.orphan!==b.orphan) return a.orphan?1:-1;   // unmatched legacy blocks sink to the bottom
-    return a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:"base"});
+    return blockCmp(a.name,b.name);
   });
 }
 
@@ -26229,7 +26235,7 @@ let fplState=null;   // { mode:'program'|'manual', progId, roundId, blockId, bed
 // from, since a manual entry isn't scoped to a program's own block list.
 function fpAllBlocksSorted(){
   return (data.blocks||[]).slice()
-    .sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:"base"}));
+    .sort((a,b)=>blockCmp(a.name,b.name));
 }
 
 function fplOpen(opts){
@@ -27087,7 +27093,7 @@ function frPerBed(app,item){
 function frBlockNames(){
   const order=new Map((data.blocks||[]).map((b,i)=>[b.name,(b.order??i)]));
   const names=[...new Set((data.beds||[]).map(b=>b.block).filter(Boolean))];
-  return names.sort((a,b)=>((order.get(a)??1e9)-(order.get(b)??1e9))||a.localeCompare(b,undefined,{numeric:true}));
+  return names.sort((a,b)=>((order.get(a)??1e9)-(order.get(b)??1e9))||blockCmp(a,b));
 }
 
 function frBedsOfBlock(name){
@@ -28436,7 +28442,7 @@ function fwmOrder(){
     const due=bppItems(bppPlanFor(bppThisWeek())).filter(i=>i.when!=="other");
     return due.map(i=>i.bed);
   }
-  const g=bedGroups(), keys=Object.keys(g).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const g=bedGroups(), keys=Object.keys(g).sort((a,b)=>blockCmp(a,b));
   const blk=keys.includes(fwmBlock) ? fwmBlock : keys[0];
   return blk ? g[blk] : [];
 }
@@ -28462,7 +28468,7 @@ function fwmRenderBeds(){
       +(late?` · <em>${late} late</em>`:"")+`</span>`
       +`<span class="fwm-card-go">${fwmDueOnly?"Clear ✕":"Show ›"}</span>`;
   }
-  const g=bedGroups(), keys=Object.keys(g).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+  const g=bedGroups(), keys=Object.keys(g).sort((a,b)=>blockCmp(a,b));
   if(!keys.includes(fwmBlock)) fwmBlock=keys[0]||"";
   const pills=document.getElementById("fwmBlocks");
   if(pills){
