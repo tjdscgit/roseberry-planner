@@ -1708,7 +1708,140 @@
   /* ---- week view layout: overdue sidebar (left) · main body · planting-detail panel (right) ----
      .wk-main spans the whole view (title row to bottom) so #wkPanel is a true full-height sibling
      of everything else, per the artboard — not just of .wk-content's board/calendar area. */
-  #view-week.active,#view-today.active{display:flex;flex-direction:column}
+  #view-week.active,#view-today.active,#view-catchup.active{display:flex;flex-direction:column}
+
+  /* ---- Catch-up (CatchUp.dc.html): slipped plantings as rows, the open action in a 320px panel
+     (desktop) or the .cm-sheet bottom sheet (phone). Same .wk-main/.wk-left frame as Today. ---- */
+  .cu-body{flex:1 1 auto;min-height:0;overflow:auto;padding:.3rem 1.5rem 5rem}
+  .cu-note{margin:.9rem 0 0;padding:.55rem .8rem;border-radius:8px;background:var(--sel);color:var(--steel);font-size:.85rem}
+  .cu-wet{display:flex;align-items:center;gap:12px;margin:.9rem 0 .2rem;padding:11px 14px;border-radius:9px;
+    background:var(--paper-2);border:1px solid var(--line)}
+  .cu-wet.on{background:var(--sel);border-color:var(--steel);box-shadow:0 0 0 1px var(--steel)}
+  .cu-wet > .ico{color:var(--steel)}
+  .cu-wet-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .cu-wet-txt b{font-size:13.5px}
+  .cu-wet-txt span{font-size:12px;color:var(--ink-2)}
+  .cu-grp{display:flex;align-items:center;gap:10px;height:34px;margin-top:10px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+  .cu-grp b{color:var(--clay);font-weight:700}
+  .cu-grp b.cu-grp-n{color:var(--ink-2)}
+  .cu-grp i{flex:1 1 auto;height:1px;background:var(--line)}
+  .cu-row{display:flex;align-items:center;gap:14px;min-height:64px;padding:8px 14px 8px 0;margin-bottom:6px;
+    border:1px solid var(--line);border-radius:8px;background:var(--paper-2);overflow:hidden;position:relative}
+  .cu-row:hover{border-color:var(--line-2)}
+  .cu-row.sel{background:var(--sel);border-color:var(--steel);box-shadow:0 0 0 1px var(--steel)}
+  .cu-bar{width:4px;align-self:stretch;flex:0 0 auto}
+  .cu-cbx{width:20px;height:20px;border-radius:5px;border:1.6px solid var(--line-2);background:transparent;
+    flex:0 0 auto;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .cu-cbx.on{background:var(--steel);border-color:var(--steel)}
+  .cu-cbx.on::after{content:"✓";color:#fff;font-size:12px;line-height:1}
+  .cu-cbx-none{opacity:.35;cursor:default;border-style:dashed}
+  .cu-main{width:300px;flex:0 0 auto;min-width:0;cursor:pointer}
+  .cu-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cu-meta{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cu-ctx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:5px;cursor:pointer}
+  .cu-ctx > div{font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cu-ctx b{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:400;margin-right:6px}
+  .cu-ctx .warn{color:var(--clay)}
+  .cu-late{font-family:var(--mono);font-size:11px;color:var(--clay);font-weight:700;width:96px;flex:0 0 auto;text-align:right}
+  .cu-acts{display:flex;gap:6px;flex:0 0 auto}
+  .cu-acts .btn-ghost,.cu-selbar .btn-ghost,.cu-wet .btn-ghost,.cu-skip .btn-ghost{font-size:12px;padding:6px 11px;border-radius:6px}
+  .cu-acts .btn-ghost.on,.cu-wet .btn-ghost.on{background:var(--steel);border-color:var(--steel);color:#fff}
+  .cu-empty{margin:2.5rem auto;max-width:44ch;text-align:center;color:var(--ink-2);font-size:.9rem;line-height:1.5}
+  .cu-empty b{display:block;color:var(--ink);font-size:1rem;margin-bottom:.3rem}
+  .cu-skip{display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .cu-skip-n{font-weight:600;white-space:nowrap}
+  .cu-skip-m{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cu-selbar{position:absolute;left:1.5rem;right:1.5rem;bottom:1rem;min-height:52px;border-radius:10px;z-index:5;
+    background:var(--paper-3);border:1px solid var(--line-2);box-shadow:var(--shadow);
+    display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:8px 14px}
+  .cu-selbar[hidden]{display:none}
+  .cu-sel-n{font-size:13.5px;font-weight:600}
+  .cu-selbar .cu-danger{border-color:var(--clay);color:var(--clay)}
+  .cu-selbar .cu-quiet{border-color:transparent;color:var(--ink-2)}
+  .cu-panel{width:320px;flex:0 0 auto;background:var(--paper-2);border-left:1px solid var(--line);
+    display:flex;flex-direction:column;overflow-y:auto}
+  .cu-panel > .cr-panel-body,.cu-sheet > .cr-panel-body{flex:1 1 auto}
+  .cu-x{width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center}
+  .cu-intro{font-size:12.5px;line-height:1.5;color:var(--ink-2);margin:0 0 .7rem}
+  .cu-gap-top{margin-top:14px}
+  .cu-tabs{margin-top:14px}
+  .cu-tabs button{flex:1 1 0;padding:.45rem .3rem}
+  .cu-when{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .cu-when button{border:1px solid var(--line-2);border-radius:7px;padding:8px 10px;font-size:12.5px;
+    background:var(--paper);color:var(--ink);cursor:pointer}
+  .cu-when button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:600}
+  .cu-date{margin-top:8px;width:100%}
+  .cu-mv{display:flex;align-items:center;gap:8px;min-height:30px;font-size:12.5px}
+  .cu-mv .k{width:104px;flex:0 0 auto;color:var(--ink-2)}
+  .cu-mv .from{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);text-decoration:line-through}
+  .cu-arr{color:var(--ink-2)}
+  .cu-mv .to{font-family:var(--mono);font-size:12px;font-weight:700}
+  .cu-mv .to.warn{color:var(--clay)}
+  .cu-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-2);margin-top:4px}
+  .cu-clash{display:flex;gap:8px;align-items:flex-start;margin-top:14px;padding:9px 10px;border-radius:8px;
+    background:var(--clay-tint);border:1px solid var(--clay);font-size:12.5px;line-height:1.4;color:var(--clay)}
+  .cu-clash .ico-s{margin-top:1px;flex:0 0 auto}
+  .cu-fix{display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;margin-top:6px;padding:9px 10px;
+    border:1px solid var(--line-2);border-radius:8px;background:var(--paper);font:inherit;font-size:12.5px;
+    line-height:1.35;color:var(--ink);cursor:pointer}
+  .cu-fix.on{border-color:var(--steel);box-shadow:0 0 0 1px var(--steel)}
+  .cu-fix small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);margin-top:3px}
+  .cu-radio{width:15px;height:15px;border-radius:50%;border:1.6px solid var(--line-2);flex:0 0 auto;margin-top:1px}
+  .cu-fix.on .cu-radio{border:4.5px solid var(--steel)}
+  .cu-bedsel{margin:6px 0 0 24px;width:calc(100% - 24px)}
+  .cu-gap{display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:12px;line-height:1.45;color:var(--ink-2)}
+  .cu-gap .ico-s{margin-top:1px;flex:0 0 auto}
+  .cu-msg{flex:1 1 100%;font-size:12px;color:var(--clay)}
+  .cu-link{all:unset;cursor:pointer;color:var(--steel-soft);font-weight:600}
+  .cu-wk{display:flex;align-items:center;gap:9px;min-height:42px;border-bottom:1px solid var(--line)}
+  .cu-wk .nm{flex:1 1 auto;min-width:0;font-size:12.5px;line-height:1.25}
+  .cu-wk .nm small{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink-2);margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cu-wk .dt{font-family:var(--mono);font-size:11px;color:var(--ink-2);white-space:nowrap}
+  .cu-wk .dt b{color:var(--ink)}
+  .cu-wk .dt.warn,.cu-wk .dt.warn b{color:var(--clay)}
+  .cu-wk.off .nm,.cu-wk.off .dt,.cu-wk.off .lib-dot{opacity:.5}
+  .cu-bfix{width:100%;margin-top:6px}
+  .cu-bfix.unset{border-color:var(--clay)}
+  .btn-primary.cu-danger-fill{background:var(--clay);border-color:var(--clay)}
+  /* This week's one-card pointer to Catch-up, at the top of the Overdue rail. */
+  .wk-cu-card{all:unset;box-sizing:border-box;display:flex;flex-direction:column;gap:3px;width:100%;cursor:pointer;
+    margin-bottom:.45rem;padding:.55rem .65rem;border-radius:7px;background:var(--clay-tint);border:1px solid var(--clay)}
+  .wk-cu-card b{font-size:.8rem;color:var(--clay)}
+  .wk-cu-card span{font-family:var(--mono);font-size:.66rem;color:var(--ink-2)}
+  @media (max-width:760px){
+    #view-catchup .cu-panel{display:none}
+    .cu-body{padding:.2rem .8rem 6rem}
+    .cu-row{flex-wrap:wrap;gap:8px 10px;padding:12px 12px 12px 16px;border-radius:12px}
+    .cu-bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+    .cu-main{width:auto;flex:1 1 calc(100% - 110px)}
+    .cu-name{font-size:15.5px;white-space:normal}
+    .cu-meta{white-space:normal;line-height:1.45}
+    .cu-late{width:auto;align-self:flex-start;font-size:11.5px;order:1}
+    .cu-ctx{flex:1 1 100%;order:2}
+    .cu-ctx:empty{display:none}
+    .cu-acts{order:3}
+    .cu-ctx > div{white-space:normal;font-size:12.5px}
+    .cu-acts{flex:1 1 100%}
+    .cu-acts .btn-ghost{flex:1 1 0;min-height:44px;font-size:14px;border-radius:9px}
+    .cu-cbx{width:26px;height:26px}
+    .cu-wet{flex-wrap:wrap}
+    .cu-wet .btn-ghost{flex:1 1 100%;min-height:44px;font-size:14px}
+    .cu-skip .btn-ghost{min-height:40px}
+    .cu-selbar{left:.6rem;right:.6rem;bottom:.6rem}
+    .cu-selbar .btn-ghost{min-height:44px;flex:1 1 0}
+    .cu-sel-n{flex:1 1 100%}
+    #cuSheet{display:flex;flex-direction:column;max-height:88%;padding:0}
+    #cuSheet[hidden]{display:none}
+    #cuSheet .cr-panel-head{position:sticky;top:0;z-index:2;background:var(--paper-2);border-radius:18px 18px 0 0}
+    #cuSheet .cu-x{width:44px;height:44px;font-size:1.05rem}
+    #cuSheet .cu-tabs button,#cuSheet .cu-when button{min-height:44px;font-size:14px}
+    #cuSheet .cu-fix{min-height:44px;font-size:14px}
+    #cuSheet .cu-date,#cuSheet .cu-bfix,#cuSheet .cu-bedsel{min-height:44px;font-size:16px}
+    #cuSheet .pn-foot{position:sticky;bottom:0;padding-bottom:calc(.85rem + env(safe-area-inset-bottom))}
+    #cuSheet .pn-foot .btn-primary,#cuSheet .pn-foot .btn-ghost{min-height:48px}
+  }
   .wk-main{flex:1 1 auto;display:flex;min-height:0}
   .wk-left{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;min-height:0;overflow:hidden}
   .wk-content{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}
@@ -5117,6 +5250,31 @@
       <div class="tl-ctx" id="wkCtxMenu"></div>
     </section>
 
+    <!-- CATCH-UP (CatchUp.dc.html + CatchUpWetWeek.dc.html + the two phone artboards): plantings
+         whose sow or plant-out date has passed without happening, and crops overstaying a bed the
+         next crop needs. Push / Done / Skip each, push a wet week, or several at once. The 320px
+         panel holds the open action on desktop; on the phone the same markup goes in #cuSheet. -->
+    <section class="view" id="view-catchup">
+      <div class="wk-main">
+      <div class="wk-left">
+      <div class="vw-title">
+        <span class="vw-name">Catch-up</span>
+        <span class="sub" id="cuSummary"></span>
+        <span class="spacer"></span>
+        <div class="seg" id="cuFilter" role="tablist" aria-label="Which slipped plantings to show"></div>
+        <button class="btn-ghost" id="cuSelectBtn" type="button">Select several</button>
+      </div>
+      <div class="cu-body" id="cuBody"></div>
+      <div class="cu-selbar" id="cuSelBar" hidden></div>
+      </div>
+      <!-- /.wk-left -->
+      <aside class="cu-panel" id="cuPanel"></aside>
+      </div>
+      <!-- /.wk-main -->
+      <div class="cm-sheet-scrim" id="cuScrim" hidden></div>
+      <div class="cm-sheet cu-sheet" id="cuSheet" role="dialog" aria-modal="true" aria-label="Catch-up action" hidden></div>
+    </section>
+
     <!-- HARVEST PLANNER (2-panel: available-to-pick list + per-outlet planned/actual entry) -->
     <section class="view" id="view-harvest">
       <div class="vw-title">
@@ -7031,6 +7189,10 @@ async function loadAll(opts){
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
       parked:!!p.fields[F.pl_parked],
+      // Failed/Failure date were only ever written (Timeline's Remove crop), never read back here —
+      // planner-shared's parser had them, this one didn't, so a crop failure vanished on reload.
+      failed:!!p.fields[F.pl_failed], failureDate:p.fields[F.pl_failureDate]||"",
+      skipped:!!p.fields[F.pl_skipped], skippedDate:p.fields[F.pl_skippedDate]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
 
@@ -8957,7 +9119,7 @@ function vwBedBlockCounts(){
    Adding a view is one line here; nothing else in this section needs touching. */
 const RAIL_GROUPS = {
   today: { label:"Today", groups:[
-    { name:"Planning", views:[["today","Today"],["week","This week"]] },
+    { name:"Planning", views:[["today","Today"],["week","This week"],["catchup","Catch-up"]] },
     { name:"Harvest",  views:[["harvest","Harvest planner"],["whiteboard","Whiteboard"]] },
   ]},
   field: { label:"Field", groups:[
@@ -8995,6 +9157,7 @@ let currentRail = VIEW_RAIL[currentView] || "field";
    because "0" and "not counted" read very differently at a glance. */
 const SIDEBAR_COUNT = {
   today:     ()=>tdCollect().filter(r=>!r.t.done).length,
+  catchup:   ()=>cuItems().length,
   crops:     ()=>Object.keys(data.crops||{}).length,
   croptasks: ()=>new Set((data.cropTasks||[]).map(ct=>ct.cropId).filter(Boolean)).size,
   tasklib:   ()=>(data.tasks||[]).length,
@@ -9120,6 +9283,7 @@ function renderViewContent(view){
   if(view==="croptasks") buildCropTasks();
   if(view==="today") buildTodayView();
   if(view==="week") buildWeekPlanner();
+  if(view==="catchup") buildCatchUp();
   if(view==="harvest") buildHarvestPlanner();
   if(view==="whiteboard") buildWhiteboard();
   if(view==="outlets") buildOutlets();
@@ -9566,8 +9730,9 @@ function cmIsMobile(){ return window.matchMedia("(max-width:760px)").matches; }
 // their ids keep resolving for tasks, harvest records and the Parked list) but absent from every
 // view and from the occupancy maths. Deriving the filtered list once, here, is what keeps that
 // from becoming a `!p.parked` check repeated across a dozen call sites.
+// Skipped plantings (Catch-up) go the same way: kept on record, gone from every plan.
 function rebuildActivePlantings(){
-  data.plantingsActive = (data.plantings||[]).filter(p=>!p.parked);
+  data.plantingsActive = (data.plantings||[]).filter(p=>!p.parked && !p.skipped);
 }
 
 function rebuildDerived(){
@@ -16616,7 +16781,7 @@ let bdMobileBed=null;       // mobile drill-down: which bed is being viewed
 let bdStatusFilter="all", bdSort="free", bdQuery="", bdSelected=null;
 
 function bdPlantingsOn(bedId){
-  return (data.plantings||[]).filter(pl=>!pl.parked && (pl.bedIds||[]).includes(bedId));
+  return (data.plantings||[]).filter(pl=>!pl.parked && !pl.skipped && (pl.bedIds||[]).includes(bedId));
 }
 // The planting that has the bed now: still inside its harvest window, or planted and not yet done.
 function bdCurrentPlanting(bedId, todayIso){
@@ -19584,6 +19749,7 @@ async function ctMaybePropagate(cropId, varietyId, taskId){
 
   const affected=(data.plantings||[]).filter(p=>{
     if(p.cropId!==cropId || p.status==="Finished") return false;
+    if(p.skipped) return false;   // its tasks were deleted on purpose when it was skipped
     if(!varietyId) return true;   // crop-wide change: every planting of the crop is a candidate
     return varietyIdForPlantingText(cropId, p.variety)===varietyId;
   });
@@ -20215,11 +20381,601 @@ function wkFillPersonPicker(ids, all){
     renderSidebar();
   });
 });
+/* ---------- Catch-up: plantings that slipped (CatchUp.dc.html, CatchUpWetWeek.dc.html) ----------
+   Every planting whose step is overdue (PlannerShared.cuCollect): not sown or planted by its date,
+   waiting in the nursery past its plant-out, or overstaying a bed the next crop needs. Each one can
+   be pushed, marked done or skipped; a wet week can be pushed in one go; several can be done at once.
+
+   The rule the page is built on (the user's, 2026-10-08): the right fix "depends on the day", so the
+   planner never picks one and never moves anything on its own. Every change is previewed with what
+   it moves and what it runs into, and a clash has to be answered before the change is saved.
+   Skipping keeps the planting on record (Skipped / Skipped date) but deletes its jobs and its
+   planned tarp — the user's call, so a skipped sowing leaves nothing behind on This week. */
+const CU_GROUPS = [
+  ["notin",   "Not sown or planted yet"],
+  ["nursery", "Waiting in the nursery"],
+  ["over",    "Overstaying — next crop waiting"],
+];
+let cuFilter="all";             // all | notin | nursery | over
+let cuSelecting=false;
+const cuSel=new Set();          // planting ids ticked in Select several
+let cuAct=null;                 // the open action: {id, mode, when, date, fix, bed, msg}
+let cuBulk=null;                // the open bulk action: {kind:"wet"|"push"|"done", ids, off:Set, when, date, fixes, msg}
+let cuNote=null;                // one-line "done" note shown above the list after a save
+let cuBusy=false;
+
+function cuItems(){ return PlannerShared.cuCollect(data, todayISO()); }
+// "Thu 24 Sep" / "24 Sep" — spelled out by hand: en-AU's toLocaleDateString gives "Thu, 24 Sept".
+const CU_DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], CU_MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const cuShort = iso => { if(!iso) return "—"; const d=wkParse(iso); return `${d.getDate()} ${CU_MON[d.getMonth()]}`; };
+const cuDay   = iso => iso ? `${CU_DOW[wkParse(iso).getDay()]} ${cuShort(iso)}` : "—";
+const cuName  = p => `${p.crop||"Crop"}${p.variety?" · "+p.variety:""}`;
+const cuLow   = p => String((p&&p.crop)||"crop").toLowerCase();
+const cuBeds  = ids => (ids||[]).map(id=>((data.beds||[]).find(b=>b.id===id)||{}).name||"?").join(", ");
+const cuMsWord = (p,ms) => ms==="sow" ? (p.tp?"sowing (trays)":"sowing") : ms==="tp" ? "plant-out" : "last harvest";
+const CU_WARN_SVG = `<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M10 3.2l7 12.4H3z"/><path d="M10 8.2v3.4M10 13.6v.1"/></svg>`;
+const CU_INFO_SVG = `<svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 9v4.6M10 6.4v.1"/></svg>`;
+
+function cuCardHTML(it){
+  const p=it.p;
+  const was = it.kind==="notin" ? `${p.tp?"sow (trays)":"sow"} was ${cuDay(p.sow)}`
+            : it.kind==="nursery" ? `plant out was ${cuDay(p.tp)}`
+            : `last harvest was ${cuDay(p.h2)}`;
+  const meta=[p.group ? p.group+(it.pos?` · ${it.pos.n} of ${it.pos.of}`:"") : "",
+              (p.bedIds||[]).length ? cuBeds(p.bedIds) : "no bed yet", was].filter(Boolean).join(" · ");
+  const ctx=[];
+  if(it.kind==="nursery" && it.seedlingDays!=null){
+    const old = it.nurseryDays==null || it.seedlingDays>it.nurseryDays;
+    ctx.push(`<div${old?' class="warn"':""}><b>Seedlings</b>${it.seedlingDays} days old${it.nurseryDays!=null?` · plan was ${it.nurseryDays} in the nursery`:""}</div>`);
+  }
+  if(it.kind==="over") ctx.push(`<div><b>Status</b>${p.status==="Harvesting"?"still picking":"still in the ground"}</div>`);
+  if(it.kind!=="over" && it.next)
+    ctx.push(`<div${it.nextLate?' class="warn"':""}><b>Next sowing</b>${esc(cuShort(it.next.sow))}${it.nextLate?" · also late":""}</div>`);
+  if(it.bedAfter)
+    ctx.push(`<div${it.kind==="over"?' class="warn"':""}><b>Bed after</b>${esc(cuBeds(it.bedAfter.bedIds))} ${esc(cuLow(it.bedAfter.p))} · due ${esc(cuShort(it.bedAfter.start))}</div>`);
+  const late = it.kind!=="over" ? `${it.lateDays}d late`
+    : it.waitDays>0 ? `${it.waitDays}d to clear` : it.waitDays===0 ? "needed today" : `needed ${-it.waitDays}d ago`;
+  const acts = it.kind==="over"
+    ? [["pull","Pulled"],["nextpush","Push next"],["nextmove","Move next"]]
+    : [["done", it.kind==="nursery"?"Planted":"Sown"],["push","Push"],["skip","Skip"]];
+  const mine = cuAct && cuAct.id===it.id;
+  const ticked = cuSel.has(it.id);
+  return `<div class="cu-row${mine?" sel":""}" data-cu-id="${esc(it.id)}">`
+    +`<span class="cu-bar" style="background:${esc(cropColor(p.cropId||p.crop))}"></span>`
+    +(cuSelecting ? (it.kind==="over"
+        ? `<span class="cu-cbx cu-cbx-none" title="Overstaying crops are sorted one at a time"></span>`
+        : `<button type="button" class="cu-cbx${ticked?" on":""}" data-cu-act="tick" aria-pressed="${ticked}" aria-label="Select ${esc(cuName(p))}"></button>`) : "")
+    +`<div class="cu-main" data-cu-act="open"><div class="cu-name">${esc(cuName(p))}</div><div class="cu-meta">${esc(meta)}</div></div>`
+    +`<div class="cu-ctx" data-cu-act="open">${ctx.join("")}</div>`
+    +`<span class="cu-late">${esc(late)}</span>`
+    +(cuSelecting ? "" : `<div class="cu-acts">${acts.map(([m,l])=>
+        `<button type="button" class="btn-ghost${mine&&cuAct.mode===m?" on":""}" data-cu-act="${m}">${esc(l)}</button>`).join("")}</div>`)
+    +`</div>`;
+}
+
+function cuSkippedHTML(){
+  const since=isoAddDays(todayISO(),-60);
+  const sk=(data.plantings||[]).filter(p=>p.skipped && (!p.skippedDate || p.skippedDate>=since))
+    .sort((a,b)=>String(b.skippedDate||"").localeCompare(String(a.skippedDate||"")));
+  if(!sk.length) return "";
+  return `<div class="cu-grp"><span>Skipped in the last 60 days</span><b class="cu-grp-n">${sk.length}</b><i></i></div>`
+    + sk.map(p=>`<div class="cu-skip"><span class="lib-dot" style="background:${esc(cropColor(p.cropId||p.crop))}"></span>`
+      +`<span class="cu-skip-n">${esc(cuName(p))}</span>`
+      +`<span class="cu-skip-m">${esc([p.group, (p.bedIds||[]).length?cuBeds(p.bedIds):"", p.skippedDate?"skipped "+cuShort(p.skippedDate):"skipped"].filter(Boolean).join(" · "))}</span>`
+      +`<button type="button" class="btn-ghost" data-cu-unskip="${esc(p.id)}" title="Put it back on the plan. Its jobs were deleted when it was skipped, so add them again from its Tasks tab.">Unskip</button></div>`).join("");
+}
+
+function buildCatchUp(){
+  const body=document.getElementById("cuBody"); if(!body) return;
+  const items=cuItems();
+  // A planting that has just been dealt with leaves the list — and its open action goes with it.
+  if(cuAct && !items.some(x=>x.id===cuAct.id)) cuAct=null;
+  [...cuSel].forEach(id=>{ if(!items.some(x=>x.id===id && x.kind!=="over")) cuSel.delete(id); });
+  const count=k=>items.filter(x=>x.kind===k).length;
+  const oldest=items.filter(x=>x.kind!=="over").reduce((m,x)=>Math.max(m,x.lateDays),0);
+  document.getElementById("cuSummary").textContent = items.length
+    ? `${items.length} slipped${oldest?` · oldest ${oldest} day${oldest===1?"":"s"}`:""}` : "Nothing slipped";
+  if(cuFilter!=="all" && !count(cuFilter)) cuFilter="all";
+  const segs=[["all",`All ${items.length}`],["notin",`Not in ${count("notin")}`],
+              ["nursery",`Nursery ${count("nursery")}`],["over",`Overstaying ${count("over")}`]];
+  const seg=document.getElementById("cuFilter");
+  seg.innerHTML=segs.filter(([k])=>k==="all"||count(k))
+    .map(([k,l])=>`<button type="button" data-cu-filter="${k}" aria-pressed="${cuFilter===k}">${esc(l)}</button>`).join("");
+  seg.hidden=!items.length;
+  const selBtn=document.getElementById("cuSelectBtn");
+  selBtn.textContent=cuSelecting ? (cmIsMobile()?"Done":"Done selecting") : (cmIsMobile()?"Select":"Select several");
+  selBtn.hidden=!items.some(x=>x.kind!=="over");
+
+  const mon=wkMonday(new Date()), wk=PlannerShared.cuWeekDue(data, wkISO(mon));
+  let html = cuNote ? `<div class="cu-note">✓ ${esc(cuNote)}</div>` : "";
+  if(wk.length){
+    const on=cuBulk&&cuBulk.kind==="wet";
+    html+=`<div class="cu-wet${on?" on":""}">`
+      +`<svg viewBox="0 0 20 20" class="ico" aria-hidden="true"><path d="M6 12.6h8.2a3.2 3.2 0 00.3-6.4A4.6 4.6 0 005.6 7.4 2.7 2.7 0 006 12.6z"/><path d="M7.4 15l-.8 1.8M10.4 15l-.8 1.8M13.4 15l-.8 1.8"/></svg>`
+      +`<div class="cu-wet-txt"><b>Too wet this week?</b><span>Push the ${wk.length} planting${wk.length===1?"":"s"} due `
+      +`${esc(cuShort(wkISO(mon)))}–${esc(cuShort(wkISO(wkAddDays(mon,6))))} back a week in one go. You'll see what it bumps into first.</span></div>`
+      +`<button type="button" class="btn-ghost${on?" on":""}" data-cu-act="wet">Push the week…</button></div>`;
+  }
+  if(!items.length){
+    html+=`<div class="cu-empty"><b>Nothing has slipped.</b>Every sowing and plant-out dated in the past has been done, and no crop is holding up a bed the next one needs.</div>`;
+  }else{
+    const shown=items.filter(x=>cuFilter==="all"||x.kind===cuFilter);
+    CU_GROUPS.forEach(([k,label])=>{
+      const g=shown.filter(x=>x.kind===k); if(!g.length) return;
+      html+=`<div class="cu-grp"><span>${esc(label)}</span><b>${g.length}</b><i></i></div>`+g.map(cuCardHTML).join("");
+    });
+  }
+  html+=cuSkippedHTML();
+  body.innerHTML=html;
+  cuRenderSelBar();
+  cuRenderPanel(items);
+}
+
+function cuRenderSelBar(){
+  const bar=document.getElementById("cuSelBar"); if(!bar) return;
+  bar.hidden=!cuSelecting;
+  if(!cuSelecting){ bar.innerHTML=""; return; }
+  const n=cuSel.size, dis=n?"":" disabled";
+  bar.innerHTML=`<span class="cu-sel-n">${n} selected</span><span class="spacer"></span>`
+    +`<button type="button" class="btn-ghost" data-cu-act="bulkdone"${dis}>Done…</button>`
+    +`<button type="button" class="btn-ghost" data-cu-act="bulkpush"${dis}>Push…</button>`
+    +`<button type="button" class="btn-ghost cu-danger" data-cu-act="bulkskip"${dis}>Skip</button>`
+    +`<button type="button" class="btn-ghost cu-quiet" data-cu-act="selectoff">Cancel</button>`;
+}
+
+// One renderer for both homes: the 320px panel on desktop, the bottom sheet on the phone.
+function cuRenderPanel(items){
+  items=items||cuItems();
+  const open=!!(cuBulk||cuAct);
+  const html = cuBulk ? cuBulkHTML() : cuAct ? cuActHTML(items) : cuIntroHTML(items);
+  const panel=document.getElementById("cuPanel"), sheet=document.getElementById("cuSheet"), scrim=document.getElementById("cuScrim");
+  if(!panel||!sheet||!scrim) return;
+  if(cmIsMobile()){
+    panel.innerHTML="";
+    sheet.innerHTML=open?html:"";
+    sheet.hidden=scrim.hidden=!open;
+    sheet.classList.toggle("open", open);   // .open + a Close button is what the back button closes
+  }else{
+    sheet.hidden=scrim.hidden=true; sheet.classList.remove("open"); sheet.innerHTML="";
+    panel.innerHTML=html;
+  }
+}
+
+function cuIntroHTML(items){
+  return `<div class="cr-panel-head"><span class="cr-panel-name">Catch-up</span></div>`
+    +`<div class="cr-panel-body">`
+    +`<p class="cu-intro">${items.length
+        ? "Every planting here is waiting on a step whose date has passed, or is holding up a bed the next crop needs."
+        : "Nothing is waiting. Plantings land here when a sowing or plant-out date passes without happening."}</p>`
+    +`<p class="cu-intro">Pick one to push it, mark it done or skip it. Each change shows what it moves and what it runs into before anything is saved — nothing here moves on its own.</p>`
+    +`<p class="cu-intro">Skipping keeps the planting on record but takes it off the plan and the harvest plan, and deletes its jobs.</p>`
+    +`</div>`;
+}
+
+// Target date for a when-chip, counted from today (a planting already weeks late pushed "a week"
+// from its old date would still be in the past).
+function cuWhenDate(a){
+  if(a.when==="pick") return a.date||null;
+  const n={week:0, next:7, two:14, three:21}[a.when||"next"];
+  return isoAddDays(todayISO(), n==null?7:n);
+}
+
+// The change behind the open action, worked out fresh from the current data on every render.
+function cuActChange(it){
+  const a=cuAct, p=it.p, S=PlannerShared;
+  if(a.mode==="push"){ const to=cuWhenDate(a); return to ? S.cuPlanChange(data,p,it.ms,to,"push") : null; }
+  if(a.mode==="done") return S.cuPlanChange(data,p,it.ms,a.date||todayISO(),"done");
+  if(a.mode==="pull") return S.cuPlanChange(data,p,"h2",a.date||todayISO(),"push");
+  if(a.mode==="nextpush"){
+    const nx=it.bedAfter; if(!nx) return null;
+    const ms=S.cuMovable(nx.p); if(!ms) return null;
+    const target=cuWhenDate(a); if(!target) return null;
+    return S.cuPlanChange(data, nx.p, ms, S.cuAdd(nx.p[ms], S.cuDiff(S.cuGroundStart(nx.p), target)), "push");
+  }
+  return null;
+}
+
+// Every way out of a change's clash. Date fixes come from planner-shared; a free bed comes from the
+// same suggester the Crop map uses, and only for a one-bed planting — moving a planting that spans
+// several beds is a Crop map job. "Leave it" is always there: it's the grower's call.
+function cuFixOptions(ch, opts){
+  const out=PlannerShared.cuClashFixes(data, ch);
+  const p=ch.p;
+  if(!(opts&&opts.noMove) && (p.bedIds||[]).length===1){
+    try{
+      const live={...data, plantings:data.plantingsActive||[]};
+      const a=ch.after;
+      const {candidates}=PlannerShared.suggestBedsForPlanting(live,
+        {cropId:p.cropId, bm:p.bm, sow:PlannerShared.cuGroundStart(a), h1:a.h1, h2:a.h2, group:p.group, excludePlantingId:p.id},
+        {limit:12});
+      const beds=candidates.filter(c=>c.geometryKnown && !p.bedIds.includes(c.bed.id)).slice(0,4).map(c=>c.bed);
+      if(beds.length) out.push({kind:"moveBed", beds});
+    }catch(e){ console.error("catch-up bed suggestions", e); }
+  }
+  out.push({kind:"leave"});
+  return out;
+}
+function cuFixLabel(f, ch){
+  if(f.kind==="pushNext"){
+    const cs=f.changes, at=c=>cuShort(PlannerShared.cuGroundStart(c.after));
+    const then=cs.flatMap(c=>c.clashes).map(c=>cuLow(c.p));
+    const sub=(cs.length===1 ? `its harvest moves ${cs[0].delta} days too` : cs.map(c=>`${cuLow(c.p)} to ${at(c)}`).join(", "))
+      + (then.length ? ` · then runs into ${then.join(", ")}` : "");
+    return [cs.length===1 ? `Push the ${cuLow(cs[0].p)} to ${at(cs[0])}` : `Push the ${cs.length} crops after it`, sub];
+  }
+  if(f.kind==="endEarly") return [`End the ${cuLow(ch.p)} harvest on ${cuShort(f.h2)}`, `about ${f.lostDays} day${f.lostDays===1?"":"s"} less picking`];
+  if(f.kind==="moveBed") return [`Move the ${cuLow(ch.p)} to a free bed`, `${f.beds.map(b=>b.name).join(" or ")} ${f.beds.length===1?"is":"are"} free for the new dates`];
+  return ["Leave it for now", "both stay in the bed on the plan"];
+}
+
+function cuMoveRow(label, from, to, warn){
+  return `<div class="cu-mv"><span class="k">${esc(label)}</span>`
+    +(from?`<span class="from">${esc(cuShort(from))}</span><span class="cu-arr">→</span>`:"")
+    +`<span class="to${warn?" warn":""}">${esc(cuDay(to))}</span></div>`;
+}
+
+function cuPreviewHTML(ch, a, it){
+  const S=PlannerShared;
+  let h=`<div class="pn-sect">What moves</div>`;
+  const rows=[];
+  if(a.mode==="done") rows.push(cuMoveRow(it.kind==="nursery"?"Planted out":"Sown", "", ch.to));
+  if(a.mode==="nextpush")
+    rows.push(cuMoveRow(`${it.p.crop} picking`, it.p.h2, S.cuAdd(S.cuGroundStart(ch.after),-1)));
+  ch.moves.forEach(m=>rows.push(cuMoveRow(a.mode==="nextpush" ? `${ch.p.crop} ${m.label.toLowerCase()}` : m.label,
+    m.from, m.to, m.key==="h2" && ch.clashes.length)));
+  h+=rows.join("") || `<p class="cu-intro">Nothing else on the plan moves.</p>`;
+  if(a.mode==="done" && ch.delta>0) h+=`<div class="cu-sub">${ch.delta} day${ch.delta===1?"":"s"} later than planned — the rest follows</div>`;
+  if(ch.tasks.length) h+=`<div class="cu-sub">+ ${ch.tasks.length} open job${ch.tasks.length===1?"":"s"} move${ch.tasks.length===1?"s":""} with it</div>`;
+  if(ch.clashes.length){
+    const names=ch.clashes.map(c=>`${cuLow(c.p)} in ${cuBeds(c.bedIds)}, due ${cuShort(c.start)}`);
+    h+=`<div class="cu-clash">${CU_WARN_SVG}<span>Runs into <b>${esc(names.join("; "))}</b>. How do you want to handle it?</span></div>`;
+    h+=cuFixOptions(ch).map(f=>{
+      const [l,sub]=cuFixLabel(f,ch), on=a.fix===f.kind;
+      return `<button type="button" class="cu-fix${on?" on":""}" data-cu-fix="${f.kind}"><span class="cu-radio"></span><span>${esc(l)}<small>${esc(sub)}</small></span></button>`
+        +(f.kind==="moveBed" && on ? `<select class="cu-bedsel" data-cu-bed aria-label="Which bed">${f.beds.map(b=>
+            `<option value="${esc(b.id)}"${a.bed===b.id?" selected":""}>${esc(b.name)}</option>`).join("")}</select>` : "");
+    }).join("");
+  }
+  if(cuGapShown(ch)){
+    const g=ch.gap, nm=cuLow(g.next), when=cuShort(g.next[ch.ms]);
+    h+=`<div class="cu-gap">${CU_INFO_SVG}<span>${g.now>0
+      ? `Lands ${g.now} day${g.now===1?"":"s"} before the next ${esc(nm)} (${esc(when)}) instead of ${g.planned} — expect a bigger pick, then a gap.`
+      : `Lands ${g.now===0?"on the same day as":`${-g.now} day${g.now===-1?"":"s"} after`} the next ${esc(nm)} (${esc(when)}).`}</span></div>`;
+  }
+  return h;
+}
+// The spacing note is about the run ahead. When the next sowing has slipped too, its own card
+// already says "also late" and comparing against a date in the past is just noise.
+function cuGapShown(ch){ return !!(ch && ch.gap && (ch.gap.next[ch.ms]||"")>=todayISO()); }
+
+function cuActHTML(items){
+  const it=items.find(x=>x.id===cuAct.id);
+  if(!it){ cuAct=null; return cuIntroHTML(items); }
+  const a=cuAct, p=it.p, over=it.kind==="over", nx=it.bedAfter;
+  const doneWord = it.kind==="nursery" ? "Planted" : "Sown";
+  const titles={push:"Push planting", done:it.kind==="nursery"?"Mark planted out":"Mark sown", skip:"Skip planting",
+                pull:"Mark pulled", nextpush:"Push the next crop", nextmove:"Move the next crop"};
+  const tabs = over ? [["pull","Pulled"],["nextpush","Push next"],["nextmove","Move next"]]
+                    : [["push","Push"],["done",doneWord],["skip","Skip"]];
+  let h=`<div class="cr-panel-head"><span class="cr-panel-name">${esc(titles[a.mode]||"Catch-up")}</span>`
+    +`<button type="button" class="icon-btn cu-x" data-cu-act="close" aria-label="Close" title="Close">✕</button></div>`
+    +`<div class="cr-panel-body cu-pbody">`
+    +`<div class="pn-title">${esc(cuName(p))}</div>`
+    +`<div class="pn-meta"><span class="lib-dot" style="background:${esc(cropColor(p.cropId||p.crop))}"></span>`
+    +`${esc([p.group?(p.group+(it.pos?` · ${it.pos.n} of ${it.pos.of}`:"")):"", (p.bedIds||[]).length?cuBeds(p.bedIds):"no bed yet", p.tp?"transplant":"direct sow"].filter(Boolean).join(" · "))}</div>`
+    +`<div class="seg cu-tabs">${tabs.map(([m,l])=>`<button type="button" data-cu-mode="${m}" aria-pressed="${a.mode===m}">${esc(l)}</button>`).join("")}</div>`;
+  let primary="";
+  if(a.mode==="skip"){
+    const nTasks=(data.plantingTasks||[]).filter(t=>t.plantingId===p.id).length, tarp=tarpForPlanting(p.id);
+    h+=`<p class="cu-intro cu-gap-top">Skipping takes it off the plan, This week and the harvest plan. It stays on record as skipped${p.group?`, so ${esc(p.group)} still shows this sowing was missed`:""}.</p>`
+      +`<p class="cu-intro">${nTasks?`Its ${nTasks} job${nTasks===1?"":"s"} ${nTasks===1?"is":"are"} deleted`:"It has no jobs to delete"}${tarp?", and so is its planned tarp":""}.</p>`;
+    if(it.next) h+=`<p class="cu-intro">Want the next sowing bigger instead? <button type="button" class="cu-link" data-cu-edit="${esc(it.next.p.id)}">Edit ${esc(cuName(it.next.p))} · ${esc(cuShort(it.next.sow))} ›</button></p>`;
+    primary=`<button type="button" class="btn-primary pn-grow cu-danger-fill" data-cu-act="apply">Skip it</button>`;
+  }else if(a.mode==="nextmove"){
+    if(!nx){ h+=`<p class="cu-intro cu-gap-top">Nothing is waiting for this bed.</p>`; }
+    else if((nx.p.bedIds||[]).length!==1){
+      h+=`<p class="cu-intro cu-gap-top">${esc(cuName(nx.p))} spans ${nx.p.bedIds.length} beds — move it from the Crop map.</p>`;
+    }else{
+      const live={...data, plantings:data.plantingsActive||[]};
+      const {candidates}=PlannerShared.suggestBedsForPlanting(live,
+        {cropId:nx.p.cropId, bm:nx.p.bm, sow:PlannerShared.cuGroundStart(nx.p), h1:nx.p.h1, h2:nx.p.h2, group:nx.p.group, excludePlantingId:nx.p.id},{limit:12});
+      const beds=candidates.filter(c=>c.geometryKnown && !nx.p.bedIds.includes(c.bed.id)).slice(0,5).map(c=>c.bed);
+      h+=`<div class="pn-sect">Move ${esc(cuName(nx.p))} (due ${esc(cuShort(nx.start))}) to</div>`;
+      if(!beds.length) h+=`<p class="cu-intro">No bed is free for its dates. Push it instead, or keep picking and pull this one.</p>`;
+      else h+=beds.map(b=>`<button type="button" class="cu-fix${a.bed===b.id?" on":""}" data-cu-pickbed="${esc(b.id)}"><span class="cu-radio"></span><span>${esc(b.name)}<small>${esc(b.block?`Block ${b.block}`:"")}${b.len?` · ${esc(b.len)} m`:""}</small></span></button>`).join("");
+      if(beds.length) primary=`<button type="button" class="btn-primary pn-grow" data-cu-act="apply">Move it${a.bed?" to "+esc(cuBeds([a.bed])):""}</button>`;
+    }
+  }else{
+    if(a.mode==="push"||a.mode==="nextpush"){
+      if(a.mode==="nextpush" && !nx){ h+=`<p class="cu-intro cu-gap-top">Nothing is waiting for this bed.</p>`; }
+      else if(a.mode==="nextpush" && !PlannerShared.cuMovable(nx.p)){ h+=`<p class="cu-intro cu-gap-top">${esc(cuName(nx.p))} is already in the ground, so it can't be pushed.</p>`; }
+      else{
+        const whens = a.mode==="push" ? [["week","This week"],["next","Next week"],["two","In 2 weeks"],["pick","Pick a date"]]
+                                      : [["next","Next week"],["two","In 2 weeks"],["three","In 3 weeks"],["pick","Pick a date"]];
+        const lbl = a.mode==="nextpush" ? `When the ${cuLow(nx.p)} goes in` : `Move the ${cuMsWord(p,it.ms)} to`;
+        h+=`<div class="pn-sect">${esc(lbl)}</div><div class="cu-when">${whens.map(([k,l])=>
+            `<button type="button" data-cu-when="${k}" aria-pressed="${(a.when||"next")===k}">${esc(l)}</button>`).join("")}</div>`;
+        if(a.when==="pick") h+=`<input type="date" class="cu-date" data-cu-date value="${esc(a.date||"")}" min="${esc(todayISO())}" aria-label="Date">`;
+      }
+    }else{
+      const lbl = a.mode==="pull" ? "Pulled on" : it.kind==="nursery" ? "Planted out on" : (p.tp?"Sown in trays on":"Sown on");
+      h+=`<div class="pn-sect">${esc(lbl)}</div><input type="date" class="cu-date" data-cu-date value="${esc(a.date||todayISO())}" max="${esc(todayISO())}" aria-label="${esc(lbl)}">`;
+    }
+    const ch=cuActChange(it);
+    if(ch){
+      h+=cuPreviewHTML(ch, a, it);
+      const lbl = a.mode==="push" ? `Push to ${cuShort(ch.to)}`
+        : a.mode==="done" ? `Mark ${doneWord.toLowerCase()} ${cuShort(ch.to)}`
+        : a.mode==="pull" ? `Mark pulled ${cuShort(ch.to)}`
+        : `Push the ${cuLow(ch.p)} to ${cuShort(PlannerShared.cuGroundStart(ch.after))}`;
+      primary=`<button type="button" class="btn-primary pn-grow" data-cu-act="apply">${esc(lbl)}</button>`;
+    }else if(a.when==="pick"){ h+=`<p class="cu-intro">Pick a date to see what moves.</p>`; }
+  }
+  h+=`</div><div class="pn-foot">${a.msg?`<div class="cu-msg">${esc(a.msg)}</div>`:""}${primary}`
+    +`<button type="button" class="btn-ghost" data-cu-act="close">Cancel</button></div>`;
+  return h;
+}
+
+// The plantings a bulk action works through, each with its change.
+function cuBulkRows(){
+  const b=cuBulk, S=PlannerShared;
+  let list;
+  if(b.kind==="wet"){
+    list=S.cuWeekDue(data, wkISO(wkMonday(new Date()))).map(x=>({p:x.p, ms:x.ms, to:S.cuAdd(x.due,7), mode:"push"}));
+  }else{
+    const items=cuItems();
+    const picked=b.ids.map(id=>items.find(x=>x.id===id)).filter(x=>x && x.kind!=="over");
+    const to = b.kind==="push" ? cuWhenDate(b) : (b.date||todayISO());
+    list=picked.map(x=>({p:x.p, ms:x.ms, to, mode:b.kind==="push"?"push":"done"}));
+  }
+  return list.map(x=>({...x, on:!b.off.has(x.p.id), ch:x.to ? S.cuPlanChange(data, x.p, x.ms, x.to, x.mode) : null}));
+}
+
+function cuBulkHTML(){
+  const b=cuBulk, rows=cuBulkRows(), on=rows.filter(r=>r.on), s=n=>n===1?"":"s";
+  const mon=wkMonday(new Date());
+  const titles={wet:"Push the week", push:`Push ${rows.length} planting${s(rows.length)}`, done:`Mark ${rows.length} done`};
+  let h=`<div class="cr-panel-head"><span class="cr-panel-name">${esc(titles[b.kind])}</span>`
+    +`<button type="button" class="icon-btn cu-x" data-cu-act="close" aria-label="Close" title="Close">✕</button></div>`
+    +`<div class="cr-panel-body cu-pbody">`;
+  if(b.kind==="wet"){
+    h+=`<div class="pn-title">Push ${esc(cuShort(wkISO(mon)))}–${esc(cuShort(wkISO(wkAddDays(mon,6))))} back a week</div>`
+      +`<p class="cu-intro cu-gap-top">The plantings due this week that aren't in yet. Untick any that can still go in — under cover, on the high beds.</p>`;
+  }else if(b.kind==="push"){
+    h+=`<div class="pn-sect">Push them all to</div><div class="cu-when">${[["week","This week"],["next","Next week"],["two","In 2 weeks"],["pick","Pick a date"]].map(([k,l])=>
+        `<button type="button" data-cu-when="${k}" aria-pressed="${(b.when||"next")===k}">${esc(l)}</button>`).join("")}</div>`;
+    if(b.when==="pick") h+=`<input type="date" class="cu-date" data-cu-date value="${esc(b.date||"")}" min="${esc(todayISO())}" aria-label="Date">`;
+  }else{
+    h+=`<div class="pn-sect">Done on</div><input type="date" class="cu-date" data-cu-date value="${esc(b.date||todayISO())}" max="${esc(todayISO())}" aria-label="Done on">`;
+  }
+  const left=b.kind!=="wet" ? b.ids.length-rows.length : 0;
+  h+=`<div class="pn-sect">What moves · ${on.length} of ${rows.length}</div>`;
+  h+=rows.map(r=>{
+    const p=r.p, from=p[r.ms];
+    return `<div class="cu-wk${r.on?"":" off"}"><button type="button" class="cu-cbx${r.on?" on":""}" data-cu-off="${esc(p.id)}" aria-pressed="${r.on}" aria-label="Include ${esc(cuName(p))}"></button>`
+      +`<span class="lib-dot" style="background:${esc(cropColor(p.cropId||p.crop))}"></span>`
+      +`<span class="nm">${esc(cuName(p))}<small>${esc([(p.bedIds||[]).length?cuBeds(p.bedIds):"no bed", cuMsWord(p,r.ms)].join(" · "))}</small></span>`
+      +`<span class="dt${r.ch&&r.ch.clashes.length?" warn":""}">${r.to?`${esc(cuShort(from))} → <b>${esc(cuShort(r.to))}</b>`:esc(cuShort(from))}</span></div>`;
+  }).join("");
+  if(left>0) h+=`<div class="cu-sub">${left} overstaying crop${s(left)} left out — those are sorted one at a time</div>`;
+  if(on.some(r=>r.ch && (r.ch.tasks.length || r.ch.moves.length)))
+    h+=`<div class="cu-sub">+ their harvest dates and open jobs; bed prep follows the new dates</div>`;
+  on.filter(r=>r.ch && r.ch.clashes.length).forEach(r=>{
+    const c=r.ch.clashes[0], pick=b.fixes[r.p.id]||"";
+    h+=`<div class="cu-clash">${CU_WARN_SVG}<span><b>${esc(cuName(r.p))}</b> would now run into ${esc(cuLow(c.p))} in ${esc(cuBeds(c.bedIds))}, due ${esc(cuShort(c.start))}.</span></div>`
+      +`<select class="cu-bfix${pick?"":" unset"}" data-cu-bfix="${esc(r.p.id)}" aria-label="How to handle it"><option value="">— Choose how to handle it —</option>`
+      +cuFixOptions(r.ch,{noMove:true}).map(f=>`<option value="${f.kind}"${pick===f.kind?" selected":""}>${esc(cuFixLabel(f,r.ch)[0])}</option>`).join("")
+      +`</select>`;
+  });
+  on.filter(r=>cuGapShown(r.ch)).forEach(r=>{
+    const g=r.ch.gap;
+    h+=`<div class="cu-gap">${CU_INFO_SVG}<span>${esc(cuName(r.p))} lands ${g.now>0?`${g.now} day${s(g.now)} before`:"on or after"} the next ${esc(cuLow(g.next))} (${esc(cuShort(g.next[r.ch.ms]))}) instead of ${g.planned}.</span></div>`;
+  });
+  const lbl = b.kind==="done" ? `Mark ${on.length} done` : `Push ${on.length} planting${s(on.length)}`;
+  h+=`</div><div class="pn-foot">${b.msg?`<div class="cu-msg">${esc(b.msg)}</div>`:""}`
+    +`<button type="button" class="btn-primary pn-grow" data-cu-act="apply">${esc(lbl)}</button>`
+    +`<button type="button" class="btn-ghost" data-cu-act="close">Cancel</button></div>`;
+  return h;
+}
+
+// ---- Saving. One write set (PlannerShared.cuWrites) → plantings, then their jobs, then tarps. ----
+const CU_FIELD = ()=>({sow:CFG.f.pl_sow, tp:CFG.f.pl_tp, h1:CFG.f.pl_h1, h2:CFG.f.pl_h2, status:CFG.f.pl_status,
+  sowActual:CFG.f.pl_sowActual, tpActual:CFG.f.pl_tpActual, bedIds:CFG.f.pl_bed});
+async function cuCommit(w){
+  const FIELD=CU_FIELD();
+  for(const [id,ch] of Object.entries(w.plantings)){
+    const fields={}; Object.entries(ch).forEach(([k,v])=>{ if(FIELD[k]) fields[FIELD[k]]=v; });
+    await atPatch(CFG.farmBase, CFG.tables.plantings, id, fields);
+    const p=(data.plantings||[]).find(x=>x.id===id); if(p) Object.assign(p, ch);
+  }
+  for(const [id,due] of Object.entries(w.tasks)){
+    await atPatch(CFG.farmBase, CFG.tables.plantingTasks, id, {[CFG.f.pt_due]:due});
+    const t=(data.plantingTasks||[]).find(x=>x.id===id); if(t) t.due=due;
+  }
+  // A planned tarp follows its crop: its dates by the crop's last-harvest move, its bed by a bed
+  // move. A tarp already on (or off) is real work done and is left alone.
+  const tarpIds=new Set([...Object.keys(w.tarps), ...Object.keys(w.plantings).filter(id=>w.plantings[id].bedIds)]);
+  for(const pid of tarpIds){
+    const tarp=tarpForPlanting(pid); if(!tarp || (tarp.status && tarp.status!=="Planned")) continue;
+    const days=w.tarps[pid]||0, bed=w.plantings[pid]&&w.plantings[pid].bedIds ? w.plantings[pid].bedIds[0] : tarp.bedId;
+    if(!days && bed===tarp.bedId) continue;
+    const moved={...tarp, bedId:bed, start:tarp.start?isoAddDays(tarp.start,days):tarp.start,
+      end:tarp.end?isoAddDays(tarp.end,days):tarp.end};
+    delete moved.name;   // let tarpSave re-derive "Bed — Crop — start" from the new bed and date
+    await tarpSave(moved, tarp.id);
+  }
+  rebuildDerived();
+}
+// Skip: kept on record, off the plan; its jobs and planned tarp are deleted (the user's rule).
+async function cuSkip(ids){
+  const today=todayISO();
+  for(const id of ids){
+    await atPatch(CFG.farmBase, CFG.tables.plantings, id, {[CFG.f.pl_skipped]:true, [CFG.f.pl_skippedDate]:today});
+    const p=(data.plantings||[]).find(x=>x.id===id); if(p){ p.skipped=true; p.skippedDate=today; }
+    const taskIds=(data.plantingTasks||[]).filter(t=>t.plantingId===id).map(t=>t.id);
+    if(taskIds.length){
+      await atDelete(CFG.farmBase, CFG.tables.plantingTasks, taskIds);
+      data.plantingTasks=(data.plantingTasks||[]).filter(t=>t.plantingId!==id);
+    }
+    const tarp=tarpForPlanting(id);
+    if(tarp && (!tarp.status || tarp.status==="Planned")) await tarpDelete(tarp.id);
+  }
+  rebuildDerived();
+}
+async function cuUnskip(id){
+  const p=(data.plantings||[]).find(x=>x.id===id); if(!p) return;
+  await atPatch(CFG.farmBase, CFG.tables.plantings, id, {[CFG.f.pl_skipped]:null, [CFG.f.pl_skippedDate]:null});
+  p.skipped=false; p.skippedDate="";
+  rebuildDerived();
+}
+function cuFinish(note){
+  cuNote=note; cuAct=null; cuBulk=null;
+  if(cuSelecting){ cuSelecting=false; cuSel.clear(); }
+  buildCatchUp(); renderSidebar();
+}
+async function cuSave(fn, note){
+  if(cuBusy) return;
+  cuBusy=true;
+  try{ await fn(); cuFinish(note); }
+  catch(e){
+    console.error("catch-up save", e);
+    alert("Couldn't save all of it: "+e.message+"\n\nReloading so the page shows what did save.");
+    try{ await loadAll(); }catch(_){}
+    cuAct=null; cuBulk=null; buildCatchUp(); renderSidebar();
+  }finally{ cuBusy=false; }
+}
+function cuSay(msg){ (cuBulk||cuAct).msg=msg; cuRenderPanel(); }
+
+function cuApplyAct(){
+  const items=cuItems(), it=items.find(x=>x.id===cuAct.id);
+  if(!it){ cuAct=null; buildCatchUp(); return; }
+  const a=cuAct, p=it.p, S=PlannerShared;
+  if(a.mode==="skip") return cuSave(()=>cuSkip([p.id]), `Skipped ${cuName(p)}.`);
+  if(a.mode==="nextmove"){
+    if(!a.bed) return cuSay("Pick a bed first.");
+    const nx=it.bedAfter;
+    return cuSave(()=>cuCommit({plantings:{[nx.p.id]:{bedIds:[a.bed]}}, tasks:{}, tarps:{}}),
+      `Moved ${cuName(nx.p)} to ${cuBeds([a.bed])}.`);
+  }
+  const ch=cuActChange(it);
+  if(!ch) return cuSay("Pick a date first.");
+  let fix=null;
+  if(ch.clashes.length){
+    if(!a.fix) return cuSay(`Choose how to handle the clash with the ${cuLow(ch.clashes[0].p)} first.`);
+    if(a.fix!=="leave"){
+      fix=cuFixOptions(ch).find(f=>f.kind===a.fix)||null;
+      if(fix && fix.kind==="moveBed") fix={kind:"moveBed", bedId:a.bed||fix.beds[0].id};
+    }
+  }
+  let extra=null;
+  if(a.mode==="done"){
+    const step=S.nextMilestoneStep(p, it.ms);
+    extra={status:step?step.status:p.status, [it.ms==="sow"?"sowActual":"tpActual"]:ch.to};
+  }
+  if(a.mode==="pull") extra={status:"Finished"};
+  const w=S.cuWrites(data, ch, fix, extra);
+  // Pushing the next crop means this one keeps picking until the day before it goes in.
+  if(a.mode==="nextpush") S.cuSetH2(data, w, p, p.h2, S.cuAdd(S.cuGroundStart(ch.after),-1));
+  const note = a.mode==="push" ? `Pushed ${cuName(p)} to ${cuShort(ch.to)}.`
+    : a.mode==="done" ? `${cuName(p)} marked ${it.kind==="nursery"?"planted out":"sown"} ${cuShort(ch.to)}.`
+    : a.mode==="pull" ? `${cuName(p)} marked pulled.`
+    : `Pushed ${cuName(ch.p)} to ${cuShort(S.cuGroundStart(ch.after))}; ${cuLow(p)} keeps picking till then.`;
+  return cuSave(()=>cuCommit(w), note);
+}
+
+function cuApplyBulk(){
+  const S=PlannerShared, rows=cuBulkRows().filter(r=>r.on && r.ch);
+  if(!rows.length) return cuSay("Nothing is ticked.");
+  const open=rows.find(r=>r.ch.clashes.length && !cuBulk.fixes[r.p.id]);
+  if(open) return cuSay(`Choose how to handle the clash for ${cuName(open.p)} first.`);
+  const all={plantings:{}, tasks:{}, tarps:{}};
+  rows.forEach(r=>{
+    const k=cuBulk.fixes[r.p.id];
+    const fix=(k && k!=="leave") ? (S.cuClashFixes(data, r.ch).find(f=>f.kind===k)||null) : null;
+    let extra=null;
+    if(r.mode==="done"){
+      const st=S.nextMilestoneStep(r.p, r.ms);
+      extra={status:st?st.status:r.p.status, [r.ms==="sow"?"sowActual":"tpActual"]:r.to};
+    }
+    const w=S.cuWrites(data, r.ch, fix, extra);
+    Object.entries(w.plantings).forEach(([id,v])=>Object.assign((all.plantings[id] ||= {}), v));
+    Object.assign(all.tasks, w.tasks);
+    Object.entries(w.tarps).forEach(([id,d])=>{ all.tarps[id]=(all.tarps[id]||0)+d; });
+  });
+  const n=rows.length, s=n===1?"":"s";
+  return cuSave(()=>cuCommit(all), cuBulk.kind==="done" ? `${n} planting${s} marked done.` : `Pushed ${n} planting${s}.`);
+}
+
+(function cuWire(){
+  const view=document.getElementById("view-catchup"); if(!view) return;
+  const rerender=()=>buildCatchUp();
+  view.addEventListener("click", e=>{
+    const el=e.target.closest("button,[data-cu-act]");
+    if(!el || !view.contains(el) || el.disabled) return;
+    if(el.id==="cuSelectBtn"){
+      cuSelecting=!cuSelecting; cuSel.clear(); cuAct=null; cuBulk=null; cuNote=null; return rerender();
+    }
+    const row=el.closest("[data-cu-id]"), id=row?row.dataset.cuId:null;
+    const d=el.dataset;
+    if(d.cuFilter){ cuFilter=d.cuFilter; return rerender(); }
+    if(d.cuMode){ cuAct.mode=d.cuMode; cuAct.fix=null; cuAct.bed=null; cuAct.msg=null; cuAct.date=null; return rerender(); }
+    if(d.cuWhen){ const t=cuBulk||cuAct; t.when=d.cuWhen; t.fix=null; t.msg=null; if(cuBulk) cuBulk.fixes={}; return rerender(); }
+    if(d.cuFix){ cuAct.fix=d.cuFix; cuAct.msg=null;
+      if(d.cuFix==="moveBed" && !cuAct.bed){
+        const it=cuItems().find(x=>x.id===cuAct.id), ch=it&&cuActChange(it), f=ch&&cuFixOptions(ch).find(x=>x.kind==="moveBed");
+        if(f) cuAct.bed=f.beds[0].id;
+      }
+      return rerender(); }
+    if(d.cuPickbed){ cuAct.bed=d.cuPickbed; cuAct.msg=null; return rerender(); }
+    if(d.cuOff){ cuBulk.off.has(d.cuOff)?cuBulk.off.delete(d.cuOff):cuBulk.off.add(d.cuOff); cuBulk.msg=null; return rerender(); }
+    if(d.cuUnskip){
+      return cuSave(()=>cuUnskip(d.cuUnskip), "Back on the plan. Its jobs were deleted when it was skipped — add them again from its Tasks tab.");
+    }
+    if(d.cuEdit){ const p=(data.plantings||[]).find(x=>x.id===d.cuEdit); if(p) apOpenEdit(p); return; }
+    const act=d.cuAct; if(!act) return;
+    cuNote=null;
+    if(act==="tick"||(act==="open" && cuSelecting)){
+      if(!id) return;
+      const it=cuItems().find(x=>x.id===id); if(!it || it.kind==="over") return;
+      cuSel.has(id)?cuSel.delete(id):cuSel.add(id); return rerender();
+    }
+    if(act==="open"){ const it=cuItems().find(x=>x.id===id); if(!it) return;
+      cuBulk=null; cuAct={id, mode:it.kind==="over"?"pull":"push", when:"next"}; return rerender(); }
+    if(["push","done","skip","pull","nextpush","nextmove"].includes(act) && id){
+      cuBulk=null; cuAct={id, mode:act, when:"next"}; return rerender(); }
+    if(act==="wet"){ cuAct=null; cuBulk={kind:"wet", ids:[], off:new Set(), fixes:{}}; return rerender(); }
+    if(act==="bulkpush"||act==="bulkdone"){
+      cuAct=null; cuBulk={kind:act==="bulkpush"?"push":"done", ids:[...cuSel], off:new Set(), fixes:{}, when:"next"}; return rerender(); }
+    if(act==="bulkskip"){
+      const ids=[...cuSel]; if(!ids.length) return;
+      const nTasks=(data.plantingTasks||[]).filter(t=>ids.includes(t.plantingId)).length;
+      if(!confirm(`Skip ${ids.length} planting${ids.length===1?"":"s"}?\n\nThey stay on record as skipped but come off the plan and the harvest plan`
+        +(nTasks?`, and their ${nTasks} job${nTasks===1?"":"s"} ${nTasks===1?"is":"are"} deleted`:"")+".")) return;
+      return cuSave(()=>cuSkip(ids), `Skipped ${ids.length} planting${ids.length===1?"":"s"}.`);
+    }
+    if(act==="selectoff"){ cuSelecting=false; cuSel.clear(); cuBulk=null; return rerender(); }
+    if(act==="close"){ cuAct=null; cuBulk=null; return rerender(); }
+    if(act==="apply") return cuBulk ? cuApplyBulk() : cuAct ? cuApplyAct() : undefined;
+  });
+  view.addEventListener("change", e=>{
+    const el=e.target;
+    if(el.matches("[data-cu-date]")){ const t=cuBulk||cuAct; if(!t) return; t.date=el.value||null; t.fix=null; t.msg=null; if(cuBulk) cuBulk.fixes={}; return rerender(); }
+    if(el.matches("[data-cu-bed]") && cuAct){ cuAct.bed=el.value; return; }
+    if(el.matches("[data-cu-bfix]") && cuBulk){ cuBulk.fixes[el.dataset.cuBfix]=el.value; cuBulk.msg=null; el.classList.toggle("unset", !el.value); return; }
+  });
+  document.getElementById("cuScrim").addEventListener("click", ()=>{ cuAct=null; cuBulk=null; rerender(); });
+})();
+
 function buildWeekPlanner(){
   const body=document.getElementById("wkBody"); if(!body) return;
   if(!wkStartISO) wkStartISO=wkISO(wkMonday(new Date()));
   wkRenderPersonPicker();
-  const {rows,start}=wkCollect();
+  let {rows,start}=wkCollect();
+  // A sowing or plant-out whose date has passed is a slipped planting, and those are sorted on
+  // Catch-up now. This week keeps jobs in its Overdue lists and points at Catch-up with one card
+  // (wkRenderOdSidebar) and a "N slipped" link in the summary, rather than a card per planting.
+  rows=rows.filter(r=>!(r.overdue && r.kind==="milestone"));
+  const cuN=cuItems().length;
 
   if(wkMode==="day"||wkMode==="board"){
     const weekISOs=[...Array(7)].map((_,i)=>wkISO(wkAddDays(start,i)));
@@ -20260,12 +21016,18 @@ function buildWeekPlanner(){
   const odBtn = overdueRows.length
     ? `<button type="button" id="wkOdSummaryBtn" style="all:unset;cursor:pointer;color:var(--clay);font-weight:700">${overdueRows.length} overdue</button>`
     : "";
+  const cuBtn = cuN
+    ? `<button type="button" id="wkCuSummaryBtn" title="Sowings and plant-outs that slipped — sort them on Catch-up" style="all:unset;cursor:pointer;color:var(--clay);font-weight:700">${cuN} slipped</button>`
+    : "";
   document.getElementById("wkSummary").innerHTML = cmIsMobile()
-    ? odBtn
+    ? [odBtn, cuBtn].filter(Boolean).join(" · ")
     : `${openWeek.length+doneWeek.length} job${(openWeek.length+doneWeek.length)===1?"":"s"} this week`
       + (mins>0?` · ≈ ${wkFmtMins(mins)} work`:"")
       + ` · ${doneWeek.length} done`
-      + (odBtn?` · ${odBtn}`:"");
+      + (odBtn?` · ${odBtn}`:"")
+      + (cuBtn?` · ${cuBtn}`:"");
+  const cuSummaryBtn=document.getElementById("wkCuSummaryBtn");
+  if(cuSummaryBtn) cuSummaryBtn.onclick=()=>showView("catchup");
   const odSummaryBtn=document.getElementById("wkOdSummaryBtn");
   if(odSummaryBtn){
     odSummaryBtn.title = wkOdCollapsed ? "Show overdue" : "Hide overdue";
@@ -20934,9 +21696,15 @@ function wkOdSidebarItemHTML(r){
 function wkRenderOdSidebar(overdueRows){
   const wrap=document.getElementById("wkOdSideBody"); if(!wrap) return;
   const countEl=document.getElementById("wkOdCount"); if(countEl) countEl.textContent=overdueRows.length||"";
-  wrap.innerHTML = overdueRows.length
+  // Slipped sowings/plant-outs are one card pointing at Catch-up, not a card each (see buildWeekPlanner).
+  const cuN=cuItems().length;
+  const cuCard = cuN
+    ? `<button type="button" class="wk-cu-card" data-cu-go><b>${cuN} planting${cuN===1?"":"s"} slipped</b><span>Sort them on Catch-up →</span></button>`
+    : "";
+  wrap.innerHTML = cuCard + (overdueRows.length
     ? overdueRows.slice().sort((a,b)=>a.due-b.due).map(wkOdSidebarItemHTML).join("")
-    : `<div class="wk-planner-empty" style="margin:1.2rem .3rem;font-size:.8rem">Nothing overdue.</div>`;
+    : `<div class="wk-planner-empty" style="margin:1.2rem .3rem;font-size:.8rem">${cuN?"No overdue jobs.":"Nothing overdue."}</div>`);
+  const go=wrap.querySelector("[data-cu-go]"); if(go) go.onclick=()=>showView("catchup");
 }
 /* ---- Board: a column per day. Overdue is a slide-out rail (#wkOdSide, shared with Calendar —
    see buildWeekPlanner), popped out by clicking "N overdue" in the title bar, not a permanent

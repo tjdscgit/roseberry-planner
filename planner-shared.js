@@ -165,6 +165,10 @@
       // harvested out normally. "Failed" gates the Timeline bar's strikethrough; the reason itself
       // isn't a separate column — it's appended to Notes so it shows up wherever Notes already does.
       pl_failed:"Failed", pl_failureDate:"Failure date",
+      // Skipped from the Catch-up page: the grower decided a slipped planting isn't going in. Kept
+      // on record (like Failed) rather than deleted, so a season can show how many sowings of a
+      // run actually happened — but every plan, schedule and occupancy read leaves it out.
+      pl_skipped:"Skipped", pl_skippedDate:"Skipped date",
       pl_sowTtId:"Sow TickTick Task ID", pl_tpTtId:"Transplant TickTick Task ID",
       pl_sowGcalId:"Sow Google Cal Event ID", pl_tpGcalId:"Transplant Google Cal Event ID",
       pl_sowOpsId:"Sow Ops Task ID", pl_tpOpsId:"Transplant Ops Task ID",
@@ -493,7 +497,7 @@
     // go in — Planned, or Seeded in the nursery.
     const sched = [], schedByBed = {};
     (data.plantings||[]).forEach(p=>{
-      if(p.parked || p.failed) return;
+      if(p.parked || p.failed || p.skipped) return;
       const d=p.tp||p.sow; if(!d || d<lateFrom || d>=horizon) return;
       if(p.status==="Harvested" || p.status==="Finished") return;
       if(statusRank(p.status) >= statusRank("In ground")) return;
@@ -721,6 +725,9 @@
       rows.push({ id:t.id, t, p, task, due, overdue, inWeek, minutes, manual });
     });
     (data.plantings||[]).forEach(p=>{
+      // Parked (wound into a zone) and skipped plantings aren't going in, so they have no sow or
+      // plant-out to do — every other schedule read leaves them out too.
+      if(p.parked || p.skipped) return;
       apLifecycle(p.tp?"transplant":"direct").forEach(step=>{
         if(step.df!=="sow" && step.df!=="tp") return;          // pre-harvest milestones only
         const dstr=p[step.df]; if(!dstr) return;               // no date set → nothing to schedule
@@ -863,6 +870,248 @@
       return patch;
     }
     return null; // already past this stage — locked, no-op
+  }
+
+  // ---- Catch-up: plantings that slipped ----------------------------------------------------
+  //
+  // A planting has slipped when the step it's waiting on is dated in the past: still Planned with
+  // its sow date gone, or Seeded in the nursery with its plant-out date gone. A crop still in the
+  // ground after its last harvest date turns up too — but only while it blocks the next crop due
+  // in one of its beds, because picking a few weeks over is normal until something needs the bed.
+  //
+  // Nothing in here picks a fix. The page asks two questions — what slipped, and what would this
+  // change run into — and the grower decides. All pure (data in, plain objects out) so
+  // scripts/test-catchup.mjs can run it against a backup snapshot.
+  const CU_MS = ["sow","tp","h1","h2"];
+  const CU_MS_LABEL = {sow:"Sow", tp:"Plant out", h1:"First harvest", h2:"Last harvest"};
+  // A planting task's Anchor names one of the four milestones; its position here decides whether
+  // moving a milestone carries the task (moving the plant-out leaves sow-anchored jobs alone).
+  const CU_ANCHOR_IDX = {"Sow":0, "Transplant":1, "First harvest":2, "Last harvest":3};
+  const CU_LOOKAHEAD_DAYS = 14;
+  const CU_BED_SLACK_M = 2;   // same tolerance as the app's BED_FIT_SLACK
+  const cuAdd  = (iso,n) => wkISO(wkAddDays(wkParse(iso), n));
+  const cuDiff = (a,b) => Math.round((wkParse(b) - wkParse(a)) / 86400000);
+
+  // Still on the plan: not wound into a zone, not failed, not skipped.
+  function cuLive(p){ return !!p && !p.parked && !p.failed && !p.skipped; }
+  // Status tests spelled out rather than via statusRank, which ranks any unknown status (blank,
+  // or a stray "Harvested") as Planned.
+  function cuNotIn(p){ return !p.status || p.status==="Planned"; }
+  function cuInGround(p){ return p.status==="In ground" || p.status==="Harvesting"; }
+  function cuDone(p){ return p.status==="Finished" || p.status==="Harvested"; }
+  // When the planting needs its bed (plant-out for a transplant, the sowing for a direct crop) and
+  // when it gives it back. One with no harvest dates yet holds the bed from its start only.
+  function cuGroundStart(p){ return p.tp || p.sow || ""; }
+  function cuGroundEnd(p){ return p.h2 || p.h1 || p.tp || p.sow || ""; }
+  // The milestone a push moves. Not sown yet: the whole planting moves, from its sow date. Already
+  // in the nursery: only the plant-out moves. In the ground: there is nothing left to push.
+  function cuMovable(p){
+    if(cuNotIn(p)) return p.sow ? "sow" : null;
+    if(p.status==="Seeded") return p.tp ? "tp" : null;
+    return null;
+  }
+
+  // Beds p and o both sit on, minus any where their lengths fit side by side — two half-bed
+  // plantings sharing a bed are a layout, not a clash. bm is the planting's total across its beds.
+  function cuSharedBeds(data, p, o){
+    const mine=p.bedIds||[];
+    const per=x=>(x.bm>0 && (x.bedIds||[]).length) ? x.bm/(x.bedIds.length) : null;
+    return (o.bedIds||[]).filter(b=>{
+      if(!mine.includes(b)) return false;
+      const bed=(data.beds||[]).find(x=>x.id===b), a=per(p), c=per(o);
+      if(bed && bed.len>0 && a!=null && c!=null && a+c<=bed.len+CU_BED_SLACK_M) return false;
+      return true;
+    });
+  }
+  // The next crop due in any of p's beds after p itself goes in.
+  function cuBedAfter(data, p){
+    const s=cuGroundStart(p); let best=null;
+    (data.plantings||[]).forEach(o=>{
+      if(o.id===p.id || !cuLive(o) || cuDone(o)) return;
+      const os=cuGroundStart(o); if(!os || (s && os<=s)) return;
+      const beds=cuSharedBeds(data,p,o); if(!beds.length) return;
+      if(!best || os<best.start) best={p:o, start:os, bedIds:beds};
+    });
+    return best;
+  }
+  // The next sowing in p's succession group.
+  function cuNextSowing(data, p){
+    if(!p.group || !p.sow) return null;
+    let best=null;
+    (data.plantings||[]).forEach(o=>{
+      if(o.id===p.id || o.group!==p.group || !cuLive(o) || !o.sow || o.sow<=p.sow) return;
+      if(!best || o.sow<best.sow) best={p:o, sow:o.sow};
+    });
+    return best;
+  }
+  // "4 of 6": p's place in its succession group by sow date. Skipped sowings keep their number.
+  function cuGroupPos(data, p){
+    if(!p.group) return null;
+    const all=(data.plantings||[]).filter(o=>o.group===p.group && !o.parked && o.sow)
+      .sort((a,b)=>a.sow.localeCompare(b.sow) || String(a.id).localeCompare(String(b.id)));
+    const i=all.findIndex(o=>o.id===p.id);
+    return i<0 ? null : {n:i+1, of:all.length};
+  }
+
+  // Every date and open task that moves when milestone `ms` moves by `delta` days. includeSelf
+  // false (a step done late) leaves that step's planned date as history — the actual date goes
+  // beside it — and moves only what comes after. Done tasks never move. A task anchored to an
+  // earlier milestone stays put; one with no anchor follows a sow or plant-out move but not a
+  // harvest change.
+  function cuShift(data, p, ms, delta, includeSelf){
+    const i=CU_MS.indexOf(ms);
+    if(!delta || i<0) return {moves:[], tasks:[]};
+    const moves=CU_MS.slice(includeSelf===false ? i+1 : i).filter(k=>p[k])
+      .map(k=>({key:k, label:CU_MS_LABEL[k], from:p[k], to:cuAdd(p[k],delta)}));
+    const tasks=(data.plantingTasks||[]).filter(t=>{
+      if(t.plantingId!==p.id || t.done || !t.due) return false;
+      const a=t.anchor ? CU_ANCHOR_IDX[t.anchor] : null;
+      return a==null ? i<=1 : a>=i;
+    }).map(t=>({t, from:t.due, to:cuAdd(t.due,delta)}));
+    return {moves, tasks};
+  }
+
+  // Crops later in p's beds that `after` (p with the change applied) now runs into: they start on
+  // or before p's new last day but were clear of p as planned. An overlap already in the plan is a
+  // deliberate relay, not something this change caused, so it isn't raised.
+  function cuClashes(data, before, after){
+    const s0=cuGroundStart(before), e0=cuGroundEnd(before), e1=cuGroundEnd(after);
+    if(!e1) return [];
+    const out=[];
+    (data.plantings||[]).forEach(o=>{
+      if(o.id===before.id || !cuLive(o) || cuDone(o)) return;
+      const os=cuGroundStart(o); if(!os) return;
+      if(s0 && os<=s0) return;        // it's in the bed before p
+      if(os>e1) return;               // still clear
+      if(e0 && os<=e0) return;        // overlapped already, as planned
+      const beds=cuSharedBeds(data, after, o); if(!beds.length) return;
+      out.push({p:o, start:os, bedIds:beds});
+    });
+    return out.sort((a,b)=>a.start.localeCompare(b.start));
+  }
+
+  // What happens if p's milestone `ms` lands on `toISO`. mode "push" moves the plan's own date;
+  // "done" records the step as happened and moves only what follows. Same number of days either way.
+  function cuPlanChange(data, p, ms, toISO, mode){
+    const from=p[ms]||"";
+    const delta=(from && toISO) ? cuDiff(from, toISO) : 0;
+    const sh=cuShift(data, p, ms, delta, mode!=="done");
+    const after={...p}; sh.moves.forEach(m=>{ after[m.key]=m.to; });
+    const clashes=cuClashes(data, p, after);
+    // Succession spacing: flagged when this now lands within half the planned gap of the next one.
+    let gap=null;
+    const next=cuNextSowing(data, p);
+    if(next && next.p[ms] && from && toISO){
+      const planned=cuDiff(from, next.p[ms]), now=cuDiff(toISO, next.p[ms]);
+      if(planned>0 && now<=planned/2) gap={next:next.p, planned, now};
+    }
+    return {p, ms, mode, from, to:toISO, delta, moves:sh.moves, tasks:sh.tasks, after, clashes, gap};
+  }
+
+  // The date-only ways out of a change's clashes. Moving to another bed needs the bed suggester,
+  // so the app adds that one itself.
+  //   pushNext: every crop it runs into moves to the day after this one finishes
+  //   endEarly: this one stops picking the day before the first of them goes in, if that still
+  //             leaves some harvest
+  function cuClashFixes(data, change){
+    const fixes=[];
+    if(!change.clashes.length) return fixes;
+    const end=cuGroundEnd(change.after);
+    const pushes=change.clashes.map(c=>{
+      const ms=cuMovable(c.p); if(!ms) return null;
+      const d=cuDiff(cuGroundStart(c.p), cuAdd(end,1));
+      return cuPlanChange(data, c.p, ms, cuAdd(c.p[ms], d), "push");
+    });
+    if(pushes.every(Boolean)) fixes.push({kind:"pushNext", changes:pushes});
+    const stop=cuAdd(change.clashes[0].start, -1), a=change.after;
+    if(a.h2 && a.h1 && stop>=a.h1 && stop<a.h2)
+      fixes.push({kind:"endEarly", h2:stop, lostDays:cuDiff(stop, a.h2)});
+    return fixes;
+  }
+
+  // Sets p's last harvest to newH2 inside a write set, carrying its Last-harvest jobs and its tarp
+  // (a tarp follows the crop it terminates) by the same number of days.
+  function cuSetH2(data, w, p, fromH2, newH2){
+    if(!fromH2 || !newH2 || fromH2===newH2) return w;
+    const d=cuDiff(fromH2, newH2);
+    (w.plantings[p.id] ||= {}).h2=newH2;
+    (data.plantingTasks||[]).forEach(t=>{
+      if(t.plantingId!==p.id || t.done || !t.due || t.anchor!=="Last harvest") return;
+      w.tasks[t.id]=cuAdd(w.tasks[t.id]||t.due, d);
+    });
+    w.tarps[p.id]=(w.tarps[p.id]||0)+d;
+    return w;
+  }
+
+  // Everything to write for a change plus the grower's pick of fix, as plain maps:
+  //   plantings {id: {sow|tp|h1|h2|status|sowActual|tpActual|bedIds: value}}
+  //   tasks     {taskId: newDue}
+  //   tarps     {plantingId: days its tarp moves}
+  // `extra` is merged into the changed planting's own writes (status, actual date).
+  function cuWrites(data, change, fix, extra){
+    const w={plantings:{}, tasks:{}, tarps:{}};
+    const add=c=>{
+      c.moves.forEach(m=>{ (w.plantings[c.p.id] ||= {})[m.key]=m.to; });
+      c.tasks.forEach(s=>{ w.tasks[s.t.id]=s.to; });
+      const h2=c.moves.find(m=>m.key==="h2");
+      if(h2) w.tarps[c.p.id]=(w.tarps[c.p.id]||0)+cuDiff(h2.from, h2.to);
+    };
+    add(change);
+    if(extra) Object.assign((w.plantings[change.p.id] ||= {}), extra);
+    if(fix && fix.kind==="pushNext") fix.changes.forEach(add);
+    if(fix && fix.kind==="endEarly") cuSetH2(data, w, change.p, change.after.h2, fix.h2);
+    if(fix && fix.kind==="moveBed") (w.plantings[change.p.id] ||= {}).bedIds=[fix.bedId];
+    return w;
+  }
+
+  // Plantings whose next step falls in the week starting weekISO and hasn't happened — what a
+  // "too wet, push the week" works through.
+  function cuWeekDue(data, weekISO){
+    const end=cuAdd(weekISO,7), out=[];
+    (data.plantings||[]).forEach(p=>{
+      if(!cuLive(p)) return;
+      const ms=cuMovable(p); if(!ms) return;
+      const d=p[ms]; if(!d || d<weekISO || d>=end) return;
+      out.push({p, ms, due:d});
+    });
+    return out.sort((a,b)=>a.due.localeCompare(b.due));
+  }
+
+  // The Catch-up list. No age cut-off on purpose: Bed prep drops a planting after two weeks late
+  // as probably-just-not-ticked, but here staying until decided is the point.
+  //   kind notin    still Planned, sow date passed
+  //        nursery  Seeded, plant-out passed; carries how old the seedlings are against the plan
+  //        over     in the ground past its last harvest, and the next crop in a bed is due within
+  //                 the lookahead (or already waiting)
+  function cuCollect(data, todayISO, opts){
+    const o=opts||{}, look=o.lookaheadDays!=null ? o.lookaheadDays : CU_LOOKAHEAD_DAYS;
+    const horizon=cuAdd(todayISO, look);
+    const items=[];
+    (data.plantings||[]).forEach(p=>{
+      if(!cuLive(p) || cuDone(p)) return;
+      let it=null;
+      if(cuNotIn(p) && p.sow && p.sow<todayISO){
+        it={kind:"notin", ms:"sow", due:p.sow};
+      }else if(p.status==="Seeded" && p.tp && p.tp<todayISO){
+        const sown=p.sowActual||p.sow;
+        it={kind:"nursery", ms:"tp", due:p.tp,
+            seedlingDays: sown ? cuDiff(sown, todayISO) : null,
+            nurseryDays: (p.sow && p.tp) ? cuDiff(p.sow, p.tp) : null};
+      }else if(cuInGround(p) && p.h2 && p.h2<todayISO){
+        const nx=cuBedAfter(data, p);
+        if(!nx || nx.start>horizon) return;
+        it={kind:"over", ms:"h2", due:p.h2, waitDays:cuDiff(todayISO, nx.start)};
+      }
+      if(!it) return;
+      items.push({id:p.id, p, ...it, lateDays:cuDiff(it.due, todayISO),
+        bedAfter:cuBedAfter(data,p), next:cuNextSowing(data,p), pos:cuGroupPos(data,p)});
+    });
+    const late=new Set(items.filter(x=>x.kind!=="over").map(x=>x.id));
+    items.forEach(x=>{ x.nextLate=!!(x.next && late.has(x.next.p.id)); });
+    const order={notin:0, nursery:1, over:2};
+    items.sort((a,b)=>(order[a.kind]-order[b.kind]) || (b.lateDays-a.lateDays)
+      || String(a.p.crop).localeCompare(String(b.p.crop)));
+    return items;
   }
 
   // Shared by loadAll() (browser) and any Node-side loader so both parse Planting Tasks identically.
@@ -1584,7 +1833,7 @@
   // `parked` plantings are excluded, matching every other read path (see pl_parked).
   function plantingsForBed(plantings, bedId){
     return (plantings||[])
-      .filter(p=>!p.parked && p.bedIds && p.bedIds[0]===bedId)
+      .filter(p=>!p.parked && !p.skipped && p.bedIds && p.bedIds[0]===bedId)
       .sort((a,b)=>String(a.sow||a.tp||"").localeCompare(String(b.sow||b.tp||""))
                  || String(a.id).localeCompare(String(b.id)));
   }
@@ -1901,6 +2150,7 @@
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
       parked:!!p.fields[F.pl_parked],
       failed:!!p.fields[F.pl_failed], failureDate:p.fields[F.pl_failureDate]||"",
+      skipped:!!p.fields[F.pl_skipped], skippedDate:p.fields[F.pl_skippedDate]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
     }));
   }
@@ -2215,6 +2465,8 @@
     const byBed={};
     (data.plantings||[]).forEach(p=>{
       if(p.id===excludePlantingId) return;
+      // Parked and skipped plantings don't hold ground, so they mustn't make a bed look full.
+      if(p.parked || p.skipped) return;
       const bedId=p.bedIds[0]; if(!bedId) return;
       (byBed[bedId] ||= []).push(p);
     });
@@ -2969,7 +3221,7 @@
   function bedCropStateOn(bed, plantings, iso){
     const occupants=[];
     (plantings||[]).forEach(p=>{
-      if(p.parked) return;
+      if(p.parked || p.skipped) return;
       if(!p.bedIds || p.bedIds[0]!==bed.id) return;
       const w=groundWindow(p);
       if(!isoWindowsOverlap(iso, iso, w.s, w.e)) return;
@@ -3301,6 +3553,9 @@
     STATUS_ORDER, statusRank, apLifecycle,
     wkParse, wkISO, wkMonday, wkAddDays, wkSameDay,
     ctTaskById, bedNameOf, wkCollect, nextMilestoneStep, buildMilestonePatch,
+    CU_MS_LABEL, cuAdd, cuDiff, cuLive, cuMovable, cuGroundStart, cuGroundEnd, cuBedAfter,
+    cuNextSowing, cuGroupPos, cuShift, cuClashes, cuPlanChange, cuClashFixes, cuSetH2, cuWrites,
+    cuWeekDue, cuCollect,
     TARP_STATUS_ORDER, TARP_STEPS, tarpStep, tarpRank, buildTarpPatch,
     parsePlantingTaskRecord, parseCropsAndDefs, parseBeds, parseTasks, parsePlantings, parseTarpings,
     parseBedIssues, parseBedPrepEvents, parseBedPrepTargets, parseBedPrepPlan,
