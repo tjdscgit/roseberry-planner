@@ -4116,7 +4116,10 @@
     padding:.6rem 1rem;border-radius:999px;font-size:.88rem;white-space:nowrap;box-shadow:var(--shadow);
     opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
   #fmHoldHint.show{opacity:1;transform:translate(-50%,0)}
-  @media(max-width:760px){ #mapWrap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none} }
+  @media(max-width:760px){ #mapWrap,#mapWrap *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent} }
+  /* while a long-press is held (and until the finger lifts), nothing on the page can be text-selected —
+     otherwise the sheet that opens under the finger starts selecting its own text */
+  html.fm-holding,html.fm-holding *{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
   /* Phone: no reload button. It floated over the top-right corner of every screen — including the
      ✕ of full-screen panels — and the app now refreshes itself when it comes back to the front.
      So the title rows no longer need to keep that corner clear either. */
@@ -8649,8 +8652,17 @@ function fmScreenToWorld(clientX,clientY){
     clearTimeout(holdTimer); holdTimer=null;
     if(holdRing){ holdRing.remove(); holdRing=null; }
   }
+  function fmEndHolding(){
+    document.documentElement.classList.remove("fm-holding");
+    try{ getSelection().removeAllRanges(); }catch(_){}
+  }
+  if(!window._fmHoldEndWired){
+    window._fmHoldEndWired=true;
+    ["pointerup","pointercancel","touchend","touchcancel"].forEach(t=>document.addEventListener(t,()=>setTimeout(fmEndHolding,60),true));
+  }
   function startHold(e){
-    cancelHold(); holdFired=false; holdStart={x:e.clientX,y:e.clientY};
+    cancelHold();
+    if(fmIsPhone()){ document.documentElement.classList.add("fm-holding"); try{ getSelection().removeAllRanges(); }catch(_){} } holdFired=false; holdStart={x:e.clientX,y:e.clientY};
     const r=wrap.getBoundingClientRect();
     holdRing=document.createElement("div"); holdRing.className="fm-hold-ring";
     holdRing.style.left=(e.clientX-r.left)+"px"; holdRing.style.top=(e.clientY-r.top)+"px";
