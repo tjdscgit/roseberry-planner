@@ -4116,6 +4116,8 @@
     padding:.6rem 1rem;border-radius:999px;font-size:.88rem;white-space:nowrap;box-shadow:var(--shadow);
     opacity:0;pointer-events:none;transition:opacity .18s,transform .18s}
   #fmHoldHint.show{opacity:1;transform:translate(-50%,0)}
+  .fm-upcoming{padding:.2rem 0 .6rem;border-bottom:1px solid var(--line)}
+  .fm-upcoming:last-of-type{border-bottom:none}
   @media(max-width:760px){ #mapWrap,#mapWrap *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent} }
   /* while a long-press is held (and until the finger lifts), nothing on the page can be text-selected —
      otherwise the sheet that opens under the finger starts selecting its own text */
@@ -7780,6 +7782,7 @@ function drawMap(placed, opts){
       segs.forEach(({sr,pl,showBedName})=>{
         const cell=document.createElementNS(SVG,"rect");
         cell.setAttribute("class","bed");cell.dataset.bed=b.id;
+        if(pl && multi) cell.dataset.seg=pl.id;
         cell.setAttribute("x",sr.x);cell.setAttribute("y",sr.y);
         cell.setAttribute("width",sr.w);cell.setAttribute("height",sr.h);
         cell.setAttribute("rx",".4");
@@ -8396,7 +8399,28 @@ function selectBed(id){
   // this bed right now, which is >1 for a relay/overlap between an outgoing and incoming crop —
   // same case the map's own split pill (drawMap) is showing. Falls back to the single headline
   // planting (which may not be OCCUPIED, e.g. still "Planned") so an empty/planned bed is unchanged.
-  const occupants = (b.plantings && b.plantings.length) ? b.plantings : (b.planting ? [b.planting] : []);
+  let occupants = (b.plantings && b.plantings.length) ? b.plantings : (b.planting ? [b.planting] : []);
+  // Split bed: name each share by where it sits on screen — left is West, right is East — and list
+  // them in that order, each with its own sow date so two of the same crop can't be confused.
+  const where={};
+  if(occupants.length>1){
+    const xs=occupants.map(pl=>{
+      const el=document.querySelector(`#mapSvg rect[data-seg="${CSS.escape(pl.id)}"]`);
+      const r=el&&el.getBoundingClientRect();
+      return {pl, x: r&&r.width ? r.left+r.width/2 : null};
+    });
+    if(xs.every(o=>o.x!=null)){
+      xs.sort((a,c)=>a.x-c.x);
+      occupants=xs.map(o=>o.pl);
+    }
+    occupants.forEach((pl,i)=>{
+      where[pl.id]= i===0 ? "West end" : i===occupants.length-1 ? "East end" : "Middle";
+    });
+  }
+  // Plantings on this bed that haven't gone in yet (Planned / Seeded) — "Coming up".
+  const upcoming=(data.plantingsActive||data.plantings||[])
+    .filter(pl=>(pl.bedIds||[]).includes(b.id) && (pl.status==="Planned"||pl.status==="Seeded") && !occupants.includes(pl))
+    .sort((a,c)=>String(a.tp||a.sow||"").localeCompare(String(c.tp||c.sow||"")));
   let html="";
   html+=`<div class="kv"><span class="k">Length</span><span class="v">${b.len!=null?b.len+" m":"—"}</span></div>`;
   html+=`<div class="kv"><span class="k">Width</span><span class="v">${b.wid!=null?b.wid+" m":"—"}</span></div>`;
@@ -8404,7 +8428,9 @@ function selectBed(id){
   if(occupants.length){
     occupants.forEach(pl=>{
       const col=cropColor(pl.cropId||pl.crop);
-      const label = occupants.length>1 ? `Current planting${pl.bm>0?" · "+pl.bm+" m":""}` : "Current planting";
+      const label = occupants.length>1
+        ? `${where[pl.id]||"Current planting"} · sown ${fmt(pl.sow)}${pl.bm>0?" · "+pl.bm+" m":""}`
+        : "Current planting";
       html+=`<div class="sect-h">${esc(label)}</div>`;
       const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(pl) : null;
       if(behindReason) html+=`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`;
@@ -8421,6 +8447,20 @@ function selectBed(id){
     });
   }else{
     html+=`<div class="sect-h">Current planting</div><div class="empty-note">Bed is empty. Add a planting from Timeline or This week and it'll appear here.</div>`;
+  }
+  if(upcoming.length){
+    html+=`<div class="sect-h">Coming up</div>`;
+    upcoming.forEach(pl=>{
+      const col=cropColor(pl.cropId||pl.crop);
+      html+=`<div class="fm-upcoming">`
+        +`<div class="kv"><span class="k">Crop</span><span class="v">${esc(pl.crop)}${pl.variety?" · "+esc(pl.variety):""}</span></div>`
+        +`<div class="kv"><span class="k">Status</span><span class="v"><span class="pill" style="background:${col}">${esc(pl.status)}</span></span></div>`
+        +`<div class="kv"><span class="k">Sow</span><span class="v">${fmt(pl.sow)}</span></div>`
+        +(pl.tp?`<div class="kv"><span class="k">Transplant</span><span class="v">${fmt(pl.tp)}</span></div>`:"")
+        +(pl.bm>0?`<div class="kv"><span class="k">Bed metres</span><span class="v">${pl.bm} m</span></div>`:"")
+        +`<button type="button" class="btn-ghost fm-edit-planting" data-pid="${esc(pl.id)}" style="width:100%;justify-content:center;margin-top:.4rem">Edit Planting</button>`
+        +`</div>`;
+    });
   }
   html+=fmReferenceHTML(b, b.planting||occupants[0]||null);
   body.innerHTML=html;
