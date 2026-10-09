@@ -1895,6 +1895,22 @@
     padding:.6rem;box-shadow:0 10px 30px rgba(0,0,0,.32)}
   .cm-pop[hidden]{display:none}
   .cm-pop-r{left:auto;right:0}
+  /* Crop map History popover — a short list, newest first, each with its own Undo. */
+  .cm-hist-pop{width:340px;padding:.5rem .5rem .4rem}
+  .cm-hist-head{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;padding:0 .2rem}
+  .cm-hist-head .cm-pop-head{margin:.15rem 0 .4rem}
+  .cm-hist-hint{font-family:var(--mono);font-size:10px;color:var(--ink-2)}
+  .cm-hist-list{max-height:min(60vh,420px);overflow:auto;border-top:1px solid var(--line)}
+  .cm-hist-row{display:flex;align-items:center;gap:.6rem;padding:.45rem .2rem;border-bottom:1px solid var(--line)}
+  .cm-hist-main{flex:1 1 auto;min-width:0}
+  .cm-hist-label{font-size:.8rem;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cm-hist-meta{font-family:var(--mono);font-size:10px;color:var(--ink-2);margin-top:2px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cm-hist-undo{flex:0 0 auto;padding:.2rem .6rem;font-size:.74rem}
+  .cm-hist-done{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--ink-2)}
+  .cm-hist-row.is-undone .cm-hist-label{color:var(--ink-2);text-decoration:line-through}
+  .cm-hist-empty{font-size:.78rem;color:var(--ink-2);padding:.7rem .2rem;line-height:1.4}
+  .cm-hist-clear{margin-top:.3rem;color:var(--ink-2);font-size:.74rem}
   .cm-pop-head{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
     color:var(--ink-2);margin:.15rem 0 .4rem .15rem}
   .cm-pop-head + .cm-pop-head{margin-top:.8rem}
@@ -2147,6 +2163,8 @@
   .cm-bar{position:absolute;left:2px;right:2px;border-radius:3px;cursor:grab;color:#fff;
     padding:2px 1px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.18);z-index:1}
   .cm-bar:active{cursor:grabbing}
+  .cm-bar-failed{opacity:.5}
+  .cm-bar-failed .cm-bar-l{text-decoration:line-through;text-decoration-thickness:2px}
   /* A bed split lengthwise between two-or-more plantings (by bed-metres) — see cmDrawBlockBars.
      The lighter edge reads as "this is a partial share of the bed", not a full-width planting. */
   .cm-bar-shared{box-shadow:0 1px 2px rgba(0,0,0,.18),inset 0 0 0 1px rgba(255,255,255,.35)}
@@ -4516,6 +4534,14 @@
           </div>
         </div>
         <span class="spacer"></span>
+        <div class="cm-pop-wrap">
+          <button class="btn-ghost cm-filters" id="cmHistBtn" type="button" aria-expanded="false"
+                  title="Your recent moves on the crop map — undo any of them (Ctrl+Z undoes the latest)">
+            <svg viewBox="0 0 20 20" class="ico-s" aria-hidden="true"><path d="M3.8 10a6.2 6.2 0 1 0 1.9-4.5"/><path d="M3.4 3.6v2.6h2.6"/><path d="M10 6.6V10l2.4 1.6"/></svg>
+            History
+          </button>
+          <div class="cm-pop cm-pop-r cm-hist-pop" id="cmHistPop" hidden></div>
+        </div>
         <button class="btn-ghost cm-filters" id="cmUnToggleBtn" type="button"
                 title="Show/hide the assign-plantings panel" aria-pressed="true" aria-expanded="true">
           Assign plantings
@@ -8094,7 +8120,9 @@ function mkChip(label,val){
   return c;
 }
 function refreshChips(){
-  document.querySelectorAll(".chip").forEach(c=>{
+  // Only the farm map's own chips (mkChip gives each a data-val) — a bare ".chip" also caught the
+  // crop map's block filter and lit every one of its chips up.
+  document.querySelectorAll(".chip[data-val]").forEach(c=>{
     const v=c.dataset.val||null;c.setAttribute("aria-pressed", (v===activeBlock)?"true":"false");
   });
   const pill=document.getElementById("fmBlockPill"), txt=document.getElementById("fmBlockPillTxt");
@@ -10500,6 +10528,10 @@ function cmDrawBlockBars(grid, beds, plantings){
       bar.style.opacity=".45";
       bar.classList.add("cm-bar-inactive");
     }
+    // Crop failure (kept and flagged, not deleted): dimmed, its name struck through — the same read
+    // as the Timeline's failed bar. A line-through follows the label whichever way it runs (down a
+    // one-bed bar, across a wide one), where a drawn line would only suit one of them.
+    if(p.failed) bar.classList.add("cm-bar-failed");
 
     // harvest window shaded darker on top, same convention as the timeline
     if(p.h1 && p.h2){
@@ -10528,7 +10560,8 @@ function cmDrawBlockBars(grid, beds, plantings){
     }
     bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
       + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"")
-      + (isBehind?`\n\nBehind schedule`:"");
+      + (isBehind?`\n\nBehind schedule`:"")
+      + (p.failed?`\n\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"");
     if(warnBadge) bar.insertAdjacentHTML("beforeend", warnBadge);
 
     // Only the first run is labelled: repeating the name on every fragment of one planting reads
@@ -10853,7 +10886,7 @@ function cmBlockByName(name){ return (data.blocks||[]).find(b=>String(b.name).tr
 /* One popover open at a time, closed by picking something, clicking away, or Escape. Shared by the
    season stepper, the Filters sheet and the overflow menu so they can never all sit open at once. */
 function cmClosePops(except){
-  [["cmSeasonBtn","cmSeasonPop"],["cmFilterBtn","cmFilterPop"],["cmMoreBtn","cmMorePop"]]
+  [["cmSeasonBtn","cmSeasonPop"],["cmFilterBtn","cmFilterPop"],["cmMoreBtn","cmMorePop"],["cmHistBtn","cmHistPop"]]
     .forEach(([btnId,popId])=>{
       if(popId===except) return;
       const pop=document.getElementById(popId), btn=document.getElementById(btnId);
@@ -10877,6 +10910,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   wire("cmSeasonBtn","cmSeasonPop");
   wire("cmFilterBtn","cmFilterPop");
   wire("cmMoreBtn","cmMorePop");
+  wire("cmHistBtn","cmHistPop");
+  const hb=document.getElementById("cmHistBtn");
+  if(hb) hb.addEventListener("click",()=>cmHistRender());   // after the toggle above has opened it
   // The design puts a filter icon in the title row as well as the labelled button below it. Both
   // open the SAME sheet rather than being two different filters, so the icon just forwards.
   const f2=document.getElementById("cmFilterBtn2");
@@ -11764,6 +11800,10 @@ async function assignBed(bedId, pidOverride){
       ]);
     }
     layoutAndDraw();                              // keep the farm map in sync
+    cmHistAdd(`${cmPlName(p)} → ${bed?bed.name:"another bed"}`,
+      `from ${cmBedsName(prev)}`+(splitWith?` · ${bed.name} split ${p.bm}m each`:""),
+      [{pid, beds:[prev,[bedId]], ...(splitWith?{bm:[prevBm,p.bm]}:{})},
+       ...bmRestore.map(([o,bm])=>({pid:o.id, bm:[bm,o.bm]}))]);
   }catch(e){
     p.bedIds=prev; p.bm=prevBm;
     bmRestore.forEach(([o,bm])=>{ o.bm=bm; });
@@ -11905,17 +11945,22 @@ async function cmBulkApply(){
   const rows=cmBulkState.proposals.slice();
   const btn=document.getElementById("cmBulkApplyBtn");
   if(btn){ btn.disabled=true; btn.textContent="Saving…"; }
-  let ok=0; const failed=[];
+  let ok=0; const failed=[], done=[];
   for(const row of rows){
     const p=(data.plantings||[]).find(x=>x.id===row.planting.id);
     if(!p) continue;
     const prev=p.bedIds.slice();
     p.bedIds=[row.bed.id];                          // optimistic, per-row
-    try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[CFG.f.pl_bed]:[row.bed.id]}); ok++; }
+    try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[CFG.f.pl_bed]:[row.bed.id]}); ok++;
+         done.push({p, c:{pid:p.id, beds:[prev,[row.bed.id]]}}); }
     catch(e){ p.bedIds=prev; failed.push(`${p.crop}: ${e.message}`); }
   }
   cmCloseBulk();
   rebuildDerived(); buildCropMap(); layoutAndDraw();   // ONE refresh at the end, not per row
+  // One history entry for the whole batch, so a single undo takes the lot back.
+  if(done.length) cmHistAdd(`Auto-placed ${done.length} planting${done.length===1?"":"s"}`,
+    done.slice(0,3).map(d=>`${cmPlName(d.p)} → ${cmBedsName(d.c.beds[1])}`).join(", ")+(done.length>3?`, +${done.length-3} more`:""),
+    done.map(d=>d.c));
   if(failed.length) alert(`Placed ${ok} of ${rows.length}. Some failed:\n`+failed.join("\n"));
 }
 
@@ -11928,11 +11973,117 @@ async function unassignBed(pid){
   try{
     await atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f.pl_bed]:[]});
     layoutAndDraw();                              // keep the farm map in sync
+    cmHistAdd(`${cmPlName(p)} → unassigned`, `from ${cmBedsName(prev)}`, [{pid, beds:[prev,[]]}]);
   }catch(e){
     p.bedIds=prev; rebuildDerived(); buildCropMap();   // roll back on failure
     alert("Couldn't unassign planting:\n"+e.message);
   }
 }
+
+/* ---------- Crop map history + undo ----------
+   Every bed change made through assignBed / unassignBed / Auto-place lands here as one entry,
+   holding each planting's beds (and bed-metres, for a split) before and after. Ctrl+Z on the crop
+   map undoes the newest; the History popover lists them all with an Undo on each.
+   Kept in localStorage, so both crop map windows share one list — a move made by dropping into the
+   other window can be undone from this one. It's this browser's record, not the farm's.
+   An undo only puts a planting back if it's still where that entry left it. If something has moved
+   it since (here, on the phone, another window), that planting is left alone and you're told. */
+const CM_HIST_KEY="roseberry_cm_history_v1", CM_HIST_MAX=60;
+function cmPlName(p){ return `${p.crop}${p.variety?" "+p.variety:""}`; }
+function cmBedsName(ids){
+  const names=(ids||[]).map(id=>{ const b=(data.beds||[]).find(x=>x.id===id); return b?b.name:"?"; });
+  return names.length ? names.join(", ") : "unassigned";
+}
+function cmHistLoad(){ try{ const v=JSON.parse(localStorage.getItem(CM_HIST_KEY)||"[]"); return Array.isArray(v)?v:[]; }catch(_){ return []; } }
+function cmHistSave(list){ try{ localStorage.setItem(CM_HIST_KEY, JSON.stringify(list.slice(0,CM_HIST_MAX))); }catch(_){} cmHistRender(); }
+function cmHistAdd(label, detail, changes){
+  const list=cmHistLoad();
+  list.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), at:new Date().toISOString(), label, detail, changes});
+  cmHistSave(list);
+}
+function cmSameIds(a,b){ a=a||[]; b=b||[]; return a.length===b.length && a.every(x=>b.includes(x)); }
+async function cmHistUndo(id){
+  const list=cmHistLoad(), e=list.find(x=>x.id===id);
+  if(!e || e.undone) return;
+  const ops=[], moved=[];
+  for(const c of e.changes){
+    const p=(data.plantings||[]).find(x=>x.id===c.pid);
+    if(!p){ moved.push("a planting that's since been deleted"); continue; }
+    const bedsOk=!c.beds || cmSameIds(p.bedIds, c.beds[1]);
+    const bmOk=!c.bm || Number(p.bm)===Number(c.bm[1]);
+    if(bedsOk && bmOk) ops.push({p,c}); else moved.push(`${cmPlName(p)} (now in ${cmBedsName(p.bedIds)})`);
+  }
+  if(!ops.length){ alert(`Can't undo "${e.label}" — it's been changed since:\n`+moved.join("\n")); return; }
+  if(moved.length && !confirm(`Some of "${e.label}" has been changed since, and will be left as it is:\n`
+    +moved.join("\n")+`\n\nUndo the rest?`)) return;
+  ops.forEach(({p,c})=>{ if(c.beds) p.bedIds=c.beds[0].slice(); if(c.bm) p.bm=c.bm[0]; });
+  rebuildDerived(); buildCropMap();
+  try{
+    await Promise.all(ops.map(({p,c})=>{
+      const f={};
+      if(c.beds) f[CFG.f.pl_bed]=c.beds[0];
+      if(c.bm) f[CFG.f.pl_bm]=c.bm[0];
+      return atPatch(CFG.farmBase, CFG.tables.plantings, p.id, f);
+    }));
+    layoutAndDraw();
+  }catch(err){
+    ops.forEach(({p,c})=>{ if(c.beds) p.bedIds=c.beds[1].slice(); if(c.bm) p.bm=c.bm[1]; });
+    rebuildDerived(); buildCropMap();
+    alert("Couldn't undo:\n"+err.message);
+    return;
+  }
+  const fresh=cmHistLoad(), f=fresh.find(x=>x.id===id);
+  if(f){ f.undone=new Date().toISOString(); cmHistSave(fresh); }
+  backToast(`Undone: ${e.label}`);
+}
+function cmHistWhen(iso){
+  const d=new Date(iso), now=new Date();
+  const h=d.getHours(), m=String(d.getMinutes()).padStart(2,"0");
+  const t=`${h%12||12}:${m} ${h<12?"am":"pm"}`;
+  if(d.toDateString()===now.toDateString()) return t;
+  const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  return `${DOW[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]} · ${t}`;
+}
+function cmHistRender(){
+  const pop=document.getElementById("cmHistPop"); if(!pop || pop.hidden) return;
+  const list=cmHistLoad();
+  const rows=list.map(e=>`<div class="cm-hist-row${e.undone?" is-undone":""}">
+      <div class="cm-hist-main">
+        <div class="cm-hist-label">${esc(e.label)}</div>
+        <div class="cm-hist-meta">${esc(cmHistWhen(e.at))}${e.detail?" · "+esc(e.detail):""}</div>
+      </div>
+      ${e.undone?`<span class="cm-hist-done">Undone</span>`
+               :`<button type="button" class="btn-ghost cm-hist-undo" data-undo="${esc(e.id)}">Undo</button>`}
+    </div>`).join("");
+  pop.innerHTML=`<div class="cm-hist-head"><span class="cm-pop-head">History</span>
+      <span class="cm-hist-hint">Ctrl+Z undoes the latest</span></div>
+    <div class="cm-hist-list">${rows || `<div class="cm-hist-empty">Nothing yet. Plantings you move to a bed, take off a bed or auto-place show up here.</div>`}</div>
+    ${list.length?`<button type="button" class="cm-pop-item cm-hist-clear" id="cmHistClear">Clear history</button>`:""}`;
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const pop=document.getElementById("cmHistPop"); if(!pop) return;
+  pop.addEventListener("click",e=>{
+    e.stopPropagation();                          // undoing several in a row shouldn't close it
+    const u=e.target.closest("[data-undo]");
+    if(u){ u.disabled=true; u.textContent="…"; cmHistUndo(u.dataset.undo).finally(cmHistRender); return; }
+    if(e.target.closest("#cmHistClear") && confirm("Clear the crop map history? Nothing on the map changes.")){
+      try{ localStorage.removeItem(CM_HIST_KEY); }catch(_){}
+      cmHistRender();
+    }
+  });
+});
+// The other crop map window wrote to the shared list — keep this one's popover current.
+window.addEventListener("storage",e=>{ if(e.key===CM_HIST_KEY) cmHistRender(); });
+document.addEventListener("keydown",e=>{
+  if(!(e.ctrlKey||e.metaKey) || e.altKey || e.shiftKey || (e.key||"").toLowerCase()!=="z") return;
+  if(currentView!=="cropmap" || cmIsMobile()) return;
+  const a=document.activeElement;
+  if(a && (a.tagName==="INPUT" || a.tagName==="TEXTAREA" || a.tagName==="SELECT" || a.isContentEditable)) return;
+  e.preventDefault();
+  const last=cmHistLoad().find(x=>!x.undone);
+  if(!last){ backToast("Nothing to undo"); return; }
+  cmHistUndo(last.id);
+});
 
 async function atPatch(base,table,id,fields){
   if(BACKEND==="supabase"){
