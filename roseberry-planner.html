@@ -10410,7 +10410,10 @@ async function trpDeleteCurrent(){
    Geometry comes from the CSS, and is asserted rather than assumed: .cm-axis is 30px, .cm-col is
    44px, .cm-grid has a 1px gap, .cm-col-h is 18px tall. If any of those change, change these.  */
 const CM_AXIS_W = 30, CM_COL_W = 44, CM_GAP = 1, CM_COLH_H = 18;
-const CM_LABEL_MIN_W = 68;   // narrower than this and the label turns sideways, as the design has it
+// Narrower than this and the label turns sideways, as the design has it. 56 rather than the
+// original 68 so a run-on rectangle (one bed and a third ≈ 59px) keeps the across label; a single
+// bed column is 44px, so one-bed bars are unaffected.
+const CM_LABEL_MIN_W = 56;
 
 function cmRunsOf(indices){
   const sorted=[...indices].sort((a,b)=>a-b), runs=[];
@@ -10447,21 +10450,21 @@ function cmDrawBlockBars(grid, beds, plantings){
     const top=Math.min(y0,y1), height=Math.max(6,Math.abs(y1-y0));
     const cols=(p.bedIds||[]).map(id=>idx.get(id)).filter(i=>i!=null);
     if(!cols.length) return;
-    let runs=cmRunsOf(cols);
-    // A planting on several beds that only part-fills some of them (a run-on's last bed: 15m + 5m)
-    // gives each part-filled bed its own fragment, so Phase 2 sizes it by that bed's share
-    // (PlannerShared.bedShares) instead of drawing it the full column wide.
-    if((p.bedIds||[]).length>1){
-      const sh=PlannerShared.bedShares(data,p);
-      const partial=new Set();
-      (p.bedIds||[]).forEach(id=>{
-        const i=idx.get(id), b=beds[i];
-        if(i!=null && b && b.len>0 && sh[id]!=null && sh[id]<b.len-0.001) partial.add(i);
-      });
-      if(partial.size) runs=[...cmRunsOf(cols.filter(i=>!partial.has(i))), ...[...partial].map(i=>({start:i,end:i}))]
-        .sort((a,b)=>a.start-b.start);
-    }
-    runs.forEach((run,runIdx)=>frags.push({p,run,runIdx,first:runs[0],top,height,groundStart}));
+    const runs=cmRunsOf(cols);
+    // A run of several beds that only part-fills the bed at either END (a run-on: all of G13, then
+    // 5m of 15 in G14) stays ONE rectangle, trimmed at that end to the part it fills. The trim sits
+    // against the full bed — the 5m is the bit of G14 next to G13 — so a left-end bed is trimmed
+    // from its left and a right-end bed from its right. cut = fraction of that column left empty.
+    const sh=(p.bedIds||[]).length>1 ? PlannerShared.bedShares(data,p) : null;
+    const cutOf=i=>{
+      const b=beds[i]; if(!sh || !b || !(b.len>0) || sh[b.id]==null) return 0;
+      return Math.max(0, Math.min(.88, 1 - sh[b.id]/b.len));
+    };
+    runs.forEach((run,runIdx)=>{
+      const span=run.end>run.start;
+      frags.push({p,run,runIdx,first:runs[0],top,height,groundStart,
+        cutL: span ? cutOf(run.start) : 0, cutR: span ? cutOf(run.end) : 0});
+    });
   });
 
   // Phase 2: every fragment that occupies exactly one bed column (span 1) is sized by its OWN
@@ -10469,9 +10472,9 @@ function cmDrawBlockBars(grid, beds, plantings){
   // when it's the only thing on that bed, so the free remainder is visible without first having
   // to drag a second planting on top of it to "reveal" the split. Fragments that actually share a
   // time window on the same bed are then laid out left to right instead of stacking on top of
-  // each other. A multi-bed span (run.end>run.start) keeps the full column width per bed it
-  // crosses: Phase 1 only leaves beds the planting FILLS inside a span, and splits out any bed it
-  // only part-fills as its own one-column fragment, sized here by that bed's share.
+  // each other. A multi-bed span (run.end>run.start) is one rectangle across its beds, trimmed at
+  // an end bed it only part-fills (cutL/cutR from Phase 1) — and a one-bed planting sharing that
+  // end bed is moved into the part the trimmed rectangle leaves free (Phase 2b below).
   const lanes=new Map();   // frag -> {leftFrac, widthFrac}
   const byBed=new Map();   // bed column index -> single-span frags on it
   frags.filter(f=>f.run.start===f.run.end).forEach(f=>{
@@ -10520,6 +10523,24 @@ function cmDrawBlockBars(grid, beds, plantings){
     });
   });
 
+  // Phase 2b: a trimmed run-on rectangle holds part of its end bed (the part next to its full bed).
+  // A one-bed planting on that bed at the same time goes in the part left over, not under it.
+  const overlapsT=(a,b)=>a.top < b.top+b.height && b.top < a.top+a.height;
+  frags.forEach(f=>{
+    if(f.run.start===f.run.end || !(f.cutL>0 || f.cutR>0)) return;
+    [[f.run.end, f.cutR, "R"], [f.run.start, f.cutL, "L"]].forEach(([col, cut, side])=>{
+      if(!(cut>0)) return;
+      (byBed.get(col)||[]).forEach(g=>{
+        if(!overlapsT(f,g)) return;
+        const lane=lanes.get(g); if(!lane) return;
+        // free part: right of the tail for a right-end trim, left of it for a left-end trim
+        const lo = side==="R" ? 1-cut : 0, hi = side==="R" ? 1 : cut;
+        lane.leftFrac = Math.min(hi-.12, lo + lane.leftFrac*(hi-lo));
+        lane.widthFrac = Math.max(.12, Math.min(lane.widthFrac, hi-lane.leftFrac));
+      });
+    });
+  });
+
   frags.forEach(frag=>{
     const {p,run,runIdx,first,top,height,groundStart}=frag;
     const span=run.end-run.start+1;
@@ -10540,9 +10561,14 @@ function cmDrawBlockBars(grid, beds, plantings){
         bar.title2=` · ${PlannerShared.bedShare(data,p,beds[run.start].id)??p.bm}m of a ${beds[run.start].len}m bed`;
       }
     }else{
-      w=span*CM_COL_W;
-      bar.style.left=colX+"px";
-      bar.style.width=(span*CM_COL_W+(span-1)*CM_GAP)+"px";
+      const cutLpx=(frag.cutL||0)*CM_COL_W, cutRpx=(frag.cutR||0)*CM_COL_W;
+      w=span*CM_COL_W-cutLpx-cutRpx;
+      bar.style.left=(colX+cutLpx)+"px";
+      bar.style.width=(span*CM_COL_W+(span-1)*CM_GAP-cutLpx-cutRpx)+"px";
+      if(cutLpx||cutRpx){
+        const shs=PlannerShared.bedShares(data,p);
+        bar.title2=" · "+p.bedIds.map(id=>`${cmBedsName([id])} ${shs[id]}m`).join(" + ");
+      }
     }
     bar.style.background=base;
     // Inactive: sow/transplant date has passed but Status never advanced to "In ground" — same
