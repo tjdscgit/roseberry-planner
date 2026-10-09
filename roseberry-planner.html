@@ -10986,16 +10986,28 @@ function buildCropMap(){
     const blk=document.createElement("div");blk.className="cm-block";
     const h=document.createElement("div");h.className="cm-block-h";
     {
-      const nBeds=(groups[key]||[]).length;
-      // what is actually in this block this year, most-planted first — the design's "16 beds · alliums"
+      const blockBeds=groups[key]||[], nBeds=blockBeds.length;
+      // Bed length: one figure when the block's beds match (they usually do), else the range.
+      const lens=blockBeds.map(b=>Number(b.len)).filter(n=>n>0);
+      const lo=Math.min(...lens), hi=Math.max(...lens);
+      const lenTxt=!lens.length ? "" : (lo===hi ? `${lo}m` : `${lo}\u2013${hi}m`);
+      // The two crop TYPES (Crop defaults > Type, else the crop's name) with the most plantings in
+      // this block in the season on screen, most-planted first (the design's "16 beds, alliums").
       const counts={};
       [...(perBlock[key]||[])].forEach(pl=>{
+        const s=pl.tp||pl.sow, e=pl.h2||pl.h1||s;
+        if(s && e && (String(e).slice(0,4) < String(cmYear) || String(s).slice(0,4) > String(cmYear))) return;
         const t=(data.cropDefs[pl.cropId]||{}).type || pl.crop;
         if(t) counts[t]=(counts[t]||0)+1;
       });
-      const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([t])=>t.toLowerCase());
-      h.innerHTML=`<span>${esc(key)}</span>`
-        +`<span class="cm-block-sub">${nBeds} bed${nBeds===1?"":"s"}${top.length?" \u00b7 "+esc(top.join(", ")):""}</span>`;
+      const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+      const top=ranked.slice(0,2).map(([t])=>t.toLowerCase());
+      const sub=[`${nBeds} bed${nBeds===1?"":"s"}`, lenTxt, top.join(", ")].filter(Boolean).join(" \u00b7 ");
+      h.innerHTML=`<span>${esc(key)}</span><span class="cm-block-sub">${esc(sub)}</span>`;
+      h.dataset.typesTitle = ranked.length
+        ? `${cmYear} plantings by crop type: `+ranked.map(([t,n])=>`${t} ${n}`).join(", ")
+        : `No plantings in ${cmYear}`;
+      h.title=h.dataset.typesTitle;     // an editable block's header adds its click hint below
     }
     // Soft visual aid only — never restricts what can be planted. 0 types = no tint (today's
     // look); 1 type = a translucent wash under the whole block; 2+ = a soft banded gradient
@@ -11013,7 +11025,7 @@ function buildCropMap(){
     }
     if(blkMeta){
       h.classList.add("cm-block-h-editable");
-      h.title="Click to set this block's preferred crop type(s)"+(prefTypes.length?` — currently ${prefTypes.join(", ")}`:" — none set");
+      h.title=h.dataset.typesTitle+"\n\nClick to set this block's preferred crop type(s)"+(prefTypes.length?` — currently ${prefTypes.join(", ")}`:" — none set");
       h.addEventListener("click",e=>{ e.stopPropagation(); cmOpenTypePopover(e, blkMeta.id); });
     }
     blk.appendChild(h);
