@@ -8085,10 +8085,10 @@ function fmSyncColorLegend(){
 const { STATUS_ORDER, statusRank } = PlannerShared;
 
 /* ---------- Crop-type colours (fixed lookup, for the Crop Map's colour-by-type mode + block underlay) ---------- */
-const CROP_TYPES = ["Roots","Greens","Brassica","Allium","Legume","Solanaceous","Cucurbit","Herb","Other"];
+const CROP_TYPES = ["Roots","Greens","Brassica","Allium","Legume","Solanaceous","Cucurbit","Herb","Flowers","Other"];
 const CROP_TYPE_COLORS = {
   Roots:"#9C6D3E", Greens:"#4C7A34", Brassica:"#3F7D46", Allium:"#7A6BA8",
-  Legume:"#8F9C3C", Solanaceous:"#A44A3F", Cucurbit:"#C29B0C", Herb:"#5B8A72", Other:"#9AA39B",
+  Legume:"#8F9C3C", Solanaceous:"#A44A3F", Cucurbit:"#C29B0C", Herb:"#5B8A72", Flowers:"#B5577E", Other:"#9AA39B",
 };
 function cropTypeColor(type){ return CROP_TYPE_COLORS[type] || CROP_TYPE_COLORS.Other; }
 // Crop Map's own colour choice (see cmColorMode) — used for the map bars AND the assign panel's
