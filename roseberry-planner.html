@@ -1677,9 +1677,18 @@
   .wk-group-row-beds{font-family:var(--sans);font-size:.76rem;color:var(--ink-2);
     margin-top:.3rem;line-height:1.4}
   /* ---- add/edit manual task modal (reuses .wk-group-card + .ap-trow-f/.ap-actions) ---- */
-  #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal,#tlSuccessionModal,#hvAddModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
+  #wkTaskModal,#qaModal,#wkDateModal,#tlRemoveModal,#tlSuccessionModal,#hvAddModal,#cmOverflowModal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open,#hvAddModal.open{display:flex}
+  #wkTaskModal.open,#qaModal.open,#wkDateModal.open,#tlRemoveModal.open,#tlSuccessionModal.open,#hvAddModal.open,#cmOverflowModal.open{display:flex}
+  /* Planting longer than its bed — the shorten / run-on choice (cmAskOverflow). */
+  #cmOverflowModal .wk-group-card{width:min(380px,100%);position:relative}
+  .cm-ov-opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:.6rem .8rem;height:auto}
+  .cm-ov-sub{font-family:var(--mono);font-size:10px;letter-spacing:.02em;opacity:.8;font-weight:400}
+  .cm-ov-warn{font-family:var(--mono);font-size:10px;color:var(--clay);font-weight:400}
+  /* Crop map bar for a planting longer than the beds it's on. */
+  .cm-bar-over{outline:2px solid var(--clay);outline-offset:-1px}
+  .cm-bar-overmark{position:absolute;right:1px;bottom:1px;z-index:3;font:700 9px var(--mono);color:#fff;
+    background:var(--clay);border-radius:3px;padding:1px 3px;cursor:pointer;line-height:1.2}
   /* crop picker is a list box, not a drop-down: a long native drop-down ran off the bottom of the screen */
   .hv-addlist{max-height:min(20rem,46vh);overflow-y:auto;border:1px solid var(--line-2);border-radius:9px;background:var(--paper)}
   .hv-addrow{display:flex;align-items:center;gap:.6rem;padding:.55rem .7rem;border-bottom:1px solid var(--line);cursor:pointer;font-size:.88rem}
@@ -10532,6 +10541,20 @@ function cmDrawBlockBars(grid, beds, plantings){
     // as the Timeline's failed bar. A line-through follows the label whichever way it runs (down a
     // one-bed bar, across a wide one), where a drawn line would only suit one of them.
     if(p.failed) bar.classList.add("cm-bar-failed");
+    // Longer than the bed(s) it's on: outlined, with a "20m" mark that opens the shorten / run-on
+    // choice. Marked on the first fragment only, like the label.
+    const over=cmOverLength(p);
+    if(over){
+      bar.classList.add("cm-bar-over");
+      if(runIdx===0 && !cmIsMobile()){
+        const m=document.createElement("span"); m.className="cm-bar-overmark";
+        m.textContent=`${over.bm}m`;
+        m.title=`${over.bm}m planting, but its bed${p.bedIds.length>1?"s hold":" holds"} ${over.room}m — click to shorten it or run it on into the next bed`;
+        m.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) assignBed(p.bedIds[0], p.id); });
+        m.addEventListener("mousedown",e=>e.stopPropagation());
+        bar.appendChild(m);
+      }
+    }
 
     // harvest window shaded darker on top, same convention as the timeline
     if(p.h1 && p.h2){
@@ -10561,7 +10584,8 @@ function cmDrawBlockBars(grid, beds, plantings){
     bar.title=`${p.crop}${p.variety?" "+p.variety:""}  ·  ${fmt(groundStart)} – ${fmt(p.h2||p.h1)}`
       + (bedCount>1?`  ·  ${bedCount} beds`:"") + (bar.title2||"")
       + (isBehind?`\n\nBehind schedule`:"")
-      + (p.failed?`\n\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"");
+      + (p.failed?`\n\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"")
+      + (over?`\n\n! ${over.bm}m planting in ${over.room}m of bed`:"");
     if(warnBadge) bar.insertAdjacentHTML("beforeend", warnBadge);
 
     // Only the first run is labelled: repeating the name on every fragment of one planting reads
@@ -10991,8 +11015,9 @@ function buildCropMap(){
       const lens=blockBeds.map(b=>Number(b.len)).filter(n=>n>0);
       const lo=Math.min(...lens), hi=Math.max(...lens);
       const lenTxt=!lens.length ? "" : (lo===hi ? `${lo}m` : `${lo}\u2013${hi}m`);
-      // The two crop TYPES (Crop defaults > Type, else the crop's name) with the most plantings in
-      // this block in the season on screen, most-planted first (the design's "16 beds, alliums").
+      // Every crop TYPE (Crop defaults > Type, else the crop's name) with plantings in this block in
+      // the season on screen, most-planted first (the design's "16 beds, alliums"). Past four it
+      // says "+N" rather than running the header off the block; the hover lists them all.
       const counts={};
       [...(perBlock[key]||[])].forEach(pl=>{
         const s=pl.tp||pl.sow, e=pl.h2||pl.h1||s;
@@ -11001,7 +11026,8 @@ function buildCropMap(){
         if(t) counts[t]=(counts[t]||0)+1;
       });
       const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
-      const top=ranked.slice(0,2).map(([t])=>t.toLowerCase());
+      const top=ranked.slice(0,4).map(([t])=>t.toLowerCase());
+      if(ranked.length>4) top.push(`+${ranked.length-4}`);
       const sub=[`${nBeds} bed${nBeds===1?"":"s"}`, lenTxt, top.join(", ")].filter(Boolean).join(" \u00b7 ");
       h.innerHTML=`<span>${esc(key)}</span><span class="cm-block-sub">${esc(sub)}</span>`;
       h.dataset.typesTitle = ranked.length
@@ -11759,22 +11785,101 @@ document.getElementById("cmZin").onclick=()=>{const r=document.getElementById("c
 document.getElementById("cmZout").onclick=()=>{const r=document.getElementById("cmViewport").getBoundingClientRect();window.cmZoomAt(r.left+r.width/2,r.top+r.height/2,.8);};
 document.getElementById("cmZfit").onclick=()=>cmFitView();
 
+/* ---- Planting longer than its bed ----
+   bm is the planting's TOTAL metres across all its beds, so it's too long when it's more than the
+   beds it's on add up to. cmOverLength gives {bm, room} for that case, else null. */
+function cmOverLength(p){
+  if(!(p.bm>0) || !(p.bedIds||[]).length) return null;
+  let room=0;
+  for(const id of p.bedIds){ const b=(data.beds||[]).find(x=>x.id===id); if(!b || !(b.len>0)) return null; room+=Number(b.len); }
+  return p.bm>room+0.001 ? {bm:p.bm, room} : null;
+}
+// The beds a planting would run on into from `bed`: the next ones along the block (block order),
+// enough of them to hold its metres. At the end of a block it runs back the other way instead.
+// Of the two directions, the one that runs into fewer other plantings in its window wins.
+function cmOverflowRun(p, bed){
+  const row=(bedGroups()[bed.block||"—"]||[]);
+  const i=row.findIndex(b=>b.id===bed.id); if(i<0) return null;
+  const win=planWindow(p);
+  const build=step=>{
+    const beds=[bed]; let room=Number(bed.len)||0;
+    for(let j=i+step; room<p.bm-0.001 && j>=0 && j<row.length; j+=step){ beds.push(row[j]); room+=Number(row[j].len)||0; }
+    if(room<p.bm-0.001) return null;
+    const ordered=step>0 ? beds : beds.slice().reverse();
+    const clashes=[];
+    beds.slice(1).forEach(b=>{
+      (data.plantingsActive||[]).forEach(o=>{
+        if(o.id===p.id || !(o.bedIds||[]).includes(b.id) || !windowsOverlap(win, planWindow(o))) return;
+        clashes.push(`${b.name} has ${cmPlName(o)} then`);
+      });
+    });
+    return {beds:ordered, clashes};
+  };
+  const runs=[build(1), build(-1)].filter(Boolean);
+  runs.sort((a,b)=>a.clashes.length-b.clashes.length);
+  return runs[0]||null;
+}
+// Ask what to do with a planting that's longer than the bed it's going on. Resolves
+// {kind:"shorten"} | {kind:"overflow", beds:[ids]} | null (cancel).
+function cmAskOverflow(p, bed){
+  return new Promise(resolve=>{
+    let modal=document.getElementById("cmOverflowModal");
+    if(!modal){ modal=document.createElement("div"); modal.id="cmOverflowModal"; document.body.appendChild(modal); }
+    const run=cmOverflowRun(p, bed);
+    const runNames=run ? run.beds.map(b=>b.name).join(" + ") : "";
+    modal.innerHTML=`<div class="wk-group-card">
+        <button class="ap-x" data-ov="cancel" title="Close">✕</button>
+        <div class="wk-group-title">${esc(cmPlName(p))} is longer than ${esc(bed.name)}</div>
+        <p class="sub" style="max-width:42ch;margin:.3rem 0 1rem">It's ${esc(String(p.bm))}m and ${esc(bed.name)} is ${esc(String(bed.len))}m.</p>
+        <div style="display:flex;flex-direction:column;gap:.5rem">
+          <button type="button" class="btn-primary cm-ov-opt" data-ov="shorten">Shorten it to ${esc(String(bed.len))}m
+            <span class="cm-ov-sub">Stays in ${esc(bed.name)} only</span></button>
+          ${run?`<button type="button" class="btn-ghost cm-ov-opt" data-ov="overflow">Run it on into ${esc(run.beds.filter(b=>b.id!==bed.id).map(b=>b.name).join(" + "))}
+            <span class="cm-ov-sub">Takes ${esc(runNames)}, ${esc(String(p.bm))}m across them</span>
+            ${run.clashes.length?`<span class="cm-ov-warn">${esc(run.clashes.join(" · "))}</span>`:""}</button>`
+            :`<p class="sub" style="margin:0">There aren't enough beds left in ${esc(bed.block||"this block")} to run it on into.</p>`}
+          <button type="button" class="btn-ghost" data-ov="cancel">Cancel — don't move it</button>
+        </div>
+      </div>`;
+    const done=v=>{ modal.classList.remove("open"); modal.onclick=null; resolve(v); };
+    modal.onclick=e=>{
+      const b=e.target.closest("[data-ov]");
+      if(!b){ if(e.target===modal) done(null); return; }
+      const k=b.dataset.ov;
+      done(k==="shorten" ? {kind:"shorten"} : k==="overflow" ? {kind:"overflow", beds:run.beds.map(x=>x.id)} : null);
+    };
+    modal.classList.add("open");
+  });
+}
+
 // assign / move the dragged planting to a bed, writing the Bed link back to Airtable
 async function assignBed(bedId, pidOverride){
   const pid=pidOverride||dragPid; dragPid=null;
   if(!pid) return;
   const p=(data.plantings||[]).find(x=>x.id===pid); if(!p) return;
-  if(p.bedIds[0]===bedId) return;                 // dropped on its own bed — no-op
+  // Dropped back on its own bed: nothing to do — unless it's too long for that bed, in which case
+  // this is the way to fix it (the bar's "too long" mark and the panel both send it here).
+  if(p.bedIds[0]===bedId && !cmOverLength(p)) return;
 
   // A drop that only fits because of BED_FIT_SLACK (see bedFreeInfo) gets a real choice instead
   // of silently leaving both plantings at their original, slightly-too-big bed-metres: split the
   // bed evenly between everything sharing it, keep the sizes as they are (they're only a couple
   // metres over — plenty of farms would just plant it tighter), or cancel the drop outright.
   const bed=(data.beds||[]).find(b=>b.id===bedId);
+
+  // Longer than the bed itself (a 20m planting dropped on a 15m bed) is never placed silently:
+  // shorten it to the bed, or let it run on into the next bed(s) of the block.
+  let newBeds=[bedId], newBm=p.bm;
+  if(bed && bed.len>0 && p.bm>bed.len+0.001){
+    const pick=await cmAskOverflow(p, bed);
+    if(!pick) return;                                // cancelled — nothing moves
+    if(pick.kind==="shorten") newBm=bed.len; else newBeds=pick.beds;
+  }
+
   let splitWith=null;
-  if(bed){
+  if(bed && newBeds.length===1){
     const win=planWindow(p);
-    const info=bedFreeInfo(bed,p,win);
+    const info=bedFreeInfo(bed,{...p, bm:newBm},win);
     if(info.fits && info.overBy>0.001){
       const occupants=(data.plantingsActive||[]).filter(o=>
         o.id!==p.id && (o.bedIds||[])[0]===bedId && windowsOverlap(win, planWindow(o)));
@@ -11796,15 +11901,18 @@ async function assignBed(bedId, pidOverride){
   const prev=p.bedIds.slice();
   const prevBm=p.bm;
   const bmRestore=[];
-  p.bedIds=[bedId];                               // optimistic
+  p.bedIds=newBeds.slice();                       // optimistic
+  p.bm=newBm;
   if(splitWith){
     const share=Math.round((bed.len/(splitWith.length+1))*10)/10;
     p.bm=share;
     splitWith.forEach(o=>{ bmRestore.push([o,o.bm]); o.bm=share; });
   }
+  const bmChanged = Number(p.bm)!==Number(prevBm);
   rebuildDerived(); buildCropMap();
   try{
-    await atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f.pl_bed]:[bedId]});
+    await atPatch(CFG.farmBase, CFG.tables.plantings, pid,
+      bmChanged && !splitWith ? {[CFG.f.pl_bed]:newBeds, [CFG.f.pl_bm]:p.bm} : {[CFG.f.pl_bed]:newBeds});
     if(splitWith){
       await Promise.all([
         atPatch(CFG.farmBase, CFG.tables.plantings, pid, {[CFG.f.pl_bm]:p.bm}),
@@ -11812,9 +11920,10 @@ async function assignBed(bedId, pidOverride){
       ]);
     }
     layoutAndDraw();                              // keep the farm map in sync
-    cmHistAdd(`${cmPlName(p)} → ${bed?bed.name:"another bed"}`,
-      `from ${cmBedsName(prev)}`+(splitWith?` · ${bed.name} split ${p.bm}m each`:""),
-      [{pid, beds:[prev,[bedId]], ...(splitWith?{bm:[prevBm,p.bm]}:{})},
+    cmHistAdd(`${cmPlName(p)} → ${bed?cmBedsName(newBeds):"another bed"}`,
+      `from ${cmBedsName(prev)}`+(splitWith?` · ${bed.name} split ${p.bm}m each`
+        : bmChanged?` · shortened ${prevBm}m → ${p.bm}m`:""),
+      [{pid, beds:[prev,newBeds.slice()], ...(bmChanged?{bm:[prevBm,p.bm]}:{})},
        ...bmRestore.map(([o,bm])=>({pid:o.id, bm:[bm,o.bm]}))]);
   }catch(e){
     p.bedIds=prev; p.bm=prevBm;
@@ -15145,6 +15254,10 @@ function tlRenderPanel(p, panel, closeFn, opts){
     </div>
     ${p.failed?`<div class="tl-fail-banner">⚠ Crop failure${p.failureDate?" · "+esc(fmt(p.failureDate)):""}</div>`:""}
     ${(!p.failed && behindReason)?`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`:""}
+    ${(()=>{ const ov=cmOverLength(p); return ov
+      ? `<div class="tl-fail-banner">! ${esc(String(ov.bm))}m planting, but ${esc(plantingBedNames(p)||"its bed")} ${p.bedIds.length>1?"hold":"holds"} ${esc(String(ov.room))}m`
+        +` <button type="button" class="btn-ghost tl-over-fix" style="margin-left:.4rem;padding:.15rem .55rem;font-size:.74rem">Fix…</button></div>`
+      : ""; })()}
     <div class="sect-h">Tasks</div>
     ${tasksHtml}
     ${acc("Planting details",detailsHtml,false)}
@@ -15161,6 +15274,12 @@ function tlRenderPanel(p, panel, closeFn, opts){
 
   panel.querySelector(".tl-panel-x").onclick=closeFn;
   panel.querySelector(".tl-remove-crop-btn").onclick=()=>tlOpenRemoveCropModal(p, panel, closeFn, opts);
+  const overFix=panel.querySelector(".tl-over-fix");
+  if(overFix) overFix.onclick=async ()=>{
+    await assignBed(p.bedIds[0], p.id);              // too long for its own bed ⇒ asks shorten / run on
+    const fresh=(data.plantings||[]).find(x=>x.id===p.id);
+    if(fresh) tlRenderPanel(fresh, panel, closeFn, opts);
+  };
   panel.querySelector(".btn-primary").onclick=()=>apOpenEdit(p);
   if(opts.showBedPicker){
     panel.querySelectorAll(".tl-bedpick-row").forEach(btn=>{
