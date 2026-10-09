@@ -11983,7 +11983,7 @@ async function unassignBed(pid){
 /* ---------- Crop map history + undo ----------
    Every bed change made through assignBed / unassignBed / Auto-place lands here as one entry,
    holding each planting's beds (and bed-metres, for a split) before and after. Ctrl+Z on the crop
-   map undoes the newest; the History popover lists them all with an Undo on each.
+   map undoes the newest, Ctrl+Y redoes; the History popover lists them all with an Undo (or Redo) on each.
    Kept in localStorage, so both crop map windows share one list — a move made by dropping into the
    other window can be undone from this one. It's this browser's record, not the farm's.
    An undo only puts a planting back if it's still where that entry left it. If something has moved
@@ -12002,39 +12002,52 @@ function cmHistAdd(label, detail, changes){
   cmHistSave(list);
 }
 function cmSameIds(a,b){ a=a||[]; b=b||[]; return a.length===b.length && a.every(x=>b.includes(x)); }
-async function cmHistUndo(id){
+// Undo puts each planting from the entry's "after" back to its "before"; redo is the same walk the
+// other way. Either way a planting is only touched if it's still in the state being reversed.
+async function cmHistApply(id, redo){
   const list=cmHistLoad(), e=list.find(x=>x.id===id);
-  if(!e || e.undone) return;
+  if(!e || !!e.undone!==!!redo) return;
+  const from=redo?0:1, to=redo?1:0, verb=redo?"redo":"undo";
   const ops=[], moved=[];
   for(const c of e.changes){
     const p=(data.plantings||[]).find(x=>x.id===c.pid);
     if(!p){ moved.push("a planting that's since been deleted"); continue; }
-    const bedsOk=!c.beds || cmSameIds(p.bedIds, c.beds[1]);
-    const bmOk=!c.bm || Number(p.bm)===Number(c.bm[1]);
+    const bedsOk=!c.beds || cmSameIds(p.bedIds, c.beds[from]);
+    const bmOk=!c.bm || Number(p.bm)===Number(c.bm[from]);
     if(bedsOk && bmOk) ops.push({p,c}); else moved.push(`${cmPlName(p)} (now in ${cmBedsName(p.bedIds)})`);
   }
-  if(!ops.length){ alert(`Can't undo "${e.label}" — it's been changed since:\n`+moved.join("\n")); return; }
+  if(!ops.length){ alert(`Can't ${verb} "${e.label}" — it's been changed since:\n`+moved.join("\n")); return; }
   if(moved.length && !confirm(`Some of "${e.label}" has been changed since, and will be left as it is:\n`
-    +moved.join("\n")+`\n\nUndo the rest?`)) return;
-  ops.forEach(({p,c})=>{ if(c.beds) p.bedIds=c.beds[0].slice(); if(c.bm) p.bm=c.bm[0]; });
+    +moved.join("\n")+`\n\n${redo?"Redo":"Undo"} the rest?`)) return;
+  ops.forEach(({p,c})=>{ if(c.beds) p.bedIds=c.beds[to].slice(); if(c.bm) p.bm=c.bm[to]; });
   rebuildDerived(); buildCropMap();
   try{
     await Promise.all(ops.map(({p,c})=>{
       const f={};
-      if(c.beds) f[CFG.f.pl_bed]=c.beds[0];
-      if(c.bm) f[CFG.f.pl_bm]=c.bm[0];
+      if(c.beds) f[CFG.f.pl_bed]=c.beds[to];
+      if(c.bm) f[CFG.f.pl_bm]=c.bm[to];
       return atPatch(CFG.farmBase, CFG.tables.plantings, p.id, f);
     }));
     layoutAndDraw();
   }catch(err){
-    ops.forEach(({p,c})=>{ if(c.beds) p.bedIds=c.beds[1].slice(); if(c.bm) p.bm=c.bm[1]; });
+    ops.forEach(({p,c})=>{ if(c.beds) p.bedIds=c.beds[from].slice(); if(c.bm) p.bm=c.bm[from]; });
     rebuildDerived(); buildCropMap();
-    alert("Couldn't undo:\n"+err.message);
+    alert(`Couldn't ${verb}:\n`+err.message);
     return;
   }
   const fresh=cmHistLoad(), f=fresh.find(x=>x.id===id);
-  if(f){ f.undone=new Date().toISOString(); cmHistSave(fresh); }
-  backToast(`Undone: ${e.label}`);
+  if(f){ if(redo) delete f.undone; else f.undone=new Date().toISOString(); cmHistSave(fresh); }
+  backToast(`${redo?"Redone":"Undone"}: ${e.label}`);
+}
+const cmHistUndo=id=>cmHistApply(id,false), cmHistRedo=id=>cmHistApply(id,true);
+// What Ctrl+Y redoes: the most recently undone entry — but only while nothing new has been done
+// since that undo, the usual rule (a fresh move ends the redo chain; the History list still offers
+// Redo on any undone entry, behind the same "still where it was" check).
+function cmHistRedoTarget(){
+  const list=cmHistLoad();
+  const undone=list.filter(x=>x.undone).sort((a,b)=>b.undone.localeCompare(a.undone))[0];
+  if(!undone) return null;
+  return list.some(x=>x.at>undone.undone) ? null : undone;
 }
 function cmHistWhen(iso){
   const d=new Date(iso), now=new Date();
@@ -12052,11 +12065,11 @@ function cmHistRender(){
         <div class="cm-hist-label">${esc(e.label)}</div>
         <div class="cm-hist-meta">${esc(cmHistWhen(e.at))}${e.detail?" · "+esc(e.detail):""}</div>
       </div>
-      ${e.undone?`<span class="cm-hist-done">Undone</span>`
+      ${e.undone?`<button type="button" class="btn-ghost cm-hist-undo" data-redo="${esc(e.id)}">Redo</button>`
                :`<button type="button" class="btn-ghost cm-hist-undo" data-undo="${esc(e.id)}">Undo</button>`}
     </div>`).join("");
   pop.innerHTML=`<div class="cm-hist-head"><span class="cm-pop-head">History</span>
-      <span class="cm-hist-hint">Ctrl+Z undoes the latest</span></div>
+      <span class="cm-hist-hint">Ctrl+Z undo · Ctrl+Y redo</span></div>
     <div class="cm-hist-list">${rows || `<div class="cm-hist-empty">Nothing yet. Plantings you move to a bed, take off a bed or auto-place show up here.</div>`}</div>
     ${list.length?`<button type="button" class="cm-pop-item cm-hist-clear" id="cmHistClear">Clear history</button>`:""}`;
 }
@@ -12066,6 +12079,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     e.stopPropagation();                          // undoing several in a row shouldn't close it
     const u=e.target.closest("[data-undo]");
     if(u){ u.disabled=true; u.textContent="…"; cmHistUndo(u.dataset.undo).finally(cmHistRender); return; }
+    const r=e.target.closest("[data-redo]");
+    if(r){ r.disabled=true; r.textContent="…"; cmHistRedo(r.dataset.redo).finally(cmHistRender); return; }
     if(e.target.closest("#cmHistClear") && confirm("Clear the crop map history? Nothing on the map changes.")){
       try{ localStorage.removeItem(CM_HIST_KEY); }catch(_){}
       cmHistRender();
@@ -12074,15 +12089,25 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 // The other crop map window wrote to the shared list — keep this one's popover current.
 window.addEventListener("storage",e=>{ if(e.key===CM_HIST_KEY) cmHistRender(); });
+// Ctrl+Z undo; Ctrl+Y redo (Ctrl+Shift+Z too, the other common redo key).
 document.addEventListener("keydown",e=>{
-  if(!(e.ctrlKey||e.metaKey) || e.altKey || e.shiftKey || (e.key||"").toLowerCase()!=="z") return;
+  if(!(e.ctrlKey||e.metaKey) || e.altKey) return;
+  const k=(e.key||"").toLowerCase();
+  const isUndo = k==="z" && !e.shiftKey, isRedo = (k==="y" && !e.shiftKey) || (k==="z" && e.shiftKey);
+  if(!isUndo && !isRedo) return;
   if(currentView!=="cropmap" || cmIsMobile()) return;
   const a=document.activeElement;
   if(a && (a.tagName==="INPUT" || a.tagName==="TEXTAREA" || a.tagName==="SELECT" || a.isContentEditable)) return;
   e.preventDefault();
-  const last=cmHistLoad().find(x=>!x.undone);
-  if(!last){ backToast("Nothing to undo"); return; }
-  cmHistUndo(last.id);
+  if(isUndo){
+    const last=cmHistLoad().find(x=>!x.undone);
+    if(!last){ backToast("Nothing to undo"); return; }
+    cmHistUndo(last.id);
+  }else{
+    const next=cmHistRedoTarget();
+    if(!next){ backToast("Nothing to redo"); return; }
+    cmHistRedo(next.id);
+  }
 });
 
 async function atPatch(base,table,id,fields){
