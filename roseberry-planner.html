@@ -2075,6 +2075,8 @@
     position:absolute;inset:0;width:auto;height:auto;box-sizing:border-box;
     white-space:normal;overflow:hidden;word-break:break-word}
   .cm-bar-sub{font-family:var(--mono);font-size:.5rem;opacity:.85;font-weight:400}
+  /* the dates line on a one-bed (sideways-label) bar: its own column beside the crop name */
+  .cm-bar-sub-v{display:block;margin-block-start:2px}
   .cm-axis{flex:0 0 30px;padding-top:18px}
   .cm-mon{height:30px;font-family:var(--mono);font-size:.56rem;color:var(--ink-2)}
   .cm-col{display:flex;flex-direction:column;width:44px;flex:0 0 44px}
@@ -10640,6 +10642,14 @@ function cmDrawBlockBars(grid, beds, plantings){
         if(height>=34) bits.push(`<span class="cm-bar-sub">${esc(fmt(groundStart))} – ${esc(fmt(p.h2||p.h1))}</span>`);
         if(height>=48 && bedCount>1) bits.push(`<span class="cm-bar-sub">${bedCount} beds</span>`);
         l.innerHTML=bits.join("");
+      }else if(w>=24){
+        // A one-bed bar: the name, then in-ground → end as a second line beside it (the label runs
+        // down the bar). Day and month only; the year joins the end date when it's a different one.
+        const s=new Date(groundStart), e=new Date(p.h2||p.h1||groundStart);
+        const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        const dm=d=>isNaN(d)?"":`${d.getDate()} ${MON[d.getMonth()]}`;
+        const when=`${dm(s)} – ${dm(e)}${(!isNaN(s)&&!isNaN(e)&&s.getFullYear()!==e.getFullYear())?" "+String(e.getFullYear()).slice(2):""}`;
+        l.innerHTML=`${esc(p.crop)}<span class="cm-bar-sub cm-bar-sub-v">${esc(when)}</span>`;
       }else{
         l.textContent=p.crop;
       }
