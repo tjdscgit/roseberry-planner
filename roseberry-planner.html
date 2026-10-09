@@ -1685,6 +1685,7 @@
   .cm-ov-opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:.6rem .8rem;height:auto}
   .cm-ov-sub{font-family:var(--mono);font-size:10px;letter-spacing:.02em;opacity:.8;font-weight:400}
   .cm-ov-warn{font-family:var(--mono);font-size:10px;color:var(--clay);font-weight:400}
+  .tl-kv-sub{color:var(--ink-2);font-size:.85em}
   /* Crop map bar for a planting longer than the beds it's on. */
   .cm-bar-over{outline:2px solid var(--clay);outline-offset:-1px}
   .cm-bar-overmark{position:absolute;right:1px;bottom:1px;z-index:3;font:700 9px var(--mono);color:#fff;
@@ -7785,10 +7786,12 @@ function drawMap(placed, opts){
       let segs;
       if(occupants.length){
         const bedLen = (tall?r.h:r.w) || 1;
-        const known=occupants.filter(o=>o.bm>0), unknown=occupants.filter(o=>!(o.bm>0));
-        const knownSum=known.reduce((s,o)=>s+o.bm,0);
+        // Each occupant's metres IN THIS BED — a run-on planting's 5m tail, not its whole 20m.
+        const om=o=>o.bm>0 ? PlannerShared.bedShare(data, o, b.id) : null;
+        const known=occupants.filter(o=>om(o)>0), unknown=occupants.filter(o=>!(om(o)>0));
+        const knownSum=known.reduce((s,o)=>s+om(o),0);
         const shareEach = unknown.length ? Math.max(0,bedLen-knownSum)/unknown.length : 0;
-        let fracs=occupants.map(o=>(o.bm>0?o.bm:shareEach)/bedLen);
+        let fracs=occupants.map(o=>(om(o)>0?om(o):shareEach)/bedLen);
         // Scale down (never up) so several generously-recorded bm's can never overflow the bed's
         // real length — same rule the Crop Map's own bed-share bars use (cmDrawBlockBars). Left
         // under 100%, the remainder is simply left as empty ground (the base rect below it), which
@@ -10444,7 +10447,20 @@ function cmDrawBlockBars(grid, beds, plantings){
     const top=Math.min(y0,y1), height=Math.max(6,Math.abs(y1-y0));
     const cols=(p.bedIds||[]).map(id=>idx.get(id)).filter(i=>i!=null);
     if(!cols.length) return;
-    const runs=cmRunsOf(cols);
+    let runs=cmRunsOf(cols);
+    // A planting on several beds that only part-fills some of them (a run-on's last bed: 15m + 5m)
+    // gives each part-filled bed its own fragment, so Phase 2 sizes it by that bed's share
+    // (PlannerShared.bedShares) instead of drawing it the full column wide.
+    if((p.bedIds||[]).length>1){
+      const sh=PlannerShared.bedShares(data,p);
+      const partial=new Set();
+      (p.bedIds||[]).forEach(id=>{
+        const i=idx.get(id), b=beds[i];
+        if(i!=null && b && b.len>0 && sh[id]!=null && sh[id]<b.len-0.001) partial.add(i);
+      });
+      if(partial.size) runs=[...cmRunsOf(cols.filter(i=>!partial.has(i))), ...[...partial].map(i=>({start:i,end:i}))]
+        .sort((a,b)=>a.start-b.start);
+    }
     runs.forEach((run,runIdx)=>frags.push({p,run,runIdx,first:runs[0],top,height,groundStart}));
   });
 
@@ -10453,9 +10469,9 @@ function cmDrawBlockBars(grid, beds, plantings){
   // when it's the only thing on that bed, so the free remainder is visible without first having
   // to drag a second planting on top of it to "reveal" the split. Fragments that actually share a
   // time window on the same bed are then laid out left to right instead of stacking on top of
-  // each other. A multi-bed span (run.end>run.start) always keeps the full column width per bed
-  // it crosses — a planting only carries one bed-metres figure, not one per bed it's on, so
-  // there's nothing to size a per-bed slice by.
+  // each other. A multi-bed span (run.end>run.start) keeps the full column width per bed it
+  // crosses: Phase 1 only leaves beds the planting FILLS inside a span, and splits out any bed it
+  // only part-fills as its own one-column fragment, sized here by that bed's share.
   const lanes=new Map();   // frag -> {leftFrac, widthFrac}
   const byBed=new Map();   // bed column index -> single-span frags on it
   frags.filter(f=>f.run.start===f.run.end).forEach(f=>{
@@ -10469,7 +10485,7 @@ function cmDrawBlockBars(grid, beds, plantings){
     // Unknown bed length, or an occupant with no stated bed-metres, has to assume it fills the
     // bed — same "unknown ⇒ whole bed" rule bedFreeInfo() uses for the fits/free-metres check.
     list.forEach(f=>{
-      const bm=(f.p.bm>0) ? f.p.bm : null;
+      const bm=(f.p.bm>0 && bed) ? PlannerShared.bedShare(data, f.p, bed.id) : null;   // this bed's part of it
       const widthFrac = bedLen ? Math.max(.12, Math.min(1, bm!=null ? bm/bedLen : 1)) : 1;
       lanes.set(f,{leftFrac:0, widthFrac});
     });
@@ -10521,7 +10537,7 @@ function cmDrawBlockBars(grid, beds, plantings){
       bar.style.width=Math.max(6, w-(lane.leftFrac>0?1:0))+"px";
       if(lane.widthFrac<1){
         bar.classList.add("cm-bar-shared");
-        bar.title2=` · ${p.bm}m of a ${beds[run.start].len}m bed`;
+        bar.title2=` · ${PlannerShared.bedShare(data,p,beds[run.start].id)??p.bm}m of a ${beds[run.start].len}m bed`;
       }
     }else{
       w=span*CM_COL_W;
@@ -10813,10 +10829,13 @@ const BED_FIT_SLACK = 2;
 function bedFreeInfo(bed,drag,win){
   let used=0, unknownOccupant=false, anyOccupant=false;
   (data.plantingsActive||[]).forEach(p=>{
-    if(p.id===drag.id || p.bedIds[0]!==bed.id) return;
+    // Every bed a planting is on counts it, at its share of that bed (a run-on's 5m tail in G14
+    // takes 5m there) — not just its first bed at its full metres.
+    if(p.id===drag.id || !(p.bedIds||[]).includes(bed.id)) return;
     if(!windowsOverlap(win, planWindow(p))) return;
     anyOccupant=true;
-    if(p.bm!=null) used+=p.bm; else unknownOccupant=true;   // occupant with no metres ⇒ assume it fills the bed
+    const share=PlannerShared.bedShare(data, p, bed.id);
+    if(share!=null) used+=share; else unknownOccupant=true;   // occupant with no metres ⇒ assume it fills the bed
   });
   // Zones hold space on top of the real occupants, but only the part of their budget nothing has
   // claimed yet. A zone the drag MATCHES is reserving space *for this planting*, so instead of
@@ -11805,13 +11824,20 @@ function cmOverflowRun(p, bed){
     const beds=[bed]; let room=Number(bed.len)||0;
     for(let j=i+step; room<p.bm-0.001 && j>=0 && j<row.length; j+=step){ beds.push(row[j]); room+=Number(row[j].len)||0; }
     if(room<p.bm-0.001) return null;
-    const ordered=step>0 ? beds : beds.slice().reverse();
+    // Kept in fill order — the bed it was dropped on first, so that's the one it fills and the
+    // extra bed takes the remainder (bedShares fills in listed order), whichever way it runs.
+    const ordered=beds;
+    // Only a real squeeze counts: the extra bed's other plantings at that time plus this one's
+    // share of it don't fit the bed. A 5m tail beside a 10m crop in a 15m bed is fine.
+    const sh=PlannerShared.bedShares(data, {bm:p.bm, bedIds:beds.map(b=>b.id)});
     const clashes=[];
     beds.slice(1).forEach(b=>{
-      (data.plantingsActive||[]).forEach(o=>{
-        if(o.id===p.id || !(o.bedIds||[]).includes(b.id) || !windowsOverlap(win, planWindow(o))) return;
-        clashes.push(`${b.name} has ${cmPlName(o)} then`);
-      });
+      const others=(data.plantingsActive||[]).filter(o=>
+        o.id!==p.id && (o.bedIds||[]).includes(b.id) && windowsOverlap(win, planWindow(o)));
+      if(!others.length) return;
+      const used=others.reduce((s,o)=>{ const m=PlannerShared.bedShare(data,o,b.id); return s+(m!=null?m:Number(b.len)||0); },0);
+      if(used+(sh[b.id]||0) > (Number(b.len)||0)+BED_FIT_SLACK)
+        clashes.push(`${b.name} has ${others.map(cmPlName).join(", ")} then — no room for ${sh[b.id]}m`);
     });
     return {beds:ordered, clashes};
   };
@@ -11826,7 +11852,8 @@ function cmAskOverflow(p, bed){
     let modal=document.getElementById("cmOverflowModal");
     if(!modal){ modal=document.createElement("div"); modal.id="cmOverflowModal"; document.body.appendChild(modal); }
     const run=cmOverflowRun(p, bed);
-    const runNames=run ? run.beds.map(b=>b.name).join(" + ") : "";
+    const runSh=run ? PlannerShared.bedShares(data, {bm:p.bm, bedIds:run.beds.map(b=>b.id)}) : {};
+    const runNames=run ? run.beds.map(b=>`${b.name} (${runSh[b.id]}m)`).join(" + ") : "";
     modal.innerHTML=`<div class="wk-group-card">
         <button class="ap-x" data-ov="cancel" title="Close">✕</button>
         <div class="wk-group-title">${esc(cmPlName(p))} is longer than ${esc(bed.name)}</div>
@@ -11835,7 +11862,7 @@ function cmAskOverflow(p, bed){
           <button type="button" class="btn-primary cm-ov-opt" data-ov="shorten">Shorten it to ${esc(String(bed.len))}m
             <span class="cm-ov-sub">Stays in ${esc(bed.name)} only</span></button>
           ${run?`<button type="button" class="btn-ghost cm-ov-opt" data-ov="overflow">Run it on into ${esc(run.beds.filter(b=>b.id!==bed.id).map(b=>b.name).join(" + "))}
-            <span class="cm-ov-sub">Takes ${esc(runNames)}, ${esc(String(p.bm))}m across them</span>
+            <span class="cm-ov-sub">${esc(runNames)}</span>
             ${run.clashes.length?`<span class="cm-ov-warn">${esc(run.clashes.join(" · "))}</span>`:""}</button>`
             :`<p class="sub" style="margin:0">There aren't enough beds left in ${esc(bed.block||"this block")} to run it on into.</p>`}
           <button type="button" class="btn-ghost" data-ov="cancel">Cancel — don't move it</button>
@@ -15131,7 +15158,10 @@ function tlRenderPanel(p, panel, closeFn, opts){
     +tlKv("Cultivar",esc(dash(p.variety)))
     +tlKv("Planting method",p.tp?"Transplant":"Direct seed")
     +tlKv("Bed",esc(bedName||"unassigned"))
-    +tlKv("Bed metres",esc(p.bm!=null?String(p.bm)+" m":"–"))
+    +tlKv("Bed metres",esc(p.bm!=null?String(p.bm)+" m":"–")
+      // On several beds: how it splits, e.g. "G13 15 · G14 5".
+      +((p.bm>0 && (p.bedIds||[]).length>1) ? (()=>{ const sh=PlannerShared.bedShares(data,p);
+          return ` <span class="tl-kv-sub">(${esc(p.bedIds.map(id=>`${cmBedsName([id])} ${sh[id]}`).join(" · "))})</span>`; })() : ""))
     +tlKv("Succession group",esc(dash(p.group)))
     +tlKv("Sow date",fmt(p.sow)+(p.sowActual?` <span class="tl-actual-note">actual: ${esc(fmt(p.sowActual))}</span>`:""))
     +(p.tp?tlKv("Transplant date",fmt(p.tp)+(p.tpActual?` <span class="tl-actual-note">actual: ${esc(fmt(p.tpActual))}</span>`:"")):"")

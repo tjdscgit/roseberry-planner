@@ -911,14 +911,39 @@
     return null;
   }
 
+  // How a planting's metres sit across its beds. bm is the TOTAL across them.
+  // - A RUN-ON (more metres than the beds before the last can hold — what the crop map's "run it on
+  //   into the next bed" makes) fills in the order the beds are listed: each takes up to its own
+  //   length, the last takes what's left. 20m on G13 then G14 is 15m + 5m, not 10m + 10m.
+  // - Anything else is spread evenly, the way a planting entered on several beds is meant: 30m on
+  //   two 30m beds is 15m each, not 30m in the first and an empty second.
+  // One bed just holds bm (even past its length — the over-length case, flagged elsewhere). No bm,
+  // or a bed of unknown length: null / even. Returns {bedId: metres}.
+  function bedShares(data, p){
+    const ids=p.bedIds||[], out={};
+    if(!(p.bm>0) || !ids.length){ ids.forEach(id=>{ out[id]=null; }); return out; }
+    if(ids.length===1){ out[ids[0]]=p.bm; return out; }
+    const lens=ids.map(id=>{ const b=(data.beds||[]).find(x=>x.id===id); return b && b.len>0 ? Number(b.len) : null; });
+    const even=()=>{ ids.forEach(id=>{ out[id]=Math.round(p.bm/ids.length*10)/10; }); return out; };
+    if(lens.some(l=>l==null)) return even();
+    const beforeLast=lens.slice(0,-1).reduce((s,l)=>s+l,0);
+    if(!(p.bm>beforeLast+0.001)) return even();
+    let left=Number(p.bm);
+    ids.forEach((id,i)=>{
+      const take = i===ids.length-1 ? left : Math.min(lens[i], left);
+      out[id]=Math.round(Math.max(0,take)*10)/10; left-=take;
+    });
+    return out;
+  }
+  function bedShare(data, p, bedId){ const s=bedShares(data,p)[bedId]; return s==null ? null : s; }
+
   // Beds p and o both sit on, minus any where their lengths fit side by side — two half-bed
   // plantings sharing a bed are a layout, not a clash. bm is the planting's total across its beds.
   function cuSharedBeds(data, p, o){
     const mine=p.bedIds||[];
-    const per=x=>(x.bm>0 && (x.bedIds||[]).length) ? x.bm/(x.bedIds.length) : null;
     return (o.bedIds||[]).filter(b=>{
       if(!mine.includes(b)) return false;
-      const bed=(data.beds||[]).find(x=>x.id===b), a=per(p), c=per(o);
+      const bed=(data.beds||[]).find(x=>x.id===b), a=bedShare(data,p,b), c=bedShare(data,o,b);
       if(bed && bed.len>0 && a!=null && c!=null && a+c<=bed.len+CU_BED_SLACK_M) return false;
       return true;
     });
@@ -3553,6 +3578,7 @@
     STATUS_ORDER, statusRank, apLifecycle,
     wkParse, wkISO, wkMonday, wkAddDays, wkSameDay,
     ctTaskById, bedNameOf, wkCollect, nextMilestoneStep, buildMilestonePatch,
+    bedShares, bedShare,
     CU_MS_LABEL, cuAdd, cuDiff, cuLive, cuMovable, cuGroundStart, cuGroundEnd, cuBedAfter,
     cuNextSowing, cuGroupPos, cuShift, cuClashes, cuPlanChange, cuClashFixes, cuSetH2, cuWrites,
     cuWeekDue, cuCollect,
