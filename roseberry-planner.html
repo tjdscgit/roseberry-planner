@@ -10791,6 +10791,41 @@ function cmBestColumns(wrap){
   }
   if(best) wrap.style.gridTemplateColumns=`repeat(${best.c}, max-content)`;
 }
+// Blocks in rows, in their usual order, each sitting right beside the last (no shared columns, so
+// a wide block doesn't push the others apart). Where the rows break is chosen the same way
+// cmBestColumns picks a column count: every sensible row length is tried, and the one that fits
+// the viewport at the largest scale wins.
+function cmPackRows(wrap){
+  const vp=document.getElementById("cmViewport"); if(!vp) return;
+  const VW=vp.clientWidth, VH=vp.clientHeight; if(!VW || !VH) return;
+  wrap.style.display="flex"; wrap.style.flexWrap="nowrap"; wrap.style.alignItems="flex-start";
+  wrap.style.boxSizing="content-box";
+  const kids=[...wrap.children]; kids.forEach(k=>{ k.style.flex="0 0 auto"; });
+  const cs=getComputedStyle(wrap);
+  const gx=parseFloat(cs.columnGap)||0, gy=parseFloat(cs.rowGap)||0;
+  const padX=(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.paddingRight)||0);
+  const padY=(parseFloat(cs.paddingTop)||0)+(parseFloat(cs.paddingBottom)||0);
+  const sizes=kids.map(b=>({w:b.offsetWidth, h:b.offsetHeight}));
+  const pack=L=>{
+    let rowW=0, rowH=0, maxW=0, totH=0, n=0;
+    sizes.forEach(s=>{
+      if(n && rowW+gx+s.w>L+0.5){ maxW=Math.max(maxW,rowW); totH+=rowH+gy; rowW=0; rowH=0; n=0; }
+      rowW+= (n?gx:0)+s.w; rowH=Math.max(rowH,s.h); n++;
+    });
+    maxW=Math.max(maxW,rowW); totH+=rowH;
+    return {maxW, totH};
+  };
+  // candidate row lengths: every run of consecutive blocks' total width
+  const cands=new Set();
+  for(let i=0;i<sizes.length;i++){ let w=0; for(let j=i;j<sizes.length;j++){ w+=(j>i?gx:0)+sizes[j].w; cands.add(Math.round(w)); } }
+  let best=null;
+  cands.forEach(L=>{
+    const r=pack(L), k=Math.min(VW/(r.maxW+padX), VH/(r.totH+padY));
+    if(!best || k>best.k+1e-6) best={k, w:r.maxW};
+  });
+  wrap.style.flexWrap="wrap";
+  if(best) wrap.style.width=Math.ceil(best.w)+"px";
+}
 function cmSetDeskBlocks(list){
   cmDeskBlocks=list;
   try{ sessionStorage.setItem(CM_DESK_BLOCKS_KEY, JSON.stringify(list)); }catch(_){}
@@ -11093,6 +11128,8 @@ function buildCropMap(){
   // auto-layout) so the Crop Map bunches up like the farm, instead of one long vertical list
   const perRow=Math.max(1,Math.ceil(Math.sqrt(activeKeys.length)));
   wrap.style.gridTemplateColumns=`repeat(${perRow}, max-content)`;
+  // undo cmPackRows' row layout from a previous build (it only applies with beds to scale)
+  wrap.style.display=wrap.style.flexWrap=wrap.style.alignItems=wrap.style.width=wrap.style.boxSizing="";
 
   wrap.innerHTML="";
   activeKeys.forEach(key=>{
@@ -11237,7 +11274,10 @@ function buildCropMap(){
   // A filtered handful of blocks is there to be read and dragged between, so it gets whichever
   // number of columns shows it biggest in this window, not the farm-like square grid above —
   // two wide blocks come out far larger one above the other than side by side.
-  if(!phone && activeKeys.length>1 && activeKeys.length<keys.length) cmBestColumns(wrap);
+  // Beds to scale makes blocks very different widths (a 60m-bed block is four times a 15m one), and
+  // the grid's shared columns then leave big gaps — so it packs into rows instead.
+  if(!phone && cmBedScale && activeKeys.length>1) cmPackRows(wrap);
+  else if(!phone && activeKeys.length>1 && activeKeys.length<keys.length) cmBestColumns(wrap);
 
   // Mobile + a single block picked: stretch the year track to fill the screen instead of
   // leaving empty space below a fixed-height grid. Measure the chrome already on screen
