@@ -4555,6 +4555,9 @@
             <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.4rem;cursor:pointer">
               <input type="checkbox" id="cmInactiveOn"> Grey out inactive plantings — should be in the ground by now, isn't
             </label>
+            <label style="display:flex;align-items:center;gap:.5rem;font-size:.78rem;color:var(--ink-2);margin-top:.4rem;cursor:pointer">
+              <input type="checkbox" id="cmBedScale"> Bed widths to scale — wider column for a longer bed
+            </label>
           </div>
         </div>
         <span class="spacer"></span>
@@ -10424,6 +10427,17 @@ async function trpDeleteCurrent(){
    Geometry comes from the CSS, and is asserted rather than assumed: .cm-axis is 30px, .cm-col is
    44px, .cm-grid has a 1px gap, .cm-col-h is 18px tall. If any of those change, change these.  */
 const CM_AXIS_W = 30, CM_COL_W = 44, CM_GAP = 1, CM_COLH_H = 18;
+
+/* Filters ▸ "Bed widths to scale" (desktop): a bed's column is as wide as the bed is long, at
+   CM_PX_PER_M px a metre (15m → 30px, 28m → 56px, 60m → 120px), so the map shows bed sizes at a
+   glance. Off, every column is CM_COL_W. A visual guide only — dates, fits and drops are unchanged.
+   Everything that places a bar reads cmColW()/the per-block x offsets, never CM_COL_W directly. */
+const CM_PX_PER_M = 2, CM_COL_MIN_W = 24, CM_BED_SCALE_KEY = "roseberry_cm_bed_scale_v1";
+let cmBedScale = (()=>{ try{ return localStorage.getItem(CM_BED_SCALE_KEY)==="1"; }catch(_){ return false; } })();
+function cmColW(bed){
+  if(!cmBedScale || cmIsMobile() || !bed || !(bed.len>0)) return CM_COL_W;
+  return Math.max(CM_COL_MIN_W, Math.round(Number(bed.len)*CM_PX_PER_M));
+}
 // Narrower than this and the label turns sideways, as the design has it. 56 rather than the
 // original 68 so a run-on rectangle (one bed and a third ≈ 59px) keeps the across label; a single
 // bed column is 44px, so one-bed bars are unaffected.
@@ -10453,6 +10467,10 @@ function cmDrawBlockBars(grid, beds, plantings){
   layer.style.height=CM_H+"px";
 
   const idx=new Map(); beds.forEach((b,i)=>idx.set(b.id,i));
+  // Column widths and left edges for this block (all CM_COL_W unless beds are drawn to scale).
+  const W=beds.map(b=>cmColW(b)), X=[];
+  W.reduce((x,w,i)=>{ X[i]=x; return x+w+CM_GAP; }, 0);
+  const spanW=(a,b)=>X[b]+W[b]-X[a];     // left edge of column a to right edge of column b
 
   // Phase 1: geometry for every bar fragment (one per contiguous bed-run of each planting), with
   // no width/position decided yet — that needs to see every fragment on a bed first.
@@ -10559,7 +10577,7 @@ function cmDrawBlockBars(grid, beds, plantings){
     const {p,run,runIdx,first,top,height,groundStart}=frag;
     const span=run.end-run.start+1;
     const lane=lanes.get(frag);
-    const colX=run.start*(CM_COL_W+CM_GAP);
+    const colX=X[run.start], colW=W[run.start];
 
     const base = cmSwatchColor(p.cropId, p.crop);
 
@@ -10567,18 +10585,18 @@ function cmDrawBlockBars(grid, beds, plantings){
     bar.style.top=top+"px"; bar.style.height=height+"px";
     let w;
     if(lane){
-      w=lane.widthFrac*CM_COL_W;
-      bar.style.left=(colX + lane.leftFrac*CM_COL_W)+"px";
+      w=lane.widthFrac*colW;
+      bar.style.left=(colX + lane.leftFrac*colW)+"px";
       bar.style.width=Math.max(6, w-(lane.leftFrac>0?1:0))+"px";
       if(lane.widthFrac<1){
         bar.classList.add("cm-bar-shared");
         bar.title2=` · ${PlannerShared.bedShare(data,p,beds[run.start].id)??p.bm}m of a ${beds[run.start].len}m bed`;
       }
     }else{
-      const cutLpx=(frag.cutL||0)*CM_COL_W, cutRpx=(frag.cutR||0)*CM_COL_W;
-      w=span*CM_COL_W-cutLpx-cutRpx;
+      const cutLpx=(frag.cutL||0)*W[run.start], cutRpx=(frag.cutR||0)*W[run.end];
+      w=spanW(run.start,run.end)-cutLpx-cutRpx;
       bar.style.left=(colX+cutLpx)+"px";
-      bar.style.width=(span*CM_COL_W+(span-1)*CM_GAP-cutLpx-cutRpx)+"px";
+      bar.style.width=w+"px";
       if(cutLpx||cutRpx){
         const shs=PlannerShared.bedShares(data,p);
         bar.title2=" · "+p.bedIds.map(id=>`${cmBedsName([id])} ${shs[id]}m`).join(" + ");
@@ -10648,8 +10666,12 @@ function cmDrawBlockBars(grid, beds, plantings){
     // as several plantings.
     if(runIdx===0){
       const l=document.createElement("span");
-      l.className = w>=CM_LABEL_MIN_W ? "cm-bar-l cm-bar-l-wide" : "cm-bar-l";
-      if(w>=CM_LABEL_MIN_W){
+      // Across label for a bar over several beds (CM_LABEL_MIN_W), but a one-bed bar keeps the
+      // sideways label until it's genuinely wide — a 28m bed drawn to scale (56px) wrapped
+      // "Garlic — Australian White" into fragments when it went across.
+      const wide = w >= (span>1 ? CM_LABEL_MIN_W : 90);
+      l.className = wide ? "cm-bar-l cm-bar-l-wide" : "cm-bar-l";
+      if(wide){
         const bits=[`${esc(p.crop)}${p.variety?" — "+esc(p.variety):""}`];
         if(height>=34) bits.push(`<span class="cm-bar-sub">${esc(fmt(groundStart))} – ${esc(fmt(p.h2||p.h1))}</span>`);
         if(height>=48 && bedCount>1) bits.push(`<span class="cm-bar-sub">${bedCount} beds</span>`);
@@ -10691,8 +10713,8 @@ function cmDrawBlockBars(grid, beds, plantings){
         if(kind==="post" && y<=top+height) return;
         const el=document.createElement("div"); el.className="cm-bar-ext";
         el.style.top=(y-1)+"px";
-        el.style.left=(first.start*(CM_COL_W+CM_GAP))+"px";
-        el.style.width=CM_COL_W+"px";
+        el.style.left=X[first.start]+"px";
+        el.style.width=W[first.start]+"px";
         el.style.background=base;
         el.title=`${taskName(t)} · ${fmt(t.due)}`;
         layer.appendChild(el);
@@ -11133,6 +11155,7 @@ function buildCropMap(){
 
     groups[key].forEach(bed=>{
       const col=document.createElement("div");col.className="cm-col";col.dataset.bed=bed.id;
+      if(cmColW(bed)!==CM_COL_W){ const cw=cmColW(bed); col.style.width=cw+"px"; col.style.flex=`0 0 ${cw}px`; }   // bed widths to scale
       const ch=document.createElement("div");ch.className="cm-col-h";ch.textContent=bed.name;ch.title=bed.name;col.appendChild(ch);
       const track=document.createElement("div");track.className="cm-track";track.style.height=CM_H+"px";
       // Zone bands go in FIRST so they sit behind the planting bars — a zone is the intent the bars
@@ -11608,6 +11631,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(cb) cb.addEventListener("change",()=>{ cmWarnOnly=cb.checked; buildCropMap(); });
   const icb=document.getElementById("cmInactiveOn");
   if(icb) icb.addEventListener("change",()=>{ cmInactiveOn=icb.checked; buildCropMap(); });
+  const scb=document.getElementById("cmBedScale");
+  if(scb){
+    scb.checked=cmBedScale;
+    scb.addEventListener("change",()=>{
+      cmBedScale=scb.checked;
+      try{ localStorage.setItem(CM_BED_SCALE_KEY, cmBedScale?"1":"0"); }catch(_){}
+      buildCropMap(); if(cmViewMode==="map") cmFitView();
+    });
+  }
 });
 
 /* Select / Pan / Tarp are one three-way choice now, so each setter only owns its own flag and
