@@ -2389,6 +2389,16 @@
   .tl-acc summary::after{content:"▸";font-family:var(--mono);font-size:.7rem;transition:transform .15s}
   .tl-acc[open] summary::after{transform:rotate(90deg)}
   .tl-acc[open] summary{color:var(--ink)}
+  /* Planting panel ▸ All tasks — the planting's jobs, then its crop's jobs not created yet. */
+  .tl-alltasks{display:flex;flex-direction:column;padding:.1rem 0 .5rem}
+  .tl-all-row{display:flex;flex-direction:column;gap:1px;padding:.4rem 0;border-bottom:1px solid var(--line)}
+  .tl-all-row:last-of-type{border-bottom:none}
+  .tl-all-name{font-size:.84rem;color:var(--ink)}
+  .tl-all-meta{font-family:var(--mono);font-size:10px;color:var(--ink-2)}
+  .tl-all-row.is-done .tl-all-name{color:var(--ink-2);text-decoration:line-through}
+  .tl-all-row.is-late .tl-all-meta{color:var(--clay)}
+  .tl-all-row.is-missing .tl-all-name{color:var(--ink-2);font-style:italic}
+  .tl-all-create{align-self:flex-start;margin-top:.5rem;padding:.3rem .7rem;font-size:.78rem}
   .tl-notes{width:100%;padding:.55rem .65rem;font-family:var(--sans);font-size:.86rem;
     border:1px solid var(--line-2);border-radius:9px;background:var(--paper-2);color:var(--ink);
     resize:vertical;margin-top:.2rem}
@@ -15263,6 +15273,35 @@ function tlRenderPanel(p, panel, closeFn, opts){
     : `<div class="empty-note">No tasks scheduled.</div>`;
   const acc=(label,body,open)=>`<details class="tl-acc"${(prevOpen.size?prevOpen.has(label):open)?" open":""}><summary>${esc(label)}</summary>${body}</details>`;
 
+  // "All tasks": every job this planting has (done ones too), then the jobs its crop's Crop tasks
+  // list says it should have but it doesn't — "not created yet", with one button to create them
+  // (the same materialize path a new planting uses). Gaps show instead of silently being absent.
+  const ownJobs=apPlantingTasksFor(p.id).slice().sort((a,b)=>String(a.due||"~").localeCompare(String(b.due||"~")));
+  const pVarId=(p.cropId && typeof varietyIdForPlantingText==="function") ? varietyIdForPlantingText(p.cropId, p.variety) : null;
+  const expectedJobs=p.cropId ? resolveTasksForCropVariety(p.cropId, pVarId) : [];
+  const jobDates={sow:p.sow, tp:p.tp, h1:p.h1, h2:p.h2};
+  const missingJobs=expectedJobs.filter(s=>!ownJobs.some(t=>t.taskId===s.taskId))
+    .map(s=>({s, inst:computePlantingTaskInstance(jobDates, s)}))
+    .sort((a,b)=>String(a.inst?a.inst.due:"~").localeCompare(String(b.inst?b.inst.due:"~")));
+  const creatable=missingJobs.filter(m=>m.inst);
+  const todayIso=todayISO();
+  const allTasksHtml = (ownJobs.length || missingJobs.length)
+    ? `<div class="tl-alltasks">`
+      + ownJobs.map(t=>{
+          const tk=(data.tasks||[]).find(x=>x.id===t.taskId);
+          const state = t.done ? "Done" : (t.due && t.due<todayIso ? "Overdue" : "To do");
+          return `<div class="tl-all-row${t.done?" is-done":""}${state==="Overdue"?" is-late":""}">`
+            +`<span class="tl-all-name">${esc(tk?tk.name:(t.label||"Task"))}</span>`
+            +`<span class="tl-all-meta">${t.due?esc(fmt(t.due))+" · ":""}${state}${t.repeat?` · every ${esc(String(t.repeat))}d`:""}</span></div>`;
+        }).join("")
+      + missingJobs.map(({s,inst})=>`<div class="tl-all-row is-missing">`
+          +`<span class="tl-all-name">${esc(s.task.name)}</span>`
+          +`<span class="tl-all-meta">${inst?`would be ${esc(fmt(inst.due))} · `:`needs a ${esc(String(s.anchor||"date").toLowerCase())} date · `}not created yet</span></div>`).join("")
+      + (creatable.length && !p.skipped
+          ? `<button type="button" class="btn-ghost tl-all-create">Create ${creatable.length} missing job${creatable.length===1?"":"s"}</button>` : "")
+      + `</div>`
+    : `<div class="empty-note">No jobs yet, and ${esc(p.crop||"this crop")} has nothing in Crop tasks. Add its jobs there and they'll show here.</div>`;
+
   // Mobile Crop Map has no drag-and-drop (accidental-move risk on touch), so it's the only
   // caller that turns this on — lets a planting be reassigned to a different bed by tapping a
   // row instead, reusing the same fit/spare-metres math the drag map already computes.
@@ -15328,6 +15367,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
       : ""; })()}
     <div class="sect-h">Tasks</div>
     ${tasksHtml}
+    ${acc("All tasks",allTasksHtml,false)}
     ${acc("Planting details",detailsHtml,false)}
     ${acc("Row spacing",rowsHtml,false)}
     ${acc("Nursery",nurseryHtml,false)}
@@ -15342,6 +15382,14 @@ function tlRenderPanel(p, panel, closeFn, opts){
 
   panel.querySelector(".tl-panel-x").onclick=closeFn;
   panel.querySelector(".tl-remove-crop-btn").onclick=()=>tlOpenRemoveCropModal(p, panel, closeFn, opts);
+  const createJobs=panel.querySelector(".tl-all-create");
+  if(createJobs) createJobs.onclick=async ()=>{
+    createJobs.disabled=true; createJobs.textContent="Creating…";
+    try{ await materializePlantingTasksFor(p.id, p.crop, p.variety, jobDates, creatable.map(m=>m.s)); }
+    catch(e){ alert("Couldn't create the jobs:\n"+e.message); }
+    const fresh=(data.plantings||[]).find(x=>x.id===p.id);
+    tlRenderPanel(fresh||p, panel, closeFn, opts);
+  };
   const overFix=panel.querySelector(".tl-over-fix");
   if(overFix) overFix.onclick=async ()=>{
     await assignBed(p.bedIds[0], p.id);              // too long for its own bed ⇒ asks shorten / run on
