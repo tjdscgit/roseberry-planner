@@ -6,7 +6,7 @@
 <title>Roseberry Planner</title>
 <!-- Fraunces: bed names and titles on the phone Field walk. Offline it falls back to Georgia. -->
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Barlow+Condensed:wght@600;700&display=swap">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -2192,10 +2192,11 @@
   .cm-bar-ext{position:absolute;left:2px;right:2px;height:2px;border-radius:1px;
     box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .cm-seg{position:absolute;left:0;right:0;z-index:1}
-  /* Crop name: the sans face, bigger and heavy, so it lifts off the crop colour. The tiny mono it
-     used to be read as a caption; the dates (.cm-bar-sub) stay small regular mono. */
-  .cm-bar-l{position:relative;z-index:2;font-family:var(--sans);font-size:.68rem;line-height:1.05;white-space:nowrap;
-    writing-mode:vertical-rl;text-orientation:mixed;font-weight:800;letter-spacing:.01em}
+  /* Crop name: a condensed face, so it can be set bigger (easier to read zoomed out) without the
+     name running further along the bar. Falls back to the system sans if the web font isn't
+     loaded (offline). The dates (.cm-bar-sub) stay small regular mono. */
+  .cm-bar-l{position:relative;z-index:2;font-family:"Barlow Condensed",var(--sans);font-size:.84rem;line-height:1;
+    white-space:nowrap;writing-mode:vertical-rl;text-orientation:mixed;font-weight:700;letter-spacing:.02em}
   .cm-chip{border:1px solid var(--line-2);border-left:4px solid var(--line-2);border-radius:6px;
     background:var(--paper);padding:.34rem .5rem;margin-bottom:.35rem;font-size:.72rem;
     cursor:grab;line-height:1.25}
