@@ -2262,6 +2262,23 @@
   .tl-rowlabel-pill{flex:0 0 auto;font-family:var(--mono);font-size:.58rem;font-weight:600;
     padding:.14rem .42rem;border-radius:999px;color:#fff;white-space:nowrap}
   .tl-rowlabel-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35}
+  /* Succession-group sub-header (By crop) — see tlAddSubRow. Sidebar label and chart band share a
+     height so the two columns stay row-for-row aligned. */
+  .tl-subhead{height:22px;display:flex;align-items:baseline;gap:.45rem;padding:0 .75rem 0 1.25rem;
+    font-family:var(--mono);font-size:.66rem;color:var(--ink-2);border-bottom:1px dashed var(--line);
+    white-space:nowrap;overflow:hidden;line-height:22px}
+  .tl-subhead-name{flex:0 0 auto;font-weight:700;color:var(--ink)}
+  .tl-subhead-meta{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .tl-subhead.is-loose .tl-subhead-name{font-weight:600;color:var(--ink-2);font-style:italic}
+  .tl-subhead.tl-hl-on{background:var(--paper-2)}
+  .tl-subband{height:22px;position:relative;border-bottom:1px dashed var(--line)}
+  .tl-subspan{position:absolute;top:10px;height:2px;background:var(--ink-2);opacity:.55}
+  .tl-subspan::before,.tl-subspan::after{content:"";position:absolute;top:-4px;width:2px;height:10px;background:inherit}
+  .tl-subspan::before{left:0}.tl-subspan::after{right:0}
+  .tl-subband:hover .tl-subspan{opacity:1}
+  /* Hovering a grouped bar: its group's bars stay, everything else fades — tlHighlightGroup. */
+  .tl-body-in.tl-hl .tl-bar:not(.tl-hl-on),.tl-body-in.tl-hl .tl-bar-ext,.tl-body-in.tl-hl .tl-bar-warn{opacity:.22}
+  .tl-body-in.tl-hl .tl-bar.tl-hl-on{box-shadow:0 0 0 2px var(--ink)}
   .tl-band{height:34px;background:var(--paper-2);border-bottom:1px solid var(--line);position:relative}
   .tl-bar.tl-group-bar{top:5px;height:24px}
   .tl-row{height:42px;position:relative;border-bottom:1px solid var(--line)}
@@ -14741,14 +14758,56 @@ function tlAddDate(bar,leftPx,text,align){
   bar.appendChild(el);
 }
 
+// Within a crop, plantings that share a Succession group sit together under a thin sub-header
+// ("Car-Win26  5 sowings", plus a bracket over the run in the chart), groups ordered by their first sowing, anything not in
+// a group last. Sorting the crop's rows by sow date alone interleaved two groups (Car-Win26 and
+// Car-26) so there was no telling which sowings belonged together. A crop with no groups at all
+// keeps the plain one-row-per-planting list.
 function tlGroupsByCrop(){
   const byCrop={};
   (data.plantingsActive||[]).forEach(p=>{ if(!p.sow) return; (byCrop[p.crop] ||= []).push(p); });
-  return Object.keys(byCrop).sort((a,b)=>a.localeCompare(b)).map(crop=>({
-    key:crop, label:crop,
-    rows: byCrop[crop].sort((a,b)=>String(a.sow).localeCompare(String(b.sow)))
-      .map(p=>({label:p.variety||crop, plantings:[p]})),
-  }));
+  const bySow=(a,b)=>String(a.sow).localeCompare(String(b.sow));
+  return Object.keys(byCrop).sort((a,b)=>a.localeCompare(b)).map(crop=>{
+    const ps=byCrop[crop].sort(bySow);
+    const one=p=>({label:p.variety||crop, plantings:[p]});
+    if(!ps.some(p=>p.group)) return {key:crop, label:crop, rows:ps.map(one)};
+    const byGrp={}, loose=[];
+    ps.forEach(p=>p.group ? (byGrp[p.group] ||= []).push(p) : loose.push(p));
+    const rows=[];
+    Object.keys(byGrp).sort((a,b)=>bySow(byGrp[a][0],byGrp[b][0])||a.localeCompare(b)).forEach(gk=>{
+      const m=byGrp[gk];
+      rows.push({sub:true, group:gk, label:gk, members:m,
+        meta:`${m.length} sowing${m.length===1?"":"s"}`,
+        range:m.length>1?`sown ${tlFmtShort(m[0].sow)} \u2013 ${tlFmtShort(m[m.length-1].sow)}`:`sown ${tlFmtShort(m[0].sow)}`});
+      m.forEach(p=>rows.push(one(p)));
+    });
+    if(loose.length){
+      rows.push({sub:true, group:null, label:"Not in a group", members:loose, meta:""});
+      loose.forEach(p=>rows.push(one(p)));
+    }
+    return {key:crop, label:crop, rows};
+  });
+}
+// "12 Jun" — the sub-header tooltip's sow range; a year only when it isn't the one on screen.
+function tlFmtShort(d){
+  const dt=new Date(d); if(isNaN(dt)) return "";
+  return dt.getDate()+" "+TL_MON[dt.getMonth()]+(dt.getFullYear()!==tlYear?" '"+String(dt.getFullYear()).slice(2):"");
+}
+// "LetMix-26 · 2 of 5" for tooltips — where this planting sits in its succession group.
+function tlGroupPos(p){
+  if(!p.group) return "";
+  const m=(data.plantingsActive||[]).filter(x=>x.group===p.group && x.sow)
+    .sort((a,b)=>String(a.sow).localeCompare(String(b.sow)));
+  const i=m.findIndex(x=>x.id===p.id);
+  return i<0 ? p.group : `${p.group} \u00b7 ${i+1} of ${m.length}`;
+}
+// Hovering a bar lifts every bar in the same succession group and fades the rest — in By bed
+// that's the only way to see a group, whose sowings are scattered over different beds and blocks.
+function tlHighlightGroup(group){
+  const body=document.getElementById("tlBodyInner"); if(!body) return;
+  body.classList.toggle("tl-hl",!!group);
+  body.querySelectorAll(".tl-bar[data-group]").forEach(el=>el.classList.toggle("tl-hl-on",!!group && el.dataset.group===group));
+  document.querySelectorAll("#tlSidebarInner .tl-subhead").forEach(el=>el.classList.toggle("tl-hl-on",!!group && el.dataset.group===group));
 }
 function tlGroupsByBed(){
   const groups={};
@@ -14843,12 +14902,17 @@ function tlAddBar(rowEl,p,b){
     bar.appendChild(seg);
   }
   const behind=tlIsBehind(p);
-  bar.title=`${p.crop}${p.variety?" · "+p.variety:""}\n${p.status||"—"} · bed ${bedNameOf(p)||"unassigned"}\n`
+  bar.title=`${p.crop}${p.variety?" · "+p.variety:""}\n${p.group?"Group "+tlGroupPos(p)+"\n":""}${p.status||"—"} · bed ${bedNameOf(p)||"unassigned"}\n`
     +`Sow ${fmt(p.sow)}${p.tp?"  ·  TP "+fmt(p.tp):""}\nHarvest ${fmt(p.h1)} – ${fmt(p.h2)}`
     +(behind?"\n⚠ Behind schedule":"")
     +(p.failed?`\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"");
   bar.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
   bar.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e,{kind:"planting", p}); };
+  if(p.group){
+    bar.dataset.group=p.group;
+    bar.addEventListener("mouseenter",()=>tlHighlightGroup(p.group));
+    bar.addEventListener("mouseleave",()=>tlHighlightGroup(null));
+  }
   if(p.failed){
     bar.classList.add("tl-bar-failed");
     const strike=document.createElement("div");strike.className="tl-bar-strike";
@@ -14916,6 +14980,37 @@ function tlAddBar(rowEl,p,b){
     if(start>rightEdge+gap && x+gap<lhStart) tlAddDate(bar,x,fhTxt,"right");
   }
   tlAddDate(bar,w-pad,lhTxt,"right");
+}
+
+// Succession-group sub-header (By crop): the group's name and sowings in the label column, and in
+// the chart a thin bracket from its first sowing to its last harvest — the whole run at a glance.
+// Hovering either lights the group's bars, same as hovering one of them.
+function tlAddSubRow(sideIn,bodyIn,row,b){
+  const lbl=document.createElement("div");
+  lbl.className="tl-subhead"+(row.group?"":" is-loose");
+  lbl.innerHTML=`<span class="tl-subhead-name">${esc(row.label)}</span>${row.meta?`<span class="tl-subhead-meta">${esc(row.meta)}</span>`:""}`;
+  lbl.title=row.group ? `Succession group ${row.label}: ${row.meta}, ${row.range}` : "Plantings of this crop with no succession group";
+  const band=document.createElement("div");band.className="tl-subband";
+  if(row.group){
+    lbl.dataset.group=row.group;
+    let lo=null,hi=null;
+    row.members.forEach(p=>{
+      const x0=tlX(p.sow,b), x1=tlX(p.h2||p.h1||p.sow,b);
+      if(x0==null||x1==null) return;
+      lo=lo==null?Math.min(x0,x1):Math.min(lo,x0,x1); hi=hi==null?Math.max(x0,x1):Math.max(hi,x0,x1);
+    });
+    if(lo!=null){
+      const br=document.createElement("div");br.className="tl-subspan";
+      br.style.left=lo+"px";br.style.width=Math.max(2,hi-lo)+"px";
+      br.title=lbl.title;
+      band.appendChild(br);
+    }
+    [lbl,band].forEach(el=>{
+      el.addEventListener("mouseenter",()=>tlHighlightGroup(row.group));
+      el.addEventListener("mouseleave",()=>tlHighlightGroup(null));
+    });
+  }
+  sideIn.appendChild(lbl); bodyIn.appendChild(band);
 }
 
 // collapsed-group summary bar: spans from the earliest sow to the latest harvest
@@ -15070,9 +15165,10 @@ function buildTimeline(){
   let groups = tlGroupMode==="crop" ? tlGroupsByCrop() : tlGroupsByBed();
   if(tlSearchQuery){
     groups = groups.map(g=>({key:g.key, label:g.label,
-        rows: g.rows.map(row=>({label:row.label, bedId:row.bedId, plantings:row.plantings.filter(tlMatchesQuery)}))
-                     .filter(row=>row.plantings.length)}))
-      .filter(g=>g.rows.length);
+        rows: g.rows.map(row=>row.sub ? {...row, members:row.members.filter(tlMatchesQuery)}
+                                       : ({label:row.label, bedId:row.bedId, plantings:row.plantings.filter(tlMatchesQuery)}))
+                     .filter(row=>row.sub ? row.members.length : row.plantings.length)}))
+      .filter(g=>g.rows.some(r=>!r.sub));
   }
   if(tlSearchQuery && !groups.length){
     const note=document.createElement("div");note.className="empty-note";note.style.padding=".6rem 1rem";
@@ -15082,7 +15178,7 @@ function buildTimeline(){
   groups.forEach(g=>{
     const key=tlGroupMode+":"+g.key, collapsed=tlCollapsed.has(key);
     const gh=document.createElement("div");gh.className="tl-grouphead";
-    gh.innerHTML=`<span>${collapsed?"▸":"▾"}</span><span>${esc(g.label)}</span><span class="tw">${g.rows.length}</span>`;
+    gh.innerHTML=`<span>${collapsed?"▸":"▾"}</span><span>${esc(g.label)}</span><span class="tw">${g.rows.filter(r=>!r.sub).length}</span>`;
     gh.onclick=()=>{ collapsed?tlCollapsed.delete(key):tlCollapsed.add(key); buildTimeline(); };
     gh.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e); };
     sideIn.appendChild(gh);
@@ -15094,6 +15190,7 @@ function buildTimeline(){
       return;
     }
     g.rows.forEach(row=>{
+      if(row.sub){ tlAddSubRow(sideIn,bodyIn,row,b); return; }
       const lbl=document.createElement("div");lbl.className="tl-rowlabel";lbl.title=row.label;
       // By-crop view: each row is exactly one planting, so its status pill can live here in the
       // fixed column instead of floating over the (horizontally-scrolling) bar area
