@@ -2272,10 +2272,11 @@
   .tl-subhead.is-loose .tl-subhead-name{font-weight:600;color:var(--ink-2);font-style:italic}
   .tl-subhead.tl-hl-on{background:var(--paper-2)}
   .tl-subband{height:22px;position:relative;border-bottom:1px dashed var(--line)}
-  .tl-subspan{position:absolute;top:10px;height:2px;background:var(--ink-2);opacity:.55}
-  .tl-subspan::before,.tl-subspan::after{content:"";position:absolute;top:-4px;width:2px;height:10px;background:inherit}
+  .tl-subspan{position:absolute;top:4px;height:14px;opacity:.55;cursor:default;
+    background:linear-gradient(var(--ink-2),var(--ink-2)) center/100% 2px no-repeat}
+  .tl-subspan::before,.tl-subspan::after{content:"";position:absolute;top:2px;width:2px;height:10px;background:var(--ink-2)}
   .tl-subspan::before{left:0}.tl-subspan::after{right:0}
-  .tl-subband:hover .tl-subspan{opacity:1}
+  .tl-subspan:hover{opacity:1}
   /* Hovering a grouped bar: its group's bars stay, everything else fades — tlHighlightGroup. */
   .tl-body-in.tl-hl .tl-bar:not(.tl-hl-on),.tl-body-in.tl-hl .tl-bar-ext,.tl-body-in.tl-hl .tl-bar-warn{opacity:.22}
   .tl-body-in.tl-hl .tl-bar.tl-hl-on{box-shadow:0 0 0 2px var(--ink)}
@@ -2447,6 +2448,7 @@
     padding:.45rem .6rem;border-radius:6px;font-family:var(--mono);font-size:.76rem;
     color:var(--ink);cursor:pointer}
   .tl-ctx button:hover{background:var(--paper-2)}
+  .tl-ctx button:disabled{color:var(--ink-2);opacity:.6;cursor:default;background:none}
   .tl-ctx-label{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;
     color:var(--ink-2);padding:.35rem .6rem .2rem}
   .tl-ctx-sep{border-top:1px solid var(--line);margin:.25rem 0}
@@ -14801,8 +14803,9 @@ function tlGroupPos(p){
   const i=m.findIndex(x=>x.id===p.id);
   return i<0 ? p.group : `${p.group} \u00b7 ${i+1} of ${m.length}`;
 }
-// Hovering a bar lifts every bar in the same succession group and fades the rest — in By bed
-// that's the only way to see a group, whose sowings are scattered over different beds and blocks.
+// Hovering a group's bracket (By crop sub-header, tlAddSubRow) lifts every bar in that succession
+// group and fades the rest. Only the bracket — firing on every bar and sub-header too was "too
+// distracting when happening all the time" (user, 2026-10-12).
 function tlHighlightGroup(group){
   const body=document.getElementById("tlBodyInner"); if(!body) return;
   body.classList.toggle("tl-hl",!!group);
@@ -14908,11 +14911,7 @@ function tlAddBar(rowEl,p,b){
     +(p.failed?`\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"");
   bar.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
   bar.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e,{kind:"planting", p}); };
-  if(p.group){
-    bar.dataset.group=p.group;
-    bar.addEventListener("mouseenter",()=>tlHighlightGroup(p.group));
-    bar.addEventListener("mouseleave",()=>tlHighlightGroup(null));
-  }
+  if(p.group) bar.dataset.group=p.group;
   if(p.failed){
     bar.classList.add("tl-bar-failed");
     const strike=document.createElement("div");strike.className="tl-bar-strike";
@@ -14984,7 +14983,7 @@ function tlAddBar(rowEl,p,b){
 
 // Succession-group sub-header (By crop): the group's name and sowings in the label column, and in
 // the chart a thin bracket from its first sowing to its last harvest — the whole run at a glance.
-// Hovering either lights the group's bars, same as hovering one of them.
+// Hovering the bracket lights the group's bars (tlHighlightGroup).
 function tlAddSubRow(sideIn,bodyIn,row,b){
   const lbl=document.createElement("div");
   lbl.className="tl-subhead"+(row.group?"":" is-loose");
@@ -15003,12 +15002,10 @@ function tlAddSubRow(sideIn,bodyIn,row,b){
       const br=document.createElement("div");br.className="tl-subspan";
       br.style.left=lo+"px";br.style.width=Math.max(2,hi-lo)+"px";
       br.title=lbl.title;
+      br.addEventListener("mouseenter",()=>tlHighlightGroup(row.group));
+      br.addEventListener("mouseleave",()=>tlHighlightGroup(null));
       band.appendChild(br);
     }
-    [lbl,band].forEach(el=>{
-      el.addEventListener("mouseenter",()=>tlHighlightGroup(row.group));
-      el.addEventListener("mouseleave",()=>tlHighlightGroup(null));
-    });
   }
   sideIn.appendChild(lbl); bodyIn.appendChild(band);
 }
@@ -15643,7 +15640,12 @@ function tlShowCtxMenu(ev,target){
   tlCtxTarget=target||null;
   const menu=document.getElementById("tlCtxMenu");
   menu.innerHTML = (target && target.kind==="planting")
-    ? `<button data-act="duplicate">Duplicate planting</button>`
+    ? `<button data-act="edit">Edit planting</button>`
+      +(()=>{ const n=target.p.group ? (data.plantings||[]).filter(x=>x.group===target.p.group).length : 0;
+          return n>1 ? `<button data-act="editgroup">Edit succession group (${n})</button>`
+                     : `<button data-act="editgroup" disabled title="${target.p.group?"Only planting in its group":"Not in a succession group"}">Edit succession group</button>`; })()
+      +`<div class="tl-ctx-sep"></div>`
+      +`<button data-act="duplicate">Duplicate planting</button>`
       +`<button data-act="succession">Add succession</button>`
       +`<div class="tl-ctx-sep"></div>`
       +`<button data-act="removecrop" class="tl-ctx-danger">Delete / crop failure…</button>`
@@ -15653,6 +15655,9 @@ function tlShowCtxMenu(ev,target){
   const x=Math.min(ev.clientX-sec.left, sec.width-190), y=Math.min(ev.clientY-sec.top, sec.height-100);
   menu.style.left=Math.max(4,x)+"px"; menu.style.top=Math.max(4,y)+"px";
   menu.classList.add("open");
+  // The planting menu is taller than the 100px allowance above — pull it up so it stays on screen.
+  const over=menu.offsetTop+menu.offsetHeight-(sec.height-4);
+  if(over>0) menu.style.top=Math.max(4,menu.offsetTop-over)+"px";
 }
 function tlHideCtxMenu(){ document.getElementById("tlCtxMenu").classList.remove("open"); tlCtxTarget=null; }
 function tlSetAllCollapsed(collapsed){
@@ -15669,6 +15674,9 @@ document.getElementById("tlCtxMenu").addEventListener("click",e=>{
   tlHideCtxMenu();
   if(act==="collapse") tlSetAllCollapsed(true);
   else if(act==="expand") tlSetAllCollapsed(false);
+  else if(act==="edit" && target) apOpenEdit(target.p);
+  // The same edit dialog with its "All in group" scope switched on — what the scope toggle does.
+  else if(act==="editgroup" && target){ apOpenEdit(target.p); if(apEditMembers.length>1) apSetScope("group"); }
   else if(act==="duplicate" && target) tlDuplicatePlanting(target.p);
   else if(act==="succession" && target) tlOpenSuccessionModal(target.p);
   else if(act==="removecrop" && target) tlOpenRemoveCropModal(target.p, null, tlClosePanel, {});
