@@ -2542,24 +2542,102 @@
   .ap-crop-item:hover,.ap-crop-item.sel{background:var(--paper-2)}
   .ap-crop-dot{width:.85rem;height:.85rem;border-radius:50%;flex:0 0 auto}
   .ap-crop-empty{padding:.9rem;color:var(--ink-2);font-size:.94rem}
-  .ap-tabs{display:flex;gap:1.6rem;border-bottom:1px solid var(--line-2);margin:1.2rem 0 1.3rem}
-  .ap-tab-btn{appearance:none;border:none;background:none;cursor:pointer;font-family:var(--mono);
-    font-size:.86rem;letter-spacing:.03em;padding:0 0 .7rem;color:var(--ink-2);
-    border-bottom:2px solid transparent;margin-bottom:-1px}
-  .ap-tab-btn[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--steel);font-weight:600}
-  .ap-tab-btn:hover{color:var(--ink)}
-  .ap-step2-body{display:flex;align-items:flex-start;margin-top:.2rem}
-  .ap-step2-main{flex:1 1 auto;min-width:0;padding-right:1.8rem}
-  .ap-sidebar{flex:0 0 250px;position:sticky;top:0;align-self:flex-start;
-    border-left:1px solid var(--line-2);padding-left:1.6rem;
-    display:flex;flex-direction:column;gap:1rem}
-  .ap-sidebar-crop{font-weight:700;font-size:1.08rem}
-  .ap-sidebar-variety{font-family:var(--mono);font-size:.72rem;color:var(--ink-2);
-    text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem}
-  .ap-side-rows{display:flex;flex-direction:column;gap:.9rem}
-  .ap-side-group{display:flex;flex-direction:column;gap:.5rem;border-top:1px solid var(--line);padding-top:.8rem}
-  .ap-side-label{font-family:var(--mono);font-size:.62rem;text-transform:uppercase;
-    letter-spacing:.08em;color:var(--ink-2);opacity:.8}
+  /* ---- Add/Edit planting, step 2 (redesign option A): timeline strip + three columns, no tabs ---- */
+  #apModal .ap-card{width:min(1180px,100%);padding:1.5rem 1.9rem 1.4rem}
+  .ap2-head{display:flex;align-items:flex-start;gap:1rem;padding-bottom:1rem;border-bottom:1px solid var(--line)}
+  .ap2-dot{width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:.5rem;background:var(--line-2)}
+  .ap2-titles{flex:1 1 auto;min-width:0}
+  .ap2-titles .ap-sub{margin:.2rem 0 0}
+  .ap2-head .seg{flex:0 0 auto;margin-top:.15rem}
+  .ap2-x{position:static;flex:0 0 auto;width:2.4rem;height:2.4rem;margin:-.3rem -.6rem 0 0}
+  .ap2-due{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;margin-top:1rem;padding:.6rem .8rem;
+    border-radius:10px;background:var(--clay-tint);font-size:.92rem}
+  .ap2-due[hidden]{display:none}
+  .ap2-due-msg{flex:1 1 16rem}
+  .ap2-due .btn-ghost{padding:.4rem .75rem;font-size:.84rem}
+  .ap2-timing{margin-top:1.1rem;display:flex;flex-direction:column;gap:.8rem}
+  /* The strip: positions are % of the strip's date range, worked out in apRenderStrip(). */
+  .ap2-strip{position:relative;height:90px;user-select:none;-webkit-user-select:none}
+  .ap2-strip[hidden]{display:none}
+  .ap2-track{position:absolute;left:0;right:0;top:22px;height:44px;border-radius:8px;
+    background:var(--paper-2);border:1px solid var(--line)}
+  .ap2-mon{position:absolute;top:22px;height:44px;border-left:1px solid var(--line)}
+  .ap2-monl{position:absolute;top:24px;font-family:var(--mono);font-size:.62rem;letter-spacing:.06em;
+    color:var(--ink-2);text-transform:uppercase;padding-left:3px;white-space:nowrap}
+  .ap2-today{position:absolute;top:18px;height:52px;border-left:2px dashed var(--clay);opacity:.7}
+  .ap2-seg{position:absolute;top:38px;height:18px}
+  .ap2-seg-nur{background:repeating-linear-gradient(135deg,var(--steel-soft) 0 6px,transparent 6px 12px);
+    border:1px solid var(--steel-soft);box-sizing:border-box;border-radius:5px 0 0 5px;opacity:.75}
+  .ap2-seg-grow{background:var(--ap2-crop,var(--ok));opacity:.55}
+  .ap2-seg-harv{background:var(--ap2-crop,var(--ok));border-radius:0 5px 5px 0}
+  .ap2-seg-first{border-top-left-radius:5px;border-bottom-left-radius:5px}
+  .ap2-seg-tarp{background:repeating-linear-gradient(135deg,var(--tarp-a) 0 5px,var(--tarp-b) 5px 10px);
+    border:1px solid var(--tarp-edge);box-sizing:border-box;border-radius:0 5px 5px 0}
+  .ap2-dur{position:absolute;top:71px;transform:translateX(-50%);font-family:var(--mono);font-size:.68rem;
+    color:var(--ink);white-space:nowrap;background:var(--paper);padding:0 .3rem}
+  .ap2-h{position:absolute;top:33px;width:14px;height:28px;margin-left:-7px;padding:0;border-radius:4px;
+    border:2px solid var(--ink);background:var(--paper);cursor:ew-resize;touch-action:none;z-index:2}
+  .ap2-h:hover,.ap2-h:focus-visible,.ap2-h.drag{border-color:var(--steel);background:var(--steel);outline:none}
+  .ap2-h:disabled{cursor:not-allowed;border-color:var(--line-2)}
+  .ap2-hl{position:absolute;top:0;font-size:.8rem;font-weight:600;white-space:nowrap}
+  .ap2-strip-empty{position:absolute;top:36px;left:14px}
+  .ap2-act{position:absolute;top:58px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:var(--ok);z-index:1}
+  .ap2-dates{display:flex;align-items:flex-end;gap:.6rem;flex-wrap:wrap}
+  .ap2-date{flex:1 1 9.5rem;min-width:8.5rem}
+  .ap2-days{flex:0 0 6.6rem}
+  .ap2-days>span{white-space:nowrap}
+  .ap2-days input{text-align:center}
+  .ap2-subrow{display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap}
+  .ap2-subrow .ap-climate{margin:0;flex:1 1 auto;align-self:center}
+  .ap2-actual{flex:0 0 11rem}
+  .ap2-lbl,.ap2-colh{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-2);font-weight:400;margin:0}
+  .ap2-colh{color:var(--ink)}
+  .ap2-colh-gap{margin-top:.6rem}
+  .ap2-jobs{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+  .ap2-jobchips{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;flex:1 1 auto}
+  .ap2-chip{display:inline-flex;align-items:center;gap:.4rem;border:1px solid var(--line-2);border-radius:999px;
+    padding:.3rem .7rem;font-size:.82rem;background:var(--paper-2);white-space:nowrap}
+  .ap2-chip i{width:7px;height:7px;border-radius:50%;background:var(--ink-2);flex:0 0 auto}
+  .ap2-chip.late{border-color:var(--clay);background:var(--clay-tint)}
+  .ap2-chip.late i{background:var(--clay)}
+  .ap2-chip.done{color:var(--ink-2)}
+  .ap2-chip.done i{background:var(--ok)}
+  .ap2-chip.unsaved{border-style:dashed;background:none;color:var(--ink-2)}
+  .ap2-none{font-size:.86rem;color:var(--ink-2)}
+  .ap2-link{border:none;background:none;color:var(--steel);cursor:pointer;font:inherit;font-size:.86rem;padding:.3rem .2rem}
+  .ap2-link:hover{text-decoration:underline}
+  .ap2-make{border:1px dashed var(--steel-soft);background:none;color:var(--steel);border-radius:999px;
+    padding:.3rem .75rem;font-size:.82rem;cursor:pointer}
+  .ap2-tasks{border:1px solid var(--line);border-radius:10px;padding:.4rem .9rem .8rem}
+  .ap2-tasks[hidden]{display:none}
+  .ap2-cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1.8rem;margin-top:1.2rem;
+    padding-top:1.1rem;border-top:1px solid var(--line)}
+  .ap2-col{display:flex;flex-direction:column;gap:.85rem;min-width:0}
+  .ap2-colhrow{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+  .ap2-colhrow .ap2-link{font-size:.78rem;padding:0}
+  .ap2-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem .8rem}
+  .ap2-bedrow{display:flex;gap:.5rem}
+  .ap2-bedrow select{flex:1 1 auto;min-width:0}
+  .ap2-bedrow .btn-ghost{flex:0 0 auto;padding:.4rem .75rem;font-size:.84rem}
+  #apBedSuggestList:empty,#apBedWarn:empty{display:none}
+  #apBedSuggestList{margin-top:0}
+  .ap2-col .seg button{flex:1 1 0;padding:.75rem .6rem;font-size:.7rem}
+  .ap2-col .ap-bedviz{margin-top:0;padding:.5rem .6rem}
+  .ap2-col .ap-bedviz-svg{height:auto}
+  .ap2-works{border:1px solid var(--line);border-radius:10px;padding:.7rem .85rem;display:flex;flex-direction:column;gap:.45rem}
+  .ap2-works .ap-side-row .v{font-weight:600}
+  .ap2-works .ap-side-row.total .v{color:var(--ok)}
+  .ap2-works .ap-side-row .v.muted{color:var(--ink-2);font-weight:400;font-family:var(--sans)}
+  .ap2-notes{margin-top:1.2rem}
+  #apModal .ap-card input::placeholder{color:var(--ink-2);opacity:.75}
+  @media(max-width:900px){ .ap2-cols{grid-template-columns:1fr 1fr} }
+  @media(max-width:620px){
+    #apModal .ap-card{padding:1.1rem 1rem 1rem}
+    .ap2-cols{grid-template-columns:1fr}
+    .ap2-head{flex-wrap:wrap}
+    .ap2-head .seg{order:3;flex:1 1 100%}
+    .ap2-actual{flex:1 1 9rem}
+  }
   /* Bed-issue warning, pinned above the summary groups. Deliberately calm — it's a heads-up, not
      an error, and the Create button stays live behind it. .ap-bedwarn-avoid only deepens the ink. */
   .ap-bedwarn{display:flex;flex-direction:column;gap:.4rem;padding:.6rem .7rem;border-radius:6px;
@@ -2574,14 +2652,6 @@
   .ap-side-row{display:flex;justify-content:space-between;gap:.7rem;font-size:.84rem}
   .ap-side-row .k{color:var(--ink-2)}
   .ap-side-row .v{font-weight:600;font-family:var(--mono);text-align:right}
-  .ap-side-rows-total{border-top:1px solid var(--line);padding-top:.8rem;
-    display:flex;flex-direction:column;gap:.5rem}
-  .ap-side-rows-total .ap-side-row .v{font-size:1.05rem;color:var(--ok)}
-  @media(max-width:760px){
-    .ap-step2-body{flex-direction:column}
-    .ap-sidebar{position:static;width:100%;flex:0 0 auto;border-left:none;
-      border-top:1px solid var(--line-2);padding-left:0;padding-top:1.4rem;margin-top:.6rem}
-  }
   .ap-bedviz{margin-top:.6rem;padding:.9rem 1rem;background:var(--paper-2);
     border:1px solid var(--line);border-radius:10px}
   .ap-bedviz-svg{width:100%;height:130px;display:block}
@@ -6513,210 +6583,198 @@
         <div class="ap-crop-list" id="apCropList"></div>
       </div>
 
-      <!-- Step 2: details -->
+      <!-- Step 2: details. One page, no tabs (Edit planting redesign, option A): a timeline strip
+           with draggable dates up top, then Planting / Spacing+Nursery / Harvest in three columns.
+           Every field keeps its old id, so the create/save/delete paths are untouched. -->
       <div id="apStep2" style="display:none">
-        <button class="ap-x" id="apClose2" title="Close">✕</button>
-        <div class="ap-head" id="apCropName">Crop</div>
-        <div class="ap-sub" id="apDefaultsNote"></div>
-
-        <div class="seg" id="apScopeWrap" style="display:none;margin-bottom:.8rem">
-          <button type="button" data-scope="single" aria-pressed="true">This planting</button>
-          <button type="button" data-scope="group" aria-pressed="false">Whole group</button>
-        </div>
-
-        <div class="ap-tabs" id="apTabBar">
-          <button type="button" class="ap-tab-btn" data-tab="details" aria-selected="true">Planting Details</button>
-          <button type="button" class="ap-tab-btn" data-tab="bed" aria-selected="false">Bed</button>
-          <button type="button" class="ap-tab-btn" data-tab="rows" aria-selected="false">Row Spacing</button>
-          <button type="button" class="ap-tab-btn" data-tab="harvest" aria-selected="false">Harvest</button>
-          <button type="button" class="ap-tab-btn" data-tab="nursery" aria-selected="false">Nursery</button>
-          <button type="button" class="ap-tab-btn" data-tab="tasks" aria-selected="false">Tasks</button>
-        </div>
-
-        <div class="ap-step2-body">
-        <div class="ap-step2-main">
-        <div class="ap-tabpane" id="apTab-details">
-        <div class="ap-grid">
-          <label class="ap-field"><span>Variety</span>
-            <select id="apVariety"></select></label>
-
-          <div class="ap-field"><span>Method</span>
-            <div class="seg" id="apMethod">
-              <button type="button" data-method="direct" aria-pressed="true">Direct seed</button>
-              <button type="button" data-method="transplant" aria-pressed="false">Transplant</button>
-            </div>
+        <div class="ap2-head">
+          <span class="ap2-dot" id="apCropDot" aria-hidden="true"></span>
+          <div class="ap2-titles">
+            <div class="ap-head" id="apCropName">Crop</div>
+            <div class="ap-sub" id="apDefaultsNote"></div>
           </div>
-          <label class="ap-field"><span>Bed metres</span>
-            <div class="ap-bm-row">
-              <input type="number" id="apBm" min="0" step="0.1" placeholder="e.g. 15">
-              <select id="apBmPreset" title="Fill from a standard bed size" aria-label="Quick bed-metre sizes">
-                <option value="">Quick size…</option>
-                <option value="15">Short bed (15m)</option>
-                <option value="7.5">Half short bed (7.5m)</option>
-                <option value="28">Long bed (28m)</option>
-                <option value="14">Half long bed (14m)</option>
-                <option value="20">Greenhouse (20m)</option>
-                <option value="10">Half greenhouse (10m)</option>
-              </select>
-            </div>
-          </label>
-          <div class="ap-field ap-succ" id="apSuccField">
-            <span>Successions</span>
-            <div class="ap-succ-row">
-              <input type="number" id="apCount" min="1" step="1" value="1" title="Number of plantings">
-              <span class="ap-x-lbl">×</span>
-              <input type="number" id="apGap" min="0" step="1" value="14" title="Days between plantings" disabled>
-              <span class="ap-x-lbl">days apart</span>
-            </div>
+          <div class="seg" id="apScopeWrap" style="display:none">
+            <button type="button" data-scope="single" aria-pressed="true">This planting</button>
+            <button type="button" data-scope="group" aria-pressed="false">Whole group</button>
           </div>
+          <button class="ap-x ap2-x" id="apClose2" title="Close" aria-label="Close">✕</button>
         </div>
 
-        <div class="ap-sect">Timing</div>
-        <div class="ap-climate" id="apClimateWrap">
-          <label class="ap-climate-toggle">
-            <input type="checkbox" id="apClimate"> Use climate-adjusted DTM
-          </label>
-          <span class="ap-climate-hint" id="apClimateHint"></span>
-        </div>
-        <div class="ap-grid">
-          <label class="ap-field" id="apSowWrap"><span>Sow date</span>
-            <input type="date" id="apSow"></label>
-          <label class="ap-field" id="apNurseryWrap" style="display:none"><span>Days in nursery</span>
-            <input type="number" id="apNursery" min="0" step="1"></label>
+        <div class="ap2-due" id="apDue" hidden></div>
 
-          <label class="ap-field" id="apTpWrap" style="display:none"><span>Transplant date</span>
-            <input type="date" id="apTp"></label>
-          <label class="ap-field" id="apDtmWrap"><span>Days to maturity</span>
-            <input type="number" id="apDtm" min="0" step="1"></label>
+        <div class="ap2-timing">
+          <div class="ap2-strip" id="apStrip"></div>
 
-          <label class="ap-field" id="apH1Wrap"><span>First harvest</span>
-            <input type="date" id="apH1"></label>
-          <label class="ap-field" id="apWindowWrap"><span>Harvest window (days)</span>
-            <input type="number" id="apWindow" min="0" step="1"></label>
-
-          <label class="ap-field" id="apH2Wrap"><span>Last harvest</span>
-            <input type="date" id="apH2"></label>
-          <label class="ap-field" id="apGroupWrap"><span>Succession group</span>
-            <input type="text" id="apGroup" placeholder="optional"></label>
-
-          <label class="ap-field" id="apSowActualWrap" title="When this was actually seeded, if different from the plan above">
-            <span>Actual sow date</span>
-            <input type="date" id="apSowActual"></label>
-          <label class="ap-field" id="apTpActualWrap" style="display:none" title="When this was actually transplanted, if different from the plan above">
-            <span>Actual transplant date</span>
-            <input type="date" id="apTpActual"></label>
-        </div>
-
-        <div class="ap-sect">Termination</div>
-        <div class="ap-climate" id="apTarpWrap">
-          <label class="ap-climate-toggle">
-            <input type="checkbox" id="apTarp"> Tarp after this crop
-          </label>
-          <span class="ap-succ-row" id="apTarpWeeksRow" style="display:none">
-            <input type="number" id="apTarpWeeks" min="0" step="1" value="3" title="Weeks under tarp">
-            <span class="ap-x-lbl">weeks from last harvest</span>
-          </span>
-          <span class="ap-climate-hint" id="apTarpHint"></span>
-        </div>
-
-        <div class="ap-sect">Notes</div>
-        <label class="ap-field"><span>Notes</span>
-          <textarea id="apNotes" rows="4" placeholder="Anything worth remembering about this planting…"></textarea></label>
-        </div><!-- /apTab-details -->
-
-        <div class="ap-tabpane" id="apTab-bed" style="display:none">
-          <div class="ap-grid">
-            <label class="ap-field"><span>Bed</span>
-              <select id="apBed"></select></label>
+          <div class="ap2-dates">
+            <label class="ap-field ap2-date" id="apSowWrap"><span>Sow</span>
+              <input type="date" id="apSow"></label>
+            <label class="ap-field ap2-days" id="apNurseryWrap" style="display:none"><span>Nursery days</span>
+              <input type="number" id="apNursery" min="0" step="1"></label>
+            <label class="ap-field ap2-date" id="apTpWrap" style="display:none"><span>Transplant</span>
+              <input type="date" id="apTp"></label>
+            <label class="ap-field ap2-days" id="apDtmWrap"><span>Maturity days</span>
+              <input type="number" id="apDtm" min="0" step="1"></label>
+            <label class="ap-field ap2-date" id="apH1Wrap"><span>First harvest</span>
+              <input type="date" id="apH1"></label>
+            <label class="ap-field ap2-days" id="apWindowWrap"><span>Window days</span>
+              <input type="number" id="apWindow" min="0" step="1"></label>
+            <label class="ap-field ap2-date" id="apH2Wrap"><span>Last harvest</span>
+              <input type="date" id="apH2"></label>
           </div>
-          <div class="ap-field ap-bed-suggest" id="apBedSuggestWrap" style="margin-top:1.1rem">
-            <div class="ap-bed-suggest-head">
-              <span>Bed suggestions</span>
-              <button type="button" class="btn-ghost" id="apSuggestBedsBtn">Suggest beds</button>
+
+          <div class="ap2-subrow">
+            <div class="ap-climate" id="apClimateWrap">
+              <label class="ap-climate-toggle">
+                <input type="checkbox" id="apClimate"> Use climate-adjusted DTM
+              </label>
+              <span class="ap-climate-hint" id="apClimateHint"></span>
             </div>
+            <label class="ap-field ap2-actual" id="apSowActualWrap" title="When this was actually seeded, if different from the plan">
+              <span>Actually sown</span>
+              <input type="date" id="apSowActual"></label>
+            <label class="ap-field ap2-actual" id="apTpActualWrap" style="display:none" title="When this was actually transplanted, if different from the plan">
+              <span>Actually transplanted</span>
+              <input type="date" id="apTpActual"></label>
+          </div>
+
+          <div class="ap2-jobs">
+            <span class="ap2-lbl">Jobs</span>
+            <div class="ap2-jobchips" id="apJobChips"></div>
+            <button type="button" class="ap2-link" id="apJobsToggle" aria-expanded="false" aria-controls="apTaskListWrap">Edit jobs</button>
+          </div>
+          <div id="apTaskListWrap" class="ap2-tasks" hidden></div>
+        </div>
+
+        <div class="ap2-cols">
+          <section class="ap2-col" aria-labelledby="apColPlanting">
+            <h3 class="ap2-colh" id="apColPlanting">Planting</h3>
+            <label class="ap-field"><span>Variety</span>
+              <select id="apVariety"></select></label>
+            <div class="ap-field"><span>Method</span>
+              <div class="seg" id="apMethod">
+                <button type="button" data-method="direct" aria-pressed="true">Direct seed</button>
+                <button type="button" data-method="transplant" aria-pressed="false">Transplant</button>
+              </div>
+            </div>
+            <div class="ap-field"><span>Bed</span>
+              <div class="ap2-bedrow">
+                <select id="apBed" aria-label="Bed"></select>
+                <button type="button" class="btn-ghost" id="apSuggestBedsBtn">Suggest</button>
+              </div>
+            </div>
+            <div id="apBedWarn"></div>
             <div id="apBedSuggestList" class="ap-bed-suggest-list"></div>
-          </div>
-        </div><!-- /apTab-bed -->
+            <label class="ap-field"><span>Bed metres</span>
+              <div class="ap-bm-row">
+                <input type="number" id="apBm" min="0" step="0.1" placeholder="e.g. 15">
+                <select id="apBmPreset" title="Fill from a standard bed size" aria-label="Quick bed-metre sizes">
+                  <option value="">Quick size…</option>
+                  <option value="15">Short bed (15m)</option>
+                  <option value="7.5">Half short bed (7.5m)</option>
+                  <option value="28">Long bed (28m)</option>
+                  <option value="14">Half long bed (14m)</option>
+                  <option value="20">Greenhouse (20m)</option>
+                  <option value="10">Half greenhouse (10m)</option>
+                </select>
+              </div>
+            </label>
+            <div class="ap-field ap-succ" id="apSuccField">
+              <span>Successions</span>
+              <div class="ap-succ-row">
+                <input type="number" id="apCount" min="1" step="1" value="1" title="Number of plantings">
+                <span class="ap-x-lbl">×</span>
+                <input type="number" id="apGap" min="0" step="1" value="14" title="Days between plantings" disabled>
+                <span class="ap-x-lbl">days apart</span>
+              </div>
+            </div>
+            <label class="ap-field" id="apGroupWrap"><span>Succession group</span>
+              <input type="text" id="apGroup" placeholder="optional"></label>
+          </section>
 
-        <div class="ap-tabpane" id="apTab-rows" style="display:none">
-          <div class="ap-grid">
-            <label class="ap-field"><span>Number of rows</span>
-              <input type="number" id="apRows" min="0" step="1"></label>
-            <label class="ap-field"><span>Spacing between rows (cm)</span>
-              <input type="number" id="apRowSpacing" min="0" step="0.1"></label>
-            <label class="ap-field"><span>Spacing on the row (cm)</span>
-              <input type="number" id="apPlantSpacing" min="0" step="0.1"></label>
-            <label class="ap-field"><span>Seeder type</span>
-              <select id="apSeeder">
-                <option value="">—</option>
-                <option value="Hand">Hand</option>
-                <option value="Push seeder">Push seeder</option>
-                <option value="Precision seeder">Precision seeder</option>
-                <option value="Multi-row seeder">Multi-row seeder</option>
-              </select></label>
-          </div>
-          <div class="ap-sect">Bed layout preview</div>
-          <div class="ap-bedviz" id="apBedViz"></div>
-        </div>
+          <section class="ap2-col" aria-labelledby="apColSpacing">
+            <div class="ap2-colhrow">
+              <h3 class="ap2-colh" id="apColSpacing">Spacing</h3>
+              <button type="button" class="ap2-link" id="apFillDefaults" hidden>Fill blanks from crop defaults</button>
+            </div>
+            <div class="ap2-pair">
+              <label class="ap-field"><span>Rows</span>
+                <input type="number" id="apRows" min="0" step="1"></label>
+              <label class="ap-field"><span>Between rows cm</span>
+                <input type="number" id="apRowSpacing" min="0" step="0.1"></label>
+              <label class="ap-field"><span>In the row cm</span>
+                <input type="number" id="apPlantSpacing" min="0" step="0.1"></label>
+              <label class="ap-field"><span>Seeder</span>
+                <select id="apSeeder">
+                  <option value="">—</option>
+                  <option value="Hand">Hand</option>
+                  <option value="Push seeder">Push seeder</option>
+                  <option value="Precision seeder">Precision seeder</option>
+                  <option value="Multi-row seeder">Multi-row seeder</option>
+                </select></label>
+            </div>
+            <div class="ap-bedviz" id="apBedViz"></div>
 
-        <div class="ap-tabpane" id="apTab-harvest" style="display:none">
-          <div class="ap-grid">
-            <label class="ap-field"><span>Harvest unit</span>
-              <select id="apHarvestUnit">
-                <option value="">—</option>
-                <option value="Each">Each</option>
-                <option value="Bunch">Bunch</option>
-                <option value="Kilogram">Kilogram</option>
-                <option value="Box">Box</option>
-                <option value="Bag">Bag</option>
-                <option value="Punnet">Punnet</option>
-                <option value="Dozen">Dozen</option>
-                <option value="Bundle">Bundle</option>
-              </select></label>
-            <label class="ap-field"><span>Number per unit</span>
-              <input type="number" id="apPlantsPerUnit" min="0" step="1" placeholder="n/a"></label>
-            <label class="ap-field"><span>Price (per unit)</span>
-              <input type="number" id="apPrice" min="0" step="0.01" placeholder="e.g. 4.50"></label>
-            <label class="ap-field"><span>Yield per bed metre</span>
-              <input type="number" id="apYield" min="0" step="0.01">
-              <span class="ap-climate-hint" id="apYieldHint"></span></label>
-          </div>
-        </div>
-
-        <div class="ap-tabpane" id="apTab-nursery" style="display:none">
-          <div class="ap-grid">
-            <label class="ap-field"><span>Tray type</span>
-              <select id="apTrayType"><option value="">—</option></select></label>
-            <label class="ap-field"><span>Seeds per cell</span>
-              <input type="number" id="apSeedsPerCell" min="0" step="1"></label>
-            <label class="ap-field"><span>Days to germinate</span>
-              <input type="number" id="apDaysToGerminate" min="0" step="1"></label>
-            <label class="ap-field"><span>Optimal germ temp (°C)</span>
-              <input type="number" id="apGermTemp" min="0" step="0.1"></label>
+            <h3 class="ap2-colh ap2-colh-gap">Nursery</h3>
+            <div class="ap2-pair">
+              <label class="ap-field"><span>Tray</span>
+                <select id="apTrayType"><option value="">—</option></select></label>
+              <label class="ap-field"><span>Seeds / cell</span>
+                <input type="number" id="apSeedsPerCell" min="0" step="1"></label>
+              <label class="ap-field"><span>Germ days</span>
+                <input type="number" id="apDaysToGerminate" min="0" step="1"></label>
+              <label class="ap-field"><span>Germ temp °C</span>
+                <input type="number" id="apGermTemp" min="0" step="0.1"></label>
+            </div>
             <div class="ap-field"><span>Requires potting up</span>
               <div class="seg" id="apPottingUp">
                 <button type="button" data-val="Yes" aria-pressed="false">Yes</button>
                 <button type="button" data-val="No" aria-pressed="false">No</button>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section class="ap2-col" aria-labelledby="apColHarvest">
+            <h3 class="ap2-colh" id="apColHarvest">Harvest</h3>
+            <div class="ap2-pair">
+              <label class="ap-field"><span>Unit</span>
+                <select id="apHarvestUnit">
+                  <option value="">—</option>
+                  <option value="Each">Each</option>
+                  <option value="Bunch">Bunch</option>
+                  <option value="Kilogram">Kilogram</option>
+                  <option value="Box">Box</option>
+                  <option value="Bag">Bag</option>
+                  <option value="Punnet">Punnet</option>
+                  <option value="Dozen">Dozen</option>
+                  <option value="Bundle">Bundle</option>
+                </select></label>
+              <label class="ap-field"><span>Number per unit</span>
+                <input type="number" id="apPlantsPerUnit" min="0" step="1" placeholder="n/a"></label>
+              <label class="ap-field"><span>Price / unit</span>
+                <input type="number" id="apPrice" min="0" step="0.01" placeholder="e.g. 4.50"></label>
+              <label class="ap-field"><span>Yield / bed m</span>
+                <input type="number" id="apYield" min="0" step="0.01"></label>
+            </div>
+            <span class="ap-climate-hint" id="apYieldHint"></span>
+
+            <div class="ap2-works" id="apWorks"></div>
+
+            <h3 class="ap2-colh ap2-colh-gap">After harvest</h3>
+            <div class="ap-climate" id="apTarpWrap">
+              <label class="ap-climate-toggle">
+                <input type="checkbox" id="apTarp"> Tarp after this crop
+              </label>
+              <span class="ap-succ-row" id="apTarpWeeksRow" style="display:none">
+                <input type="number" id="apTarpWeeks" min="0" step="1" value="3" title="Weeks under tarp">
+                <span class="ap-x-lbl">weeks</span>
+              </span>
+              <span class="ap-climate-hint" id="apTarpHint"></span>
+            </div>
+          </section>
         </div>
 
-        <div class="ap-tabpane" id="apTab-tasks" style="display:none">
-          <div class="ap-sect" style="margin-top:0">Tasks for this planting</div>
-          <div id="apTaskListWrap"></div>
-        </div>
-        </div><!-- /ap-step2-main -->
-
-        <aside class="ap-sidebar" id="apSidebar">
-          <div class="ap-sidebar-head">
-            <div class="ap-sidebar-crop" id="apSideCrop">Crop</div>
-            <div class="ap-sidebar-variety" id="apSideVariety">Generic</div>
-          </div>
-          <div class="ap-side-rows" id="apSideRows"></div>
-          <div class="ap-side-rows ap-side-rows-total" id="apSideRevenue"></div>
-        </aside>
-        </div><!-- /ap-step2-body -->
+        <label class="ap-field ap2-notes"><span>Notes</span>
+          <textarea id="apNotes" rows="3" placeholder="Anything worth remembering about this planting…"></textarea></label>
 
         <div class="ap-status" id="apMsg"></div>
         <div class="ap-actions">
@@ -15823,6 +15881,7 @@ function renderApTaskRows(){
     sel.onchange=()=>{ if(sel.value) apAddTaskRow(sel.value); };
     wrap.appendChild(sel);
   }
+  apRenderJobChips();
 }
 // Adds a row for a library task not yet on this planting's list — prefilled from the crop's
 // resolved schedule if it's assigned there, else the task's own default (still a sensible start
@@ -15849,7 +15908,8 @@ async function apRemoveTaskRow(index){
 }
 function apUpdateTaskRow(index, patch){
   Object.assign(apTaskRows[index], patch);
-  apSyncTaskRow(index);
+  apSyncTaskRow(index).then(apRenderJobChips);
+  apRenderJobChips();
 }
 // What Due date this row resolves to against apEditPlanting's real saved dates. Edit mode only —
 // in create mode there's no real planting yet, so Due date is simply written for the first time
@@ -16139,75 +16199,248 @@ function apUpdateVis(){
   apShow("apSowActualWrap", !group);          // actual dates are per-planting facts, not bulk-editable
   apShow("apTpActualWrap", isTp && !group);
   apShow("apClimateWrap", apMode==="create"); // season-adjust harvest only when creating
+  apRenderStrip(); apRenderDue(); apRenderJobChips();
 }
 
-// ---- Tabs: Planting Details / Row Spacing / Harvest / Nursery ----
-const AP_TABS=["details","bed","rows","harvest","nursery","tasks"];
-function apShowTab(name){
-  AP_TABS.forEach(t=>{ $ap("apTab-"+t).style.display = (t===name) ? "block" : "none"; });
-  $ap("apTabBar").querySelectorAll(".ap-tab-btn").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===name?"true":"false"));
-  if(name==="tasks") renderApTaskRows();   // re-render current state (never reloads, so in-progress edits survive tab switches)
+// ---- Step 2 is one page now (Edit planting redesign, option A) — no tabs, no summary sidebar.
+// apShowTab keeps its name because its three callers (apSelectCrop, apOpenEdit, tlDuplicatePlanting)
+// call it right after filling the form; it now redraws everything the tabs used to gate.
+function apShowTab(){
+  $ap("apTaskListWrap").hidden=true;
+  apSetSuggestOpen(false);
+  $ap("apJobsToggle").setAttribute("aria-expanded","false");
+  $ap("apCropDot").style.background = apCropId ? cropColor(apCropId) : "";
+  renderApTaskRows();
+  apRenderStrip(); apRenderDue(); apRenderJobChips(); apShowDefaultHints();
 }
-// ---- Persistent summary sidebar: consolidates Planting Details/Row Spacing/Harvest into one
-// always-visible panel (Heirloom-style), instead of a separate summary box per tab.
+function apShort(iso){ if(!iso) return ""; const d=isoToDate(iso); return d.getDate()+" "+TL_MON[d.getMonth()]; }
+
+// ---- Timeline strip: sow → transplant → first harvest → last harvest (→ tarp), with a handle on
+// each date. Each handle edits the duration BEFORE it, through the same cascade the typed fields
+// use, so dates and day counts never disagree: Sow moves the whole planting, Transplant sets days
+// in nursery, First harvest sets days to maturity, Last harvest sets the harvest window.
+let apStripDrag=null;   // {key, range, last} while a handle is held — the range is frozen so nothing slides under the pointer
+const AP_HANDLES={
+  sow:{input:"apSow", label:"Sow",           title:"Sow date — drag to move the whole planting"},
+  tp: {input:"apTp",  label:"Transplant",    title:"Transplant date — drag to change days in nursery"},
+  h1: {input:"apH1",  label:"First harvest", title:"First harvest — drag to change days to maturity"},
+  h2: {input:"apH2",  label:"Last harvest",  title:"Last harvest — drag to change the harvest window"},
+};
+function apStripDates(){
+  const v=id=>$ap(id).value||"", tpOn=apMethod()==="transplant";
+  return {sow:v("apSow"), tp:tpOn?v("apTp"):"", h1:v("apH1"), h2:v("apH2"),
+    sowA:v("apSowActual"), tpA:tpOn?v("apTpActual"):"",
+    tarp: $ap("apTarp").checked ? apTarpRange(v("apH2")||v("apH1")) : null};
+}
+function apStripRange(d){
+  const all=[d.sow,d.tp,d.h1,d.h2,d.sowA,d.tpA,d.tarp&&d.tarp.end].filter(Boolean).sort();
+  if(!all.length) return null;
+  const span=Math.max(1,isoDiffDays(all[0],all[all.length-1]));
+  const pad=Math.max(6,Math.round(span*.05));
+  return {a:isoAddDays(all[0],-pad), b:isoAddDays(all[all.length-1],pad)};
+}
+function apRenderStrip(){
+  const box=$ap("apStrip"); if(!box) return;
+  const group=apMode==="edit" && apEditScope==="group";
+  box.hidden=group;          // absolute dates differ per succession, so there's nothing single to draw
+  if(group) return;
+  const d=apStripDates();
+  const r=(apStripDrag&&apStripDrag.range)||apStripRange(d);
+  box.style.setProperty("--ap2-crop", apCropId ? cropColor(apCropId) : "var(--ok)");
+  if(!r || !d.sow){
+    box.innerHTML=`<div class="ap2-track"></div><span class="ap2-none ap2-strip-empty">Set a sow date to see the timeline.</span>`;
+    return;
+  }
+  const total=isoDiffDays(r.a,r.b)||1;
+  const pct=iso=>Math.max(0,Math.min(100,isoDiffDays(r.a,iso)/total*100));
+  let h=`<div class="ap2-track"></div>`;
+  const end=isoToDate(r.b);
+  const a0=isoToDate(r.a);
+  for(let m=new Date(a0.getFullYear(), a0.getMonth()+1, 1); m<=end; m=new Date(m.getFullYear(), m.getMonth()+1, 1)){
+    const x=pct(dateToISO(m));
+    h+=`<span class="ap2-mon" style="left:${x}%"></span>`;
+    if(x<95) h+=`<span class="ap2-monl" style="left:${x}%">${TL_MON[m.getMonth()]}${m.getMonth()===0?" "+String(m.getFullYear()).slice(2):""}</span>`;
+  }
+  const t=todayISO();
+  if(t>r.a && t<r.b) h+=`<span class="ap2-today" style="left:${pct(t)}%" title="Today"></span>`;
+  const seg=(a,b,cls,long,short)=>{
+    if(!a||!b||b<a) return "";
+    const x=pct(a), w=pct(b)-x;
+    return `<div class="ap2-seg ${cls}" style="left:${x}%;width:${w}%"></div>`
+      + (long ? `<span class="ap2-dur" style="left:${x+w/2}%">${w<10?short:long}</span>` : "");
+  };
+  const tpOn=!!d.tp, grow=tpOn?d.tp:d.sow;
+  if(tpOn){ const n=isoDiffDays(d.sow,d.tp); h+=seg(d.sow,d.tp,"ap2-seg-nur",`${n} d nursery`,`${n}d`); }
+  if(d.h1){ const n=isoDiffDays(grow,d.h1); h+=seg(grow,d.h1,"ap2-seg-grow"+(tpOn?"":" ap2-seg-first"),`${n} d to maturity`,`${n}d`); }
+  if(d.h1&&d.h2){ const n=isoDiffDays(d.h1,d.h2); h+=seg(d.h1,d.h2,"ap2-seg-harv",`${n} d window`,`${n}d`); }
+  if(d.tarp){ const wk=Math.round(isoDiffDays(d.tarp.start,d.tarp.end)/7); h+=seg(d.tarp.start,d.tarp.end,"ap2-seg-tarp",`${wk} wk tarp`,"tarp"); }
+  [["sowA","Actually sown"],["tpA","Actually transplanted"]].forEach(([k,lab])=>{
+    if(d[k]) h+=`<span class="ap2-act" style="left:${pct(d[k])}%" title="${lab} ${esc(fmt(d[k]))}"></span>`;
+  });
+  // Handle labels sit above the track, nudged right off the one before. If the full "Sow 15 Feb"
+  // labels can't all fit (a phone, or dates close together) fall back to the date alone (the date
+  // fields below name them), and if even those collide, leave out the ones that don't fit.
+  const keys=["sow"].concat(tpOn?["tp"]:[], d.h1?["h1"]:[], d.h1&&d.h2?["h2"]:[]);
+  const W=box.clientWidth||1100;
+  const place=full=>{
+    let lastRight=-100, ok=true;
+    const out=keys.map(k=>{
+      const x=pct(d[k]), txt=(full?AP_HANDLES[k].label+" ":"")+apShort(d[k]), w=(txt.length*7.4+6)/W*100;
+      const L=Math.max(0, lastRight+.8, Math.min(x-w/2, 100-w));
+      if(L+w>100.5){ ok=false; return null; }
+      lastRight=L+w; return {k,L,txt};
+    });
+    return {ok,out};
+  };
+  let lab=place(true); if(!lab.ok) lab=place(false);
+  keys.forEach((k,i)=>{
+    const iso=d[k], x=pct(iso), meta=AP_HANDLES[k], l=lab.out[i];
+    const off = k==="h1" && $ap("apDtm").readOnly;
+    if(l) h+=`<span class="ap2-hl" style="left:${l.L}%">${esc(l.txt)}</span>`;
+    h+=`<button type="button" class="ap2-h${apStripDrag&&apStripDrag.key===k?" drag":""}" data-k="${k}" style="left:${x}%"`
+      +` aria-label="${esc(meta.label)} ${esc(fmt(iso))}" title="${esc(off?"First harvest follows the climate-adjusted DTM — untick it to drag":meta.title)}"${off?" disabled":""}></button>`;
+  });
+  box.innerHTML=h;
+}
+function apStripApply(k, iso){
+  if(k==="sow"){ $ap("apSow").value=iso; apCascadeFromSow(); }
+  else if(k==="tp"){
+    const sow=$ap("apSow").value; if(!sow) return;
+    $ap("apNursery").value=Math.max(0,isoDiffDays(sow,iso));
+    apRecalcTp(); apSyncDtm(); apRecalcH1(); apRecalcH2();
+  }else if(k==="h1"){
+    const base=apGrowthStart(); if(!base || $ap("apDtm").readOnly) return;
+    const n=Math.max(0,isoDiffDays(base,iso));
+    $ap("apDtm").value=n; apNominalDtm=n; apRecalcH1(); apRecalcH2();
+  }else if(k==="h2"){
+    const h1=$ap("apH1").value; if(!h1) return;
+    $ap("apWindow").value=Math.max(0,isoDiffDays(h1,iso)); apRecalcH2();
+  }
+  apRenderStrip(); apRenderDue();
+}
+function apStripIsoAt(clientX){
+  const rect=$ap("apStrip").getBoundingClientRect(), r=apStripDrag.range;
+  const f=Math.max(0,Math.min(1,(clientX-rect.left)/(rect.width||1)));
+  return isoAddDays(r.a, Math.round(f*isoDiffDays(r.a,r.b)));
+}
+
+// ---- "Did it happen?" banner: a single planting whose planned sow/transplant has passed, with no
+// actual date and a status that hasn't moved past it. One click copies the plan into the actual.
+function apRenderDue(){
+  const box=$ap("apDue"); if(!box) return;
+  const p=apEditPlanting;
+  const single=apMode==="edit" && apEditScope==="single" && p && !p.failed;
+  const t=todayISO(), d=apStripDates(), rank=statusRank(apStatusVal);
+  const sowDue=!!(single && d.sow && d.sow<t && !d.sowA && rank<1);
+  const tpDue =!!(single && d.tp  && d.tp<t  && !d.tpA  && rank<2);
+  if(!sowDue && !tpDue){ box.hidden=true; box.innerHTML=""; return; }
+  const what = sowDue&&tpDue ? `Sowing (${apShort(d.sow)}) and transplanting (${apShort(d.tp)}) were due and haven't been recorded.`
+    : sowDue ? `Sowing was due ${apShort(d.sow)} and hasn't been recorded.`
+    : `Transplanting was due ${apShort(d.tp)} and hasn't been recorded.`;
+  box.innerHTML=`<span class="ap2-due-msg">${what}</span>`
+    +(sowDue?`<button type="button" class="btn-ghost" data-due="sow">Sown ${apShort(d.sow)} as planned</button>`:"")
+    +(tpDue ?`<button type="button" class="btn-ghost" data-due="tp">Transplanted ${apShort(d.tp)} as planned</button>`:"");
+  box.hidden=false;
+}
+
+// ---- Job chips under the strip: this planting's task schedule at a glance. Saved jobs show their
+// stored due date and done state; not-yet-saved rows (create mode, or an edit whose planting has no
+// jobs yet) show the date they'd get from the dates on screen.
+function apRenderJobChips(){
+  const box=$ap("apJobChips"); if(!box) return;
+  const group=apMode==="edit" && apEditScope==="group";
+  box.closest(".ap2-jobs").hidden=group;
+  if(group){ $ap("apTaskListWrap").hidden=true; return; }
+  const t=todayISO(), d=apStripDates();
+  const dates={sow:d.sow, tp:d.tp, h1:d.h1, h2:d.h2};
+  const chips=apTaskRows.map(row=>{
+    const task=ctTaskById(row.taskId); if(!task) return null;
+    const rec=row.id ? (data.plantingTasks||[]).find(x=>x.id===row.id) : null;
+    const due=(rec&&rec.due) || (computePlantingTaskInstance(dates,row)||{}).due || "";
+    const unsaved=apMode==="edit" && !row.id;
+    const done=!!(rec&&rec.done);
+    const cls=unsaved?"unsaved":done?"done":(due&&due<t?"late":"");
+    return {due, html:`<span class="ap2-chip ${cls}" title="${unsaved?"Not created yet":done?"Done":due&&due<t?"Overdue":"Due"}${due?" "+esc(fmt(due)):""}">`
+      +`<i></i>${esc(task.name)}${due?" · "+apShort(due):""}${done?" ✓":""}</span>`};
+  }).filter(Boolean).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
+  const unsavedN=apMode==="edit" ? apTaskRows.filter(r=>!r.id && r.taskId).length : 0;
+  box.innerHTML = chips.length ? chips.map(c=>c.html).join("") : `<span class="ap2-none">No jobs on this planting.</span>`;
+  if(unsavedN) box.insertAdjacentHTML("beforeend",
+    `<button type="button" class="ap2-make" id="apMakeJobs">Create ${unsavedN===1?"this job":"these "+unsavedN+" jobs"}</button>`);
+  const tg=$ap("apJobsToggle");
+  tg.textContent = $ap("apTaskListWrap").hidden ? (chips.length?"Edit jobs":"Add jobs") : "Hide job editor";
+}
+// The crop's saved default for each blank planting field, shown as the field's placeholder, plus a
+// one-click fill. Nothing is written until the user clicks — a blank field still saves as blank.
+const AP_DEFAULT_FIELDS={apRows:"rows", apRowSpacing:"rowSpacing", apPlantSpacing:"plantSpacing", apSeeder:"seeder",
+  apHarvestUnit:"harvestUnit", apPlantsPerUnit:"plantsPerUnit", apPrice:"price", apYield:"yield",
+  apTrayType:"trayType", apSeedsPerCell:"seedsPerCell", apDaysToGerminate:"daysToGerminate", apGermTemp:"germTemp"};
+function apDefaultGaps(){
+  if(!apCropId) return [];
+  const defs=apMergedDefaults(apCropId, apVarietyId());
+  const out=[];
+  Object.entries(AP_DEFAULT_FIELDS).forEach(([id,k])=>{
+    const v=defs[k];
+    if(v==null || v==="" || (typeof v==="number"&&isNaN(v))) return;
+    out.push({id,k,v,blank:$ap(id).value===""});
+  });
+  if(defs.pottingUp && !apPottingUpVal()) out.push({id:"apPottingUp",k:"pottingUp",v:defs.pottingUp,blank:true});
+  return out;
+}
+function apShowDefaultHints(){
+  const gaps=apDefaultGaps();
+  Object.keys(AP_DEFAULT_FIELDS).forEach(id=>{
+    const el=$ap(id); if(el.tagName!=="INPUT") return;
+    if(el.dataset.ph0==null) el.dataset.ph0=el.getAttribute("placeholder")||"";
+    const g=gaps.find(x=>x.id===id);
+    el.placeholder = g ? `crop: ${g.v}` : el.dataset.ph0;
+  });
+  $ap("apFillDefaults").hidden = !gaps.some(g=>g.blank);
+}
+function apFillBlanksFromDefaults(){
+  apDefaultGaps().filter(g=>g.blank).forEach(g=>{
+    if(g.id==="apPottingUp"){ apSetPottingUp(g.v); return; }
+    if(g.id==="apTrayType"){ apFillTrayTypes(g.v); return; }
+    $ap(g.id).value=g.v;
+  });
+  apSyncYield(); apUpdateRowsSummary();
+}
+
+// ---- Bed issues (under the Bed field) and the "works out to" box (Harvest column). Kept under its
+// old name: every field listener and filler in this dialog already calls it.
 function apUpdateSummarySidebar(){
-  const cropName=apCurrentCropName()||"Crop";
-  $ap("apSideCrop").textContent=cropName;
-  $ap("apSideVariety").textContent=apVarietyText()||"Generic";
-
   const bedSel=$ap("apBed");
   const bedName=bedSel.value ? (bedSel.options[bedSel.selectedIndex]?.textContent||"") : "";
   const bm=parseFloat($ap("apBm").value);
   const rows=parseFloat($ap("apRows").value);
-  const rowSpacing=parseFloat($ap("apRowSpacing").value);
   const plantSpacing=parseFloat($ap("apPlantSpacing").value);
-  const seeder=$ap("apSeeder").value;
   const harvestUnit=$ap("apHarvestUnit").value;
   const price=parseFloat($ap("apPrice").value);
   const yieldPerBm=parseFloat($ap("apYield").value);
   const trayType=$ap("apTrayType").value;
-  const seedsPerCell=parseFloat($ap("apSeedsPerCell").value);
-  const daysToGerminate=parseFloat($ap("apDaysToGerminate").value);
-  const germTemp=parseFloat($ap("apGermTemp").value);
-  const pottingUp=apPottingUpVal();
+  const isTp=apMethod()==="transplant";
 
-  // Trays required: total plants (from Row Spacing's rows/plant-spacing × bed metres) ÷ the
-  // selected tray type's cell count, rounded up. Same plants-per-metre math as apSyncYield.
+  // Trays required: total plants (rows/plant-spacing × bed metres) ÷ the tray type's cell count,
+  // rounded up. Same plants-per-metre math as apSyncYield.
   const plantsPerMetre = (rows>0 && plantSpacing>0) ? rows*100/plantSpacing : null;
   const totalPlants = (plantsPerMetre!=null && bm>0) ? plantsPerMetre*bm : null;
   const cellsPerTray = trayType ? (data.trayTypes||[]).find(t=>t.name===trayType)?.cells : null;
   const traysRequired = (totalPlants!=null && cellsPerTray>0) ? Math.ceil(totalPlants/cellsPerTray) : null;
+  let totalYield=null, revenue=null;
+  if(yieldPerBm>0 && bm>0){ totalYield=yieldPerBm*bm; if(price>0) revenue=totalYield*price; }
+  const unitLabel = (totalYield!=null && harvestUnit) ? " "+harvestUnit.toLowerCase()+(Math.abs(totalYield-1)<.005?"":"s") : "";
+  const row=(k,v,hint,cls)=>`<div class="ap-side-row${cls?" "+cls:""}"><span class="k">${esc(k)}</span>`
+    +(v!=null?`<span class="v">${esc(v)}</span>`:`<span class="v muted">${esc(hint)}</span>`)+`</div>`;
+  $ap("apWorks").innerHTML=`<span class="ap2-lbl">Works out to</span>`
+    + row("Plants", totalPlants!=null?"≈ "+Math.round(totalPlants).toLocaleString("en-AU"):null, bm>0?"add rows + in-row spacing":"add bed metres")
+    + (isTp ? row("Trays", traysRequired!=null?`${traysRequired} × ${trayType}`:null, totalPlants==null?"needs plants":"pick a tray") : "")
+    + row("Yield", totalYield!=null?totalYield.toFixed(1)+unitLabel:null, "add yield / bed m")
+    + row("Income", revenue!=null?"$"+revenue.toFixed(2):null, totalYield==null?"needs yield":"add a price", "total");
 
-  const groups=[
-    { label:"Planting", rows:[
-      ["Method", CR_METHOD_FROM_INTERNAL[apMethod()] || "–"],
-      ["Bed", bedName || "–"],
-      ["Bed metres", bm>0 ? `${bm} m` : "–"],
-    ]},
-    { label:"Row Spacing", rows:[
-      ["Number of rows", rows>0 ? `${rows} rows` : "–"],
-      ["Row spacing", rowSpacing>0 ? `${rowSpacing} cm` : "–"],
-      ["Plant spacing", plantSpacing>0 ? `${plantSpacing} cm` : "–"],
-      ["Seeder", seeder || "–"],
-    ]},
-    { label:"Harvest", rows:[
-      ["Harvest unit", harvestUnit || "–"],
-      ["Price", price>0 ? `$${price.toFixed(2)}${harvestUnit?" / "+harvestUnit.toLowerCase():""}` : "–"],
-      ["Yield", yieldPerBm>0 ? `${yieldPerBm.toFixed(2)} / bed m` : "–"],
-    ]},
-    { label:"Nursery", rows:[
-      ["Tray type", trayType || "–"],
-      ["Seeds per cell", seedsPerCell>0 ? seedsPerCell : "–"],
-      ["Days to germinate", daysToGerminate>0 ? `${daysToGerminate} days` : "–"],
-      ["Optimal germ temp", germTemp>0 ? `${germTemp}°C` : "–"],
-      ["Requires potting up", pottingUp || "–"],
-      ["Trays required", traysRequired!=null ? `${traysRequired} × ${trayType}` : "–"],
-    ]},
-  ];
-  // Bed issues sit above the summary, not inside it — they're the one thing here you might want to
-  // act on rather than just read. Advisory throughout: nothing below stops the planting being made.
+  // Bed issues sit right under the Bed picker — the one thing here you might act on. Advisory
+  // throughout: nothing stops the planting being made.
   const conflicts=apBedConflicts(bedSel.value);
-  const warnHTML = conflicts.length
+  $ap("apBedWarn").innerHTML = conflicts.length
     ? `<div class="ap-bedwarn${conflicts.some(i=>i.severity==="Avoid")?" ap-bedwarn-avoid":""}">`
       + `<div class="ap-bedwarn-h">⚠ ${esc(bedName.replace(/^⚠\s*/,""))} — ${conflicts.length===1?"known issue":conflicts.length+" known issues"}</div>`
       + conflicts.map(i=>
@@ -16215,18 +16448,8 @@ function apUpdateSummarySidebar(){
           + `<strong>${esc(i.type||"Issue")}</strong>${i.notes?" — "+esc(i.notes.split("\n")[0]):""}</div>`).join("")
       + `<div class="ap-bedwarn-foot">You can still plant here.</div></div>`
     : "";
-
-  $ap("apSideRows").innerHTML = warnHTML + groups.map(g=>
-    `<div class="ap-side-group"><div class="ap-side-label">${esc(g.label)}</div>`
-    + g.rows.map(([k,v])=>`<div class="ap-side-row"><span class="k">${esc(k)}</span><span class="v">${esc(v)}</span></div>`).join("")
-    + `</div>`).join("");
-
-  let totalYield=null, revenue=null;
-  if(yieldPerBm>0 && bm>0){ totalYield=yieldPerBm*bm; if(price>0) revenue=totalYield*price; }
-  const unitLabel = (totalYield!=null && harvestUnit) ? " "+harvestUnit.toLowerCase()+(Math.abs(totalYield-1)<.005?"":"s") : "";
-  $ap("apSideRevenue").innerHTML =
-    `<div class="ap-side-row"><span class="k">Est. yield</span><span class="v">${totalYield!=null?totalYield.toFixed(1)+unitLabel:"–"}</span></div>`
-    +`<div class="ap-side-row"><span class="k">Est. revenue</span><span class="v">${revenue!=null?"$"+revenue.toFixed(2):"$0.00"}</span></div>`;
+  apShowDefaultHints();
+  if(!apStripDrag){ apRenderStrip(); apRenderJobChips(); }
 }
 // Schematic bed-layout preview (Row Spacing tab): dashed row lines + dots for a fixed 2m window,
 // so it stays readable regardless of the planting's actual bed length. Width label uses the real
@@ -16353,7 +16576,17 @@ function apCollectSuggestInput(){
     excludePlantingId: apMode==="edit" && apEditPlanting ? apEditPlanting.id : null,
   };
 }
+// Suggestions only show once asked for (the Suggest button) — the list is long, and on the one-page
+// layout it would otherwise push the rest of the Planting column down every time a date moved.
+let apSuggestOpen=false;
+function apSetSuggestOpen(on){
+  apSuggestOpen=on;
+  $ap("apSuggestBedsBtn").textContent = on ? "Hide" : "Suggest";
+  $ap("apSuggestBedsBtn").setAttribute("aria-expanded", on?"true":"false");
+  if(on) apRunBedSuggestions(); else $ap("apBedSuggestList").innerHTML="";
+}
 function apRunBedSuggestions(){
+  if(!apSuggestOpen){ $ap("apBedSuggestList").innerHTML=""; return; }
   const input=apCollectSuggestInput();
   if(!input.cropId || !input.sow){ $ap("apBedSuggestList").innerHTML=""; return; }
   const { candidates, excluded } = suggestBedsForPlanting(data, input, {limit:8});
@@ -16379,7 +16612,7 @@ function apRenderBedSuggestions(candidates, excluded){
     btn.onclick=()=>{
       $ap("apBed").value = btn.dataset.use;
       $ap("apBed").dispatchEvent(new Event("change"));
-      box.querySelectorAll(".ap-suggest-card").forEach(c=>c.classList.toggle("ap-suggest-chosen", c.dataset.bed===btn.dataset.use));
+      apSetSuggestOpen(false);
     };
   });
 }
@@ -17008,7 +17241,7 @@ $ap("apBmPreset").addEventListener("change",e=>{
   e.target.value="";
 });
 $ap("apGroup").addEventListener("input",apScheduleSuggestBeds);
-$ap("apSuggestBedsBtn").addEventListener("click",apRunBedSuggestions);
+$ap("apSuggestBedsBtn").addEventListener("click",()=>apSetSuggestOpen(!apSuggestOpen));
 $ap("apRows").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apRowSpacing").addEventListener("input",apUpdateRowsSummary);
 $ap("apPlantSpacing").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
@@ -17025,7 +17258,57 @@ $ap("apPottingUp").querySelectorAll("button").forEach(b=>b.addEventListener("cli
   apSetPottingUp(apPottingUpVal()===b.dataset.val ? "" : b.dataset.val);
   apUpdateSummarySidebar();
 }));
-$ap("apTabBar").querySelectorAll(".ap-tab-btn").forEach(b=>b.addEventListener("click",()=>apShowTab(b.dataset.tab)));
+// Timeline strip: pointer capture lives on the strip itself, because every move redraws the handles.
+$ap("apStrip").addEventListener("pointerdown",e=>{
+  const hd=e.target.closest(".ap2-h"); if(!hd || hd.disabled) return;
+  e.preventDefault();
+  apStripDrag={key:hd.dataset.k, range:apStripRange(apStripDates()), last:null};
+  $ap("apStrip").setPointerCapture(e.pointerId);
+  hd.classList.add("drag");
+});
+$ap("apStrip").addEventListener("pointermove",e=>{
+  if(!apStripDrag) return;
+  const iso=apStripIsoAt(e.clientX);
+  if(iso===apStripDrag.last) return;
+  apStripDrag.last=iso;
+  apStripApply(apStripDrag.key, iso);
+});
+["pointerup","pointercancel"].forEach(ev=>$ap("apStrip").addEventListener(ev,()=>{
+  if(!apStripDrag) return;
+  apStripDrag=null; apRenderStrip(); apRenderJobChips(); apRenderDue();
+}));
+$ap("apStrip").addEventListener("keydown",e=>{
+  const hd=e.target.closest(".ap2-h"); if(!hd) return;
+  const step = e.key==="ArrowLeft" ? -1 : e.key==="ArrowRight" ? 1 : 0; if(!step) return;
+  e.preventDefault();
+  const k=hd.dataset.k, cur=$ap(AP_HANDLES[k].input).value; if(!cur) return;
+  apStripApply(k, isoAddDays(cur, step*(e.shiftKey?7:1)));
+  apRenderJobChips();
+  const again=$ap("apStrip").querySelector(`.ap2-h[data-k="${k}"]`); if(again) again.focus();
+});
+$ap("apDue").addEventListener("click",e=>{
+  const b=e.target.closest("[data-due]"); if(!b) return;
+  if(b.dataset.due==="sow") $ap("apSowActual").value=$ap("apSow").value;
+  else $ap("apTpActual").value=$ap("apTp").value;
+  apRenderDue(); apRenderStrip();
+  const msg=$ap("apMsg"); msg.style.color="var(--ink-2)"; msg.textContent="Recorded — save changes to keep it.";
+});
+["apSowActual","apTpActual"].forEach(id=>$ap(id).addEventListener("change",()=>{ apRenderStrip(); apRenderDue(); }));
+$ap("apTarp").addEventListener("change",apRenderStrip);
+$ap("apTarpWeeks").addEventListener("input",apRenderStrip);
+$ap("apJobsToggle").addEventListener("click",()=>{
+  const wrap=$ap("apTaskListWrap"), open=wrap.hidden;
+  wrap.hidden=!open;
+  $ap("apJobsToggle").setAttribute("aria-expanded", open?"true":"false");
+  if(open) renderApTaskRows(); else apRenderJobChips();
+});
+$ap("apJobChips").addEventListener("click",async e=>{
+  if(!e.target.closest("#apMakeJobs")) return;
+  e.target.disabled=true;
+  for(let i=0;i<apTaskRows.length;i++) if(!apTaskRows[i].id && apTaskRows[i].taskId) await apSyncTaskRow(i);
+  renderApTaskRows();
+});
+$ap("apFillDefaults").addEventListener("click",apFillBlanksFromDefaults);
 $ap("apModal").addEventListener("mousedown",e=>{ if(e.target.id==="apModal") apClose(); });
 
 /* ---- Tarp editor wiring ---- */
