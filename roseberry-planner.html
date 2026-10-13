@@ -2635,13 +2635,13 @@
   .ap2-act{position:absolute;top:56px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:var(--ok);z-index:1}
   .ap2-strip-empty{position:absolute;top:36px;left:14px}
   .ap2-none{font-size:.86rem;color:var(--ink-2)}
-  .ap2-dur{position:absolute;display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--ink-2);white-space:nowrap;transform:translateX(-50%);z-index:1}
+  .ap2-dur{position:absolute;display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--ink-2);white-space:nowrap;z-index:1}
   #apModal .ap2-dur input{width:3.1rem;padding:.3rem 0;text-align:center;font-family:var(--mono);font-size:.84rem}
   .ap2-tarpl{position:absolute;transform:translateX(-50%);font-family:var(--mono);font-size:.72rem;color:var(--ink-2);white-space:nowrap}
   /* whole-group edit: no single set of dates to draw, so the day counts sit in a plain row */
   .ap2-stripwrap.ap2-static{display:flex;gap:1.4rem;flex-wrap:wrap}
   .ap2-static .ap2-strip{display:none}
-  .ap2-static .ap2-dur{position:static;transform:none}
+  .ap2-static .ap2-dur{position:static;transform:none!important}
   .ap2-dates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem 1rem;margin-top:.4rem}
   .ap2-after{grid-column:span 2}
   .ap2-tarpbox{display:flex;align-items:center;gap:.55rem;border:1px solid var(--line);border-radius:9px;padding:0 .75rem;min-height:2.75rem;font-size:.92rem}
@@ -16327,6 +16327,7 @@ function apShowTab(){
   $ap("apCropDot").style.background = apCropId ? cropColor(apCropId) : "";
   apSelectTab("planting");
   apUpdateSummarySidebar();
+  requestAnimationFrame(()=>{ if(apTab==="planting") apRenderStrip(); });   // the dialog is open by now, so the bar can be measured
 }
 function apShort(iso){ if(!iso) return ""; const d=isoToDate(iso); return d.getDate()+" "+TL_MON[d.getMonth()]; }
 function apDay(iso){ return iso ? ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][isoToDate(iso).getDay()]+" "+apShort(iso) : ""; }
@@ -16386,18 +16387,17 @@ function apRenderStrip(){
   const box=$ap("apStrip"), wrap=$ap("apStripWrap"); if(!box) return;
   const group=apMode==="edit" && apEditScope==="group";
   wrap.classList.toggle("ap2-static", group);   // absolute dates differ per succession — just the day counts
-  ["apNurseryWrap","apDtmWrap","apWindowWrap"].forEach(id=>{ $ap(id).style.left=""; $ap(id).style.top=""; });
-  if(group) return;
+  if(group){ AP_DUR_IDS.forEach(id=>{ $ap(id).style.left=""; $ap(id).style.top=""; }); return; }
   const d=apStripDates(), n=apSuccCount(), gap=apSuccGap();
   const r=(apStripDrag&&apStripDrag.range)||apStripRange(d,n,gap);
   box.style.setProperty("--ap2-crop", apCropId ? cropColor(apCropId) : "var(--ok)");
   const trackH=46+(n-1)*13, durTop=22+trackH+8;
   box.style.height=(durTop+30)+"px";
-  const placeDur=(id,x)=>{ $ap(id).style.left=x+"%"; $ap(id).style.top=durTop+"px"; };
+
   if(!r || !d.sow){
     box.innerHTML=`<div class="ap2-track" style="height:46px"></div><span class="ap2-none ap2-strip-empty">Set a sow date to see the timeline.</span>`;
     box.style.height="110px";
-    [["apNurseryWrap",16],["apDtmWrap",50],["apWindowWrap",84]].forEach(([id,x])=>{ $ap(id).style.left=x+"%"; $ap(id).style.top="78px"; });
+    apPlaceDurs({apNurseryWrap:16, apDtmWrap:50, apWindowWrap:84}, 78);
     return;
   }
   const total=isoDiffDays(r.a,r.b)||1;
@@ -16459,9 +16459,33 @@ function apRenderStrip(){
   box.innerHTML=h;
   const grow=tpOn?d.tp:d.sow;
   const mid=(a,b,fb)=> a&&b ? (pct(a)+pct(b))/2 : fb;
-  placeDur("apNurseryWrap", mid(d.sow,d.tp,16));
-  placeDur("apDtmWrap", mid(grow,d.h1,50));
-  placeDur("apWindowWrap", mid(d.h1,d.h2,84));
+  apPlaceDurs({apNurseryWrap:mid(d.sow,d.tp,16), apDtmWrap:mid(grow,d.h1,50), apWindowWrap:mid(d.h1,d.h2,84)}, durTop);
+}
+// The three day-count boxes sit under the middle of their stretch of bar. Kept inside the bar and
+// clear of each other (a 1-day nursery would otherwise centre its box off the left edge), and left
+// where they are while one is being typed in — every keystroke redraws the bar, and a box sliding
+// out from under the cursor mid-number reads as "it won't let me type".
+const AP_DUR_IDS=["apNurseryWrap","apDtmWrap","apWindowWrap"];
+function apPlaceDurs(centres, top){
+  const a=document.activeElement;
+  if(a && AP_DUR_IDS.some(id=>$ap(id).contains(a))) return;
+  const W=$ap("apStripWrap").clientWidth;
+  if(!W){   // not on screen yet (the dialog opens after this runs): centre by % until the redraw
+    AP_DUR_IDS.forEach(id=>{ const el=$ap(id); el.style.left=centres[id]+"%"; el.style.top=top+"px"; el.style.transform="translateX(-50%)"; });
+    return;
+  }
+  const items=AP_DUR_IDS.map(id=>({el:$ap(id), c:centres[id]}))
+    .filter(x=>x.el.style.display!=="none")
+    .map(x=>{ x.el.style.transform="none"; x.el.style.top=top+"px"; return {...x, w:x.el.offsetWidth}; })
+    .sort((p,q)=>p.c-q.c);
+  const GAP=10;
+  let right=0;
+  items.forEach(x=>{ x.L=Math.max(right, Math.min(x.c/100*W - x.w/2, W - x.w)); right=x.L+x.w+GAP; });
+  for(let i=items.length-1, limit=W; i>=0; i--){   // anything pushed past the right edge slides back left
+    if(items[i].L+items[i].w>limit) items[i].L=Math.max(0, limit-items[i].w);
+    limit=items[i].L-GAP;
+  }
+  items.forEach(x=>{ x.el.style.left=Math.round(x.L)+"px"; });
 }
 function apStripApply(k, iso){
   if(k==="sow"){ $ap("apSow").value=iso; apCascadeFromSow(); }
@@ -17656,6 +17680,11 @@ $ap("apDue").addEventListener("click",e=>{
 });
 ["apSowActual","apTpActual"].forEach(id=>$ap(id).addEventListener("change",()=>{ apDueUndo=null; apUpdateSummarySidebar(); }));
 $ap("apTarp").addEventListener("change",apRenderStrip);
+["apNursery","apDtm","apWindow"].forEach(id=>{
+  $ap(id).setAttribute("inputmode","numeric");
+  $ap(id).addEventListener("focus",e=>e.target.select());
+  $ap(id).addEventListener("blur",()=>setTimeout(apRenderStrip));   // after focus has left, so the boxes move
+});
 $ap("apTarpWeeks").addEventListener("input",apRenderStrip);
 $ap("apGroup").addEventListener("input",apRenderExtras);
 $ap("apTabBar").addEventListener("click",e=>{ const b=e.target.closest("[data-tab]"); if(b) apSelectTab(b.dataset.tab); });
