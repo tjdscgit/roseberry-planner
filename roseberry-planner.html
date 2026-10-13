@@ -2645,7 +2645,7 @@
   .ap2-dates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem 1rem;margin-top:.4rem}
   .ap2-after{grid-column:span 2}
   .ap2-tarpbox{display:flex;align-items:center;gap:.55rem;border:1px solid var(--line);border-radius:9px;padding:0 .75rem;min-height:2.75rem;font-size:.92rem}
-  #apModal .ap2-tarpbox input[type=number]{width:3.2rem;padding:.35rem 0;text-align:center}
+  #apModal .ap2-tarpbox input[data-num]{width:3.2rem;padding:.35rem 0;text-align:center}
   #apModal .ap2-tarpbox input:disabled{opacity:.45}
   .ap2-tarpbox .ap-climate-toggle{white-space:nowrap}
   .ap2-tarphint{margin-left:auto;font-family:var(--mono);font-size:.74rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -16100,6 +16100,7 @@ function apTaskRowEl(row, index){
     renderApTaskRows();
   };
   el.querySelector(".apt-del").onclick=()=>apRemoveTaskRow(index);
+  apTextNumbers(el);
   wrap.appendChild(el);
   if(row.repeat!=null){
     const sub=document.createElement("div"); sub.className="ap-trow-sub";
@@ -16110,6 +16111,7 @@ function apTaskRowEl(row, index){
       +`<select>${TASK_ANCHORS.map(a=>`<option${a===row.until?" selected":""}>${esc(a)}</option>`).join("")}</select>`;
     sub.querySelector("input").onchange=e=>apUpdateTaskRow(index, {repeat: Math.max(1, parseInt(e.target.value)||1)});
     sub.querySelector("select").onchange=e=>apUpdateTaskRow(index, {until: e.target.value});
+    apTextNumbers(sub);
     wrap.appendChild(sub);
   }
   return wrap;
@@ -17635,6 +17637,23 @@ $ap("apPottingUp").querySelectorAll("button").forEach(b=>b.addEventListener("cli
   apSetPottingUp(apPottingUpVal()===b.dataset.val ? "" : b.dataset.val);
   apUpdateSummarySidebar();
 }));
+// Number fields in this dialog are plain text boxes that only take digits. On the grower's PC the
+// browser's own number boxes (the ones with up/down arrows) ignored Backspace and the number pad
+// (2026-10-14) while text boxes worked; inputmode still brings up the number keypad on a phone.
+function apTextNumbers(root){
+  root.querySelectorAll('input[type="number"]').forEach(el=>{
+    const dec=/\./.test(el.getAttribute("step")||"");
+    el.type="text"; el.inputMode=dec?"decimal":"numeric"; el.dataset.num=dec?"dec":"int"; el.autocomplete="off";
+  });
+}
+apTextNumbers($ap("apModal"));
+// Strip anything that isn't part of a number before the field's own listeners see it (capture phase).
+$ap("apModal").addEventListener("input",e=>{
+  const el=e.target; if(!el.dataset || !el.dataset.num) return;
+  let v=el.value.replace(",",".");
+  v = el.dataset.num==="dec" ? v.replace(/[^\d.]/g,"").replace(/(\..*)\./g,"$1") : v.replace(/\D/g,"");
+  if(v!==el.value){ const pos=Math.max(0,(el.selectionStart||0)-(el.value.length-v.length)); el.value=v; try{ el.setSelectionRange(pos,pos); }catch(_){} }
+},true);
 // Timeline strip: pointer capture lives on the strip itself, because every move redraws the handles.
 $ap("apStrip").addEventListener("pointerdown",e=>{
   const hd=e.target.closest(".ap2-h"); if(!hd || hd.disabled) return;
