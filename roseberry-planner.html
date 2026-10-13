@@ -2581,6 +2581,16 @@
   .ap2-tag{font-family:var(--sans);font-size:.68rem;letter-spacing:0;text-transform:none;color:var(--steel);
     background:var(--sel);border-radius:5px;padding:1px 6px;margin-left:.45rem;vertical-align:1px}
   .ap2-tag[hidden]{display:none}
+  /* number boxes: our own up/down arrows (see apTextNumbers) */
+  .ap2-num{position:relative;display:flex;flex:0 0 auto;min-width:0}
+  .ap2-num>input{flex:1 1 auto;min-width:0;padding-right:1.45rem!important}
+  .ap2-spin{position:absolute;right:3px;top:3px;bottom:3px;width:1.05rem;display:flex;flex-direction:column;opacity:.5}
+  .ap2-num:hover .ap2-spin,.ap2-num:focus-within .ap2-spin{opacity:1}
+  .ap2-spin button{flex:1 1 0;border:0;background:none;color:var(--ink-2);font-size:.62rem;line-height:1;padding:0;cursor:pointer;border-radius:4px}
+  .ap2-spin button:hover{background:var(--hover);color:var(--ink)}
+  #apModal .apt-num input{width:5rem}
+  #apModal .apt-dur input{width:6.5rem}
+  #apModal .ap-trow-sub input{width:4.6rem}
   /* successions stepper */
   .ap2-succ{display:flex;align-items:center;gap:.5rem}
   .ap2-stepper{display:flex;flex:0 0 auto}
@@ -2590,7 +2600,7 @@
   .ap2-stepper button:last-child{border-radius:0 9px 9px 0}
   #apModal .ap2-stepper input{width:2.8rem;border-radius:0;border-left:0;border-right:0;text-align:center;padding-left:0;padding-right:0;-moz-appearance:textfield}
   #apModal .ap2-stepper input::-webkit-inner-spin-button,#apModal .ap2-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
-  #apModal #apGap{width:3.4rem;text-align:center;padding-left:0;padding-right:0}
+  #apModal #apGap{width:4.4rem;text-align:center;padding-left:0;padding-right:0}
   .ap2-bedrow{display:flex;gap:.5rem}
   .ap2-bedrow select{flex:1 1 auto;min-width:0}
   .ap2-bedrow .btn-ghost{flex:0 0 auto;padding:.4rem .8rem;font-size:.84rem}
@@ -2636,7 +2646,7 @@
   .ap2-strip-empty{position:absolute;top:36px;left:14px}
   .ap2-none{font-size:.86rem;color:var(--ink-2)}
   .ap2-dur{position:absolute;display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--ink-2);white-space:nowrap;z-index:1}
-  #apModal .ap2-dur input{width:3.1rem;padding:.3rem 0;text-align:center;font-family:var(--mono);font-size:.84rem}
+  #apModal .ap2-dur input{width:4.3rem;padding:.3rem 0;text-align:center;font-family:var(--mono);font-size:.84rem}
   .ap2-tarpl{position:absolute;transform:translateX(-50%);font-family:var(--mono);font-size:.72rem;color:var(--ink-2);white-space:nowrap}
   /* whole-group edit: no single set of dates to draw, so the day counts sit in a plain row */
   .ap2-stripwrap.ap2-static{display:flex;gap:1.4rem;flex-wrap:wrap}
@@ -2645,7 +2655,7 @@
   .ap2-dates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.9rem 1rem;margin-top:.4rem}
   .ap2-after{grid-column:span 2}
   .ap2-tarpbox{display:flex;align-items:center;gap:.55rem;border:1px solid var(--line);border-radius:9px;padding:0 .75rem;min-height:2.75rem;font-size:.92rem}
-  #apModal .ap2-tarpbox input[data-num]{width:3.2rem;padding:.35rem 0;text-align:center}
+  #apModal .ap2-tarpbox input[data-num]{width:4.3rem;padding:.35rem 0;text-align:center}
   #apModal .ap2-tarpbox input:disabled{opacity:.45}
   .ap2-tarpbox .ap-climate-toggle{white-space:nowrap}
   .ap2-tarphint{margin-left:auto;font-family:var(--mono);font-size:.74rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -17640,13 +17650,43 @@ $ap("apPottingUp").querySelectorAll("button").forEach(b=>b.addEventListener("cli
 // Number fields in this dialog are plain text boxes that only take digits. On the grower's PC the
 // browser's own number boxes (the ones with up/down arrows) ignored Backspace and the number pad
 // (2026-10-14) while text boxes worked; inputmode still brings up the number keypad on a phone.
+// They keep up/down arrows, drawn by us rather than the browser (.ap2-spin), plus the Up/Down keys.
 function apTextNumbers(root){
   root.querySelectorAll('input[type="number"]').forEach(el=>{
-    const dec=/\./.test(el.getAttribute("step")||"");
+    const step=el.getAttribute("step")||"1", dec=/\./.test(step);
     el.type="text"; el.inputMode=dec?"decimal":"numeric"; el.dataset.num=dec?"dec":"int"; el.autocomplete="off";
+    el.dataset.step=dec ? "1" : step;                     // a price nudges by whole dollars, not cents
+    if(el.hasAttribute("min")) el.dataset.min=el.getAttribute("min");
+    if(el.id==="apCount") return;                         // has its own − / + buttons
+    const wrap=document.createElement("span"); wrap.className="ap2-num";
+    el.parentNode.insertBefore(wrap, el); wrap.appendChild(el);
+    wrap.insertAdjacentHTML("beforeend",
+      `<span class="ap2-spin" aria-hidden="true"><button type="button" tabindex="-1" data-spin="1">▴</button><button type="button" tabindex="-1" data-spin="-1">▾</button></span>`);
   });
 }
+function apNudge(el, dir){
+  if(el.readOnly || el.disabled) return;
+  const step=parseFloat(el.dataset.step)||1, min=el.dataset.min!=null ? parseFloat(el.dataset.min) : -Infinity;
+  const cur=parseFloat(el.value);
+  let v = isNaN(cur) ? (dir>0 ? Math.max(0,min) : Math.max(0,min)) : cur+dir*step;
+  if(v<min) v=min;
+  el.value = el.dataset.num==="dec" ? String(Math.round(v*100)/100) : String(Math.round(v));
+  el.dispatchEvent(new Event("input",{bubbles:true}));
+  el.dispatchEvent(new Event("change",{bubbles:true}));
+}
 apTextNumbers($ap("apModal"));
+// Arrow buttons: mousedown is cancelled so the box keeps focus; click nudges by one step.
+$ap("apModal").addEventListener("mousedown",e=>{ if(e.target.closest(".ap2-spin")) e.preventDefault(); });
+$ap("apModal").addEventListener("click",e=>{
+  const b=e.target.closest(".ap2-spin [data-spin]"); if(!b) return;
+  e.preventDefault();
+  const el=b.closest(".ap2-num").querySelector("input");
+  apNudge(el, +b.dataset.spin);
+});
+$ap("apModal").addEventListener("keydown",e=>{
+  const el=e.target; if(!el.dataset || !el.dataset.num || (e.key!=="ArrowUp" && e.key!=="ArrowDown")) return;
+  e.preventDefault(); apNudge(el, e.key==="ArrowUp" ? 1 : -1);
+});
 // Strip anything that isn't part of a number before the field's own listeners see it (capture phase).
 $ap("apModal").addEventListener("input",e=>{
   const el=e.target; if(!el.dataset || !el.dataset.num) return;
