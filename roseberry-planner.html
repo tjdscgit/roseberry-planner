@@ -8976,8 +8976,15 @@ function fmScreenToWorld(clientX,clientY){
     clearTimeout(holdTimer); holdTimer=null;
     if(holdRing){ holdRing.remove(); holdRing=null; }
   }
+  // Only after a real map long-press. This runs on EVERY pointerup in the page, and clearing the
+  // selection unconditionally also wiped the caret out of whatever field had just been clicked —
+  // the box looked focused but typing went nowhere, app-wide, on a desktop mouse (2026-10-14).
   function fmEndHolding(){
-    document.documentElement.classList.remove("fm-holding");
+    const root=document.documentElement;
+    if(!root.classList.contains("fm-holding")) return;
+    root.classList.remove("fm-holding");
+    const a=document.activeElement;
+    if(a && (a.tagName==="INPUT" || a.tagName==="TEXTAREA" || a.isContentEditable)) return;
     try{ getSelection().removeAllRanges(); }catch(_){}
   }
   if(!window._fmHoldEndWired){

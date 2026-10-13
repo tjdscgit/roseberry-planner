@@ -1,7 +1,0 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Typing test</title>
-<style>body{font:18px system-ui,sans-serif;margin:40px;background:#14181B;color:#EAE7DE}input{font:20px system-ui;padding:10px;width:320px}</style></head>
-<body><p>Plain page, no planner code. Click the box and type.</p>
-<input id="t" type="text" placeholder="type here"><p id="log" style="font:13px monospace;color:#98A29A"></p>
-<script>const l=document.getElementById("log"),t=document.getElementById("t");["keydown","beforeinput","input"].forEach(e=>t.addEventListener(e,ev=>{l.textContent+=e+":"+(ev.key||ev.data||"")+"  "}));</script>
-</body></html>
