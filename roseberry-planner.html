@@ -2712,6 +2712,8 @@
   /* jobs */
   .ap2-jobshead{display:flex;align-items:center;gap:1rem}
   .ap2-jobshead .ap2-intro{flex:1 1 auto}
+  .ap2-jobgroup{display:flex;align-items:center;gap:1rem;margin-top:.7rem;padding:.6rem .9rem;border:1px dashed var(--line);border-radius:10px;color:var(--ink-2);font-size:.88rem}
+  .ap2-jobgroup span{flex:1 1 auto}
   .ap2-jobpick{position:relative;width:13rem;flex:0 0 auto}
   #apModal .ap2-jobadd{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;
     padding:.55rem .8rem;border:1px solid var(--line);border-radius:8px;background:var(--bg-2,transparent);color:var(--ink);cursor:pointer;font:inherit}
@@ -6927,6 +6929,10 @@
             </div>
           </div>
           <div id="apJobList"></div>
+          <div class="ap2-jobgroup" id="apJobGroup" hidden>
+            <span id="apJobGroupTxt"></span>
+            <button type="button" class="btn-ghost" id="apJobGroupBtn">Update all in group</button>
+          </div>
           <div id="apJobMissing"></div>
         </div>
         </div><!-- /ap2-body -->
@@ -16833,6 +16839,10 @@ function apRenderJobs(){
   const avail=(data.tasks||[]).filter(tk=>!apTaskRows.some(r=>r.taskId===tk.id));
   $ap("apJobAdd").disabled=!avail.length;
   if(!$ap("apJobPop").hidden) apFillJobOpts();
+  const others=apMode==="edit" ? apEditMembers.filter(m=>m.id!==apEditPlanting.id) : [];
+  $ap("apJobGroup").hidden=!others.length || !apJobShown().length;
+  if(others.length && !$ap("apJobGroupBtn").disabled)
+    $ap("apJobGroupTxt").textContent=`Give the other ${others.length} planting${others.length===1?"":"s"} in ${apEditPlanting.group} these same jobs and timings.`;
   const missing=apJobMissing();
   if(missing.length){
     const d=apStripDates(), crop=data.crops[apCropId]||"the crop", n=missing.length;
@@ -16861,6 +16871,47 @@ async function apAutoAddCropJobs(){
     }
   }catch(e){ console.error("Couldn't add crop jobs:", e); }
   if(apEditPlanting===p) apRenderJobs();
+}
+// Copies this planting's job list onto every other planting in its succession group: each job is
+// added where missing, or has its timing / who brought in line where present, with the due date
+// worked out from that planting's own dates. Done jobs are left alone, and nothing is removed.
+async function apJobsToGroup(){
+  const p=apEditPlanting, F=CFG.f;
+  const others=apEditMembers.filter(m=>m.id!==p.id);
+  const rows=apTaskRows.filter(r=>r.id && r.taskId);
+  if(!others.length || !rows.length) return;
+  if(!confirm(`Update jobs on the other ${others.length} planting${others.length===1?"":"s"} in ${p.group}?\n\n`
+    +rows.map(r=>"• "+(ctTaskById(r.taskId)?.name||"Job")+" — "+apJobWhen(r)).join("\n")
+    +"\n\nMissing jobs are added, existing ones get these timings. Done jobs aren't touched, and nothing is removed.")) return;
+  const btn=$ap("apJobGroupBtn"), txt=$ap("apJobGroupTxt"); btn.disabled=true;
+  let added=0, changed=0;
+  try{
+    for(const m of others){
+      for(const r of rows){
+        const task=ctTaskById(r.taskId); if(!task) continue;
+        const inst=computePlantingTaskInstance({sow:m.sow,tp:m.tp,h1:m.h1,h2:m.h2}, r);
+        const fields={[F.pt_task]:[r.taskId], [F.pt_anchor]:r.anchor||null, [F.pt_offset]:r.offset??0,
+          [F.pt_repeat]:r.repeat??null, [F.pt_until]:r.until||null, [F.pt_duration]:r.duration??null,
+          [F.pt_assignee]:r.assignee||null, [F.pt_label]:`${m.crop}${m.variety?" · "+m.variety:""} — ${task.name}`};
+        if(inst) fields[F.pt_due]=inst.due;
+        const local={taskId:r.taskId, anchor:r.anchor, offset:r.offset, repeat:r.repeat, until:r.until, duration:r.duration, assignee:r.assignee};
+        const theirs=apPlantingTasksFor(m.id).filter(t=>t.taskId===r.taskId);
+        const open=theirs.find(t=>!t.done);
+        if(open){
+          await atPatch(CFG.farmBase, CFG.tables.plantingTasks, open.id, fields);
+          Object.assign(open, local, {due:inst?inst.due:open.due}); changed++;
+        }else if(!theirs.length){
+          fields[F.pt_planting]=[m.id];
+          const [rec]=await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [fields]);
+          data.plantingTasks.push({id:rec.id, plantingId:m.id, ...local, due:inst?inst.due:"", done:false}); added++;
+        }
+        txt.textContent=`Updating… ${added} added, ${changed} updated`;
+      }
+    }
+    txt.textContent=`Done — ${added} job${added===1?"":"s"} added, ${changed} updated across ${others.length} plantings.`;
+  }catch(e){
+    console.error(e); txt.textContent="Couldn't finish: "+e.message+` (${added} added, ${changed} updated before it stopped)`;
+  }finally{ btn.disabled=false; }
 }
 async function apAddMissingJob(x){
   if(x.i>=0) await apSyncTaskRow(x.i);
@@ -17896,6 +17947,7 @@ function apPickJob(id){
 }
 $ap("apJobAdd").addEventListener("click",()=>apJobPopShow($ap("apJobPop").hidden));
 $ap("apJobSearch").addEventListener("input",apFillJobOpts);
+$ap("apJobGroupBtn").addEventListener("click",apJobsToGroup);
 $ap("apJobSearch").addEventListener("keydown",e=>{
   const opts=[...$ap("apJobOpts").querySelectorAll("button")], cur=opts.findIndex(b=>b.classList.contains("hl"));
   if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); apJobPopShow(false); $ap("apJobAdd").focus(); }
