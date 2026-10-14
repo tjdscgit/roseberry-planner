@@ -2287,6 +2287,14 @@
     overflow:hidden;box-shadow:0 1px 1px rgba(0,0,0,.18)}
   .tl-bar-ext{position:absolute;top:6px;height:26px;width:2px;border-radius:1px;
     cursor:pointer;box-shadow:0 1px 1px rgba(0,0,0,.18)}
+  /* an event outside the sow→harvest span: dotted lead from the bar to a small round marker */
+  .tl-evt-lead{position:absolute;top:18px;height:0;border-top:2px dotted var(--ink-2);opacity:.7;pointer-events:none}
+  .tl-evt{position:absolute;top:10px;width:18px;height:18px;margin-left:-9px;border-radius:50%;cursor:pointer;z-index:4;
+    display:flex;align-items:center;justify-content:center;font:700 .62rem/1 var(--mono);color:#fff;
+    border:2px solid var(--bg,#1b1f23);box-shadow:0 1px 2px rgba(0,0,0,.35)}
+  .tl-evt.is-tarp{background:#d4a72c;color:#1b1f23}
+  .tl-evt-span{position:absolute;top:15px;height:6px;border-radius:3px;pointer-events:none;opacity:.55;
+    background:repeating-linear-gradient(45deg,#d4a72c 0 4px,transparent 4px 7px)}
   .tl-seg{position:absolute;top:0;height:100%}
   .tl-date{position:absolute;top:50%;font-family:var(--mono);
     font-size:.68rem;font-weight:600;color:#fff;white-space:nowrap;pointer-events:none;z-index:3;
@@ -14947,6 +14955,19 @@ function tlAddBarExt(rowEl,x,color,label,p){
   el.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
   rowEl.appendChild(el);
 }
+// A marker for something that happens outside the planting's own sow→harvest span (a job before
+// sowing, a tarp after the last harvest): dotted lead from the bar edge, then a round badge.
+function tlAddEvent(rowEl,x,edge,color,letter,label,p,cls){
+  const lo=Math.min(x,edge), hi=Math.max(x,edge);
+  if(hi-lo>10){ const lead=document.createElement("div");lead.className="tl-evt-lead";
+    lead.style.left=lo+"px";lead.style.width=(hi-lo)+"px";rowEl.appendChild(lead); }
+  const el=document.createElement("div");el.className="tl-evt"+(cls?" "+cls:"");
+  el.style.left=x+"px"; if(color) el.style.background=color;
+  el.textContent=letter; el.title=label;
+  el.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
+  el.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e,{kind:"planting", p}); };
+  rowEl.appendChild(el);
+}
 function tlAddDate(bar,leftPx,text,align){
   if(!text) return;
   const el=document.createElement("div");el.className="tl-date";el.textContent=text;
@@ -15128,14 +15149,28 @@ function tlAddBar(rowEl,p,b){
   // tick marks for tasks that fall outside the sow→harvest span (e.g. bed prep before sowing,
   // tarping after harvest) — same click target as the main bar; a thin line at the task's own
   // date rather than a box, so it reads as a marker instead of extending the bar's shape
-  const ext=taskExtentFor(p, p.sow, p.h2||p.h1||p.sow);
+  const ext=taskExtentFor(p, p.sow, p.h2||p.h1||p.sow), barEnd=left+w;
+  const tarp=tarpForPlanting(p.id);
+  const tarpJob=t=>t && /tarp/i.test(taskName(t));
   if(ext.pre){
     const xPre=tlX(ext.pre.due,b);
-    if(xPre!=null && xPre<left) tlAddBarExt(rowEl, xPre, base, `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, p);
+    if(xPre!=null && xPre<left) tlAddEvent(rowEl, xPre, left, base, taskName(ext.pre).charAt(0).toUpperCase(), `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, p);
   }
-  if(ext.post){
-    const xPost=tlX(ext.post.due,b), rightEdge=left+w;
-    if(xPost!=null && xPost>rightEdge) tlAddBarExt(rowEl, xPost, base, `${taskName(ext.post)} · ${fmt(ext.post.due)}`, p);
+  if(tarp && tarp.start){
+    // tarp after the last harvest: badge at the day it goes down, hatched strip until it comes off
+    const xs=tlX(tarp.start,b), xe=tlX(tarp.end||tarp.start,b);
+    if(xs!=null){
+      const job=apPlantingTasksFor(p.id).find(t=>tarpJob(t) && !t.done);
+      const at=Math.max(xs, barEnd+12);
+      if(xe!=null && xe>at){ const sp=document.createElement("div");sp.className="tl-evt-span";
+        sp.style.left=at+"px";sp.style.width=(xe-at)+"px";rowEl.appendChild(sp); }
+      tlAddEvent(rowEl, at, barEnd, null, "T",
+        `Tarp ${fmt(tarp.start)}${tarp.end?" – "+fmt(tarp.end):""}${job?"\nJob: "+taskName(job)+" · "+fmt(job.due):""}`, p, "is-tarp");
+    }
+  }
+  if(ext.post && !(tarp && tarpJob(ext.post))){
+    const xPost=tlX(ext.post.due,b);
+    if(xPost!=null && xPost>barEnd) tlAddEvent(rowEl, Math.max(xPost, barEnd+12), barEnd, base, taskName(ext.post).charAt(0).toUpperCase(), `${taskName(ext.post)} · ${fmt(ext.post.due)}`, p);
   }
 
   // crop name shown inside the bar itself, centred in the field ("in ground") segment — between
@@ -17243,12 +17278,56 @@ async function apSyncTarpFor(plantingId, bedId, h2, wantTarp, weeks){
   const existing=tarpForPlanting(plantingId);
   if(!wantTarp || !h2 || !bedId){
     if(existing) await tarpDelete(existing.id);
+    if(!wantTarp) await apSyncTarpJob(plantingId, h2, false);
     return;
   }
   const days=Math.round((isFinite(weeks)?weeks:TARP_DEFAULT_WEEKS)*7);
   const patch={bedId, plantingId, start:h2, end:isoAddDays(h2,days)};
   if(existing) await tarpSave(patch, existing.id);
   else await tarpSave({...patch, bm:null, status:"Planned", notes:""});
+  await apSyncTarpJob(plantingId, h2, true);
+}
+// A tarped planting gets a "Lay tarp" job 3 days after its last harvest (anchor Last harvest, +3,
+// so it follows the harvest date if that moves). Uses the library task with "tarp" in its name,
+// creating "Lay tarp" there the first time. Removing the tarp removes the job if it isn't done.
+const TARP_JOB_OFFSET = 3;
+async function apTarpLibraryTask(){
+  let t=(data.tasks||[]).find(x=>/^lay tarp$/i.test(x.name)) || (data.tasks||[]).find(x=>/tarp/i.test(x.name));
+  if(t) return t;
+  const [rec]=await atCreate(CFG.farmBase, CFG.tables.tasks, [{[CFG.f.tk_name]:"Lay tarp",
+    [CFG.f.tk_anchor]:"Last harvest", [CFG.f.tk_offset]:TARP_JOB_OFFSET}]);
+  t={id:rec.id, name:"Lay tarp", category:"", desc:"", anchor:"Last harvest", offset:TARP_JOB_OFFSET,
+    repeat:null, until:"", duration:null, fwTag:"", fertProgramId:null};
+  data.tasks.push(t); data.tasks.sort((a,b)=>a.name.localeCompare(b.name));
+  return t;
+}
+async function apSyncTarpJob(plantingId, h2, want){
+  const F=CFG.f;
+  const mine=(data.plantingTasks||[]).filter(t=>t.plantingId===plantingId && /tarp/i.test(taskName(t)));
+  if(!want){
+    for(const t of mine.filter(t=>!t.done)){
+      await atDelete(CFG.farmBase, CFG.tables.plantingTasks, [t.id]);
+      data.plantingTasks=data.plantingTasks.filter(x=>x.id!==t.id);
+    }
+    return;
+  }
+  if(!h2) return;
+  const due=isoAddDays(h2, TARP_JOB_OFFSET), open=mine.find(t=>!t.done);
+  if(open){
+    if(open.due!==due && open.anchor==="Last harvest"){
+      await atPatch(CFG.farmBase, CFG.tables.plantingTasks, open.id, {[F.pt_due]:due});
+      open.due=due;
+    }
+    return;
+  }
+  if(mine.length) return;   // already laid (done) — don't add another
+  const task=await apTarpLibraryTask();
+  const p=(data.plantings||[]).find(x=>x.id===plantingId);
+  const label=`${p?p.crop:"Planting"}${p&&p.variety?" · "+p.variety:""} — ${task.name}`;
+  const [rec]=await atCreate(CFG.farmBase, CFG.tables.plantingTasks, [{[F.pt_label]:label, [F.pt_planting]:[plantingId],
+    [F.pt_task]:[task.id], [F.pt_anchor]:"Last harvest", [F.pt_offset]:TARP_JOB_OFFSET, [F.pt_due]:due}]);
+  data.plantingTasks.push({id:rec.id, plantingId, taskId:task.id, anchor:"Last harvest", offset:TARP_JOB_OFFSET,
+    due, done:false, repeat:null, until:"", duration:null, assignee:""});
 }
 function apSetScope(scope){
   apEditScope=scope;
