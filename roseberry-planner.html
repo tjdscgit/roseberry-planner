@@ -2712,7 +2712,17 @@
   /* jobs */
   .ap2-jobshead{display:flex;align-items:center;gap:1rem}
   .ap2-jobshead .ap2-intro{flex:1 1 auto}
-  #apModal .ap2-jobadd{width:13rem;flex:0 0 auto}
+  .ap2-jobpick{position:relative;width:13rem;flex:0 0 auto}
+  #apModal .ap2-jobadd{width:100%;display:flex;justify-content:space-between;align-items:center;text-align:left;
+    padding:.55rem .8rem;border:1px solid var(--line);border-radius:8px;background:var(--bg-2,transparent);color:var(--ink);cursor:pointer;font:inherit}
+  #apModal .ap2-jobadd:disabled{opacity:.5;cursor:default}
+  .ap2-jobpop{position:absolute;right:0;top:calc(100% + 4px);width:18rem;z-index:20;background:var(--bg,#1b1f23);
+    border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);padding:.4rem}
+  #apModal .ap2-jobpop input{width:100%;box-sizing:border-box;margin-bottom:.3rem}
+  .ap2-joblist{max-height:16rem;overflow-y:auto}
+  .ap2-joblist button{display:block;width:100%;text-align:left;padding:.45rem .6rem;border:0;border-radius:6px;background:none;color:var(--ink);font:inherit;cursor:pointer}
+  .ap2-joblist button:hover,.ap2-joblist button.hl{background:var(--line)}
+  .ap2-joblist .none{padding:.45rem .6rem;color:var(--ink-2)}
   .ap2-jtable{border:1px solid var(--line);border-radius:12px;overflow:hidden}
   .ap2-jrow{display:grid;grid-template-columns:minmax(0,1fr) 14rem 7rem 9rem 1.6rem;align-items:center;gap:.8rem;
     padding:.75rem 1rem;border-top:1px solid var(--line);cursor:pointer;width:100%;border-left:0;border-right:0;border-bottom:0;
@@ -2754,7 +2764,7 @@
     .ap2-head{flex-wrap:wrap}
     .ap2-head .seg{order:3;flex:1 1 100%}
     .ap2-jobshead{flex-direction:column;align-items:stretch}
-    #apModal .ap2-jobadd{width:100%}
+    #apModal .ap2-jobadd,.ap2-jobpick{width:100%}
   }
   /* Bed-issue warning, pinned above the summary groups. Deliberately calm — it's a heads-up, not
      an error, and the Create button stays live behind it. .ap-bedwarn-avoid only deepens the ink. */
@@ -6908,7 +6918,13 @@
         <div class="ap2-pane" id="apPane-jobs" role="tabpanel" hidden>
           <div class="ap2-jobshead">
             <p class="ap2-intro">This planting's jobs. Click a job to change when it falls or who does it.</p>
-            <select id="apJobAdd" class="ap2-jobadd" aria-label="Add a job"></select>
+            <div class="ap2-jobpick" id="apJobPick">
+              <button type="button" class="ap2-jobadd" id="apJobAdd" aria-haspopup="listbox" aria-expanded="false">+ Add a job… <span aria-hidden="true">▾</span></button>
+              <div class="ap2-jobpop" id="apJobPop" hidden>
+                <input type="text" id="apJobSearch" placeholder="Search jobs…" autocomplete="off">
+                <div class="ap2-joblist" id="apJobOpts" role="listbox"></div>
+              </div>
+            </div>
           </div>
           <div id="apJobList"></div>
           <div id="apJobMissing"></div>
@@ -16043,9 +16059,9 @@ function apLoadTaskRows(){
 // for a purely ad-hoc, one-off addition).
 function apAddTaskRow(taskId){
   const sched=effectiveScheduleForTask(apCropId, apVarietyId()||null, taskId);
-  apTaskRows.push(sched ? apRowFromSchedule(sched) : {id:null, taskId, anchor:"Transplant", offset:0, repeat:null, until:"", duration:null, assignee:""});
+  apTaskRows.push({...(sched ? apRowFromSchedule(sched) : {id:null, taskId, anchor:"Transplant", offset:0, repeat:null, until:"", duration:null, assignee:""}), pending:true});
   renderApTaskRows();
-  apSyncTaskRow(apTaskRows.length-1);
+  return apSyncTaskRow(apTaskRows.length-1);
 }
 async function apRemoveTaskRow(index){
   apJobOpen=-1;
@@ -16770,11 +16786,11 @@ function apJobInfo(row){
   const due=(rec&&rec.due) || (computePlantingTaskInstance({sow:d.sow,tp:d.tp,h1:d.h1,h2:d.h2},row)||{}).due || "";
   return {rec, due, done:!!(rec&&rec.done)};
 }
-function apJobShown(){ return apTaskRows.map((r,i)=>i).filter(i=>apTaskRows[i].taskId && (apMode!=="edit" || apTaskRows[i].id)); }
+function apJobShown(){ return apTaskRows.map((r,i)=>i).filter(i=>apTaskRows[i].taskId && (apMode!=="edit" || apTaskRows[i].id || apTaskRows[i].pending)); }
 function apJobMissing(){
   if(apMode!=="edit" || !apCropId) return [];
   const out=[];
-  apTaskRows.forEach((r,i)=>{ if(!r.id && r.taskId) out.push({i, taskId:r.taskId, row:r}); });
+  apTaskRows.forEach((r,i)=>{ if(!r.id && !r.pending && r.taskId) out.push({i, taskId:r.taskId, row:r}); });
   resolveTasksForCropVariety(apCropId, apVarietyId()||null).forEach(s=>{
     if(!apTaskRows.some(r=>r.taskId===s.taskId)) out.push({i:-1, taskId:s.taskId, row:s});
   });
@@ -16815,8 +16831,8 @@ function apRenderJobs(){
     });
   }
   const avail=(data.tasks||[]).filter(tk=>!apTaskRows.some(r=>r.taskId===tk.id));
-  $ap("apJobAdd").innerHTML=`<option value="">+ Add a job…</option>`+avail.map(tk=>`<option value="${tk.id}">${esc(tk.name)}</option>`).join("");
   $ap("apJobAdd").disabled=!avail.length;
+  if(!$ap("apJobPop").hidden) apFillJobOpts();
   const missing=apJobMissing();
   if(missing.length){
     const d=apStripDates(), crop=data.crops[apCropId]||"the crop", n=missing.length;
@@ -16829,6 +16845,22 @@ function apRenderJobs(){
       }).join("")+`</div>`;
   }else miss.innerHTML="";
   apRenderTabSubs();
+}
+// The crop's jobs always belong on its plantings: opening one that's missing any adds them (each
+// saves like a manual Add). Skipped once the planting's last harvest is past — back-filling a
+// finished crop would only flood Today with overdue jobs.
+async function apAutoAddCropJobs(){
+  const p=apEditPlanting; if(apMode!=="edit" || !p) return;
+  if(p.status==="Finished" || (p.h2 && p.h2<todayISO())) return;
+  const missing=apJobMissing(); if(!missing.length) return;
+  missing.forEach(x=>{ if(x.i>=0) apTaskRows[x.i].pending=true; });
+  try{
+    for(const x of missing){
+      if(apEditPlanting!==p) return;   // dialog moved on to another planting
+      await apAddMissingJob(x);
+    }
+  }catch(e){ console.error("Couldn't add crop jobs:", e); }
+  if(apEditPlanting===p) apRenderJobs();
 }
 async function apAddMissingJob(x){
   if(x.i>=0) await apSyncTaskRow(x.i);
@@ -17131,6 +17163,7 @@ function apOpenEdit(p){
   apFillBlanksFromDefaults();   // blank spacing/harvest/nursery fields show the crop library's value
   apSnapshot();
   apLoadTaskRows();   // this planting's own saved task schedule, or crop defaults if none exist yet
+  apAutoAddCropJobs();
   apShowTab("details");
   $ap("apMsg").textContent="";
   $ap("apStep1").style.display="none";
@@ -17842,12 +17875,39 @@ $ap("apTabBar").addEventListener("keydown",e=>{
   const next=tabs[(tabs.findIndex(t=>t.dataset.tab===apTab)+step+tabs.length)%tabs.length];
   apSelectTab(next.dataset.tab); next.focus(); e.preventDefault();
 });
-$ap("apJobAdd").addEventListener("change",e=>{
-  const id=e.target.value; if(!id) return;
-  apAddTaskRow(id);
-  apJobOpen=apTaskRows.length-1;   // open the new job so its timing can be set straight away
+// "+ Add a job…": a search box over the jobs list (it will grow), picking adds straight to this
+// planting's jobs and opens the row so its timing can be set.
+function apFillJobOpts(){
+  const q=$ap("apJobSearch").value.trim().toLowerCase();
+  const avail=(data.tasks||[]).filter(tk=>!apTaskRows.some(r=>r.taskId===tk.id) && (!q || tk.name.toLowerCase().includes(q)));
+  $ap("apJobOpts").innerHTML = avail.length
+    ? avail.map((tk,i)=>`<button type="button" role="option" data-tk="${tk.id}"${i===0?' class="hl"':""}>${esc(tk.name)}</button>`).join("")
+    : `<div class="none">No jobs match.</div>`;
+}
+function apJobPopShow(on){
+  $ap("apJobPop").hidden=!on; $ap("apJobAdd").setAttribute("aria-expanded", on?"true":"false");
+  if(on){ $ap("apJobSearch").value=""; apFillJobOpts(); $ap("apJobSearch").focus(); }
+}
+function apPickJob(id){
+  apJobPopShow(false);
+  apJobOpen=apTaskRows.length;   // the row about to be added
+  Promise.resolve(apAddTaskRow(id)).then(()=>apRenderJobs());
   apRenderJobs();
+}
+$ap("apJobAdd").addEventListener("click",()=>apJobPopShow($ap("apJobPop").hidden));
+$ap("apJobSearch").addEventListener("input",apFillJobOpts);
+$ap("apJobSearch").addEventListener("keydown",e=>{
+  const opts=[...$ap("apJobOpts").querySelectorAll("button")], cur=opts.findIndex(b=>b.classList.contains("hl"));
+  if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); apJobPopShow(false); $ap("apJobAdd").focus(); }
+  else if(e.key==="Enter"){ e.preventDefault(); if(opts[cur]) apPickJob(opts[cur].dataset.tk); }
+  else if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+    e.preventDefault(); if(!opts.length) return;
+    const n=(cur+(e.key==="ArrowDown"?1:-1)+opts.length)%opts.length;
+    opts.forEach((b,i)=>b.classList.toggle("hl",i===n)); opts[n].scrollIntoView({block:"nearest"});
+  }
 });
+$ap("apJobOpts").addEventListener("click",e=>{ const b=e.target.closest("[data-tk]"); if(b) apPickJob(b.dataset.tk); });
+document.addEventListener("mousedown",e=>{ if(!$ap("apJobPop").hidden && !$ap("apJobPick").contains(e.target)) apJobPopShow(false); });
 $ap("apJobList").addEventListener("click",e=>{
   const b=e.target.closest(".ap2-jrow[data-job]"); if(!b) return;
   const i=+b.dataset.job; apJobOpen = apJobOpen===i ? -1 : i; apRenderJobs();
