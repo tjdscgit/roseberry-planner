@@ -2272,7 +2272,7 @@
   .tl-subhead.is-loose .tl-subhead-name{font-weight:600;color:var(--ink-2);font-style:italic}
   .tl-subhead.tl-hl-on{background:var(--paper-2)}
   .tl-subband{height:22px;position:relative;border-bottom:1px dashed var(--line)}
-  .tl-subspan{position:absolute;top:4px;height:14px;opacity:.55;cursor:default;
+  .tl-subspan{position:absolute;top:4px;height:14px;opacity:.55;cursor:pointer;
     background:linear-gradient(var(--ink-2),var(--ink-2)) center/100% 2px no-repeat}
   .tl-subspan::before,.tl-subspan::after{content:"";position:absolute;top:2px;width:2px;height:10px;background:var(--ink-2)}
   .tl-subspan::before{left:0}.tl-subspan::after{right:0}
@@ -15179,7 +15179,7 @@ function tlAddBar(rowEl,p,b){
 
 // Succession-group sub-header (By crop): the group's name and sowings in the label column, and in
 // the chart a thin bracket from its first sowing to its last harvest — the whole run at a glance.
-// Hovering the bracket lights the group's bars (tlHighlightGroup).
+// Hovering the bracket lights the group's bars (tlHighlightGroup); clicking it opens Edit succession group.
 function tlAddSubRow(sideIn,bodyIn,row,b){
   const lbl=document.createElement("div");
   lbl.className="tl-subhead"+(row.group?"":" is-loose");
@@ -15197,9 +15197,12 @@ function tlAddSubRow(sideIn,bodyIn,row,b){
     if(lo!=null){
       const br=document.createElement("div");br.className="tl-subspan";
       br.style.left=lo+"px";br.style.width=Math.max(2,hi-lo)+"px";
-      br.title=lbl.title;
+      br.title=lbl.title+" — click to edit the group";
       br.addEventListener("mouseenter",()=>tlHighlightGroup(row.group));
       br.addEventListener("mouseleave",()=>tlHighlightGroup(null));
+      br.addEventListener("click",e=>{ e.stopPropagation(); tlHighlightGroup(null);
+        const first=row.members.slice().sort((p,q)=>(p.sow||"").localeCompare(q.sow||""))[0]; if(!first) return;
+        apOpenEdit(first); if(apEditMembers.length>1) apSetScope("group"); });
       band.appendChild(br);
     }
   }
