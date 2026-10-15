@@ -2272,6 +2272,8 @@
   .tl-subhead.is-loose .tl-subhead-name{font-weight:600;color:var(--ink-2);font-style:italic}
   .tl-subhead.tl-hl-on{background:var(--paper-2)}
   .tl-subband{height:22px;position:relative;border-bottom:1px dashed var(--line)}
+  .tl-donedate{font:inherit;font-size:inherit;color:inherit;background:transparent;border:1px solid var(--line);border-radius:5px;padding:0 .25rem;margin-left:.2rem;cursor:pointer;color-scheme:dark}
+  .tl-donedate:hover{border-color:var(--ink-2)}
   .dd-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
   .dd-ov.open{display:flex}
   .dd-box{background:var(--bg,#1b1f23);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.2rem;width:min(22rem,100%);box-shadow:0 12px 40px rgba(0,0,0,.45)}
@@ -15576,6 +15578,7 @@ function tlMilestoneItemsHTML(p){
     const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
     const actual=p[{sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[t.df]];
     const dateStr = (done && actual) ? "Done "+fmt(actual) : p[t.df] ? fmt(p[t.df]) : "";
+    const doneBox = "";   // read-only here: the Farm map sidebar has no wiring for the date box
     const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
     const assigneeChoices=knownAssignees();
     if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
@@ -15586,7 +15589,7 @@ function tlMilestoneItemsHTML(p){
     return { date:p[t.df]||"", html:`<div class="tl-qa-row tl-qa-task-row milestone${locked?" locked":""}">`
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${done?"checked":""} ${locked?"disabled":""} data-df="${t.df}">`
-        +`<span class="tl-qa-label">${esc(t.label)}${dateStr?`<span class="tl-qa-date">${esc(dateStr)}</span>`:""}</span>`
+        +`<span class="tl-qa-label">${esc(t.label)}${doneBox?`<span class="tl-qa-date">Done ${doneBox}</span>`:dateStr?`<span class="tl-qa-date">${esc(dateStr)}</span>`:""}</span>`
       +`</label>`
       +assigneeSelect
       +`</div>` };
@@ -15618,7 +15621,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const milestoneItems=lc.map(t=>{
     const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
     const actual=p[{sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[t.df]];
-    const dateStr = (done && actual) ? "Done "+fmt(actual) : p[t.df] ? fmt(p[t.df]) : "";
+    const dateStr = p[t.df] ? fmt(p[t.df]) : "";
+    const doneBox = (done && actual) ? `<input type="date" class="tl-donedate" data-ms-done="${t.df}" value="${esc(actual)}" max="${todayISO()}" title="Done on — click to change">` : "";
     const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
     const assigneeChoices=knownAssignees();
     if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
@@ -15629,7 +15633,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     return { date:p[t.df]||"", html:`<div class="tl-qa-row tl-qa-task-row milestone${locked?" locked":""}">`
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${done?"checked":""} ${locked?"disabled":""} data-df="${t.df}">`
-        +`<span class="tl-qa-label">${esc(t.label)}${dateStr?`<span class="tl-qa-date">${esc(dateStr)}</span>`:""}</span>`
+        +`<span class="tl-qa-label">${esc(t.label)}${doneBox?`<span class="tl-qa-date">Done ${doneBox}</span>`:dateStr?`<span class="tl-qa-date">${esc(dateStr)}</span>`:""}</span>`
       +`</label>`
       +assigneeSelect
       +`</div>` };
@@ -15689,7 +15693,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${t.done?"checked":""} data-tasktoggle="${t.id}">`
         +`<span class="tl-qa-label">${esc(tk?tk.name:"Task")}`
-          +((t.done&&t.doneDate)?`<span class="tl-qa-date">Done ${esc(fmt(t.doneDate))}</span>`:t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
+          +(t.done?`<span class="tl-qa-date">Done <input type="date" class="tl-donedate" data-task-done="${t.id}" value="${esc(t.doneDate||"")}" max="${todayISO()}" title="Done on — click to change"></span>`:t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
       +`</label>`
       +assigneeSelect
       +`</div>` };
@@ -15839,6 +15843,23 @@ function tlRenderPanel(p, panel, closeFn, opts){
     });
   }
   // Milestones and the Tasks drop-down are each a .tl-qa list — wire both.
+  // "Done <date>" boxes: changing one re-dates that tick without unticking it
+  panel.querySelectorAll("input.tl-donedate").forEach(inp=>{
+    inp.addEventListener("click",e=>e.stopPropagation());
+    inp.addEventListener("change",async ()=>{
+      const v=inp.value||null;
+      try{
+        if(inp.dataset.taskDone){
+          const t=(data.plantingTasks||[]).find(x=>x.id===inp.dataset.taskDone); if(!t) return;
+          await atPatch(CFG.farmBase, CFG.tables.plantingTasks, t.id, {[CFG.f.pt_doneDate]:v}); t.doneDate=v||"";
+        }else{
+          const df=inp.dataset.msDone, key={sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[df];
+          const fld={sowActual:CFG.f.pl_sowActual,tpActual:CFG.f.pl_tpActual,h1Actual:CFG.f.pl_h1Actual,h2Actual:CFG.f.pl_h2Actual}[key];
+          await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[fld]:v}); p[key]=v||"";
+        }
+      }catch(e){ alert("Couldn't save the date: "+e.message); }
+    });
+  });
   for(const tasksBox of panel.querySelectorAll(".tl-qa")){
     tasksBox.querySelectorAll("input[data-df]").forEach(cb=>{
       cb.onclick=e=>{ e.preventDefault(); if(cb.disabled) return; wkToggleMilestone(p.id,cb.dataset.df).then(()=>{
@@ -23591,6 +23612,11 @@ async function wkToggleDone(id,val,date){
 // Defaults to today; resolves the picked ISO date, or null if cancelled (the tick then doesn't happen).
 // Syncs (TickTick) pass their date straight in and never see this.
 function askDoneDate(title, defISO){
+  // User's call (2026-10-16): no popup — tick straight away as today, then fix the date by
+  // clicking the "Done" date box next to the item. The popup is kept below, unused, in case.
+  return Promise.resolve(defISO||todayISO());
+}
+function askDoneDatePopup(title, defISO){
   return new Promise(resolve=>{
     let ov=document.getElementById("doneDateModal");
     if(!ov){
