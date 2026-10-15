@@ -15094,10 +15094,21 @@ function tlGroupsByBed(){
 // tasks (like "Bed prep" before sowing or "Tarp" after harvest) that extend a planting's real
 // bed-occupancy window beyond the sow/transplant→harvest span. Shared by the Timeline and Crop
 // Map, each of which passes its own notion of "the span the main bar already covers".
+// Where a job sits on the bar: a done job at the day it was done; an open job re-worked from the
+// planting's actual dates (tlBarDates) so it moves with an early/late sow or harvest. Display only.
+function tlJobDate(t, p){
+  if(t.done) return t.doneDate||t.due||"";
+  if(t.anchor){
+    const e=tlBarDates(p), inst=computePlantingTaskInstance({sow:e.sow,tp:e.tp,h1:e.h1,h2:e.h2}, t);
+    if(inst && inst.due) return inst.due;
+  }
+  return t.due||"";
+}
 function taskExtentFor(p, rangeStart, rangeEnd){
   let pre=null, post=null;
-  apPlantingTasksFor(p.id).forEach(t=>{
-    if(!t.due) return;
+  apPlantingTasksFor(p.id).forEach(t0=>{
+    const due=tlJobDate(t0, p); if(!due) return;
+    const t={...t0, due};
     if(rangeStart && t.due<rangeStart && (!pre || t.due<pre.due)) pre=t;
     if(rangeEnd && t.due>rangeEnd && (!post || t.due>post.due)) post=t;
   });
@@ -15203,7 +15214,7 @@ function tlAddBar(rowEl,orig,b){
   const tarpJob=t=>t && /tarp/i.test(taskName(t));
   if(ext.pre){
     const xPre=tlX(ext.pre.due,b);
-    if(xPre!=null && xPre<left) tlAddEvent(rowEl, xPre, left, base, taskName(ext.pre).charAt(0).toUpperCase(), `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, orig);
+    if(xPre!=null && xPre<left) tlAddEvent(rowEl, xPre, left, base, taskName(ext.pre).charAt(0).toUpperCase(), `${taskName(ext.pre)} · ${ext.pre.done?"done ":""}${fmt(ext.pre.due)}`, orig);
   }
   if(tarp && tarp.start){
     // tarp after the last harvest: badge at the day it goes down, hatched strip until it comes off
@@ -15219,7 +15230,7 @@ function tlAddBar(rowEl,orig,b){
   }
   if(ext.post && !(tarp && tarpJob(ext.post))){
     const xPost=tlX(ext.post.due,b);
-    if(xPost!=null && xPost>barEnd) tlAddEvent(rowEl, Math.max(xPost, barEnd+12), barEnd, base, taskName(ext.post).charAt(0).toUpperCase(), `${taskName(ext.post)} · ${fmt(ext.post.due)}`, orig);
+    if(xPost!=null && xPost>barEnd) tlAddEvent(rowEl, Math.max(xPost, barEnd+12), barEnd, base, taskName(ext.post).charAt(0).toUpperCase(), `${taskName(ext.post)} · ${ext.post.done?"done ":""}${fmt(ext.post.due)}`, orig);
   }
 
   // crop name shown inside the bar itself, centred in the field ("in ground") segment — between
