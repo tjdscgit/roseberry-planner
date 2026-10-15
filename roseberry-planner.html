@@ -2274,6 +2274,8 @@
   .tl-subband{height:22px;position:relative;border-bottom:1px dashed var(--line)}
   .tl-donedate{font:inherit;font-size:inherit;color:inherit;background:transparent;border:1px solid var(--line);border-radius:5px;padding:0 .25rem;margin-left:.2rem;cursor:pointer;color-scheme:dark}
   .tl-donedate:hover{border-color:var(--ink-2)}
+  .tl-toplanned{margin-left:.3rem;padding:0 .35rem;border:1px solid var(--line);border-radius:5px;background:none;color:var(--ink-2);font:inherit;font-size:.9em;cursor:pointer;white-space:nowrap}
+  .tl-toplanned:hover{color:var(--ink);border-color:var(--ink-2)}
   .dd-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
   .dd-ov.open{display:flex}
   .dd-box{background:var(--bg,#1b1f23);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.2rem;width:min(22rem,100%);box-shadow:0 12px 40px rgba(0,0,0,.45)}
@@ -10717,6 +10719,9 @@ function cmRunsOf(indices){
 // bed-metres correctly for the drag "fits" highlight; this only teaches the RENDERING the same
 // thing, splitting a bed's column width between whichever plantings actually share it.
 function cmDrawBlockBars(grid, beds, plantings){
+  // Bars sit on what actually happened where it's recorded (same rule as the Timeline, tlBarDates);
+  // the panel still opens on the real record.
+  plantings=plantings.map(p=>Object.assign(tlBarDates(p),{__orig:p}));
   const layer=document.createElement("div");
   layer.className="cm-bars";
   layer.style.top=CM_COLH_H+"px";
@@ -10948,10 +10953,10 @@ function cmDrawBlockBars(grid, beds, plantings){
     }
 
     if(cmIsMobile()){
-      bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
+      bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p.__orig||p); });
     }else{
       bar.draggable=true;
-      bar.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) cmOpenPanel(p); });
+      bar.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) cmOpenPanel(p.__orig||p); });
       bar.addEventListener("dragstart",e=>{
         if(cmLocked){e.preventDefault();return;}
         cmDragStart(e,p);
@@ -11646,7 +11651,7 @@ function buildUnassigned(){
         +`<span class="cm-kid-name">${esc(p.variety||p.crop)}</span>`
         +`<span class="c-sub">${beds?esc(beds)+" · ":""}${esc(when)}</span>`;
       if(cmIsMobile()){
-        chip.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p); });
+        chip.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p.__orig||p); });
       }else{
         chip.draggable=true;
         chip.addEventListener("dragstart",e=>{
@@ -15632,7 +15637,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
     const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
     const actual=p[{sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[t.df]];
     const dateStr = p[t.df] ? fmt(p[t.df]) : "";
-    const doneBox = (done && actual) ? `<input type="date" class="tl-donedate" data-ms-done="${t.df}" value="${esc(actual)}" max="${todayISO()}" title="Done on — click to change">` : "";
+    const doneBox = (done && actual) ? `<input type="date" class="tl-donedate" data-ms-done="${t.df}" value="${esc(actual)}" max="${todayISO()}" title="Done on — click to change">`
+      +(p[t.df] && p[t.df]!==actual ? `<button type="button" class="tl-toplanned" data-plan="${esc(p[t.df])}" title="Set to the planned date, ${esc(fmt(p[t.df]))}">↺ planned</button>` : "") : "";
     const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
     const assigneeChoices=knownAssignees();
     if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
@@ -15703,7 +15709,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${t.done?"checked":""} data-tasktoggle="${t.id}">`
         +`<span class="tl-qa-label">${esc(tk?tk.name:"Task")}`
-          +(t.done?`<span class="tl-qa-date">Done <input type="date" class="tl-donedate" data-task-done="${t.id}" value="${esc(t.doneDate||"")}" max="${todayISO()}" title="Done on — click to change"></span>`:t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
+          +(t.done?`<span class="tl-qa-date">Done <input type="date" class="tl-donedate" data-task-done="${t.id}" value="${esc(t.doneDate||"")}" max="${todayISO()}" title="Done on — click to change">`
+          +(t.due && t.due!==t.doneDate ? `<button type="button" class="tl-toplanned" data-plan="${esc(t.due)}" title="Set to the planned date, ${esc(fmt(t.due))}">↺ planned</button>` : "")+`</span>`:t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
       +`</label>`
       +assigneeSelect
       +`</div>` };
@@ -15854,6 +15861,13 @@ function tlRenderPanel(p, panel, closeFn, opts){
   }
   // Milestones and the Tasks drop-down are each a .tl-qa list — wire both.
   // "Done <date>" boxes: changing one re-dates that tick without unticking it
+  panel.querySelectorAll("button.tl-toplanned").forEach(btn=>{
+    btn.addEventListener("click",e=>{
+      e.preventDefault(); e.stopPropagation();
+      const inp=btn.previousElementSibling; if(!inp) return;
+      inp.value=btn.dataset.plan; inp.dispatchEvent(new Event("change")); btn.remove();
+    });
+  });
   panel.querySelectorAll("input.tl-donedate").forEach(inp=>{
     inp.addEventListener("click",e=>e.stopPropagation());
     inp.addEventListener("change",async ()=>{
@@ -15866,6 +15880,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
           const df=inp.dataset.msDone, key={sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[df];
           const fld={sowActual:CFG.f.pl_sowActual,tpActual:CFG.f.pl_tpActual,h1Actual:CFG.f.pl_h1Actual,h2Actual:CFG.f.pl_h2Actual}[key];
           await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, {[fld]:v}); p[key]=v||"";
+          if(currentView==="timeline") buildTimeline();   // the bar follows the actual date
         }
       }catch(e){ alert("Couldn't save the date: "+e.message); }
     });
