@@ -15826,8 +15826,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
       };
     });
   }
-  const tasksBox=panel.querySelector(".tl-qa");
-  if(tasksBox){
+  // Milestones and the Tasks drop-down are each a .tl-qa list — wire both.
+  for(const tasksBox of panel.querySelectorAll(".tl-qa")){
     tasksBox.querySelectorAll("input[data-df]").forEach(cb=>{
       cb.onclick=e=>{ e.preventDefault(); if(cb.disabled) return; wkToggleMilestone(p.id,cb.dataset.df).then(()=>{
         const fresh=(data.plantings||[]).find(x=>x.id===p.id); if(fresh) tlRenderPanel(fresh,panel,closeFn);
