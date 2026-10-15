@@ -15598,7 +15598,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
   panel._tlOpts = opts;
   // preserve which accordion sections were open across re-renders (e.g. after a checkbox toggle
   // or a resize-triggered rebuild), rather than snapping them all back to their defaults
-  const prevOpen=new Set(Array.from(panel.querySelectorAll("details.tl-acc[open] summary")).map(s=>s.textContent));
+  const prevOpen=new Set(Array.from(panel.querySelectorAll("details.tl-acc[open] summary")).map(s=>s.textContent.split(" (")[0]));
   const bedName=bedNameOf(p);
   const lc=apLifecycle(p.tp?"transplant":"direct");
   const curRank=statusRank(p.status);
@@ -15684,16 +15684,19 @@ function tlRenderPanel(p, panel, closeFn, opts){
   });
   // one combined, date-ordered checklist — milestones (sow/transplant/harvest) render bold via
   // .milestone, undated items sort to the end rather than clumping at the top
-  const allItems=[...milestoneItems,...taskItems].sort((a,b)=>{
+  // Split (user's call): the always-open list is just the milestones (sow / transplant / harvest /
+  // tarp steps); every other job lives in the "Tasks" drop-down below, still tickable there.
+  const byDate=(a,b)=>{
     if(!a.date&&!b.date) return 0;
     if(!a.date) return 1;
     if(!b.date) return -1;
     return String(a.date).localeCompare(String(b.date));
-  });
-  const tasksHtml = allItems.length
-    ? `<div class="tl-qa">${allItems.map(i=>i.html).join("")}</div>`
-    : `<div class="empty-note">No tasks scheduled.</div>`;
-  const acc=(label,body,open)=>`<details class="tl-acc"${(prevOpen.size?prevOpen.has(label):open)?" open":""}><summary>${esc(label)}</summary>${body}</details>`;
+  };
+  const tasksHtml = milestoneItems.length
+    ? `<div class="tl-qa">${milestoneItems.slice().sort(byDate).map(i=>i.html).join("")}</div>`
+    : `<div class="empty-note">No milestones scheduled.</div>`;
+  const jobItems=taskItems.slice().sort(byDate);
+  const acc=(label,body,open)=>`<details class="tl-acc"${(prevOpen.size?prevOpen.has(label.split(" (")[0]):open)?" open":""}><summary>${esc(label)}</summary>${body}</details>`;
 
   // "All tasks": every job this planting has (done ones too), then the jobs its crop's Crop tasks
   // list says it should have but it doesn't — "not created yet", with one button to create them
@@ -15708,14 +15711,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const creatable=missingJobs.filter(m=>m.inst);
   const todayIso=todayISO();
   const allTasksHtml = (ownJobs.length || missingJobs.length)
-    ? `<div class="tl-alltasks">`
-      + ownJobs.map(t=>{
-          const tk=(data.tasks||[]).find(x=>x.id===t.taskId);
-          const state = t.done ? "Done" : (t.due && t.due<todayIso ? "Overdue" : "To do");
-          return `<div class="tl-all-row${t.done?" is-done":""}${state==="Overdue"?" is-late":""}">`
-            +`<span class="tl-all-name">${esc(tk?tk.name:(t.label||"Task"))}</span>`
-            +`<span class="tl-all-meta">${t.due?esc(fmt(t.due))+" · ":""}${state}${t.repeat?` · every ${esc(String(t.repeat))}d`:""}</span></div>`;
-        }).join("")
+    ? (jobItems.length ? `<div class="tl-qa">${jobItems.map(i=>i.html).join("")}</div>` : "")
+      + `<div class="tl-alltasks">`
       + missingJobs.map(({s,inst})=>`<div class="tl-all-row is-missing">`
           +`<span class="tl-all-name">${esc(s.task.name)}</span>`
           +`<span class="tl-all-meta">${inst?`would be ${esc(fmt(inst.due))} · `:`needs a ${esc(String(s.anchor||"date").toLowerCase())} date · `}not created yet</span></div>`).join("")
@@ -15787,9 +15784,9 @@ function tlRenderPanel(p, panel, closeFn, opts){
       ? `<div class="tl-fail-banner">! ${esc(String(ov.bm))}m planting, but ${esc(plantingBedNames(p)||"its bed")} ${p.bedIds.length>1?"hold":"holds"} ${esc(String(ov.room))}m`
         +` <button type="button" class="btn-ghost tl-over-fix" style="margin-left:.4rem;padding:.15rem .55rem;font-size:.74rem">Fix…</button></div>`
       : ""; })()}
-    <div class="sect-h">Tasks</div>
+    <div class="sect-h">Milestones</div>
     ${tasksHtml}
-    ${acc("All tasks",allTasksHtml,false)}
+    ${acc(`Tasks${ownJobs.length?" ("+ownJobs.filter(t=>!t.done).length+" to do)":""}`,allTasksHtml,false)}
     ${acc("Planting details",detailsHtml,false)}
     ${acc("Row spacing",rowsHtml,false)}
     ${acc("Nursery",nurseryHtml,false)}
