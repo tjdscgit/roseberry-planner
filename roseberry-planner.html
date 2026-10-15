@@ -15116,7 +15116,17 @@ function tlAddTarp(rowEl,t,b){
   rowEl.appendChild(el);
 }
 
-function tlAddBar(rowEl,p,b){
+function tlBarDates(p){
+  const sow=p.sowActual||p.sow, tp=p.tp?(p.tpActual||p.tp):p.tp;
+  const h1=p.h1Actual||p.h1;
+  let h2=p.h2Actual||p.h2;
+  if(h2 && h1 && h2<h1) h2=h1;
+  return {...p, sow, tp, h1, h2};
+}
+function tlAddBar(rowEl,orig,b){
+  // Draw what actually happened where it's been recorded (ticking "Harvest started" early moves the
+  // harvest segment to that day); planned dates fill the rest. Clicks/menus still get the real record.
+  const p=tlBarDates(orig);
   const x0=tlX(p.sow,b), x3=tlX(p.h2||p.h1||p.sow,b);
   if(x0==null||x3==null) return;
   const left=Math.min(x0,x3), w=Math.max(2,Math.abs(x3-x0)), span=(x3-x0)||1;
@@ -15160,8 +15170,8 @@ function tlAddBar(rowEl,p,b){
     +`Sow ${fmt(p.sow)}${p.tp?"  ·  TP "+fmt(p.tp):""}\nHarvest ${fmt(p.h1)} – ${fmt(p.h2)}`
     +(behind?"\n⚠ Behind schedule":"")
     +(p.failed?`\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"");
-  bar.onclick=e=>{e.stopPropagation();tlOpenPanel(p);};
-  bar.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e,{kind:"planting", p}); };
+  bar.onclick=e=>{e.stopPropagation();tlOpenPanel(orig);};
+  bar.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e,{kind:"planting", p:orig}); };
   if(p.group) bar.dataset.group=p.group;
   if(p.failed){
     bar.classList.add("tl-bar-failed");
@@ -15188,7 +15198,7 @@ function tlAddBar(rowEl,p,b){
   const tarpJob=t=>t && /tarp/i.test(taskName(t));
   if(ext.pre){
     const xPre=tlX(ext.pre.due,b);
-    if(xPre!=null && xPre<left) tlAddEvent(rowEl, xPre, left, base, taskName(ext.pre).charAt(0).toUpperCase(), `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, p);
+    if(xPre!=null && xPre<left) tlAddEvent(rowEl, xPre, left, base, taskName(ext.pre).charAt(0).toUpperCase(), `${taskName(ext.pre)} · ${fmt(ext.pre.due)}`, orig);
   }
   if(tarp && tarp.start){
     // tarp after the last harvest: badge at the day it goes down, hatched strip until it comes off
@@ -15199,12 +15209,12 @@ function tlAddBar(rowEl,p,b){
       if(xe!=null && xe>at){ const sp=document.createElement("div");sp.className="tl-evt-span";
         sp.style.left=at+"px";sp.style.width=(xe-at)+"px";rowEl.appendChild(sp); }
       tlAddEvent(rowEl, at, barEnd, null, "T",
-        `Tarp ${fmt(tarp.start)}${tarp.end?" – "+fmt(tarp.end):""}${job?"\nJob: "+taskName(job)+" · "+fmt(job.due):""}`, p, "is-tarp");
+        `Tarp ${fmt(tarp.start)}${tarp.end?" – "+fmt(tarp.end):""}${job?"\nJob: "+taskName(job)+" · "+fmt(job.due):""}`, orig, "is-tarp");
     }
   }
   if(ext.post && !(tarp && tarpJob(ext.post))){
     const xPost=tlX(ext.post.due,b);
-    if(xPost!=null && xPost>barEnd) tlAddEvent(rowEl, Math.max(xPost, barEnd+12), barEnd, base, taskName(ext.post).charAt(0).toUpperCase(), `${taskName(ext.post)} · ${fmt(ext.post.due)}`, p);
+    if(xPost!=null && xPost>barEnd) tlAddEvent(rowEl, Math.max(xPost, barEnd+12), barEnd, base, taskName(ext.post).charAt(0).toUpperCase(), `${taskName(ext.post)} · ${fmt(ext.post.due)}`, orig);
   }
 
   // crop name shown inside the bar itself, centred in the field ("in ground") segment — between
