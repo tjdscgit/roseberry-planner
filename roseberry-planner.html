@@ -2272,6 +2272,15 @@
   .tl-subhead.is-loose .tl-subhead-name{font-weight:600;color:var(--ink-2);font-style:italic}
   .tl-subhead.tl-hl-on{background:var(--paper-2)}
   .tl-subband{height:22px;position:relative;border-bottom:1px dashed var(--line)}
+  .dd-ov{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
+  .dd-ov.open{display:flex}
+  .dd-box{background:var(--bg,#1b1f23);border:1px solid var(--line);border-radius:14px;padding:1.1rem 1.2rem;width:min(22rem,100%);box-shadow:0 12px 40px rgba(0,0,0,.45)}
+  .dd-title{font-weight:700;margin-bottom:.8rem}
+  .dd-lbl{display:flex;align-items:center;gap:.6rem;color:var(--ink-2)}
+  .dd-lbl input{flex:1}
+  .dd-quick{display:flex;gap:.4rem;margin:.7rem 0 1rem}
+  .dd-quick button{flex:1;padding:.35rem .4rem;border:1px solid var(--line);border-radius:8px;background:none;color:var(--ink);font:inherit;font-size:.82rem;cursor:pointer}
+  .dd-btns{display:flex;justify-content:flex-end;gap:.5rem}
   .tl-subspan{position:absolute;top:4px;height:14px;opacity:.55;cursor:pointer;
     background:linear-gradient(var(--ink-2),var(--ink-2)) center/100% 2px no-repeat}
   .tl-subspan::before,.tl-subspan::after{content:"";position:absolute;top:2px;width:2px;height:10px;background:var(--ink-2)}
@@ -7491,6 +7500,7 @@ async function loadAll(opts){
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
+      h1Actual:p.fields[F.pl_h1Actual]||"", h2Actual:p.fields[F.pl_h2Actual]||"",
       parked:!!p.fields[F.pl_parked],
       // Failed/Failure date were only ever written (Timeline's Remove crop), never read back here —
       // planner-shared's parser had them, this one didn't, so a crop failure vanished on reload.
@@ -15564,7 +15574,8 @@ function tlMilestoneItemsHTML(p){
   const msAssigneeKey={sow:"sowAssignee",tp:"tpAssignee",h1:"h1Assignee",h2:"h2Assignee"};
   return lc.map(t=>{
     const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
-    const dateStr = p[t.df] ? fmt(p[t.df]) : "";
+    const actual=p[{sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[t.df]];
+    const dateStr = (done && actual) ? "Done "+fmt(actual) : p[t.df] ? fmt(p[t.df]) : "";
     const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
     const assigneeChoices=knownAssignees();
     if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
@@ -15606,7 +15617,8 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const msAssigneeKey={sow:"sowAssignee",tp:"tpAssignee",h1:"h1Assignee",h2:"h2Assignee"};
   const milestoneItems=lc.map(t=>{
     const stageRank=statusRank(t.stage), done=curRank>=stageRank, locked=curRank>stageRank;
-    const dateStr = p[t.df] ? fmt(p[t.df]) : "";
+    const actual=p[{sow:"sowActual",tp:"tpActual",h1:"h1Actual",h2:"h2Actual"}[t.df]];
+    const dateStr = (done && actual) ? "Done "+fmt(actual) : p[t.df] ? fmt(p[t.df]) : "";
     const akey=msAssigneeKey[t.df], curAssignee=p[akey]||"";
     const assigneeChoices=knownAssignees();
     if(curAssignee && !assigneeChoices.includes(curAssignee)) assigneeChoices.push(curAssignee);
@@ -15677,7 +15689,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${t.done?"checked":""} data-tasktoggle="${t.id}">`
         +`<span class="tl-qa-label">${esc(tk?tk.name:"Task")}`
-          +(t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
+          +((t.done&&t.doneDate)?`<span class="tl-qa-date">Done ${esc(fmt(t.doneDate))}</span>`:t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
       +`</label>`
       +assigneeSelect
       +`</div>` };
@@ -23567,12 +23579,43 @@ function wkRenderByBed(rows){
   return html;
 }
 
-async function wkToggleDone(id,val){
+async function wkToggleDone(id,val,date){
   const t=(data.plantingTasks||[]).find(x=>x.id===id); if(!t) return;
-  const prev=t.done; t.done=val;                // optimistic
+  const doneDate=val ? (date||todayISO()) : null;
+  const prev={done:t.done, doneDate:t.doneDate}; t.done=val; t.doneDate=doneDate||"";   // optimistic
   buildWeekPlanner();
-  try{ await atPatch(CFG.farmBase, CFG.tables.plantingTasks, id, {[CFG.f.pt_done]:val}); }
-  catch(e){ t.done=prev; buildWeekPlanner(); alert("Couldn't save that: "+e.message); }
+  try{ await atPatch(CFG.farmBase, CFG.tables.plantingTasks, id, {[CFG.f.pt_done]:val, [CFG.f.pt_doneDate]:doneDate}); }
+  catch(e){ Object.assign(t,prev); buildWeekPlanner(); alert("Couldn't save that: "+e.message); }
+}
+// "When was it done?" - a small date popup shown on every hand tick (milestones, tarp steps, jobs).
+// Defaults to today; resolves the picked ISO date, or null if cancelled (the tick then doesn't happen).
+// Syncs (TickTick) pass their date straight in and never see this.
+function askDoneDate(title, defISO){
+  return new Promise(resolve=>{
+    let ov=document.getElementById("doneDateModal");
+    if(!ov){
+      ov=document.createElement("div"); ov.id="doneDateModal"; ov.className="dd-ov";
+      ov.innerHTML=`<div class="dd-box" role="dialog" aria-modal="true" aria-labelledby="ddTitle">
+        <div class="dd-title" id="ddTitle"></div>
+        <label class="dd-lbl">Done on <input type="date" id="ddDate"></label>
+        <div class="dd-quick"><button type="button" data-dd="0">Today</button><button type="button" data-dd="-1">Yesterday</button><button type="button" data-dd="-2">2 days ago</button></div>
+        <div class="dd-btns"><button type="button" class="btn-ghost" id="ddCancel">Cancel</button><button type="button" class="btn-primary" id="ddOk">Save</button></div>
+      </div>`;
+      document.body.appendChild(ov);
+    }
+    const inp=ov.querySelector("#ddDate");
+    ov.querySelector("#ddTitle").textContent=title;
+    inp.value=defISO||todayISO(); inp.max=todayISO();
+    const done=v=>{ ov.classList.remove("open"); document.removeEventListener("keydown",key,true); resolve(v); };
+    const key=e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); done(null); }
+                   else if(e.key==="Enter"){ e.preventDefault(); done(inp.value||todayISO()); } };
+    ov.querySelector("#ddOk").onclick=()=>done(inp.value||todayISO());
+    ov.querySelector("#ddCancel").onclick=()=>done(null);
+    ov.onmousedown=e=>{ if(e.target===ov) done(null); };
+    ov.querySelectorAll("[data-dd]").forEach(b=>b.onclick=()=>{ inp.value=isoAddDays(todayISO(), +b.dataset.dd); });
+    document.addEventListener("keydown",key,true);
+    ov.classList.add("open"); setTimeout(()=>ov.querySelector("#ddOk").focus());
+  });
 }
 
 // Is this a bed prep job? The category lives on the master task library, so a one-off manual task
@@ -23590,7 +23633,13 @@ function bpIsPrepTask(t){
 // a loop over every synced task, and a modal in there would pop once per task and block the sync on
 // await. Only the three human call sites use this.
 async function wkToggleDoneInteractive(id,val){
-  await wkToggleDone(id,val);
+  let date;
+  if(val){
+    const t0=(data.plantingTasks||[]).find(x=>x.id===id);
+    date=await askDoneDate(t0 ? (taskName(t0)+(t0.label?" — "+t0.label.split(" — ")[0]:"")) : "Job done", todayISO());
+    if(!date) return;
+  }
+  await wkToggleDone(id,val,date);
   if(!val) return;                        // unticking never prompts
   const t=(data.plantingTasks||[]).find(x=>x.id===id);
   if(!bpIsPrepTask(t)) return;
@@ -23622,10 +23671,15 @@ function wkToggleBedPrep(rowId){
   bppOpenPass(r ? r.bpAttach : rowId.split(":")[1]);
   return Promise.resolve();
 }
-async function wkToggleTarp(rowId){
+async function wkToggleTarp(rowId, date){
   const [,tarpId,step]=rowId.split(":");
   const t=(data.tarps||[]).find(x=>x.id===tarpId); if(!t) return;
-  const patch=PlannerShared.buildTarpPatch(t, step, todayISO());
+  const probe=PlannerShared.buildTarpPatch(t, step, todayISO());
+  if(probe && date===undefined && Object.values(probe).some(v=>v===todayISO())){   // moving forward: ask when
+    date=await askDoneDate((step==="pull"?"Tarp pulled":"Tarp laid")+" — "+tarpName(t), todayISO());
+    if(!date) return;
+  }
+  const patch=PlannerShared.buildTarpPatch(t, step, date||todayISO());
   if(!patch) return;                                  // already past this step — locked
   const prev={status:t.status, laidActual:t.laidActual, pulledActual:t.pulledActual};
   Object.assign(t, patch);                            // optimistic
@@ -23637,14 +23691,22 @@ async function wkToggleTarp(rowId){
     alert("Couldn't save that: "+e.message);
   }
 }
-async function wkToggleMilestone(plantingId, df){
+async function wkToggleMilestone(plantingId, df, date){
   const p=(data.plantings||[]).find(x=>x.id===plantingId); if(!p) return;
   // the actual stepper rule lives in planner-shared.js (buildMilestonePatch) so it can't drift
   // from whatever else advances a planting's status (e.g. an MCP tool) — null = locked, no-op.
   // Besides Status, it also stamps/clears the sow/tp "actual date" field, keyed by app-side prop
   // name (status/sowActual/tpActual) — map those to Airtable field names for the PATCH below.
-  const patch=PlannerShared.buildMilestonePatch(p, df, todayISO()); if(!patch) return;
-  const propToField={status:CFG.f.pl_status, sowActual:CFG.f.pl_sowActual, tpActual:CFG.f.pl_tpActual};
+  const probe=PlannerShared.buildMilestonePatch(p, df, todayISO()); if(!probe) return;
+  const forward=statusRank(probe.status)>statusRank(p.status);
+  if(forward && date===undefined){
+    const lbl=({sow:"Sown",tp:"Planted out",h1:"Harvest started",h2:"Finished / pulled"})[df]||"Done";
+    date=await askDoneDate(`${lbl} — ${p.crop}${p.variety?" · "+p.variety:""}`, todayISO());
+    if(!date) return;
+  }
+  const patch=PlannerShared.buildMilestonePatch(p, df, date||todayISO()); if(!patch) return;
+  const propToField={status:CFG.f.pl_status, sowActual:CFG.f.pl_sowActual, tpActual:CFG.f.pl_tpActual,
+    h1Actual:CFG.f.pl_h1Actual, h2Actual:CFG.f.pl_h2Actual};
   const prev={}; Object.keys(patch).forEach(k=>prev[k]=p[k]);
   Object.assign(p, patch);                                // optimistic
   // Refresh whichever board is actually on screen — a milestone can be ticked from the Timeline
@@ -25144,7 +25206,7 @@ async function ttPullCompletions(){
       const resp=await ttApiFetch(t.assignee, TT_API_BASE+"/project/"+acc.listId+"/task/"+t.ttId);
       if(!resp.ok) continue;
       const tt=await resp.json();
-      if(tt.status===2){ await wkToggleDone(t.id, true); advanced++; }
+      if(tt.status===2){ await wkToggleDone(t.id, true, todayISO()); advanced++; }
     }catch(e){ failed++; console.error("TickTick pull failed for task",t.id,e); }
   }
   for(const p of (data.plantings||[])){
@@ -25161,7 +25223,7 @@ async function ttPullCompletions(){
         const resp=await ttApiFetch(assignee, TT_API_BASE+"/project/"+acc.listId+"/task/"+ttId);
         if(!resp.ok) continue;
         const tt=await resp.json();
-        if(tt.status===2){ await wkToggleMilestone(p.id, df); advanced++; }
+        if(tt.status===2){ await wkToggleMilestone(p.id, df, todayISO()); advanced++; }
       }catch(e){ failed++; console.error("TickTick pull failed for planting",p.id,df,e); }
     }
   }
@@ -25179,7 +25241,7 @@ async function ttPullCompletions(){
         const resp=await ttApiFetch(assignee, TT_API_BASE+"/project/"+acc.listId+"/task/"+ttId);
         if(!resp.ok) continue;
         const tt=await resp.json();
-        if(tt.status===2){ await wkToggleTarp(`tarp:${tarp.id}:${s.step}`); advanced++; }
+        if(tt.status===2){ await wkToggleTarp(`tarp:${tarp.id}:${s.step}`, todayISO()); advanced++; }
       }catch(e){ failed++; console.error("TickTick pull failed for tarp",tarp.id,s.step,e); }
     }
   }

@@ -152,7 +152,7 @@
       ct_anchor:"Anchor", ct_offset:"Offset days", ct_repeat:"Repeat every (days)", ct_until:"Repeat until",
       ct_duration:"Minutes per 15m bed",
       pt_label:"Label", pt_planting:"Planting", pt_task:"Task", pt_anchor:"Anchor", pt_offset:"Offset days",
-      pt_due:"Due date", pt_done:"Done", pt_start:"Start minute",
+      pt_due:"Due date", pt_done:"Done", pt_doneDate:"Done date", pt_start:"Start minute",
       pt_repeat:"Repeat every (days)", pt_until:"Repeat until", pt_duration:"Minutes per 15m bed",
       pt_assignee:"Assignee", pt_ttid:"TickTick Task ID", pt_gcalid:"Google Cal Event ID",
       // Ops app mirror id — same per-record external-id pattern as pt_ttid/pt_gcalid above.
@@ -191,7 +191,7 @@
       // `pl_tpActual` is the same idea for the transplant step — both are also auto-stamped by
       // the milestone-tick stepper (see buildMilestonePatch below) and hand-editable in the
       // Add/Edit Planting dialog.
-      pl_seedRef:"Seed ref", pl_traysSown:"Trays sown", pl_sowActual:"Actual sow date",
+      pl_seedRef:"Seed ref", pl_traysSown:"Trays sown", pl_sowActual:"Actual sow date", pl_h1Actual:"Actual first harvest", pl_h2Actual:"Actual last harvest",
       pl_tpActual:"Actual transplant date",
       // Wound back into a bed zone. Not a Status value — statusRank() is positional, so adding one
       // would rank as "Planned". A parked planting keeps everything (id, bed link, tasks, harvest
@@ -846,7 +846,7 @@
 
   // sow/tp are the only milestones with an "actual date" counterpart (h1/h2 don't — see the
   // pl_tpActual comment above); maps a milestone df to the app-side planting property to stamp.
-  const MILESTONE_ACTUAL_KEY = {sow:"sowActual", tp:"tpActual"};
+  const MILESTONE_ACTUAL_KEY = {sow:"sowActual", tp:"tpActual", h1:"h1Actual", h2:"h2Actual"};
 
   // Wraps nextMilestoneStep with the actual-date side effect: ticking a milestone forward stamps
   // today's date into its actual-date field (only if that field is still blank — never clobbers a
@@ -861,7 +861,7 @@
     const actualKey = MILESTONE_ACTUAL_KEY[df];
     if(cur<sr){
       const patch={status: lc[i].stage};
-      if(actualKey && !planting[actualKey]) patch[actualKey]=todayISO;
+      if(actualKey) patch[actualKey]=todayISO;
       return patch;
     }
     if(cur===sr){
@@ -1151,6 +1151,7 @@
       offset:num(r.fields[F.pt_offset]),
       due:r.fields[F.pt_due] || "",
       done:!!r.fields[F.pt_done],
+      doneDate:r.fields[F.pt_doneDate] || "",
       start: r.fields[F.pt_start]==null ? null : Number(r.fields[F.pt_start]),
       repeat:num(r.fields[F.pt_repeat]),
       until:r.fields[F.pt_until] || "",
@@ -2173,6 +2174,7 @@
       bedIds:(p.fields[F.pl_bed]||[]).slice(),
       seedRef:p.fields[F.pl_seedRef]||"", traysSown:num(p.fields[F.pl_traysSown]),
       sowActual:p.fields[F.pl_sowActual]||"", tpActual:p.fields[F.pl_tpActual]||"",
+      h1Actual:p.fields[F.pl_h1Actual]||"", h2Actual:p.fields[F.pl_h2Actual]||"",
       parked:!!p.fields[F.pl_parked],
       failed:!!p.fields[F.pl_failed], failureDate:p.fields[F.pl_failureDate]||"",
       skipped:!!p.fields[F.pl_skipped], skippedDate:p.fields[F.pl_skippedDate]||"",
@@ -2306,7 +2308,7 @@
     const actualKey=TARP_STEPS[i].actual;
     if(cur<sr){
       const patch={status:TARP_STEPS[i].stage};
-      if(!tarp[actualKey]) patch[actualKey]=todayISO;
+      patch[actualKey]=todayISO;
       return patch;
     }
     if(cur===sr){
