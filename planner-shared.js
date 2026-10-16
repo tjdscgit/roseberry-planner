@@ -202,7 +202,7 @@
       cr_window:"Harvest window days", cr_gap:"Succession interval days",
       cr_rows:"Rows per bed", cr_rowSpacing:"Spacing between rows cm", cr_plantSpacing:"In-row spacing cm",
       cr_seeder:"Seeder type", cr_harvestUnit:"Harvest unit", cr_plantsPerUnit:"Plants per unit",
-      cr_price:"Price", cr_yield:"Yield per bed metre",
+      cr_price:"Price", cr_yield:"Yield per bed metre", cr_yieldTyped:"Yield typed in",
       cr_trayType:"Tray type", cr_seedsPerCell:"Seeds per cell", cr_daysToGerminate:"Days to germinate",
       cr_germTemp:"Optimal germ temp (°C)", cr_pottingUp:"Requires potting up",
       va_name:"Variety", va_crop:"Crop", va_method:"Method", va_nursery:"Days in nursery",

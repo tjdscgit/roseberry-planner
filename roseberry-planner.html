@@ -274,6 +274,7 @@
   .cr-table select{width:auto;min-width:10.5rem}
   .cr-table input:focus,.cr-table select:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel)}
   .cr-num{max-width:6rem}
+  .cr-num.cr-yield-calc{font-style:italic;color:var(--ink-2)}
   /* wider than .cr-num — the Crop Tasks tree's inherit-hint placeholder ("inherit · 13.95") needs
      more room than a plain number does, or it clips right after "inherit ·" */
   .cr-table input[data-k="duration"]{max-width:9rem}
@@ -7418,6 +7419,7 @@ async function loadAll(opts){
       data.crops[c.id] = (c.fields["Crop"] ?? "Crop");
       data.cropDefs[c.id] = readDefaultFields(c.fields, "cr");
       data.cropDefs[c.id].type = c.fields[F.cr_type] || "";
+      data.cropDefs[c.id].yieldTyped = !!c.fields[F.cr_yieldTyped];
     });
     data.varietiesByCrop = {}; data.varietiesById = {};
     varieties.forEach(v => {
@@ -17119,6 +17121,12 @@ function apSyncYield(){
   const inp=$ap("apYield"), hint=$ap("apYieldHint"); inp.readOnly=false;
   const sp=apSpacingYield();
   if(!sp){ if(hint) hint.textContent=""; return; }
+  const cd=apCropId ? (data.cropDefs[apCropId]||{}) : {};
+  if(!apYieldManual && cd.yieldTyped && cd.yield!=null){   // the crop library's own figure was typed in: that wins
+    inp.value=cd.yield;
+    if(hint) hint.innerHTML=`From the crop library (typed in there). Spacing gives ${sp.v}.`;
+    return;
+  }
   if(!apYieldManual){
     if(parseFloat(inp.value)!==sp.v){ inp.value=sp.v; }
     if(hint) hint.innerHTML=`From spacing: ≈ ${Math.round(sp.ppm)} plants/m ÷ ${sp.per} per unit. Type to override.`;
@@ -18101,6 +18109,47 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $zn("znModal").c
 /* ---------- Crops tab: per-crop timing defaults, and per-variety overrides of them,
    stored on Airtable (Crop / Crop Varieties tables) so they sync across devices ---------- */
 const CR_FIELD_KEY=Object.fromEntries(DEFAULT_KEYS.map(k=>[k,"cr_"+k]));
+// Crop library yield follows spacing the same way Edit planting does (apSyncYield): plants/m ÷ how
+// many make a unit (Number / unit, else the count in the unit name, "Bunch (6)"), unless it's been
+// typed over — remembered per crop in "Yield typed in". Clearing the box, or typing the spacing
+// figure, hands it back to spacing.
+function crSpacingYield(d){
+  const per = d.plantsPerUnit>0 ? +d.plantsPerUnit : (()=>{ const m=String(d.harvestUnit||"").match(/\((\d+(?:\.\d+)?)\)/); return m?+m[1]:null; })();
+  const rows=+d.rows, ps=+d.plantSpacing;
+  if(!(per>0 && rows>0 && ps>0)) return null;
+  return +((rows*100/ps)/per).toFixed(2);
+}
+async function crSaveYieldTyped(cropId, on){
+  const d=data.cropDefs[cropId]; if(!d || !!d.yieldTyped===on) return;
+  d.yieldTyped=on;
+  try{ await atPatch(CFG.farmBase, CFG.tables.crops, cropId, {[CFG.f.cr_yieldTyped]:on}); }
+  catch(e){ d.yieldTyped=!on; console.error(e); }
+}
+async function crSaveWithYield(cropId,k,v,tr){
+  const d=(data.cropDefs[cropId] ||= {});
+  if(k==="yield"){
+    const sp=crSpacingYield(d);
+    if(v===""||v==null){ await crSaveYieldTyped(cropId,false); if(sp!=null) v=sp; }
+    else await crSaveYieldTyped(cropId, !(sp!=null && +v===sp));
+    await saveCropDefault(cropId,"yield",v);
+  }else{
+    await saveCropDefault(cropId,k,v);
+    if(["rows","plantSpacing","plantsPerUnit","harvestUnit"].includes(k) && !d.yieldTyped){
+      const sp=crSpacingYield(d);
+      if(sp!=null && sp!==+d.yield) await saveCropDefault(cropId,"yield",sp);
+    }
+  }
+  crShowYieldSource(cropId, tr);
+}
+function crShowYieldSource(cropId, tr){
+  const inp=tr && tr.querySelector('[data-k="yield"]'); if(!inp) return;
+  const d=data.cropDefs[cropId]||{}, sp=crSpacingYield(d);
+  inp.value=d.yield??"";
+  inp.classList.toggle("cr-yield-calc", !d.yieldTyped && sp!=null);
+  inp.title = sp==null ? "Needs rows, plant spacing and a number per unit to work out from spacing"
+    : d.yieldTyped ? `Typed in. Spacing gives ${sp} — clear the box to use that.`
+    : `From spacing: ${Math.round(+d.rows*100/+d.plantSpacing)} plants/m ÷ per unit. Type to override.`;
+}
 async function saveCropDefault(cropId,key,val){
   const fieldName=CFG.f[CR_FIELD_KEY[key]]; if(!fieldName) return;
   const clean = (val===""||val==null||(typeof val==="number"&&isNaN(val))) ? null : val;
@@ -18216,7 +18265,7 @@ function buildCrMobileList(){
     box.appendChild(typeRow);
     const form=document.createElement("div"); form.innerHTML=crFieldRowsHTML();
     box.appendChild(form);
-    crBindFieldCells(form, cd, (k,v)=>saveCropDefault(crMobileCrop,k,v), null);
+    crBindFieldCells(form, cd, (k,v)=>crSaveWithYield(crMobileCrop,k,v,form), null); crShowYieldSource(crMobileCrop, form);
 
     const sect=document.createElement("div"); sect.className="sect-h"; sect.textContent="Varieties";
     box.appendChild(sect);
@@ -18283,7 +18332,7 @@ function crRenderPanel(){
   panel.querySelector("[data-cr-type]").onchange=e=>saveCropType(id, e.target.value||null);
   const form=panel.querySelector("#crPanelFields");
   form.innerHTML=crFieldRowsHTML();
-  crBindFieldCells(form, cd, (k,v)=>saveCropDefault(id,k,v), null);
+  crBindFieldCells(form, cd, (k,v)=>crSaveWithYield(id,k,v,form), null); crShowYieldSource(id, form);
 }
 function crMarkSelectedRow(){
   document.querySelectorAll("#crBody tr").forEach(tr=>
@@ -18392,7 +18441,8 @@ function crCropRow(c){
     +crFieldCellsHTML(0,5)
     +`<td class="cr-spark-cell" data-grp="Timing"></td>`
     +crFieldCellsHTML(5);
-  const {sparkCell}=crBindFieldCells(tr, cd, (k,v)=>saveCropDefault(c.id,k,v), null);
+  const {sparkCell}=crBindFieldCells(tr, cd, (k,v)=>crSaveWithYield(c.id,k,v,tr), null);
+  crShowYieldSource(c.id, tr);
   const nameCell=tr.querySelector(".cr-crop");
   if(nameCell){
     nameCell.style.cursor="pointer";
