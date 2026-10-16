@@ -16399,6 +16399,7 @@ function apApplyDefaults(cropId, varietyId){
   apSetPottingUp(defs.pottingUp || "");
   $ap("apNotes").value = "";
   apCascadeFromSow();
+  apYieldManual=false;
   apSyncYield();
   apUpdateRowsSummary(); apUpdateHarvestSummary();
 }
@@ -16737,6 +16738,7 @@ function apFillBlanksFromDefaults(){
     if(g.id==="apTrayType"){ apFillTrayTypes(g.v); return; }
     $ap(g.id).value=g.v;
   });
+  apSyncYield();
 }
 function apRenderCropTags(){
   const defs=apCropId ? apMergedDefaults(apCropId, apVarietyId()) : {};
@@ -17096,22 +17098,33 @@ function apSyncDtm(){
     if(hint) hint.textContent="";
   }
 }
-// When "Number per unit" is set (e.g. 10 radishes per bunch), Yield per bed metre is derived from
-// the Row Spacing tab (plants/m ÷ per-unit) instead of typed in directly — same read-only-when-
-// derivable pattern as climate-adjusted DTM above. Create mode only; edit mode always shows the
-// planting's own stored value, editable.
+// Yield per bed metre is worked out from spacing — plants/m (rows × 100 ÷ in-row spacing) ÷ how
+// many make a unit — unless it's been typed over (user's call, 2026-10-17). "How many make a unit"
+// is Number per unit, or failing that the count in the harvest unit's name ("Bunch (6)" → 6).
+// Typed-over: typing in the box this session, or opening a planting whose saved yield differs from
+// both the crop library's and the spacing figure (someone chose it). The hint offers the way back.
+let apYieldManual=false;
+function apUnitCount(){
+  const per=parseFloat($ap("apPlantsPerUnit").value); if(per>0) return per;
+  const m=String($ap("apHarvestUnit").value||"").match(/\((\d+(?:\.\d+)?)\)/);
+  return m ? parseFloat(m[1]) : null;
+}
+function apSpacingYield(){
+  const per=apUnitCount(), rows=parseFloat($ap("apRows").value), ps=parseFloat($ap("apPlantSpacing").value);
+  if(!(per>0 && rows>0 && ps>0)) return null;
+  const ppm=rows*100/ps;
+  return {v:+(ppm/per).toFixed(2), ppm, per};
+}
 function apSyncYield(){
-  const inp=$ap("apYield"), hint=$ap("apYieldHint");
-  if(apMode!=="create"){ inp.readOnly=false; if(hint) hint.textContent=""; return; }
-  const perUnit=parseFloat($ap("apPlantsPerUnit").value);
-  const rows=parseFloat($ap("apRows").value), plantSpacing=parseFloat($ap("apPlantSpacing").value);
-  if(perUnit>0 && rows>0 && plantSpacing>0){
-    const plantsPerMetre=rows*100/plantSpacing;
-    inp.value=(plantsPerMetre/perUnit).toFixed(2); inp.readOnly=true;
-    if(hint) hint.textContent=`≈ ${Math.round(plantsPerMetre)} plants/m ÷ ${perUnit} per unit`;
-  }else{
-    inp.readOnly=false;
-    if(hint) hint.textContent = perUnit>0 ? "Also needs Number of rows + Spacing on the row (Row Spacing tab)." : "";
+  const inp=$ap("apYield"), hint=$ap("apYieldHint"); inp.readOnly=false;
+  const sp=apSpacingYield();
+  if(!sp){ if(hint) hint.textContent=""; return; }
+  if(!apYieldManual){
+    if(parseFloat(inp.value)!==sp.v){ inp.value=sp.v; }
+    if(hint) hint.innerHTML=`From spacing: ≈ ${Math.round(sp.ppm)} plants/m ÷ ${sp.per} per unit. Type to override.`;
+  }else if(hint){
+    hint.innerHTML = parseFloat(inp.value)===sp.v ? "" :
+      `Typed in. Spacing gives ${sp.v}. <button type="button" class="ap2-link" id="apYieldUseSpacing">Use spacing</button>`;
   }
 }
 function apRecalcH1(){
@@ -17281,7 +17294,9 @@ function apOpenEdit(p){
   apNominalDtm = dtm;
   $ap("apWindow").value = win!=null ? win : "";
   apSyncDtm();   // edit: keeps apDtm editable, clears any climate hint
-  apSyncYield();   // edit: keeps apYield editable, clears any derivation hint
+  { const sv=p.yield, cd=(apMergedDefaults(apCropId, apVarietyId())||{}).yield, sp=apSpacingYield();
+    apYieldManual = sv!=null && sv!=="" && !(cd!=null && +cd===+sv) && !(sp && sp.v===+sv); }
+  apSyncYield();
   apUpdateRowsSummary(); apUpdateHarvestSummary();
   // Termination: reflect this planting's existing tarp, if it has one. Weeks is back-computed
   // from the record's own dates so a hand-adjusted tarp keeps its real length.
@@ -17889,9 +17904,13 @@ $ap("apRowSpacing").addEventListener("input",apUpdateRowsSummary);
 $ap("apPlantSpacing").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apSeeder").addEventListener("change",apUpdateSummarySidebar);
 $ap("apPlantsPerUnit").addEventListener("input",()=>{ apSyncYield(); apUpdateHarvestSummary(); });
-$ap("apYield").addEventListener("input",apUpdateHarvestSummary);
+$ap("apYield").addEventListener("input",()=>{ apYieldManual=true; apSyncYield(); apUpdateHarvestSummary(); });
+$ap("apYieldHint").addEventListener("click",e=>{
+  if(!e.target.closest("#apYieldUseSpacing")) return;
+  apYieldManual=false; apSyncYield(); apUpdateHarvestSummary(); apUpdateSummarySidebar();
+});
 $ap("apPrice").addEventListener("input",apUpdateHarvestSummary);
-$ap("apHarvestUnit").addEventListener("change",apUpdateHarvestSummary);
+$ap("apHarvestUnit").addEventListener("change",()=>{ apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apTrayType").addEventListener("change",apUpdateSummarySidebar);
 $ap("apSeedsPerCell").addEventListener("input",apUpdateSummarySidebar);
 $ap("apDaysToGerminate").addEventListener("input",apUpdateSummarySidebar);
