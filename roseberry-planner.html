@@ -2456,6 +2456,40 @@
   .tl-notes:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel)}
   .tl-panel-actions{display:flex;gap:.5rem;margin-top:1.2rem}
   .tl-panel-actions .btn-primary{flex:1 1 auto}
+  /* Planting panel, Option B: title row, chips, tabs. */
+  .tl-head-b{height:auto;padding-top:1rem;padding-bottom:.2rem;margin-bottom:.5rem;border-bottom:none}
+  .tl-head-b .tl-panel-title{display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap}
+  .tl-head-b .tl-panel-crop{font-size:1.3rem}
+  .tl-head-b .tl-panel-variety{font-family:var(--sans);font-size:.9rem;text-transform:none;letter-spacing:0;margin:0}
+  .tl-chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.7rem}
+  .tl-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .6rem;border-radius:999px;
+    background:var(--paper);font-size:.78rem;color:var(--ink);white-space:nowrap}
+  .tl-chip-status{background:color-mix(in srgb, var(--c) 28%, transparent);font-weight:600}
+  .tl-tabs{display:flex;margin:0 -1.1rem .9rem;padding:0 .5rem;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:var(--paper-2);z-index:1}
+  .tl-tab{flex:1 1 0;min-height:42px;border:none;background:none;cursor:pointer;font:.84rem var(--sans);
+    color:var(--ink-2);border-bottom:2px solid transparent;padding:0 .2rem}
+  .tl-tab:hover{color:var(--ink)}
+  .tl-tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ok)}
+  .tl-tab-n{font-size:.72rem;color:var(--ink-2);font-weight:400}
+  .tl-tab-body .sect-h:first-child{margin-top:0}
+  /* Milestones as a vertical timeline: the checkbox becomes the dot, a line joins them. */
+  .tl-ms-line{gap:0;margin-top:.2rem}
+  .tl-ms-line .tl-qa-row{position:relative;padding-bottom:1rem}
+  .tl-ms-line .tl-qa-row:not(:last-child)::before{content:"";position:absolute;left:10px;top:1.45rem;bottom:.1rem;width:2px;background:var(--line-2)}
+  .tl-ms-line .tl-qa-row:has(input:checked):not(:last-child)::before{background:var(--ok)}
+  .tl-ms-line .tl-qa-row.locked{opacity:1}
+  .tl-ms-line .tl-qa-row.locked .tl-qa-label,.tl-ms-line .tl-qa-row:has(input:checked) .tl-qa-label{font-weight:500;color:var(--ink-2)}
+  .tl-ms-line input[type=checkbox]{appearance:none;-webkit-appearance:none;width:22px;height:22px;margin:0;flex:0 0 auto;
+    border-radius:50%;border:2px solid var(--line-2);background:var(--paper-2);cursor:pointer;position:relative}
+  .tl-ms-line input[type=checkbox]:checked{background:var(--ok);border-color:var(--ok)}
+  .tl-ms-line input[type=checkbox]:checked::after{content:"";position:absolute;left:50%;top:45%;width:5px;height:10px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:translate(-50%,-50%) rotate(45deg)}
+  .tl-ms-line input[type=checkbox]:disabled{cursor:default}
+  .tl-due{background:var(--paper);border-radius:12px;padding:.7rem .85rem .4rem;margin:.4rem 0 .6rem}
+  .tl-due-h{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:.86rem}
+  .tl-due .tl-qa{margin-top:.5rem}
+  .tl-linkbtn{background:none;border:none;color:var(--ok);cursor:pointer;font:.8rem var(--sans);padding:.2rem 0}
   .tl-fail-banner{background:rgba(192,57,43,.14);border:1px solid rgba(192,57,43,.4);color:var(--clay);
     border-radius:8px;padding:.5rem .7rem;font-size:.78rem;font-weight:600;margin:.8rem 0}
   .fi-soil-banner{background:rgba(58,138,158,.14);border:1px solid rgba(58,138,158,.4);color:var(--steel);
@@ -15752,7 +15786,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
       +`<option value=""${!t.assignee?" selected":""}>+ Assign…</option>`
       +assigneeChoices.map(a=>`<option value="${esc(a)}"${a===t.assignee?" selected":""}>${esc(a)}</option>`).join("")
       +`<option value="__add__">+ Add new…</option></select>`;
-    return { date:t.due||"", html:`<div class="tl-qa-row tl-qa-task-row">`
+    return { date:t.due||"", done:!!t.done, html:`<div class="tl-qa-row tl-qa-task-row">`
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${t.done?"checked":""} data-tasktoggle="${t.id}">`
         +`<span class="tl-qa-label">${esc(tk?tk.name:"Task")}`
@@ -15773,7 +15807,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     return String(a.date).localeCompare(String(b.date));
   };
   const tasksHtml = milestoneItems.length
-    ? `<div class="tl-qa">${milestoneItems.slice().sort(byDate).map(i=>i.html).join("")}</div>`
+    ? `<div class="tl-qa tl-ms-line">${milestoneItems.slice().sort(byDate).map(i=>i.html).join("")}</div>`
     : `<div class="empty-note">No milestones scheduled.</div>`;
   const jobItems=taskItems.slice().sort(byDate);
   const acc=(label,body,open)=>`<details class="tl-acc"${(prevOpen.size?prevOpen.has(label.split(" (")[0]):open)?" open":""}><summary>${esc(label)}</summary>${body}</details>`;
@@ -15844,42 +15878,61 @@ function tlRenderPanel(p, panel, closeFn, opts){
   // planting's detail panel from anywhere (Farm map, Timeline, Crop map, Week planner) explains
   // WHY it's flagged, not just that it is.
   const behindReason=typeof tlBehindReason==="function" ? tlBehindReason(p) : null;
+  // Option B (2026-10-17): header chips + Overview / Tasks / Setup / Harvest tabs instead of a
+  // stack of accordions. Only the active tab is rendered; the tab sticks across re-renders.
+  if(panel._tlPid!==p.id){ panel._tlPid=p.id; panel._tlTab="overview"; }
+  const tab=panel._tlTab||"overview";
+  const openJobs=jobItems.filter(i=>!i.done);
+  const sowRef=p.sowActual||p.sow;
+  const dayN=sowRef ? Math.floor((new Date(todayISO())-new Date(sowRef))/864e5) : null;
+  const chips=[
+    `<span class="tl-chip tl-chip-status" style="--c:${statusColor(p.status)}">● ${esc(p.status||"—")}</span>`,
+    `<span class="tl-chip"><span class="tl-panel-dot" style="background:${cropColor(p.cropId||p.crop)}"></span>${esc(bedName||"unassigned")}${bedObj?.block?` · Block ${esc(bedObj.block)}`:""}</span>`,
+    p.bm>0?`<span class="tl-chip">${esc(String(p.bm))} m</span>`:"",
+    (dayN!=null && dayN>=0)?`<span class="tl-chip" title="Days since sowing">Day ${dayN}</span>`:"",
+  ].join("");
+  const tabBtn=(id,label)=>`<button type="button" role="tab" class="tl-tab${tab===id?" on":""}" data-tltab="${id}" aria-selected="${tab===id}">${label}</button>`;
+  let body="";
+  if(tab==="overview"){
+    body=tasksHtml
+      +(openJobs.length?`<div class="tl-due"><div class="tl-due-h"><span>Due next</span><button type="button" class="tl-linkbtn" data-tltab="tasks">${Math.min(2,openJobs.length)} of ${openJobs.length} ›</button></div>`
+        +`<div class="tl-qa">${openJobs.slice(0,2).map(i=>i.html).join("")}</div></div>`:"")
+      +`<div class="sect-h">Notes</div>
+    <textarea class="tl-notes" rows="4" placeholder="Anything worth remembering about this planting…">${esc(p.notes||"")}</textarea>`;
+  }else if(tab==="tasks"){
+    body=allTasksHtml;
+  }else if(tab==="setup"){
+    body=`<div class="sect-h">Planting</div>${detailsHtml}<div class="sect-h">Row spacing</div>${rowsHtml}`
+      +(p.tp?`<div class="sect-h">Nursery</div>${nurseryHtml}`:"")+bedPickerHtml;
+  }else{
+    body=harvestHtml;
+  }
   panel.innerHTML=`
-    <div class="tl-panel-head">
+    <div class="tl-panel-head tl-head-b">
       <div class="tl-panel-title">
-        <div class="tl-panel-crop">${esc(p.crop||"Crop")}</div>
-        ${p.variety?`<div class="tl-panel-variety">${esc(p.variety)}</div>`:""}
+        <span class="tl-panel-crop">${esc(p.crop||"Crop")}</span>
+        ${p.variety?`<span class="tl-panel-variety">${esc(p.variety)}</span>`:""}
       </div>
-      <div class="tl-panel-bed">${esc(bedName||"unassigned")}</div>
-      <button type="button" class="tl-panel-x" title="Close">✕</button>
+      <button type="button" class="tl-panel-x" title="Close" aria-label="Close">✕</button>
     </div>
-    <div class="tl-panel-meta">
-      <span class="tl-panel-dot" style="background:${cropColor(p.cropId||p.crop)}"></span>
-      <span class="tl-panel-meta-txt">${esc(metaParts.join(" · "))}</span>
-      <span class="pill tl-panel-status" style="background:${statusColor(p.status)}">${esc(p.status||"—")}</span>
-    </div>
+    <div class="tl-chips">${chips}</div>
+    <div class="tl-tabs" role="tablist">${tabBtn("overview","Overview")}${tabBtn("tasks",`Tasks${openJobs.length?` <span class="tl-tab-n">${openJobs.length}</span>`:""}`)}${tabBtn("setup","Setup")}${tabBtn("harvest","Harvest")}</div>
     ${p.failed?`<div class="tl-fail-banner">⚠ Crop failure${p.failureDate?" · "+esc(fmt(p.failureDate)):""}</div>`:""}
     ${(!p.failed && behindReason)?`<div class="tl-fail-banner">! ${esc(behindReason)}</div>`:""}
     ${(()=>{ const ov=cmOverLength(p); return ov
       ? `<div class="tl-fail-banner">! ${esc(String(ov.bm))}m planting, but ${esc(plantingBedNames(p)||"its bed")} ${p.bedIds.length>1?"hold":"holds"} ${esc(String(ov.room))}m`
         +` <button type="button" class="btn-ghost tl-over-fix" style="margin-left:.4rem;padding:.15rem .55rem;font-size:.74rem">Fix…</button></div>`
       : ""; })()}
-    <div class="sect-h">Milestones</div>
-    ${tasksHtml}
-    ${acc(`Tasks${ownJobs.length?" ("+ownJobs.filter(t=>!t.done).length+" to do)":""}`,allTasksHtml,false)}
-    ${acc("Planting details",detailsHtml,false)}
-    ${acc("Row spacing",rowsHtml,false)}
-    ${acc("Nursery",nurseryHtml,false)}
-    ${acc("Harvest",harvestHtml,false)}
-    <div class="sect-h">Notes</div>
-    <textarea class="tl-notes" rows="4" placeholder="Anything worth remembering about this planting…">${esc(p.notes||"")}</textarea>
-    ${bedPickerHtml}
+    <div class="tl-tab-body">${body}</div>
     <div class="tl-panel-actions">
-      <button type="button" class="btn-primary">Edit Planting</button>
-      <button type="button" class="btn-ghost tl-remove-crop-btn" style="color:var(--clay)">Remove crop</button>
+      <button type="button" class="btn-primary">Edit planting</button>
+      <button type="button" class="btn-ghost tl-remove-crop-btn" style="color:var(--clay)">Remove</button>
     </div>`;
 
   panel.querySelector(".tl-panel-x").onclick=closeFn;
+  panel.querySelectorAll("[data-tltab]").forEach(b=>b.onclick=()=>{
+    panel._tlTab=b.dataset.tltab; tlRenderPanel(p, panel, closeFn, opts);
+  });
   panel.querySelector(".tl-remove-crop-btn").onclick=()=>tlOpenRemoveCropModal(p, panel, closeFn, opts);
   const createJobs=panel.querySelector(".tl-all-create");
   if(createJobs) createJobs.onclick=async ()=>{
@@ -15981,7 +16034,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     });
   }
   const notesEl=panel.querySelector(".tl-notes");
-  notesEl.addEventListener("blur",async()=>{
+  if(notesEl) notesEl.addEventListener("blur",async()=>{
     const val=notesEl.value;
     if(val===(p.notes||"")) return;
     try{
