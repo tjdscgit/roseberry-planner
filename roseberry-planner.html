@@ -24099,15 +24099,17 @@ function bpIsPrepTask(t){
 // await. Only the three human call sites use this.
 // ---- Jobs <-> fertiliser / spray records (2026-10-17) ----
 // A fertiliser job is one whose library task is in the Fertility category or names a Fert program
-// (dry amendments and fertigation both live in fert programs); a spray job is one with "spray" in
+// (dry amendments and fertigation both live in fert programs); a spray job is one with "spray" or "foliar" in
 // its name. Ticking one opens the matching log form already filled in for that planting's beds,
 // and saving links the record to the job (Planting Tasks "Fert application" / "Spray application").
 // Logging a record from its own page offers to tick the matching open jobs in those beds.
 function jobLib(t){ return t ? (data.tasks||[]).find(x=>x.id===t.taskId) : null; }
 function jobKind(t){
   const lib=jobLib(t); if(!lib) return null;
+  // Foliar feeds go on with the sprayer, so they're logged as sprays (user's call), even though
+  // they sit in the Fertility category.
+  if(/spray|foliar/i.test(lib.name||"")) return "spray";
   if(lib.fertProgramId || lib.category==="Fertility") return "fert";
-  if(/spray/i.test(lib.name||"")) return "spray";
   return null;
 }
 async function jobLink(taskId, kind, appId){
