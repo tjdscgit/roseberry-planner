@@ -7362,15 +7362,27 @@ const AT_ID_TO_PG = PlannerShared.AT_ID_TO_PG;
 // a sleeping PC or a throttled background tab lets it slip past expiry, and the next save then
 // failed with "401 JWT expired". So: refresh first if the token is (nearly) stale, and if the
 // server still says 401, refresh once more and retry with the new token.
+// One renewal at a time: loadAll fires ~30 requests together, and if each renewed on its own the
+// first would rotate the refresh token and the rest would fail with the spent one.
+let sbRefreshing=null;
+function sbRefreshOnce(){
+  if(!sbRefreshing) sbRefreshing=refreshSbSession().finally(()=>{ sbRefreshing=null; });
+  return sbRefreshing;
+}
+// A request that never answers (patchy phone signal) must not leave "reading the base…" up forever.
+function sbTimed(url, init, ms){
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(), ms);
+  return fetch(url, {...init, signal:ctl.signal}).finally(()=>clearTimeout(t));
+}
 async function sbFetch(url, init={}){
-  if(SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 60000) await refreshSbSession();
+  if(SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 60000) await sbRefreshOnce();
   const withAuth=()=>({...init, headers:{...(init.headers||{}), Authorization:`Bearer ${SB_SESSION.access_token || SB_KEY}`}});
-  let r=await fetch(url, withAuth());
-  if(r.status===401 && SB_SESSION.refresh_token && await refreshSbSession()) r=await fetch(url, withAuth());
+  let r=await sbTimed(url, withAuth(), 45000);
+  if(r.status===401 && SB_SESSION.refresh_token && await sbRefreshOnce()) r=await sbTimed(url, withAuth(), 45000);
   return r;
 }
 document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="visible" && SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 120000) refreshSbSession().then(ok=>{ if(ok) sbScheduleRefresh(); });
+  if(document.visibilityState==="visible" && SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 120000) sbRefreshOnce().then(ok=>{ if(ok) sbScheduleRefresh(); });
 });
 function sbHeaders(extra={}){
   return { apikey:SB_KEY, Authorization:`Bearer ${SB_SESSION.access_token || SB_KEY}`, "Content-Type":"application/json", ...extra };
