@@ -749,7 +749,7 @@
 
   #loading{position:absolute;inset:0;z-index:40;display:none;align-items:center;
     justify-content:center;background:rgba(247,245,239,.7);font-family:var(--mono);
-    font-size:.78rem;color:var(--ink-2);letter-spacing:.06em}
+    font-size:.78rem;color:var(--ink-2);letter-spacing:.06em;white-space:pre-line;text-align:center;padding:1rem}
   #loading.show{display:flex}
   .sw-update{position:fixed;left:76px;bottom:16px;z-index:900;border:1px solid var(--line-2);border-radius:999px;
     background:var(--steel);color:#fff;font:600 12.5px var(--sans);padding:8px 14px;cursor:pointer;
@@ -7326,11 +7326,11 @@ async function refreshSbSession(){
   if(!SB_SESSION.refresh_token) return false;
   if(sbAdoptStoredSession() && SB_SESSION.expires_at - Date.now() > 180000) return true;
   try{
-    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
+    const r = await sbTimed(`${SB_URL}/auth/v1/token?grant_type=refresh_token`, {
       method:"POST",
       headers:{ apikey:SB_KEY, "Content-Type":"application/json" },
       body: JSON.stringify({ refresh_token: SB_SESSION.refresh_token }),
-    });
+    }, 15000);
     if(!r.ok){
       if(sbAdoptStoredSession()) return true;   // another window rotated the token first — use theirs
       saveSbSession(null); return false;
@@ -7395,7 +7395,26 @@ function sbToRecord(row){
   return { id, fields };
 }
 
-async function atFetch(base, table, opts={}){
+// Loading-screen progress (2026-10-17, phone stuck on "reading the base…"): while loadAll runs,
+// every fetch counts itself so the cover says how far it got, and after that "drawing…" — so a
+// hang can be told apart from a slow download. Errors land on the cover too.
+let LOAD_TRACK=null;
+function loadMsg(t){ const el=document.getElementById("loading"); if(el) el.textContent=t; }
+function atFetch(base, table, opts){
+  const lt=LOAD_TRACK;
+  if(!lt) return atFetchRaw(base, table, opts);
+  lt.t++;
+  return atFetchRaw(base, table, opts).finally(()=>{
+    lt.d++;
+    if(LOAD_TRACK===lt) loadMsg(`reading the base… ${lt.d} of ${lt.t}${lt.s>=10?` · ${lt.s}s`:""}`);
+  });
+}
+["error","unhandledrejection"].forEach(ev=>window.addEventListener(ev,e=>{
+  const el=document.getElementById("loading"); if(!el || !el.classList.contains("show")) return;
+  const m=(e.reason&&(e.reason.message||String(e.reason))) || e.message || "unknown error";
+  el.textContent+=`\nError: ${m}`;
+}));
+async function atFetchRaw(base, table, opts={}){
   if(BACKEND==="supabase"){
     const pgTable = AT_ID_TO_PG[table];
     const pageSize = 1000;
@@ -7448,6 +7467,12 @@ async function loadAll(opts){
   // sync layer (which retries) instead of dropping the user onto the sign-in gate.
   const quiet = !!(opts && opts.quiet);
   showLoading(!quiet);
+  const lt = quiet ? null : {d:0,t:0,s:0};
+  let ltTimer=null;
+  if(lt){
+    LOAD_TRACK=lt; loadMsg("reading the base…");
+    ltTimer=setInterval(()=>{ lt.s+=5; if(LOAD_TRACK===lt) loadMsg(`reading the base… ${lt.d} of ${lt.t} · ${lt.s}s`); },5000);
+  }
   try{
     // The field walk tables are newer than some deployed schemas and have no Airtable origin, so
     // each one is fetched behind its own catch: a missing table (the SQL hasn't been run yet) or a
@@ -7497,6 +7522,7 @@ async function loadAll(opts){
       fwFetch(CFG.tables.farmSettings),
       fwFetch(CFG.tables.boardNotes), fwFetch(CFG.tables.boardReplies), fwFetch(CFG.tables.boardTallies),
     ]);
+    if(lt){ LOAD_TRACK=null; loadMsg("drawing the planner…"); }
     const F = CFG.f;
     data.crops = {}; data.cropDefs = {};
     crops.forEach(c => {
@@ -7708,7 +7734,11 @@ async function loadAll(opts){
     console.error(e);
     if(quiet) throw e;
     gate(true, "err", "Couldn't load: "+e.message);
-  }finally{ showLoading(false); }
+  }finally{
+    if(ltTimer) clearInterval(ltTimer);
+    if(LOAD_TRACK===lt) LOAD_TRACK=null;
+    showLoading(false); loadMsg("reading the base…");
+  }
 }
 const num = PlannerShared.num;
 
