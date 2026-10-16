@@ -6910,6 +6910,10 @@
               <input type="number" id="apPlantsPerUnit" min="0" step="1" placeholder="n/a"></label>
             <label class="ap-field"><span>Price per unit ($)</span>
               <input type="number" id="apPrice" min="0" step="0.01" placeholder="e.g. 4.50"></label>
+            <label class="ap-field"><span>Pick every (days)</span>
+              <input type="number" id="apPickEvery" min="0" step="1" placeholder="once"></label>
+            <label class="ap-field"><span>Per plant, per pick</span>
+              <input type="number" id="apPerPick" min="0" step="0.01" placeholder="1 / per unit"></label>
             <label class="ap-field"><span>Yield per bed m</span>
               <input type="number" id="apYield" min="0" step="0.01"></label>
           </div>
@@ -16404,6 +16408,8 @@ function apApplyDefaults(cropId, varietyId){
   $ap("apPlantsPerUnit").value = defs.plantsPerUnit ?? "";
   $ap("apPrice").value = defs.price ?? "";
   $ap("apYield").value = defs.yield ?? "";
+  $ap("apPickEvery").value = defs.pickEvery ?? "";
+  $ap("apPerPick").value = defs.perPick ?? "";
   apFillTrayTypes(defs.trayType || "");
   $ap("apSeedsPerCell").value = defs.seedsPerCell ?? "";
   $ap("apDaysToGerminate").value = defs.daysToGerminate ?? "";
@@ -16730,7 +16736,7 @@ function apRenderExtras(){
 // the dialog opens (apFillBlanksFromDefaults), and a small "crop" tag marks any field still holding
 // the library's value; typing a different value makes it this planting's own and the tag goes.
 const AP_DEFAULT_FIELDS={apRows:"rows", apRowSpacing:"rowSpacing", apPlantSpacing:"plantSpacing", apSeeder:"seeder",
-  apHarvestUnit:"harvestUnit", apPlantsPerUnit:"plantsPerUnit", apPrice:"price", apYield:"yield",
+  apHarvestUnit:"harvestUnit", apPlantsPerUnit:"plantsPerUnit", apPrice:"price", apYield:"yield", apPickEvery:"pickEvery", apPerPick:"perPick",
   apTrayType:"trayType", apSeedsPerCell:"seedsPerCell", apDaysToGerminate:"daysToGerminate", apGermTemp:"germTemp"};
 function apDefaultGaps(){
   if(!apCropId) return [];
@@ -17126,7 +17132,7 @@ function apSpacingYield(){
   const n=id=>{ const v=parseFloat($ap(id).value); return isNaN(v)?null:v; };
   return PlannerShared.yieldFromSpacing({rows:n("apRows"), plantSpacing:n("apPlantSpacing"),
     plantsPerUnit:n("apPlantsPerUnit"), harvestUnit:$ap("apHarvestUnit").value,
-    window:n("apWindow"), pickEvery:cd.pickEvery, perPick:cd.perPick});
+    window:n("apWindow"), pickEvery:n("apPickEvery")??cd.pickEvery, perPick:n("apPerPick")??cd.perPick});
 }
 // The "typed" marker on the Yield field's label (amber, next to where "crop" shows).
 function apMarkYieldTyped(on){
@@ -17301,6 +17307,8 @@ function apOpenEdit(p){
   $ap("apPlantsPerUnit").value = p.plantsPerUnit ?? "";
   $ap("apPrice").value = p.price ?? "";
   $ap("apYield").value = p.yield ?? "";
+  $ap("apPickEvery").value = p.pickEvery ?? "";
+  $ap("apPerPick").value = p.perPick ?? "";
   apFillTrayTypes(p.trayType || "");
   $ap("apSeedsPerCell").value = p.seedsPerCell ?? "";
   $ap("apDaysToGerminate").value = p.daysToGerminate ?? "";
@@ -17364,6 +17372,8 @@ function tlPrefillApFromPlanting(p){
   $ap("apPlantsPerUnit").value = p.plantsPerUnit ?? "";
   $ap("apPrice").value = p.price ?? "";
   $ap("apYield").value = p.yield ?? "";
+  $ap("apPickEvery").value = p.pickEvery ?? "";
+  $ap("apPerPick").value = p.perPick ?? "";
   apFillTrayTypes(p.trayType || "");
   $ap("apSeedsPerCell").value = p.seedsPerCell ?? "";
   $ap("apDaysToGerminate").value = p.daysToGerminate ?? "";
@@ -17453,7 +17463,7 @@ function apSnapshot(){
     sowActual:$ap("apSowActual").value, tpActual:$ap("apTpActual").value,
     rows:$ap("apRows").value, rowSpacing:$ap("apRowSpacing").value, plantSpacing:$ap("apPlantSpacing").value,
     seeder:$ap("apSeeder").value, harvestUnit:$ap("apHarvestUnit").value, plantsPerUnit:$ap("apPlantsPerUnit").value,
-    price:$ap("apPrice").value, yield:$ap("apYield").value,
+    price:$ap("apPrice").value, yield:$ap("apYield").value, pickEvery:$ap("apPickEvery").value, perPick:$ap("apPerPick").value,
     trayType:$ap("apTrayType").value, seedsPerCell:$ap("apSeedsPerCell").value,
     daysToGerminate:$ap("apDaysToGerminate").value, germTemp:$ap("apGermTemp").value, pottingUp:apPottingUpVal(),
     notes:$ap("apNotes").value,
@@ -17650,6 +17660,7 @@ async function apDoCreate(){
     if(seeder) f[F.pl_seeder]=seeder;
     if(harvestUnit) f[F.pl_harvestUnit]=harvestUnit;
     if(plantsPerUnit!=null) f[F.pl_plantsPerUnit]=plantsPerUnit;
+    f[F.pl_pickEvery]=$ap("apPickEvery").value===""?null:(+$ap("apPickEvery").value); f[F.pl_perPick]=$ap("apPerPick").value===""?null:(+$ap("apPerPick").value);
     if(price!=null) f[F.pl_price]=price;
     if(yieldPerBm!=null) f[F.pl_yield]=yieldPerBm;
     f[F.pl_yieldTyped]=!!apYieldManual;
@@ -17760,6 +17771,7 @@ async function apDoSave(){
     f[F.pl_seeder]=$ap("apSeeder").value||null;
     f[F.pl_harvestUnit]=$ap("apHarvestUnit").value||null;
     f[F.pl_plantsPerUnit]=$ap("apPlantsPerUnit").value===""?null:(+$ap("apPlantsPerUnit").value);
+    f[F.pl_pickEvery]=$ap("apPickEvery").value===""?null:(+$ap("apPickEvery").value); f[F.pl_perPick]=$ap("apPerPick").value===""?null:(+$ap("apPerPick").value);
     f[F.pl_price]=$ap("apPrice").value===""?null:(+$ap("apPrice").value);
     f[F.pl_yield]=$ap("apYield").value===""?null:(+$ap("apYield").value);
     f[F.pl_yieldTyped]=!!apYieldManual;
@@ -17805,6 +17817,8 @@ async function apDoSave(){
       if(changedSeeder) f[F.pl_seeder]=$ap("apSeeder").value||null;
       if(changedHarvestUnit) f[F.pl_harvestUnit]=$ap("apHarvestUnit").value||null;
       if(changedPlantsPerUnit) f[F.pl_plantsPerUnit]=$ap("apPlantsPerUnit").value===""?null:(+$ap("apPlantsPerUnit").value);
+      if(chg("pickEvery")) f[F.pl_pickEvery]=$ap("apPickEvery").value===""?null:(+$ap("apPickEvery").value);
+      if(chg("perPick")) f[F.pl_perPick]=$ap("apPerPick").value===""?null:(+$ap("apPerPick").value);
       if(changedPrice) f[F.pl_price]=$ap("apPrice").value===""?null:(+$ap("apPrice").value);
       if(changedYield){ f[F.pl_yield]=$ap("apYield").value===""?null:(+$ap("apYield").value); f[F.pl_yieldTyped]=!!apYieldManual; }
       if(changedTrayType) f[F.pl_trayType]=$ap("apTrayType").value||null;
@@ -17859,7 +17873,7 @@ function currentVal(k){
   if(k==="pottingUp") return apPottingUpVal();
   const map={bedId:"apBed",bm:"apBm",group:"apGroup",
     rows:"apRows",rowSpacing:"apRowSpacing",plantSpacing:"apPlantSpacing",
-    seeder:"apSeeder",harvestUnit:"apHarvestUnit",plantsPerUnit:"apPlantsPerUnit",price:"apPrice",yield:"apYield",
+    seeder:"apSeeder",harvestUnit:"apHarvestUnit",plantsPerUnit:"apPlantsPerUnit",price:"apPrice",yield:"apYield",pickEvery:"apPickEvery",perPick:"apPerPick",
     trayType:"apTrayType",seedsPerCell:"apSeedsPerCell",daysToGerminate:"apDaysToGerminate",germTemp:"apGermTemp",
     notes:"apNotes"};
   return $ap(map[k]).value;
@@ -17934,6 +17948,7 @@ $ap("apRowSpacing").addEventListener("input",apUpdateRowsSummary);
 $ap("apPlantSpacing").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apSeeder").addEventListener("change",apUpdateSummarySidebar);
 $ap("apPlantsPerUnit").addEventListener("input",()=>{ apSyncYield(); apUpdateHarvestSummary(); });
+["apPickEvery","apPerPick"].forEach(id=>$ap(id).addEventListener("input",()=>{ apSyncYield(); apUpdateHarvestSummary(); apRenderCropTags(); }));
 $ap("apYield").addEventListener("input",()=>{ apYieldManual=true; apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apYieldHint").addEventListener("click",e=>{
   if(!e.target.closest("#apYieldUseSpacing")) return;

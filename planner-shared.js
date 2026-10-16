@@ -182,7 +182,7 @@
       pl_h1Assignee:"First harvest assignee", pl_h2Assignee:"Last harvest assignee",
       pl_rows:"Number of rows", pl_rowSpacing:"Spacing between rows cm", pl_plantSpacing:"In-row spacing cm",
       pl_seeder:"Seeder type", pl_harvestUnit:"Harvest unit", pl_plantsPerUnit:"Plants per unit",
-      pl_price:"Price", pl_yield:"Yield per bed metre", pl_yieldTyped:"Yield typed in",
+      pl_price:"Price", pl_yield:"Yield per bed metre", pl_yieldTyped:"Yield typed in", pl_pickEvery:"Pick every days", pl_perPick:"Per plant per pick",
       pl_trayType:"Tray type", pl_seedsPerCell:"Seeds per cell", pl_daysToGerminate:"Days to germinate",
       pl_germTemp:"Optimal germ temp (°C)", pl_pottingUp:"Requires potting up",
       // Written by the Seed book page from a photo of the paper seeding book. `pl_sowActual` is
@@ -386,7 +386,7 @@
   // for the long-form rationale (kept only in one place here, not re-explained per call site).
   const DEFAULT_KEYS = ["method","nursery","dtm","window","gap","rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
   const SELECT_DEFAULT_KEYS = new Set(["method","seeder","harvestUnit","trayType","pottingUp"]);
-  const PLANTING_DEFAULT_KEYS = ["rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
+  const PLANTING_DEFAULT_KEYS = ["rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
 
   // Yield per bed metre from spacing (user's design, 2026-10-17):
   //   plants/m (rows x 100 / in-row spacing) x picks x per plant, per pick
