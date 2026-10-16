@@ -2836,6 +2836,12 @@
   .ap2-jcat{flex:0 0 auto;font-family:var(--mono);font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;padding:.1rem .4rem;border-radius:4px;
     color:var(--cat);border:1px solid var(--cat);opacity:.9}
   .ap2-jrow.done .nm{text-decoration:line-through;color:var(--ink-2)}
+  .ap2-jkind{flex:0 0 auto;font-family:var(--mono);font-size:.6rem;padding:.1rem .4rem;border-radius:4px;border:1px dashed var(--ink-2);color:var(--ink-2)}
+  .ap2-jkind.on{border-style:solid;border-color:var(--green,#5aa36b);color:var(--green,#5aa36b)}
+  .jo-list{display:flex;flex-direction:column;gap:.35rem;max-height:50vh;overflow:auto}
+  .jo-row{display:flex;gap:.6rem;align-items:flex-start;padding:.45rem .5rem;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+  .jo-row input{margin-top:.2rem}
+  .jo-sub{color:var(--ink-2);font-size:.82rem}
   .ap2-jrow.done{opacity:.7}
   .ap2-jrow .w{font-size:.84rem;color:var(--ink-2)}
   .ap2-jrow .d{font-family:var(--mono);font-size:.84rem}
@@ -17155,7 +17161,12 @@ function apRenderJobs(){
       const cat=task&&task.category||"";
       b.style.setProperty("--cat", tkCatColor(cat));
       b.innerHTML=`<span class="n"><input type="checkbox" class="ap2-jdone" ${j.done?"checked":""} ${row.id?"":"disabled"} title="${row.id?"Mark done":"Saved when the planting is created"}">`
-        +`<span class="nm">${esc(task?task.name:"Job")}</span>${cat?`<span class="ap2-jcat">${esc(cat)}</span>`:""}</span><span class="w">${esc(apJobWhen(row))}</span>`
+        +`<span class="nm">${esc(task?task.name:"Job")}</span>${cat?`<span class="ap2-jcat">${esc(cat)}</span>`:""}`
+        +(()=>{ const rec=(data.plantingTasks||[]).find(x=>x.id===row.id), k=jobKind(rec||row);
+            if(!k) return "";
+            const linked=rec && (rec.fertAppId||rec.sprayAppId);
+            return `<span class="ap2-jkind${linked?" on":""}" title="${linked?"Logged in "+(k==="fert"?"Fertiliser":"Spray")+" records":"Ticking this opens the "+(k==="fert"?"fertiliser":"spray")+" log"}">${k==="fert"?"fert":"spray"}${linked?" ✓":""}</span>`; })()
+        +`</span><span class="w">${esc(apJobWhen(row))}</span>`
         +`<span class="d">${due}</span><span class="who">${esc(row.assignee||"Anyone")}</span><span class="chev">${apJobOpen===i?"▴":"▾"}</span>`;
       tbl.appendChild(b);
       if(apJobOpen===i){
@@ -24086,6 +24097,86 @@ function bpIsPrepTask(t){
 // Deliberately a wrapper rather than a branch inside wkToggleDone — ttPullCompletions calls that in
 // a loop over every synced task, and a modal in there would pop once per task and block the sync on
 // await. Only the three human call sites use this.
+// ---- Jobs <-> fertiliser / spray records (2026-10-17) ----
+// A fertiliser job is one whose library task is in the Fertility category or names a Fert program
+// (dry amendments and fertigation both live in fert programs); a spray job is one with "spray" in
+// its name. Ticking one opens the matching log form already filled in for that planting's beds,
+// and saving links the record to the job (Planting Tasks "Fert application" / "Spray application").
+// Logging a record from its own page offers to tick the matching open jobs in those beds.
+function jobLib(t){ return t ? (data.tasks||[]).find(x=>x.id===t.taskId) : null; }
+function jobKind(t){
+  const lib=jobLib(t); if(!lib) return null;
+  if(lib.fertProgramId || lib.category==="Fertility") return "fert";
+  if(/spray/i.test(lib.name||"")) return "spray";
+  return null;
+}
+async function jobLink(taskId, kind, appId){
+  const F=CFG.f, fld = kind==="fert" ? F.pt_fertApp : F.pt_sprayApp, key = kind==="fert" ? "fertAppId" : "sprayAppId";
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.plantingTasks, taskId, {[fld]:appId});
+    const t=(data.plantingTasks||[]).find(x=>x.id===taskId); if(t) t[key]=appId;
+  }catch(e){ console.error("Couldn't link the job to its record:", e); }
+}
+function jobBlockIdOf(p){
+  const bed=(data.beds||[]).find(b=>(p.bedIds||[]).includes(b.id)); if(!bed) return null;
+  const blk=(data.blocks||[]).find(b=>String(b.name).trim()===String(bed.block||"").trim());
+  return blk ? blk.id : null;
+}
+function jobLogFert(t, date){
+  const p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
+  const lib=jobLib(t), progId=lib && lib.fertProgramId && fpProgram(lib.fertProgramId) ? lib.fertProgramId : null;
+  const blockId=jobBlockIdOf(p), beds=(p.bedIds||[]).slice();
+  let roundId=null;
+  if(progId){   // the next round these beds haven't had yet, else the first
+    const rounds=fpRoundsOf(progId);
+    roundId=(rounds.find(r=>{ const done=PlannerShared.fertBedsDone(data.fertApps||[], progId, r.id); return !beds.every(b=>done.has(b)); })||rounds[0]||{}).id||null;
+  }
+  fplOpen(progId ? {mode:"program", progId, roundId, blockId} : {mode:"manual", blockId});
+  if(!fplState) return;
+  fplState.beds=new Set(beds); fplState.date=date||todayISO();
+  fplState.notes=`${p.crop}${p.variety?" · "+p.variety:""} — ${(lib&&lib.name)||"job"}`;
+  fplState.onSaved=appId=>jobLink(t.id, "fert", appId);
+  fplRender();
+}
+function jobLogSpray(t, date){
+  const p=(data.plantings||[]).find(x=>x.id===t.plantingId); if(!p) return;
+  sprayOpen();
+  (p.bedIds||[]).forEach(id=>spray.beds.add(id));
+  if(p.cropId) spray.cropIds.add(p.cropId);
+  $s("sprayDate").value=date||todayISO();
+  spray.onSaved=appId=>jobLink(t.id, "spray", appId);
+  renderSprayBedChips(); renderSprayCropChips();
+}
+// After a record is logged from its own page: offer to tick the open jobs of that kind on plantings
+// in those beds, due within 10 days either side. Pre-ticked; untick any that don't apply.
+function jobsOfferForRecord(kind, appId, date, bedIds){
+  const beds=new Set(bedIds||[]); if(!beds.size) return;
+  const d0=new Date(date||todayISO()).getTime(), DAY=864e5;
+  const cand=(data.plantingTasks||[]).filter(t=>{
+    if(t.done || jobKind(t)!==kind || !t.due) return false;
+    if(Math.abs(new Date(t.due).getTime()-d0)>10*DAY) return false;
+    const p=(data.plantings||[]).find(x=>x.id===t.plantingId);
+    return p && (p.bedIds||[]).some(b=>beds.has(b));
+  });
+  if(!cand.length) return;
+  const ov=document.createElement("div"); ov.className="dd-ov open";
+  const row=t=>{ const p=(data.plantings||[]).find(x=>x.id===t.plantingId)||{};
+    return `<label class="jo-row"><input type="checkbox" checked data-jo="${t.id}"><span><b>${esc(jobLib(t)?.name||"Job")}</b> · ${esc(p.crop||"")}${p.variety?" "+esc(p.variety):""} <span class="jo-sub">${esc(bedNameOf(p)||"")} · due ${esc(fmt(t.due))}</span></span></label>`; };
+  ov.innerHTML=`<div class="dd-box" role="dialog" aria-modal="true" style="width:min(28rem,100%)">
+    <div class="dd-title">Tick off the matching job${cand.length>1?"s":""}?</div>
+    <p class="jo-sub" style="margin:-.4rem 0 .7rem">These ${kind==="fert"?"fertiliser":"spray"} jobs are open on plantings in those beds and due around ${esc(fmt(date))}.</p>
+    <div class="jo-list">${cand.map(row).join("")}</div>
+    <div class="dd-btns" style="margin-top:1rem"><button type="button" class="btn-ghost" data-jo-no>Not now</button><button type="button" class="btn-primary" data-jo-yes>Tick off</button></div></div>`;
+  document.body.appendChild(ov);
+  const close=()=>ov.remove();
+  ov.querySelector("[data-jo-no]").onclick=close;
+  ov.onmousedown=e=>{ if(e.target===ov) close(); };
+  ov.querySelector("[data-jo-yes]").onclick=async()=>{
+    const ids=[...ov.querySelectorAll("[data-jo]:checked")].map(x=>x.dataset.jo); close();
+    for(const id of ids){ await wkToggleDone(id, true, date); await jobLink(id, kind, appId); }
+    if(currentView==="timeline") buildTimeline();
+  };
+}
 async function wkToggleDoneInteractive(id,val){
   let date;
   if(val){
@@ -24093,9 +24184,23 @@ async function wkToggleDoneInteractive(id,val){
     date=await askDoneDate(t0 ? (taskName(t0)+(t0.label?" — "+t0.label.split(" — ")[0]:"")) : "Job done", todayISO());
     if(!date) return;
   }
+  const t0=(data.plantingTasks||[]).find(x=>x.id===id);
+  if(!val && t0 && (t0.fertAppId || t0.sprayAppId)){
+    // unticking a job that logged a record: offer to remove the record too (its own delete confirms)
+    const kind=t0.fertAppId?"fert":"spray", appId=t0.fertAppId||t0.sprayAppId;
+    await wkToggleDone(id,false);
+    if(confirm(`This job logged a ${kind==="fert"?"fertiliser application":"spray record"}. Delete that record as well?`)){
+      if(kind==="fert") await frDelete(appId); else await sprayDeleteRecord(appId);
+    }
+    await jobLink(id, kind, null);
+    return;
+  }
   await wkToggleDone(id,val,date);
   if(!val) return;                        // unticking never prompts
   const t=(data.plantingTasks||[]).find(x=>x.id===id);
+  const kind=jobKind(t);
+  if(kind==="fert" && !t.fertAppId){ jobLogFert(t, date); return; }
+  if(kind==="spray" && !t.sprayAppId){ jobLogSpray(t, date); return; }
   if(!bpIsPrepTask(t)) return;
   // Prefill the due date, not today: a task ticked on Friday that was due Tuesday was usually done
   // Tuesday. The field is editable either way.
@@ -26741,11 +26846,13 @@ async function spraySaveRecord(){
     if(!spray.editId) await sprayCreateFollowups(appId);
     if(by) localStorage.setItem(SPRAY_BY_KEY, by);
     // Captured before sprayClose(), which resets both — see sprayAfterSaveView and fwLinkSprayToObs.
-    const cameFromWalk=fwSprayFromWalk, linkObsId=fwSprayLinkObsId;
+    const cameFromWalk=fwSprayFromWalk, linkObsId=fwSprayLinkObsId, onSaved=spray.onSaved;
     sprayClose();
     await loadAll();
     if(linkObsId) fwLinkSprayToObs(linkObsId, appId);
+    if(onSaved){ await onSaved(appId); renderViewContent(currentView); return; }   // opened by ticking a job: stay put
     sprayAfterSaveView(cameFromWalk);
+    if(status==="Logged") jobsOfferForRecord("spray", appId, date, bedIds);
   }catch(e){
     sprayShowErr("Couldn't save: "+e.message);
   }finally{ btn.disabled=false; btn.textContent=origLabel; }
@@ -29469,7 +29576,10 @@ async function fplSave(){
     app.items=PlannerShared.parseFertApplicationItems(
       created.map((c,i)=>({id:c.id, fields:itemFields[i]})));
     data.fertApps=[app].concat(data.fertApps||[]);
+    const onSaved=s.onSaved;
     fplClose();
+    if(onSaved) await onSaved(rec.id);
+    else jobsOfferForRecord("fert", rec.id, appFields[F.fa_date], bedIds);
     buildFertProg();
     if(document.getElementById("view-fertrec").classList.contains("active")) buildFertRecords();
   }catch(e){ alert("Couldn't save this application:\n"+e.message); }

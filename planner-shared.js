@@ -152,7 +152,7 @@
       ct_anchor:"Anchor", ct_offset:"Offset days", ct_repeat:"Repeat every (days)", ct_until:"Repeat until",
       ct_duration:"Minutes per 15m bed",
       pt_label:"Label", pt_planting:"Planting", pt_task:"Task", pt_anchor:"Anchor", pt_offset:"Offset days",
-      pt_due:"Due date", pt_done:"Done", pt_doneDate:"Done date", pt_start:"Start minute",
+      pt_due:"Due date", pt_done:"Done", pt_doneDate:"Done date", pt_fertApp:"Fert application", pt_sprayApp:"Spray application", pt_start:"Start minute",
       pt_repeat:"Repeat every (days)", pt_until:"Repeat until", pt_duration:"Minutes per 15m bed",
       pt_assignee:"Assignee", pt_ttid:"TickTick Task ID", pt_gcalid:"Google Cal Event ID",
       // Ops app mirror id — same per-record external-id pattern as pt_ttid/pt_gcalid above.
@@ -1177,6 +1177,8 @@
       due:r.fields[F.pt_due] || "",
       done:!!r.fields[F.pt_done],
       doneDate:r.fields[F.pt_doneDate] || "",
+      fertAppId:r.fields[F.pt_fertApp] || null,
+      sprayAppId:r.fields[F.pt_sprayApp] || null,
       start: r.fields[F.pt_start]==null ? null : Number(r.fields[F.pt_start]),
       repeat:num(r.fields[F.pt_repeat]),
       until:r.fields[F.pt_until] || "",
