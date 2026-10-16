@@ -182,7 +182,7 @@
       pl_h1Assignee:"First harvest assignee", pl_h2Assignee:"Last harvest assignee",
       pl_rows:"Number of rows", pl_rowSpacing:"Spacing between rows cm", pl_plantSpacing:"In-row spacing cm",
       pl_seeder:"Seeder type", pl_harvestUnit:"Harvest unit", pl_plantsPerUnit:"Plants per unit",
-      pl_price:"Price", pl_yield:"Yield per bed metre",
+      pl_price:"Price", pl_yield:"Yield per bed metre", pl_yieldTyped:"Yield typed in",
       pl_trayType:"Tray type", pl_seedsPerCell:"Seeds per cell", pl_daysToGerminate:"Days to germinate",
       pl_germTemp:"Optimal germ temp (°C)", pl_pottingUp:"Requires potting up",
       // Written by the Seed book page from a photo of the paper seeding book. `pl_sowActual` is
@@ -203,13 +203,14 @@
       cr_rows:"Rows per bed", cr_rowSpacing:"Spacing between rows cm", cr_plantSpacing:"In-row spacing cm",
       cr_seeder:"Seeder type", cr_harvestUnit:"Harvest unit", cr_plantsPerUnit:"Plants per unit",
       cr_price:"Price", cr_yield:"Yield per bed metre", cr_yieldTyped:"Yield typed in",
+      cr_pickEvery:"Pick every days", cr_perPick:"Per plant per pick",
       cr_trayType:"Tray type", cr_seedsPerCell:"Seeds per cell", cr_daysToGerminate:"Days to germinate",
       cr_germTemp:"Optimal germ temp (°C)", cr_pottingUp:"Requires potting up",
       va_name:"Variety", va_crop:"Crop", va_method:"Method", va_nursery:"Days in nursery",
       va_dtm:"Days to maturity", va_window:"Harvest window days", va_gap:"Succession interval days",
       va_rows:"Rows per bed", va_rowSpacing:"Spacing between rows cm", va_plantSpacing:"In-row spacing cm",
       va_seeder:"Seeder type", va_harvestUnit:"Harvest unit", va_plantsPerUnit:"Plants per unit",
-      va_price:"Price", va_yield:"Yield per bed metre",
+      va_price:"Price", va_yield:"Yield per bed metre", va_pickEvery:"Pick every days", va_perPick:"Per plant per pick",
       va_trayType:"Tray type", va_seedsPerCell:"Seeds per cell", va_daysToGerminate:"Days to germinate",
       va_germTemp:"Optimal germ temp (°C)", va_pottingUp:"Requires potting up",
       so_name:"Name", so_type:"Type", so_active:"Active", so_notes:"Notes", so_order:"Order",
@@ -383,9 +384,33 @@
 
   // fields shared identically by Crop, Crop Varieties and Plantings — see roseberry-planner.html
   // for the long-form rationale (kept only in one place here, not re-explained per call site).
-  const DEFAULT_KEYS = ["method","nursery","dtm","window","gap","rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
+  const DEFAULT_KEYS = ["method","nursery","dtm","window","gap","rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
   const SELECT_DEFAULT_KEYS = new Set(["method","seeder","harvestUnit","trayType","pottingUp"]);
   const PLANTING_DEFAULT_KEYS = ["rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
+
+  // Yield per bed metre from spacing (user's design, 2026-10-17):
+  //   plants/m (rows x 100 / in-row spacing) x picks x per plant, per pick
+  // picks = 1 for a once-only crop (no "pick every"), else floor(harvest window / pick every) + 1.
+  // per plant, per pick = the crop's own figure, else 1 / Number per unit, else 1 / the count in the
+  // unit name ("Bunch (6)" -> 1/6). null when there isn't enough to work it out.
+  function yieldFromSpacing(d){
+    const rows=+d.rows, ps=+d.plantSpacing;
+    if(!(rows>0 && ps>0)) return null;
+    let per = d.perPick>0 ? +d.perPick : null, perSrc="per pick";
+    if(per==null){
+      const n = d.plantsPerUnit>0 ? +d.plantsPerUnit
+        : (()=>{ const m=String(d.harvestUnit||"").match(/\((\d+(?:\.\d+)?)\)/); return m?+m[1]:null; })();
+      if(!(n>0)) return null;
+      per=1/n; perSrc="1/"+n;
+    }
+    const ppm=rows*100/ps;
+    const pe=+d.pickEvery, win=+d.window;
+    const picks = (pe>0 && win>0) ? Math.floor(win/pe)+1 : 1;
+    const v=+(ppm*picks*per).toFixed(2);
+    const r=x=>+(+x).toFixed(2);
+    const text = `${r(ppm)} plants/m` + (picks>1?` × ${picks} picks`:"") + ` × ${perSrc==="per pick"?r(per):perSrc} = ${v}`;
+    return {v, ppm, picks, per, text};
+  }
 
   function readDefaultFields(fields, prefix, keys){
     const out={};
@@ -3576,7 +3601,7 @@
     IRRIG_INTERCEPTION_MM, IRRIG_TUNNEL_FACTOR, IRRIG_DEFAULT_DAYS,
     plantingSeasonFrac, bedCropStateOn, irrigBedBalance, weightedPercentile,
     irrigBlockPlan, indexIrrigationByBed, irrigPlan,
-    DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields,
+    DEFAULT_KEYS, SELECT_DEFAULT_KEYS, PLANTING_DEFAULT_KEYS, readDefaultFields, yieldFromSpacing,
     STATUS_ORDER, statusRank, apLifecycle,
     wkParse, wkISO, wkMonday, wkAddDays, wkSameDay,
     ctTaskById, bedNameOf, wkCollect, nextMilestoneStep, buildMilestonePatch,

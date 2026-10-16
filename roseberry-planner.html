@@ -275,6 +275,13 @@
   .cr-table input:focus,.cr-table select:focus{outline:2px solid var(--steel);outline-offset:1px;border-color:var(--steel)}
   .cr-num{max-width:6rem}
   .cr-num.cr-yield-calc{font-style:italic;color:var(--ink-2)}
+  /* a typed-over yield: amber outline + pencil, so it can't be mistaken for a worked-out one */
+  .cr-num.cr-yield-typed,#apModal input.ap2-typed{border-color:#d4a72c!important;box-shadow:inset 3px 0 0 #d4a72c;font-weight:600;
+    background-image:linear-gradient(transparent,transparent)}
+  td:has(> .cr-yield-typed){position:relative}
+  td:has(> .cr-yield-typed)::after{content:"✎";position:absolute;right:.3rem;top:50%;transform:translateY(-50%);color:#d4a72c;font-size:.8rem;pointer-events:none}
+  .ap2-typedtag{background:#d4a72c!important;color:#1b1f23!important}
+  #apYieldHint .typed{color:#d4a72c;font-weight:600}
   /* wider than .cr-num — the Crop Tasks tree's inherit-hint placeholder ("inherit · 13.95") needs
      more room than a plain number does, or it clips right after "inherit ·" */
   .cr-table input[data-k="duration"]{max-width:9rem}
@@ -4977,7 +4984,7 @@
               <th></th>
               <th colspan="6" data-grp="Timing">Timing</th>
               <th colspan="4" class="cr-divider" data-grp="Row Spacing">Row Spacing</th>
-              <th colspan="4" class="cr-divider" data-grp="Harvest">Harvest</th>
+              <th colspan="6" class="cr-divider" data-grp="Harvest">Harvest</th>
               <th colspan="5" class="cr-divider" data-grp="Nursery">Nursery</th>
             </tr>
             <tr>
@@ -4996,6 +5003,8 @@
               <th class="cr-divider" title="What harvest is counted in — bunches, kg, heads, punnets, etc." data-grp="Harvest">Unit</th>
               <th title="How many of that unit one plant typically yields — used to estimate total harvest from bed length" data-grp="Harvest">Number&nbsp;/&nbsp;unit</th>
               <th title="Default sale price per unit — feeds the Harvest tab's season-earnings estimate" data-grp="Harvest">Price</th>
+              <th title="For crops picked more than once: days between picks. Blank = harvested once" data-grp="Harvest">Pick&nbsp;every&nbsp;(d)</th>
+              <th title="How much one plant gives each pick, in the Unit. Blank = 1 / Number per unit (or the number in the unit, e.g. Bunch (6))" data-grp="Harvest">Per&nbsp;plant&nbsp;/&nbsp;pick</th>
               <th title="Expected yield (in the Unit above) per metre of bed — the other way of estimating total harvest, for crops sold by length rather than by plant count" data-grp="Harvest">Yield&nbsp;/&nbsp;bed&nbsp;m</th>
               <th class="cr-divider" title="Default tray type used when starting this crop in the nursery" data-grp="Nursery">Tray&nbsp;type</th>
               <th title="How many seeds sown per cell — more than 1 for crops normally multi-sown (e.g. beets, spring onions)" data-grp="Nursery">Seeds&nbsp;/&nbsp;cell</th>
@@ -7527,6 +7536,7 @@ async function loadAll(opts){
       failed:!!p.fields[F.pl_failed], failureDate:p.fields[F.pl_failureDate]||"",
       skipped:!!p.fields[F.pl_skipped], skippedDate:p.fields[F.pl_skippedDate]||"",
       ...readDefaultFields(p.fields, "pl", PLANTING_DEFAULT_KEYS),
+      yieldTyped:!!p.fields[F.pl_yieldTyped],
     }));
 
     // Parked plantings have been wound back into a bed zone. data.plantings stays complete so ids
@@ -15720,7 +15730,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const harvestHtml=tlKv("Harvest unit",esc(dash(p.harvestUnit)))
     +tlKv("Number per unit",esc(dash(p.plantsPerUnit)))
     +tlKv("Price (per unit)",esc(p.price?"$"+Number(p.price).toFixed(2):"–"))
-    +tlKv("Yield per bed metre",esc(dash(p.yield)))
+    +tlKv("Yield per bed metre",esc(dash(p.yield))+(p.yieldTyped?` <span class="tl-kv-sub" style="color:#d4a72c" title="Typed in, not worked out from spacing">✎ typed</span>`:""))
     +tlKv("Est. yield",esc(totalYield!=null?totalYield.toFixed(1)+unitLabel:"–"))
     +tlKv("Est. revenue",esc(revenue!=null?"$"+revenue.toFixed(2):"$0.00"));
 
@@ -16746,7 +16756,7 @@ function apRenderCropTags(){
   const defs=apCropId ? apMergedDefaults(apCropId, apVarietyId()) : {};
   Object.entries(AP_DEFAULT_FIELDS).forEach(([id,k])=>{
     const el=$ap(id), lab=el.closest(".ap-field")?.querySelector(":scope > span"); if(!lab) return;
-    let tag=lab.querySelector(".ap2-tag");
+    let tag=lab.querySelector(".ap2-tag:not(.ap2-typedtag)");
     if(!tag){ tag=document.createElement("span"); tag.className="ap2-tag"; tag.textContent="crop"; tag.title="From the crop library"; lab.appendChild(tag); }
     const v=defs[k], has=v!=null && v!=="" && !(typeof v==="number"&&isNaN(v));
     const num=parseFloat(v);
@@ -17112,27 +17122,37 @@ function apUnitCount(){
   return m ? parseFloat(m[1]) : null;
 }
 function apSpacingYield(){
-  const per=apUnitCount(), rows=parseFloat($ap("apRows").value), ps=parseFloat($ap("apPlantSpacing").value);
-  if(!(per>0 && rows>0 && ps>0)) return null;
-  const ppm=rows*100/ps;
-  return {v:+(ppm/per).toFixed(2), ppm, per};
+  const cd=apCropId ? (apMergedDefaults(apCropId, apVarietyId())||{}) : {};
+  const n=id=>{ const v=parseFloat($ap(id).value); return isNaN(v)?null:v; };
+  return PlannerShared.yieldFromSpacing({rows:n("apRows"), plantSpacing:n("apPlantSpacing"),
+    plantsPerUnit:n("apPlantsPerUnit"), harvestUnit:$ap("apHarvestUnit").value,
+    window:n("apWindow"), pickEvery:cd.pickEvery, perPick:cd.perPick});
+}
+// The "typed" marker on the Yield field's label (amber, next to where "crop" shows).
+function apMarkYieldTyped(on){
+  const inp=$ap("apYield"); inp.classList.toggle("ap2-typed", !!on);
+  const lab=inp.closest(".ap-field")?.querySelector(":scope > span"); if(!lab) return;
+  let t=lab.querySelector(".ap2-typedtag");
+  if(!t){ t=document.createElement("span"); t.className="ap2-tag ap2-typedtag"; t.textContent="✎ typed"; t.title="Typed in — not worked out from spacing"; lab.appendChild(t); }
+  t.hidden=!on;
 }
 function apSyncYield(){
   const inp=$ap("apYield"), hint=$ap("apYieldHint"); inp.readOnly=false;
   const sp=apSpacingYield();
-  if(!sp){ if(hint) hint.textContent=""; return; }
+  apMarkYieldTyped(apYieldManual && !(sp && parseFloat(inp.value)===sp.v));
+  if(!sp){ if(hint) hint.innerHTML = apYieldManual ? `<span class="typed">✎ Typed in.</span>` : ""; return; }
   const cd=apCropId ? (data.cropDefs[apCropId]||{}) : {};
   if(!apYieldManual && cd.yieldTyped && cd.yield!=null){   // the crop library's own figure was typed in: that wins
     inp.value=cd.yield;
-    if(hint) hint.innerHTML=`From the crop library (typed in there). Spacing gives ${sp.v}.`;
+    if(hint) hint.innerHTML=`<span class="typed">✎ Typed in the crop library.</span> Worked out it would be ${sp.v}.`;
     return;
   }
   if(!apYieldManual){
     if(parseFloat(inp.value)!==sp.v){ inp.value=sp.v; }
-    if(hint) hint.innerHTML=`From spacing: ≈ ${Math.round(sp.ppm)} plants/m ÷ ${sp.per} per unit. Type to override.`;
+    if(hint) hint.innerHTML=`Worked out: ${esc(sp.text)}. Type to override.`;
   }else if(hint){
     hint.innerHTML = parseFloat(inp.value)===sp.v ? "" :
-      `Typed in. Spacing gives ${sp.v}. <button type="button" class="ap2-link" id="apYieldUseSpacing">Use spacing</button>`;
+      `<span class="typed">✎ Typed in.</span> Worked out it would be ${sp.v}. <button type="button" class="ap2-link" id="apYieldUseSpacing">Use worked out</button>`;
   }
 }
 function apRecalcH1(){
@@ -17303,7 +17323,7 @@ function apOpenEdit(p){
   $ap("apWindow").value = win!=null ? win : "";
   apSyncDtm();   // edit: keeps apDtm editable, clears any climate hint
   { const sv=p.yield, cd=(apMergedDefaults(apCropId, apVarietyId())||{}).yield, sp=apSpacingYield();
-    apYieldManual = sv!=null && sv!=="" && !(cd!=null && +cd===+sv) && !(sp && sp.v===+sv); }
+    apYieldManual = !!p.yieldTyped || (sv!=null && sv!=="" && !(cd!=null && +cd===+sv) && !(sp && sp.v===+sv)); }
   apSyncYield();
   apUpdateRowsSummary(); apUpdateHarvestSummary();
   // Termination: reflect this planting's existing tarp, if it has one. Weeks is back-computed
@@ -17632,6 +17652,7 @@ async function apDoCreate(){
     if(plantsPerUnit!=null) f[F.pl_plantsPerUnit]=plantsPerUnit;
     if(price!=null) f[F.pl_price]=price;
     if(yieldPerBm!=null) f[F.pl_yield]=yieldPerBm;
+    f[F.pl_yieldTyped]=!!apYieldManual;
     if(trayType) f[F.pl_trayType]=trayType;
     if(seedsPerCell!=null) f[F.pl_seedsPerCell]=seedsPerCell;
     if(daysToGerminate!=null) f[F.pl_daysToGerminate]=daysToGerminate;
@@ -17741,6 +17762,7 @@ async function apDoSave(){
     f[F.pl_plantsPerUnit]=$ap("apPlantsPerUnit").value===""?null:(+$ap("apPlantsPerUnit").value);
     f[F.pl_price]=$ap("apPrice").value===""?null:(+$ap("apPrice").value);
     f[F.pl_yield]=$ap("apYield").value===""?null:(+$ap("apYield").value);
+    f[F.pl_yieldTyped]=!!apYieldManual;
     f[F.pl_trayType]=$ap("apTrayType").value||null;
     f[F.pl_seedsPerCell]=$ap("apSeedsPerCell").value===""?null:(+$ap("apSeedsPerCell").value);
     f[F.pl_daysToGerminate]=$ap("apDaysToGerminate").value===""?null:(+$ap("apDaysToGerminate").value);
@@ -17784,7 +17806,7 @@ async function apDoSave(){
       if(changedHarvestUnit) f[F.pl_harvestUnit]=$ap("apHarvestUnit").value||null;
       if(changedPlantsPerUnit) f[F.pl_plantsPerUnit]=$ap("apPlantsPerUnit").value===""?null:(+$ap("apPlantsPerUnit").value);
       if(changedPrice) f[F.pl_price]=$ap("apPrice").value===""?null:(+$ap("apPrice").value);
-      if(changedYield) f[F.pl_yield]=$ap("apYield").value===""?null:(+$ap("apYield").value);
+      if(changedYield){ f[F.pl_yield]=$ap("apYield").value===""?null:(+$ap("apYield").value); f[F.pl_yieldTyped]=!!apYieldManual; }
       if(changedTrayType) f[F.pl_trayType]=$ap("apTrayType").value||null;
       if(changedSeedsPerCell) f[F.pl_seedsPerCell]=$ap("apSeedsPerCell").value===""?null:(+$ap("apSeedsPerCell").value);
       if(changedDaysToGerminate) f[F.pl_daysToGerminate]=$ap("apDaysToGerminate").value===""?null:(+$ap("apDaysToGerminate").value);
@@ -17889,7 +17911,7 @@ $ap("apNursery").addEventListener("input",()=>{ apRecalcTp(); apSyncDtm(); apRec
 $ap("apTp").addEventListener("change",()=>{ apSyncDtm(); apRecalcH1(); apRecalcH2(); });
 $ap("apDtm").addEventListener("input",()=>{ const v=$ap("apDtm").value; apNominalDtm = v===""?null:parseInt(v); apRecalcH1(); apRecalcH2(); });
 $ap("apH1").addEventListener("change",apRecalcH2);
-$ap("apWindow").addEventListener("input",apRecalcH2);
+$ap("apWindow").addEventListener("input",()=>{ apRecalcH2(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apH2").addEventListener("change",()=>{ apUpdateTarpVis(); apRefreshBedFlags(); });
 $ap("apTarp").addEventListener("change",apUpdateTarpVis);
 $ap("apTarpWeeks").addEventListener("input",apUpdateTarpVis);
@@ -18113,12 +18135,7 @@ const CR_FIELD_KEY=Object.fromEntries(DEFAULT_KEYS.map(k=>[k,"cr_"+k]));
 // many make a unit (Number / unit, else the count in the unit name, "Bunch (6)"), unless it's been
 // typed over — remembered per crop in "Yield typed in". Clearing the box, or typing the spacing
 // figure, hands it back to spacing.
-function crSpacingYield(d){
-  const per = d.plantsPerUnit>0 ? +d.plantsPerUnit : (()=>{ const m=String(d.harvestUnit||"").match(/\((\d+(?:\.\d+)?)\)/); return m?+m[1]:null; })();
-  const rows=+d.rows, ps=+d.plantSpacing;
-  if(!(per>0 && rows>0 && ps>0)) return null;
-  return +((rows*100/ps)/per).toFixed(2);
-}
+function crSpacingYield(d){ const c=PlannerShared.yieldFromSpacing(d); return c ? c.v : null; }
 async function crSaveYieldTyped(cropId, on){
   const d=data.cropDefs[cropId]; if(!d || !!d.yieldTyped===on) return;
   d.yieldTyped=on;
@@ -18134,7 +18151,7 @@ async function crSaveWithYield(cropId,k,v,tr){
     await saveCropDefault(cropId,"yield",v);
   }else{
     await saveCropDefault(cropId,k,v);
-    if(["rows","plantSpacing","plantsPerUnit","harvestUnit"].includes(k) && !d.yieldTyped){
+    if(["rows","plantSpacing","plantsPerUnit","harvestUnit","window","pickEvery","perPick"].includes(k) && !d.yieldTyped){
       const sp=crSpacingYield(d);
       if(sp!=null && sp!==+d.yield) await saveCropDefault(cropId,"yield",sp);
     }
@@ -18143,12 +18160,14 @@ async function crSaveWithYield(cropId,k,v,tr){
 }
 function crShowYieldSource(cropId, tr){
   const inp=tr && tr.querySelector('[data-k="yield"]'); if(!inp) return;
-  const d=data.cropDefs[cropId]||{}, sp=crSpacingYield(d);
+  const d=data.cropDefs[cropId]||{}, c=PlannerShared.yieldFromSpacing(d);
   inp.value=d.yield??"";
-  inp.classList.toggle("cr-yield-calc", !d.yieldTyped && sp!=null);
-  inp.title = sp==null ? "Needs rows, plant spacing and a number per unit to work out from spacing"
-    : d.yieldTyped ? `Typed in. Spacing gives ${sp} — clear the box to use that.`
-    : `From spacing: ${Math.round(+d.rows*100/+d.plantSpacing)} plants/m ÷ per unit. Type to override.`;
+  const typed=!!d.yieldTyped && d.yield!=null;
+  inp.classList.toggle("cr-yield-calc", !typed && !!c);
+  inp.classList.toggle("cr-yield-typed", typed);
+  inp.title = typed ? (c ? `✎ Typed in. Worked out it would be ${c.v} (${c.text}) — clear the box to use that.` : "✎ Typed in.")
+    : c ? `Worked out: ${c.text}. Type to override.`
+    : "Needs rows, plant spacing and a per-pick figure (or a number per unit) to work out";
 }
 async function saveCropDefault(cropId,key,val){
   const fieldName=CFG.f[CR_FIELD_KEY[key]]; if(!fieldName) return;
@@ -18384,6 +18403,8 @@ const CR_ROW_FIELDS=[
   {k:"harvestUnit", type:"select", options:["Each","Bunch","Kilogram","Box","Bag","Punnet","Dozen","Bundle"], divider:true, label:"Unit", group:"Harvest"},
   {k:"plantsPerUnit", step:"1", label:"Number / unit", group:"Harvest"},
   {k:"price", step:"0.01", label:"Price", group:"Harvest"},
+  {k:"pickEvery", step:"1", label:"Pick every (days)", group:"Harvest"},
+  {k:"perPick", step:"0.01", label:"Per plant, per pick", group:"Harvest"},
   {k:"yield", step:"0.01", label:"Yield / bed m", group:"Harvest"},
   {k:"trayType", type:"select", options:()=>(data.trayTypes||[]).map(t=>t.name), divider:true, label:"Tray type", group:"Nursery"},
   {k:"seedsPerCell", step:"1", label:"Seeds / cell", group:"Nursery"},
