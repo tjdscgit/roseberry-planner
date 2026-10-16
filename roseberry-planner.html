@@ -281,6 +281,10 @@
   td:has(> .cr-yield-typed){position:relative}
   td:has(> .cr-yield-typed)::after{content:"✎";position:absolute;right:.3rem;top:50%;transform:translateY(-50%);color:#d4a72c;font-size:.8rem;pointer-events:none}
   .ap2-typedtag{background:#d4a72c!important;color:#1b1f23!important}
+  .ap2-mp{display:flex;align-items:center;gap:.45rem;min-height:2.6rem;cursor:pointer;white-space:nowrap;color:var(--ink)}
+  #apModal .ap2-mp input{width:1.1rem!important;height:1.1rem;margin:0;flex:0 0 auto}
+  .cr-mp{display:inline-flex;align-items:center;margin-right:.3rem;vertical-align:middle;cursor:pointer}
+  .cr-num:disabled{opacity:.35}
   #apYieldHint .typed{color:#d4a72c;font-weight:600}
   /* wider than .cr-num — the Crop Tasks tree's inherit-hint placeholder ("inherit · 13.95") needs
      more room than a plain number does, or it clips right after "inherit ·" */
@@ -6910,9 +6914,11 @@
               <input type="number" id="apPlantsPerUnit" min="0" step="1" placeholder="n/a"></label>
             <label class="ap-field"><span>Price per unit ($)</span>
               <input type="number" id="apPrice" min="0" step="0.01" placeholder="e.g. 4.50"></label>
-            <label class="ap-field"><span>Pick every (days)</span>
+            <label class="ap-field ap2-mpwrap"><span>Picked more than once</span>
+              <span class="ap2-mp"><input type="checkbox" id="apMultiPick"> Multi-pick</span></label>
+            <label class="ap-field ap2-pickf"><span>Pick every (days)</span>
               <input type="number" id="apPickEvery" min="0" step="1" placeholder="once"></label>
-            <label class="ap-field"><span>Per plant, per pick</span>
+            <label class="ap-field ap2-pickf"><span>Per plant, per pick</span>
               <input type="number" id="apPerPick" min="0" step="0.01" placeholder="1 / per unit"></label>
             <label class="ap-field"><span>Yield per bed m</span>
               <input type="number" id="apYield" min="0" step="0.01"></label>
@@ -17134,6 +17140,14 @@ function apSpacingYield(){
     plantsPerUnit:n("apPlantsPerUnit"), harvestUnit:$ap("apHarvestUnit").value,
     window:n("apWindow"), pickEvery:n("apPickEvery")??cd.pickEvery, perPick:n("apPerPick")??cd.perPick});
 }
+// Multi-pick tick (user's call, 2026-10-17): ticked shows Pick every / Per plant, per pick; unticked
+// hides them and stores Pick every = 0, which means "harvested once" even when the crop library
+// says it's picked repeatedly. State is read straight off Pick every, so nothing else is stored.
+function apSyncMultiPick(){
+  const on=parseFloat($ap("apPickEvery").value)>0;
+  $ap("apMultiPick").checked=on;
+  document.querySelectorAll("#apModal .ap2-pickf").forEach(el=>el.style.display=on?"":"none");
+}
 // The "typed" marker on the Yield field's label (amber, next to where "crop" shows).
 function apMarkYieldTyped(on){
   const inp=$ap("apYield"); inp.classList.toggle("ap2-typed", !!on);
@@ -17144,6 +17158,7 @@ function apMarkYieldTyped(on){
 }
 function apSyncYield(){
   const inp=$ap("apYield"), hint=$ap("apYieldHint"); inp.readOnly=false;
+  apSyncMultiPick();
   const sp=apSpacingYield();
   apMarkYieldTyped(apYieldManual && !(sp && parseFloat(inp.value)===sp.v));
   if(!sp){ if(hint) hint.innerHTML = apYieldManual ? `<span class="typed">✎ Typed in.</span>` : ""; return; }
@@ -17948,6 +17963,16 @@ $ap("apRowSpacing").addEventListener("input",apUpdateRowsSummary);
 $ap("apPlantSpacing").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apSeeder").addEventListener("change",apUpdateSummarySidebar);
 $ap("apPlantsPerUnit").addEventListener("input",()=>{ apSyncYield(); apUpdateHarvestSummary(); });
+$ap("apMultiPick").addEventListener("change",e=>{
+  if(e.target.checked){
+    if(!(parseFloat($ap("apPickEvery").value)>0)){
+      const cd=apCropId ? (apMergedDefaults(apCropId, apVarietyId())||{}) : {};
+      $ap("apPickEvery").value = cd.pickEvery>0 ? cd.pickEvery : 7;
+    }
+  }else $ap("apPickEvery").value="0";
+  apSyncYield(); apUpdateHarvestSummary(); apRenderCropTags(); apRenderTabSubs();
+  if(e.target.checked) $ap("apPickEvery").focus();
+});
 ["apPickEvery","apPerPick"].forEach(id=>$ap(id).addEventListener("input",()=>{ apSyncYield(); apUpdateHarvestSummary(); apRenderCropTags(); }));
 $ap("apYield").addEventListener("input",()=>{ apYieldManual=true; apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apYieldHint").addEventListener("click",e=>{
@@ -18262,6 +18287,8 @@ function crFieldRowsHTML(){
             const opts=`<option value="">—</option>`+opts_.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
             return `<label class="cr-mobile-field"><span>${f.label}</span><select data-k="${f.k}">${opts}</select></label>`;
           }
+          if(f.k==="pickEvery") return `<label class="cr-mobile-field"><span>Multi-pick</span><input type="checkbox" data-mp></label>`
+            +`<label class="cr-mobile-field"><span>${f.label}</span><input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}"></label>`;
           return `<label class="cr-mobile-field"><span>${f.label}</span><input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}"></label>`;
         }).join("")
       + `</div>`;
@@ -18437,7 +18464,8 @@ function crFieldCellsHTML(start,end){
       const opts=`<option value="">—</option>`+opts_.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       return `<td class="${cls}"${grp}><select data-k="${f.k}">${opts}</select></td>`;
     }
-    return `<td class="${cls}"${grp}><input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}"></td>`;
+    const mp = f.k==="pickEvery" ? `<label class="cr-mp" title="Picked more than once — tick to set Pick every and Per plant, per pick"><input type="checkbox" data-mp></label>` : "";
+    return `<td class="${cls}"${grp}>${mp}<input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}"></td>`;
   }).join("");
 }
 // Binds every [data-k] cell in a row to a save function and a source object to read values from
@@ -18458,6 +18486,17 @@ function crBindFieldCells(tr, rec, saveFn, cropDefsForPlaceholder){
       crRefreshSpark(tr);
     };
   });
+  // Multi-pick tick: unticked greys out Pick every + Per plant, per pick (and clears Pick every, so
+  // the yield works out as one harvest); ticking opens them up for typing.
+  const mp=tr.querySelector("[data-mp]"), pe=tr.querySelector('[data-k="pickEvery"]'), pp=tr.querySelector('[data-k="perPick"]');
+  if(mp && pe && pp){
+    const set=on=>{ mp.checked=on; pe.disabled=!on; pp.disabled=!on; };
+    set(+rec.pickEvery>0);
+    mp.onchange=()=>{
+      if(mp.checked){ set(true); pe.focus(); }
+      else{ set(false); pe.value=""; saveFn("pickEvery",""); }
+    };
+  }
   return {sparkCell};
 }
 function crRefreshSpark(tr){ if(tr._crRenderSpark) tr._crRenderSpark(); }
