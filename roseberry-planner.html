@@ -2797,7 +2797,14 @@
   .ap2-jrow:first-child{border-top:0}
   .ap2-jrow.h{background:var(--paper-2);cursor:default;font-family:var(--mono);font-size:.64rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);padding:.55rem 1rem}
   .ap2-jrow:not(.h):hover,.ap2-jrow.open{background:var(--hover)}
-  .ap2-jrow .n{font-size:.95rem}
+  .ap2-jrow .n{font-size:.95rem;display:flex;align-items:center;gap:.6rem;min-width:0}
+  .ap2-jrow:not(.h){box-shadow:inset 4px 0 0 var(--cat,transparent)}
+  .ap2-jrow .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #apModal .ap2-jdone{width:1.05rem!important;height:1.05rem;margin:0;flex:0 0 auto;accent-color:var(--cat,var(--green));cursor:pointer}
+  .ap2-jcat{flex:0 0 auto;font-family:var(--mono);font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;padding:.1rem .4rem;border-radius:4px;
+    color:var(--cat);border:1px solid var(--cat);opacity:.9}
+  .ap2-jrow.done .nm{text-decoration:line-through;color:var(--ink-2)}
+  .ap2-jrow.done{opacity:.7}
   .ap2-jrow .w{font-size:.84rem;color:var(--ink-2)}
   .ap2-jrow .d{font-family:var(--mono);font-size:.84rem}
   .ap2-jrow .who{font-size:.86rem;color:var(--ink-2)}
@@ -16988,10 +16995,14 @@ function apRenderJobs(){
       const row=apTaskRows[i], task=ctTaskById(row.taskId), j=apJobInfo(row);
       const due = j.done ? `<span class="ap2-ok">Done ✓</span>` : !j.due ? "–"
         : j.due<t ? `<span class="ap2-late">${apShort(j.due)}</span>` : apShort(j.due);
-      const b=document.createElement("button"); b.type="button";
-      b.className="ap2-jrow"+(apJobOpen===i?" open":""); b.dataset.job=i;
+      // a div, not a button: it holds a tick box, which can't live inside a <button>
+      const b=document.createElement("div"); b.tabIndex=0; b.setAttribute("role","button");
+      b.className="ap2-jrow"+(apJobOpen===i?" open":"")+(j.done?" done":""); b.dataset.job=i;
       b.setAttribute("aria-expanded", apJobOpen===i?"true":"false");
-      b.innerHTML=`<span class="n">${esc(task?task.name:"Job")}</span><span class="w">${esc(apJobWhen(row))}</span>`
+      const cat=task&&task.category||"";
+      b.style.setProperty("--cat", tkCatColor(cat));
+      b.innerHTML=`<span class="n"><input type="checkbox" class="ap2-jdone" ${j.done?"checked":""} ${row.id?"":"disabled"} title="${row.id?"Mark done":"Saved when the planting is created"}">`
+        +`<span class="nm">${esc(task?task.name:"Job")}</span>${cat?`<span class="ap2-jcat">${esc(cat)}</span>`:""}</span><span class="w">${esc(apJobWhen(row))}</span>`
         +`<span class="d">${due}</span><span class="who">${esc(row.assignee||"Anyone")}</span><span class="chev">${apJobOpen===i?"▴":"▾"}</span>`;
       tbl.appendChild(b);
       if(apJobOpen===i){
@@ -18190,7 +18201,18 @@ $ap("apJobOpts").addEventListener("click",e=>{ const b=e.target.closest("[data-t
 document.addEventListener("mousedown",e=>{ if(!$ap("apJobPop").hidden && !$ap("apJobPick").contains(e.target)) apJobPopShow(false); });
 $ap("apJobList").addEventListener("click",e=>{
   const b=e.target.closest(".ap2-jrow[data-job]"); if(!b) return;
+  const tick=e.target.closest(".ap2-jdone");
+  if(tick){
+    e.preventDefault(); e.stopPropagation();
+    const row=apTaskRows[+b.dataset.job]; if(!row || !row.id) return;
+    const t=(data.plantingTasks||[]).find(x=>x.id===row.id);
+    wkToggleDoneInteractive(row.id, !(t && t.done)).then(()=>apRenderJobs());
+    return;
+  }
   const i=+b.dataset.job; apJobOpen = apJobOpen===i ? -1 : i; apRenderJobs();
+});
+$ap("apJobList").addEventListener("keydown",e=>{
+  if((e.key==="Enter"||e.key===" ") && e.target.matches(".ap2-jrow[data-job]")){ e.preventDefault(); e.target.click(); }
 });
 $ap("apJobMissing").addEventListener("click",async e=>{
   const b=e.target.closest("[data-miss]"); if(!b) return;
