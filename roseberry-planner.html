@@ -7285,6 +7285,20 @@ let uiRestored = false; // only replay the saved tab/pan/zoom once per page load
 // "supabase", so nothing else in the file has to change, now or when we flip the default later.
 const AT_ID_TO_PG = PlannerShared.AT_ID_TO_PG;
 
+// Every data call goes through here. The background refresh timer can't be trusted on its own —
+// a sleeping PC or a throttled background tab lets it slip past expiry, and the next save then
+// failed with "401 JWT expired". So: refresh first if the token is (nearly) stale, and if the
+// server still says 401, refresh once more and retry with the new token.
+async function sbFetch(url, init={}){
+  if(SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 60000) await refreshSbSession();
+  const withAuth=()=>({...init, headers:{...(init.headers||{}), Authorization:`Bearer ${SB_SESSION.access_token || SB_KEY}`}});
+  let r=await fetch(url, withAuth());
+  if(r.status===401 && SB_SESSION.refresh_token && await refreshSbSession()) r=await fetch(url, withAuth());
+  return r;
+}
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible" && SB_SESSION.refresh_token && Date.now() >= SB_SESSION.expires_at - 120000) refreshSbSession().then(ok=>{ if(ok) sbScheduleRefresh(); });
+});
 function sbHeaders(extra={}){
   return { apikey:SB_KEY, Authorization:`Bearer ${SB_SESSION.access_token || SB_KEY}`, "Content-Type":"application/json", ...extra };
 }
@@ -7303,7 +7317,7 @@ async function atFetch(base, table, opts={}){
     let all=[], offset=0;
     for(;;){
       const url = `${SB_URL}/rest/v1/${pgTable}?select=*&order=id&offset=${offset}&limit=${pageSize}`;
-      const r = await fetch(url, { headers: sbHeaders() });
+      const r = await sbFetch(url, { headers: sbHeaders() });
       if(!r.ok){
         const t = await r.text().catch(()=> "");
         throw new Error(`${pgTable} ${r.status}: ${t.slice(0,120)}`);
@@ -12643,7 +12657,7 @@ document.addEventListener("keydown",e=>{
 async function atPatch(base,table,id,fields){
   if(BACKEND==="supabase"){
     const pgTable = AT_ID_TO_PG[table];
-    const r = await fetch(`${SB_URL}/rest/v1/${pgTable}?id=eq.${encodeURIComponent(id)}`, {
+    const r = await sbFetch(`${SB_URL}/rest/v1/${pgTable}?id=eq.${encodeURIComponent(id)}`, {
       method:"PATCH",
       headers: sbHeaders({ Prefer:"return=representation" }),
       body: JSON.stringify(fields),
@@ -12668,7 +12682,7 @@ async function atCreate(base,table,recordList){
     const created=[];
     for(let i=0;i<recordList.length;i+=500){
       const chunk=recordList.slice(i,i+500);
-      const r=await fetch(`${SB_URL}/rest/v1/${pgTable}`,{
+      const r=await sbFetch(`${SB_URL}/rest/v1/${pgTable}`,{
         method:"POST",
         headers: sbHeaders({ Prefer:"return=representation" }),
         body: JSON.stringify(chunk),
@@ -12696,7 +12710,7 @@ async function atDelete(base,table,ids){
   if(BACKEND==="supabase"){
     const pgTable = AT_ID_TO_PG[table];
     const idList = ids.map(encodeURIComponent).join(",");
-    const r = await fetch(`${SB_URL}/rest/v1/${pgTable}?id=in.(${idList})`, {
+    const r = await sbFetch(`${SB_URL}/rest/v1/${pgTable}?id=in.(${idList})`, {
       method:"DELETE", headers: sbHeaders(),
     });
     if(!r.ok){const t=await r.text().catch(()=>"");throw new Error(`${r.status}: ${t.slice(0,160)}`);}
