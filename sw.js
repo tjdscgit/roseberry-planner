@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "roseberry-shell-v175";
+const CACHE_NAME = "roseberry-shell-v175";
 const SHELL_FILES = [
   "./roseberry-planner.html",
   "./planner-shared.js",
@@ -9,7 +9,7 @@ const SHELL_FILES = [
 ];
 
 // GitHub Pages serves this app with `Cache-Control: max-age=600` (confirmed 2026-07-21). A plain
-// `fetch(req)` honours that HTTP header â€” so even this "network-first" strategy could silently
+// `fetch(req)` honours that HTTP header — so even this "network-first" strategy could silently
 // hand back a browser-disk-cached response up to 10 minutes old with NO real network round-trip,
 // which is exactly what let a stale build sit invisible on a phone. `cache:"no-store"` forces every
 // request this worker makes (both the install-time precache and every runtime fetch) to bypass the
@@ -49,8 +49,8 @@ self.addEventListener("fetch", (event) => {
 });
 
 /* ---------- Push notifications ----------
-   The sender puts a JSON body on the wire ({title, body, url, tag}); anything else â€” a malformed
-   payload, or a browser-generated wake-up with no data at all â€” still has to show *something*,
+   The sender puts a JSON body on the wire ({title, body, url, tag}); anything else — a malformed
+   payload, or a browser-generated wake-up with no data at all — still has to show *something*,
    because the subscription is userVisibleOnly and Chrome will show its own "This site has been
    updated in the background" notice if we don't. Hence the fallbacks rather than an early return.
 
@@ -67,7 +67,7 @@ self.addEventListener("push", (event) => {
     icon: "./icons/icon-192.png",
     badge: "./icons/icon-192.png",
     data: { url: payload.url || "./roseberry-planner.html" },
-    // Farm phones live in pockets and gloves â€” let the OS decide vibration, but keep the
+    // Farm phones live in pockets and gloves — let the OS decide vibration, but keep the
     // notification sticky enough that a glance later still finds it.
     renotify: !!payload.tag,
   };
@@ -75,7 +75,7 @@ self.addEventListener("push", (event) => {
 });
 
 /* Tapping a notification should land in the already-open app if there is one, rather than starting
-   a second copy â€” an app relaunch would lose whatever was on screen and re-fetch everything. */
+   a second copy — an app relaunch would lose whatever was on screen and re-fetch everything. */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = (event.notification.data && event.notification.data.url) || "./roseberry-planner.html";
