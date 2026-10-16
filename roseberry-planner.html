@@ -2495,6 +2495,12 @@
   .tl-due{background:var(--paper);border-radius:12px;padding:.7rem .85rem .4rem;margin:.4rem 0 .6rem}
   .tl-due-h{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:.86rem}
   .tl-due .tl-qa{margin-top:.5rem}
+  /* Jobs coloured by task category, same treatment as Edit planting › Jobs (.ap2-jrow). */
+  .tl-qa-cat{box-shadow:inset 3px 0 0 var(--cat);padding:.35rem 0 .35rem .6rem;border-radius:2px}
+  .tl-qa-cat input[type=checkbox]{accent-color:var(--cat)}
+  .tl-qa-cat .ap2-jcat{font-size:.56rem;padding:.05rem .35rem;margin-left:.3rem;vertical-align:1px}
+  .tl-qa-cat.is-done .tl-qa-nm{text-decoration:line-through;color:var(--ink-2)}
+  .tl-qa-cat.is-done{opacity:.75}
   .tl-linkbtn{background:none;border:none;color:var(--ok);cursor:pointer;font:.8rem var(--sans);padding:.2rem 0}
   .tl-fail-banner{background:rgba(192,57,43,.14);border:1px solid rgba(192,57,43,.4);color:var(--clay);
     border-radius:8px;padding:.5rem .7rem;font-size:.78rem;font-weight:600;margin:.8rem 0}
@@ -15799,10 +15805,11 @@ function tlRenderPanel(p, panel, closeFn, opts){
       +`<option value=""${!t.assignee?" selected":""}>+ Assign…</option>`
       +assigneeChoices.map(a=>`<option value="${esc(a)}"${a===t.assignee?" selected":""}>${esc(a)}</option>`).join("")
       +`<option value="__add__">+ Add new…</option></select>`;
-    return { date:t.due||"", done:!!t.done, html:`<div class="tl-qa-row tl-qa-task-row">`
+    const cat=tk&&tk.category||"";
+    return { date:t.due||"", done:!!t.done, html:`<div class="tl-qa-row tl-qa-task-row tl-qa-cat${t.done?" is-done":""}" style="--cat:${tkCatColor(cat)}">`
       +`<label class="tl-qa-check">`
         +`<input type="checkbox" ${t.done?"checked":""} data-tasktoggle="${t.id}">`
-        +`<span class="tl-qa-label">${esc(tk?tk.name:"Task")}`
+        +`<span class="tl-qa-label"><span class="tl-qa-nm">${esc(tk?tk.name:"Task")}</span>${cat?` <span class="ap2-jcat">${esc(cat)}</span>`:""}`
           +(t.done?`<span class="tl-qa-date">Done <input type="date" class="tl-donedate" data-task-done="${t.id}" value="${esc(t.doneDate||"")}" max="${todayISO()}" title="Done on — click to change">`
           +(t.due && t.due!==t.doneDate ? `<button type="button" class="tl-toplanned" data-plan="${esc(t.due)}" title="Set to the planned date, ${esc(fmt(t.due))}">↺ planned</button>` : "")+`</span>`:t.due?`<span class="tl-qa-date">${esc(fmt(t.due))}</span>`:"")+`</span>`
       +`</label>`
