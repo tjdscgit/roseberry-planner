@@ -552,12 +552,36 @@
   .bd-conflict-bed{font-weight:400;color:var(--ink-2)}
   .bd-conflict-when,.bd-conflict-why{font-family:var(--mono);font-size:.72rem;color:var(--ink-2)}
   /* Mobile drill-down — the eight-column bed table can't shrink to a phone, so it's replaced */
-  .bd-mobile{display:flex;flex-direction:column;gap:.3rem}
+  .bd-mobile{display:flex;flex-direction:column;gap:.3rem;padding-bottom:7rem}
   .bd-mob-block{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;
     letter-spacing:.06em;color:var(--ink-2);margin:.7rem 0 .1rem}
   .bd-mob-row{display:flex;align-items:center;justify-content:space-between;gap:.6rem;
     padding:.6rem .7rem;border:1px solid var(--line-2);border-radius:9px;background:var(--paper-2);
     color:var(--ink);font-family:var(--sans);font-size:.9rem;cursor:pointer;text-align:left}
+  /* Bulk edit: tick beds, then one bar acts on all of them */
+  .bd-selcol{width:2rem;text-align:center}
+  .bd-selcol input{width:1rem;height:1rem;cursor:pointer}
+  tr.bd-is-sel td{background:color-mix(in srgb,var(--steel) 9%,transparent)}
+  #bdBulkBar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+    padding:.55rem .8rem;margin:0 0 .6rem;border:1px solid var(--line-2);border-radius:10px;
+    background:var(--paper-2);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  #bdBulkBar[hidden]{display:none}
+  #bdBulkBar .bd-bulk-n{font-weight:600;margin-right:auto}
+  .bd-blockrow-selbtn{font-size:.78rem}
+  .bd-mob-row.is-sel{border-color:var(--steel);background:color-mix(in srgb,var(--steel) 10%,var(--paper-2))}
+  .bd-mob-tick{font-size:1.05rem;display:inline-block;width:1.4rem}
+  .bd-mob-tools{display:flex;justify-content:flex-end;gap:.5rem}
+  .bd-mob-block{display:flex;justify-content:space-between;align-items:center}
+  .bd-mob-block button{border:none;background:none;color:var(--steel);font-family:var(--mono);
+    font-size:.7rem;cursor:pointer;padding:.2rem 0}
+  @media (max-width:760px){
+    #bdBulkBar{position:fixed;left:.6rem;right:.6rem;bottom:calc(64px + env(safe-area-inset-bottom,0px));top:auto;z-index:40;margin:0}
+  }
+  .bd-bulk-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.9rem}
+  .bd-bulk-grid .ap-field.wide{grid-column:1/-1}
+  .bd-bulk-grid .cr-num{width:100%;box-sizing:border-box}
+  .bd-bulk-check{grid-column:1/-1;display:flex;align-items:center;gap:.5rem;font-size:.85rem;color:var(--ink-2);cursor:pointer}
+  .bd-bulk-note{font-size:.78rem;color:var(--ink-2);margin-top:.3rem}
   .bd-mob-tag{font-family:var(--mono);font-size:.66rem;color:var(--ink-2)}
   .bd-mob-back{border:none;background:none;cursor:pointer;color:var(--steel);
     font-family:var(--mono);font-size:.82rem;padding:.3rem 0;align-self:flex-start}
@@ -2587,9 +2611,9 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal,#bdBulkModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open,#bdBulkModal.open{display:flex}
   #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
   #mfModal{z-index:70}   /* opened from on top of the Farm Map's own bed/block panels */
   .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
@@ -5291,9 +5315,16 @@
           preferred crop types, irrigation defaults, or how many beds it has — position, rotation
           and label placement stay on the Farm map, where you can see them move.
         </p>
+        <div id="bdBulkBar" hidden>
+          <span class="bd-bulk-n" id="bdBulkN"></span>
+          <button class="btn-primary" type="button" id="bdBulkEdit">Edit selected</button>
+          <button class="btn-ghost" type="button" id="bdBulkDelete">Delete</button>
+          <button class="btn-ghost" type="button" id="bdBulkClear">Clear</button>
+        </div>
         <table class="cr-table" id="bdTable">
           <thead>
             <tr>
+              <th class="bd-selcol"><input type="checkbox" id="bdSelAll" title="Select every bed"></th>
               <th>Bed</th>
               <th title="A grouping tag for this bed — informational only, doesn't affect rotation or scheduling">Category</th>
               <th title="Bed length in metres, along its long axis — with Width, draws the bed to true scale on the Farm map">Length m</th>
@@ -7262,6 +7293,42 @@
       <button class="btn-ghost" id="mfCancel">Cancel</button>
       <span class="spacer" style="flex:1 1 auto"></span>
       <button class="btn-danger" id="mfDelete" style="display:none">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="bdBulkModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(520px,100%);max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="bdBulkHead">
+    <button class="ap-x" id="bdBulkClose" title="Close">✕</button>
+    <div class="ap-head" id="bdBulkHead">Edit beds</div>
+    <div class="bd-bulk-note" id="bdBulkWho"></div>
+    <div class="bd-bulk-note">Anything left on “No change” or blank stays as it is on each bed.</div>
+    <div class="bd-bulk-grid">
+      <label class="ap-field wide"><span>Category</span><select id="bdbCategory"></select></label>
+      <label class="ap-field"><span>Length m</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbLen" placeholder="No change"></label>
+      <label class="ap-field"><span>Width m</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbWid" placeholder="No change"></label>
+      <label class="ap-field"><span>Notes</span><select id="bdbNotesMode">
+        <option value="">No change</option><option value="replace">Replace with</option>
+        <option value="append">Add to end</option><option value="clear">Clear</option></select></label>
+      <label class="ap-field"><span>&nbsp;</span><input type="text" id="bdbNotes" placeholder="Note text"></label>
+    </div>
+    <div class="ap-sect">Irrigation &amp; soil</div>
+    <div class="bd-bulk-grid" style="margin-top:.2rem">
+      <label class="ap-field"><span>Method</span><select id="bdbMethod">
+        <option value="">No change</option><option value="__inherit">Use block default</option>
+        <option>Drip</option><option>Overhead</option></select></label>
+      <label class="ap-field"><span>Soil type</span><select id="bdbSoil"></select></label>
+      <label class="ap-field"><span>Emitter spacing cm</span><input class="cr-num" type="number" min="0" step="1" id="bdbEmitSpacing" placeholder="No change"></label>
+      <label class="ap-field"><span>Emitter flow L/hr</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbEmitFlow" placeholder="No change"></label>
+      <label class="ap-field"><span>Driplines per bed</span><input class="cr-num" type="number" min="0" step="1" id="bdbLines" placeholder="No change"></label>
+      <label class="ap-field"><span>Wetted width m</span><input class="cr-num" type="number" min="0" step="0.05" id="bdbWetWidth" placeholder="No change"></label>
+      <label class="ap-field"><span>Precipitation mm/hr</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbPrecip" placeholder="No change"></label>
+      <label class="bd-bulk-check"><input type="checkbox" id="bdbIrrigReset"><span>Clear all irrigation numbers (use block defaults)</span></label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="bdbApply">Apply</button>
+      <button class="btn-ghost" id="bdbCancel">Cancel</button>
+      <span class="sub" id="bdbStatus"></span>
     </div>
   </div>
 </div>
@@ -18974,6 +19041,9 @@ const BD_ISSUE_TYPES=["Nutrition","Weed pressure","Disease","Pest","Drainage","S
 const BD_SEVERITIES=["Advisory","Avoid"];
 const BD_CATEGORIES=["Field","Tunnel","Nursery","Perennial","Trial","Retired"];
 let bdExpanded=new Set();   // bed ids whose issue sub-rows are open
+let bdSel=new Set();       // bulk edit: ticked bed ids (survives redraws, pruned to beds that still exist)
+let bdSelLast=null;        // last ticked bed, the anchor for shift-click ranges
+let bdMobSelect=false;     // phone: list is in tick mode instead of drill-down
 let bdMobileBed=null;       // mobile drill-down: which bed is being viewed
 
 /* ---------- Beds: state ----------
@@ -19164,6 +19234,8 @@ function buildBedSetupTab(){
   if(!table||!mob) return;
   const mobile=cmIsMobile();
   table.hidden=mobile; mob.hidden=!mobile;
+  bdSelPrune();
+  bdBulkBarSync();
   if(mobile){ bdBuildMobile(); return; }
 
   const body=document.getElementById("bdBody"); body.innerHTML="";
@@ -19174,7 +19246,7 @@ function buildBedSetupTab(){
   (data.blocks||[]).forEach(b=>{ const n=String(b.name||"").trim(); if(n) blockNames.add(n); });
   const keys=Array.from(blockNames).sort((a,b)=>blockCmp(a,b));
   if(!keys.length){
-    body.innerHTML=`<tr><td colspan="9"><div class="cr-empty">No beds yet.</div></td></tr>`;
+    body.innerHTML=`<tr><td colspan="10"><div class="cr-empty">No beds yet.</div></td></tr>`;
     return;
   }
   keys.forEach(blkName=>{
@@ -19184,10 +19256,11 @@ function buildBedSetupTab(){
     const expanded=bkExpanded.has(key);
     const collapsed=bdBlockCollapsed.has(key);
     const hd=document.createElement("tr"); hd.className="bd-blockrow";
-    hd.innerHTML=`<td colspan="9"><div class="bd-blockrow-inner">`
+    hd.innerHTML=`<td colspan="10"><div class="bd-blockrow-inner">`
      +`<span class="bd-blockrow-chevron${collapsed?" is-collapsed":""}">▾</span>`
      +`<span class="bd-blockrow-label">Block ${esc(blkName)}</span>`
      +`<span class="bd-blockrow-meta">${bkRowMetaHTML(blockRec, beds)}</span>`
+     +(beds.length?`<button class="btn-ghost bd-blockrow-selbtn" type="button">${beds.every(b=>bdSel.has(b.id))?"Unselect":"Select"} beds</button>`:"")
      +`<button class="btn-ghost bd-blockrow-editbtn" type="button">${blockRec ? (expanded?"Close":"Edit") : "Create block record"}</button>`
     +`</div></td>`;
     hd.querySelector(".bd-blockrow-editbtn").onclick=async (e)=>{
@@ -19204,6 +19277,8 @@ function buildBedSetupTab(){
       if(expanded) bkExpanded.delete(key); else bkExpanded.add(key);
       buildBedSetupTab();
     };
+    const selBtn=hd.querySelector(".bd-blockrow-selbtn");
+    if(selBtn) selBtn.onclick=e=>{ e.stopPropagation(); bdSelToggleMany(beds.map(b=>b.id)); buildBedSetupTab(); };
     hd.onclick=()=>{
       if(collapsed) bdBlockCollapsed.delete(key); else bdBlockCollapsed.add(key);
       buildBedSetupTab();
@@ -19211,7 +19286,7 @@ function buildBedSetupTab(){
     body.appendChild(hd);
     if(expanded && blockRec){
       const er=document.createElement("tr"); er.className="bd-blockeditrow";
-      const td=document.createElement("td"); td.colSpan=9;
+      const td=document.createElement("td"); td.colSpan=10;
       td.innerHTML=bkBlockEditInlineHTML(blockRec, beds);
       er.appendChild(td);
       body.appendChild(er);
@@ -19480,8 +19555,10 @@ function bdBedRow(bed){
   const prepChip=od.length
     ? ` <span class="bd-chip bd-chip-avoid" title="Overdue for: ${esc(od.join(", "))}">⛏ ${od.length}</span>`
     : "";
+  if(bdSel.has(bed.id)) tr.classList.add("bd-is-sel");
   tr.innerHTML=
-    `<td><strong>${esc(bed.name)}</strong>${prepChip}</td>`
+    `<td class="bd-selcol"><input type="checkbox" class="bd-sel"${bdSel.has(bed.id)?" checked":""} aria-label="Select ${esc(bed.name)}"></td>`
+   +`<td><strong>${esc(bed.name)}</strong>${prepChip}</td>`
    +`<td><select data-k="category">${bdSelectHTML(BD_CATEGORIES,bed.category,"—")}</select></td>`
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="len" value="${bed.len??""}"></td>`
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></td>`
@@ -19489,6 +19566,7 @@ function bdBedRow(bed){
    +`<td><input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></td>`
    +`<td><button type="button" class="bd-expand">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`
    +`<td><button type="button" class="icon-btn bd-delete" title="Delete bed">🗑</button></td>`;
+  tr.querySelector(".bd-sel").onclick=e=>{ bdSelClick(bed.id,e.shiftKey); buildBedSetupTab(); };
   tr.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
   tr.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
   ["len","wid","order"].forEach(k=>{
@@ -19505,7 +19583,7 @@ function bdBedRow(bed){
 // The expanded panel under a bed: one block per issue, plus an add button.
 function bdIssuesRow(bed){
   const tr=document.createElement("tr"); tr.className="bd-issuerow";
-  const td=document.createElement("td"); td.colSpan=9;
+  const td=document.createElement("td"); td.colSpan=10;
   const wrap=document.createElement("div"); wrap.className="bd-issues";
   const issues=bedIssuesOn(bed.id);
   if(!issues.length){
@@ -19801,6 +19879,136 @@ async function bdDeleteBed(bed){
   }catch(e){
     console.error(e);
     alert("Couldn't delete bed:\n"+e.message);
+  }
+}
+
+/* ---- Bulk edit: tick beds (row box, shift-click for a run, Select beds on a block heading),
+   then one dialog sets the same values on all of them. Every field starts at "No change", so it
+   only writes what you actually touch. ---- */
+function bdOrderedBedIds(){
+  const groups=bedGroups();
+  return Object.keys(groups).sort((a,b)=>blockCmp(a,b)).flatMap(k=>groups[k].map(b=>b.id));
+}
+function bdSelPrune(){
+  const live=new Set((data.beds||[]).map(b=>b.id));
+  [...bdSel].forEach(id=>{ if(!live.has(id)) bdSel.delete(id); });
+}
+function bdSelClick(id,shift){
+  if(shift && bdSelLast && bdSelLast!==id){
+    const ids=bdOrderedBedIds(), a=ids.indexOf(bdSelLast), b=ids.indexOf(id);
+    if(a>=0 && b>=0){
+      const on=!bdSel.has(id);
+      ids.slice(Math.min(a,b),Math.max(a,b)+1).forEach(x=>on?bdSel.add(x):bdSel.delete(x));
+      bdSelLast=id; return;
+    }
+  }
+  if(bdSel.has(id)) bdSel.delete(id); else bdSel.add(id);
+  bdSelLast=id;
+}
+function bdSelToggleMany(ids){
+  const allOn=ids.length && ids.every(id=>bdSel.has(id));
+  ids.forEach(id=>allOn?bdSel.delete(id):bdSel.add(id));
+}
+function bdBulkBarSync(){
+  const bar=document.getElementById("bdBulkBar"); if(!bar) return;
+  const n=bdSel.size;
+  bar.hidden=!n;
+  document.getElementById("bdBulkN").textContent=`${n} bed${n===1?"":"s"} selected`;
+  const all=document.getElementById("bdSelAll");
+  if(all){
+    const total=(data.beds||[]).length;
+    all.checked=!!total && n===total; all.indeterminate=n>0 && n<total;
+  }
+}
+function bdBulkOpen(){
+  if(!bdSel.size) return;
+  const beds=(data.beds||[]).filter(b=>bdSel.has(b.id));
+  const names=beds.map(b=>b.name);
+  document.getElementById("bdBulkHead").textContent=`Edit ${beds.length} bed${beds.length===1?"":"s"}`;
+  document.getElementById("bdBulkWho").textContent=names.length>14?names.slice(0,14).join(", ")+` and ${names.length-14} more`:names.join(", ");
+  document.getElementById("bdbCategory").innerHTML=`<option value="">No change</option>`
+    +BD_CATEGORIES.map(c=>`<option>${esc(c)}</option>`).join("");
+  document.getElementById("bdbSoil").innerHTML=`<option value="">No change</option><option value="__inherit">Use block default</option>`
+    +Object.keys(PlannerShared.SOIL_TYPES).map(o=>`<option>${esc(o)}</option>`).join("");
+  ["bdbLen","bdbWid","bdbNotes","bdbEmitSpacing","bdbEmitFlow","bdbLines","bdbWetWidth","bdbPrecip"].forEach(id=>document.getElementById(id).value="");
+  ["bdbNotesMode","bdbMethod"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("bdbIrrigReset").checked=false;
+  document.getElementById("bdbStatus").textContent="";
+  document.getElementById("bdbApply").disabled=false;
+  const m=document.getElementById("bdBulkModal"); m.classList.add("open"); m.setAttribute("aria-hidden","false");
+}
+function bdBulkClose(){
+  const m=document.getElementById("bdBulkModal"); m.classList.remove("open"); m.setAttribute("aria-hidden","true");
+}
+async function bdBulkApply(){
+  const g=id=>document.getElementById(id).value;
+  const numOrSkip=id=>g(id)===""?undefined:+g(id);
+  const set={};   // bed key -> value (same keys as saveBed)
+  if(g("bdbCategory")) set.category=g("bdbCategory");
+  if(numOrSkip("bdbLen")!==undefined) set.len=numOrSkip("bdbLen");
+  if(numOrSkip("bdbWid")!==undefined) set.wid=numOrSkip("bdbWid");
+  if(g("bdbMethod")) set.method=g("bdbMethod")==="__inherit"?"":g("bdbMethod");
+  if(g("bdbSoil")) set.soil=g("bdbSoil")==="__inherit"?"":g("bdbSoil");
+  const irrigKeys={emitSpacing:"bdbEmitSpacing",emitFlow:"bdbEmitFlow",lines:"bdbLines",wetWidth:"bdbWetWidth",precipRate:"bdbPrecip"};
+  if(document.getElementById("bdbIrrigReset").checked) Object.keys(irrigKeys).forEach(k=>set[k]=null);
+  Object.entries(irrigKeys).forEach(([k,id])=>{ const v=numOrSkip(id); if(v!==undefined) set[k]=v; });
+  const notesMode=g("bdbNotesMode"), notesText=g("bdbNotes").trim();
+  if(notesMode && notesMode!=="clear" && !notesText){ alert("Type the note text, or set Notes back to No change."); return; }
+  if(!Object.keys(set).length && !notesMode){ alert("Nothing to change — every field is on No change."); return; }
+
+  const beds=(data.beds||[]).filter(b=>bdSel.has(b.id));
+  const patches=beds.map(b=>{
+    const vals={...set};
+    if(notesMode==="replace") vals.notes=notesText;
+    else if(notesMode==="clear") vals.notes="";
+    else if(notesMode==="append") vals.notes=b.notes?`${b.notes}; ${notesText}`:notesText;
+    const fields={}; Object.entries(vals).forEach(([k,v])=>fields[CFG.f[BD_BED_FIELDS[k]]]=v);
+    return {bed:b, vals, fields};
+  });
+  const btn=document.getElementById("bdbApply"), status=document.getElementById("bdbStatus");
+  btn.disabled=true;
+  let done=0; const failed=[];
+  // Ten at a time so a 200-bed change doesn't open 200 requests at once.
+  for(let i=0;i<patches.length;i+=10){
+    await Promise.all(patches.slice(i,i+10).map(async p=>{
+      try{ await atPatch(CFG.farmBase, CFG.tables.beds, p.bed.id, p.fields); Object.assign(p.bed,p.vals); done++; }
+      catch(e){ console.error(e); failed.push(p.bed.name); }
+    }));
+    status.textContent=`Saved ${done} of ${patches.length}…`;
+  }
+  rebuildDerived();
+  buildBedSetupTab();
+  layoutAndDraw();
+  if(failed.length){
+    btn.disabled=false;
+    status.textContent=`${done} saved, ${failed.length} failed`;
+    alert(`Couldn't save ${failed.length} bed${failed.length===1?"":"s"}: ${failed.join(", ")}. The rest were saved.`);
+    return;
+  }
+  bdBulkClose();
+}
+async function bdBulkDelete(){
+  const beds=(data.beds||[]).filter(b=>bdSel.has(b.id)); if(!beds.length) return;
+  const ids=new Set(beds.map(b=>b.id));
+  const occ=(data.plantings||[]).filter(p=>(p.bedIds||[]).some(id=>ids.has(id))).length;
+  const issues=(data.bedIssues||[]).filter(i=>ids.has(i.bedId)).length;
+  const warn=[];
+  if(occ) warn.push(`${occ} planting${occ===1?"":"s"}`);
+  if(issues) warn.push(`${issues} issue${issues===1?"":"s"}`);
+  const detail=warn.length?`\n\nThey still have ${warn.join(" and ")} pointing at them.`:"";
+  if(!confirm(`Delete ${beds.length} bed${beds.length===1?"":"s"} (${beds.map(b=>b.name).join(", ")})?\n\nThis permanently removes them.${detail}`)) return;
+  try{
+    const list=[...ids];
+    for(let i=0;i<list.length;i+=10) await atDelete(CFG.farmBase, CFG.tables.beds, list.slice(i,i+10));
+    data.beds=data.beds.filter(b=>!ids.has(b.id));
+    bdSel.clear();
+    rebuildDerived();
+    buildBedSetupTab();
+    layoutAndDraw();
+  }catch(e){
+    console.error(e);
+    alert("Couldn't delete beds:\n"+e.message);
+    buildBedSetupTab();
   }
 }
 
@@ -20372,6 +20580,20 @@ function bpWire(){
   if(addBedBtn) addBedBtn.onclick=bdAddBed;
   const bbOpenBtn=document.getElementById("bbOpenBtn");
   if(bbOpenBtn) bbOpenBtn.onclick=bbOpen;
+  const bulkModal=document.getElementById("bdBulkModal");
+  if(bulkModal){
+    document.getElementById("bdBulkEdit").onclick=bdBulkOpen;
+    document.getElementById("bdBulkDelete").onclick=bdBulkDelete;
+    document.getElementById("bdBulkClear").onclick=()=>{ bdSel.clear(); bdMobSelect=false; buildBedSetupTab(); };
+    document.getElementById("bdSelAll").onclick=e=>{
+      if(e.target.checked) (data.beds||[]).forEach(b=>bdSel.add(b.id)); else bdSel.clear();
+      buildBedSetupTab();
+    };
+    document.getElementById("bdBulkClose").onclick=bdBulkClose;
+    document.getElementById("bdbCancel").onclick=bdBulkClose;
+    document.getElementById("bdbApply").onclick=bdBulkApply;
+    bulkModal.onclick=e=>{ if(e.target===bulkModal) bdBulkClose(); };
+  }
   const bbModal=document.getElementById("bbModal");
   if(bbModal){
     document.getElementById("bbClose").onclick=bbClose;
@@ -20908,16 +21130,25 @@ function bdBuildMobile(){
   const bed=bdMobileBed ? (data.beds||[]).find(b=>b.id===bdMobileBed) : null;
   if(!bed){
     const groups=bedGroups(), keys=Object.keys(groups).sort((a,b)=>blockCmp(a,b));
-    box.innerHTML=keys.map(blk=>
-      `<div class="bd-mob-block">Block ${esc(blk)}</div>`
+    box.innerHTML=`<div class="bd-mob-tools"><button type="button" class="btn-ghost" id="bdMobSelBtn">${bdMobSelect?"Done":"Select"}</button></div>`
+     +keys.map(blk=>
+      `<div class="bd-mob-block"><span>Block ${esc(blk)}</span>`
+      +(bdMobSelect?`<button type="button" data-selblk="${esc(blk)}">${groups[blk].every(b=>bdSel.has(b.id))?"Unselect":"Select"} all</button>`:"")+`</div>`
       + groups[blk].map(b=>{
-          const n=bedIssuesOn(b.id).length;
-          return `<button type="button" class="bd-mob-row" data-bed="${b.id}">`
-            +`<span>${esc(b.name)}${b.category==="Tunnel"?' <span class="bd-mob-tag">tunnel</span>':""}</span>`
+          const n=bedIssuesOn(b.id).length, on=bdSel.has(b.id);
+          return `<button type="button" class="bd-mob-row${bdMobSelect&&on?" is-sel":""}" data-bed="${b.id}">`
+            +`<span>${bdMobSelect?`<span class="bd-mob-tick">${on?"☑":"☐"}</span>`:""}${esc(b.name)}${b.category==="Tunnel"?' <span class="bd-mob-tag">tunnel</span>':""}</span>`
             +`<span class="bd-chip${n?"":" bd-chip-none"}">${n||"–"}</span>`
           +`</button>`;
         }).join("")).join("");
-    box.querySelectorAll(".bd-mob-row").forEach(b=>b.onclick=()=>{ bdMobileBed=b.dataset.bed; bdBuildMobile(); });
+    box.querySelectorAll(".bd-mob-row").forEach(b=>b.onclick=()=>{
+      if(bdMobSelect){ bdSelClick(b.dataset.bed,false); bdBulkBarSync(); bdBuildMobile(); return; }
+      bdMobileBed=b.dataset.bed; bdBuildMobile();
+    });
+    box.querySelector("#bdMobSelBtn").onclick=()=>{ bdMobSelect=!bdMobSelect; if(!bdMobSelect) bdSel.clear(); bdBulkBarSync(); bdBuildMobile(); };
+    box.querySelectorAll("[data-selblk]").forEach(btn=>btn.onclick=()=>{
+      bdSelToggleMany((groups[btn.dataset.selblk]||[]).map(b=>b.id)); bdBulkBarSync(); bdBuildMobile();
+    });
     return;
   }
   box.innerHTML=`<button type="button" class="bd-mob-back">← All beds</button>
