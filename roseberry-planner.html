@@ -19954,13 +19954,13 @@ const BD_IRRIG_STRING_KEYS=new Set(["method","soil"]);
 // force it on/off on this bed or block.
 function irSysSelect(attr, key, val, inherited, fromLabel){
   return `<select ${attr}="${key}">`
-   +`<option value="">— ${inherited?"On":"Off"}${fromLabel&&fromLabel!=="farm"?` (from ${esc(fromLabel)})`:""}</option>`
+   +`<option value="">— ${inherited?"On":"Off"}</option>`
    +`<option value="on"${val===true?" selected":""}>On</option>`
    +`<option value="off"${val===false?" selected":""}>Off</option></select>`;
 }
 const irSysVal=v=>v==="on"?true:v==="off"?false:null;
 function irZoneOptions(selectedId, inheritedZone, fromLabel){
-  return `<option value="">— ${inheritedZone?esc(inheritedZone.name):"none"}${fromLabel&&fromLabel!=="farm"?` (from ${esc(fromLabel)})`:""}</option>`
+  return `<option value="">— ${inheritedZone?esc(inheritedZone.name):"none"}</option>`
     +(data.irrigZones||[]).map(z=>`<option value="${esc(z.id)}"${z.id===selectedId?" selected":""}>${esc(z.name)}</option>`).join("");
 }
 // One line per system: rate and what 10 mm takes.
@@ -19985,7 +19985,7 @@ function bdIrrigCard(bed){
   const inh=PlannerShared.irrigSystemsFor(Object.assign({}, bed, {drip:null, overhead:null, zoneId:"", method:""}), data.blocks, set, Z);
   const dripSpec=PlannerShared.irrigSpecFor(bed, data.blocks, set, Z, "drip");
   const ohSpec=PlannerShared.irrigSpecFor(bed, data.blocks, set, Z, "overhead");
-  const src=(spec,k)=>(spec.from[k]==="bed"||spec.from[k]==="farm") ? "" : ` (from ${spec.from[k]})`;
+  const src=()=>"";
   const soils=Object.keys(PlannerShared.SOIL_TYPES);
   const numCell=(spec,k,label,step,val,shown)=>
     `<label class="bd-irrig-f"><span>${esc(label)}</span>`
