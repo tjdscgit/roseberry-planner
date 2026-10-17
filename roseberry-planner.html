@@ -19592,7 +19592,7 @@ function bkfIrrigFieldsHTML(blk){
   const numCell=(k,label,step,val,shown)=>
     `<label class="bd-irrig-f"><span>${esc(label)}</span>`
    +`<input class="cr-num" type="number" min="0" step="${step}" data-bk="${k}" value="${val??""}"`
-   +` placeholder="${esc(String(shown??"—"))} (from farm)"></label>`;
+   +` placeholder="${esc(String(shown??"—"))}"></label>`;
   const legacy = blk.drip==null && blk.overhead==null && blk.method;
   const sys=PlannerShared.irrigSystemsFor({block:blk.name}, data.blocks, set, data.irrigZones);
   const soils=Object.keys(PlannerShared.SOIL_TYPES);
@@ -19600,7 +19600,7 @@ function bkfIrrigFieldsHTML(blk){
   let h=`<label class="bd-irrig-f"><span>Drip</span>${irSysSelect("data-bksys","drip",legacy?null:blk.drip,!!set.drip,"farm")}</label>`
    +`<label class="bd-irrig-f"><span>Overhead</span>${irSysSelect("data-bksys","overhead",legacy?null:blk.overhead,!!set.overhead,"farm")}</label>`
    +`<label class="bd-irrig-f"><span>Soil type</span><select data-bk="soil">`
-   +`<option value="">— ${esc(set.soil||"")} (from farm)</option>`
+   +`<option value="">— ${esc(set.soil||"")}</option>`
    +soils.map(o=>`<option${o===blk.soil?" selected":""}>${esc(o)}</option>`).join("")
    +`</select></label>`;
   if(sys.drip) h+=numCell("emitSpacing","Emitter spacing cm","1",blk.emitSpacing,set.emitSpacing)
@@ -19954,13 +19954,13 @@ const BD_IRRIG_STRING_KEYS=new Set(["method","soil"]);
 // force it on/off on this bed or block.
 function irSysSelect(attr, key, val, inherited, fromLabel){
   return `<select ${attr}="${key}">`
-   +`<option value="">— ${inherited?"On":"Off"}${fromLabel?` (from ${esc(fromLabel)})`:""}</option>`
+   +`<option value="">— ${inherited?"On":"Off"}${fromLabel&&fromLabel!=="farm"?` (from ${esc(fromLabel)})`:""}</option>`
    +`<option value="on"${val===true?" selected":""}>On</option>`
    +`<option value="off"${val===false?" selected":""}>Off</option></select>`;
 }
 const irSysVal=v=>v==="on"?true:v==="off"?false:null;
 function irZoneOptions(selectedId, inheritedZone, fromLabel){
-  return `<option value="">— ${inheritedZone?esc(inheritedZone.name):"none"}${fromLabel?` (from ${esc(fromLabel)})`:""}</option>`
+  return `<option value="">— ${inheritedZone?esc(inheritedZone.name):"none"}${fromLabel&&fromLabel!=="farm"?` (from ${esc(fromLabel)})`:""}</option>`
     +(data.irrigZones||[]).map(z=>`<option value="${esc(z.id)}"${z.id===selectedId?" selected":""}>${esc(z.name)}</option>`).join("");
 }
 // One line per system: rate and what 10 mm takes.
@@ -19985,7 +19985,7 @@ function bdIrrigCard(bed){
   const inh=PlannerShared.irrigSystemsFor(Object.assign({}, bed, {drip:null, overhead:null, zoneId:"", method:""}), data.blocks, set, Z);
   const dripSpec=PlannerShared.irrigSpecFor(bed, data.blocks, set, Z, "drip");
   const ohSpec=PlannerShared.irrigSpecFor(bed, data.blocks, set, Z, "overhead");
-  const src=(spec,k)=>spec.from[k]==="bed" ? "" : ` (from ${spec.from[k]})`;
+  const src=(spec,k)=>(spec.from[k]==="bed"||spec.from[k]==="farm") ? "" : ` (from ${spec.from[k]})`;
   const soils=Object.keys(PlannerShared.SOIL_TYPES);
   const numCell=(spec,k,label,step,val,shown)=>
     `<label class="bd-irrig-f"><span>${esc(label)}</span>`
