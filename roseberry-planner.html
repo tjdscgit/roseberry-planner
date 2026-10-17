@@ -2652,6 +2652,12 @@
   #apModal .ap-card{width:min(1000px,100%);padding:1.6rem 2rem 1.3rem}
   #apStep2{height:min(820px,calc(92vh - 3rem));flex-direction:column}
   .ap2-head{display:flex;align-items:flex-start;gap:1rem}
+  .ap2-pop{position:static;flex:0 0 auto;font-size:1.05rem;padding:0 .2rem;margin-top:.1rem}
+  html.ap-popout .ap2-pop{display:none}
+  /* popped-out window: the dialog is the whole window, no backdrop or margin */
+  html.ap-popout #apModal{padding:0;background:var(--paper)}
+  html.ap-popout #apModal .ap-card{width:100%;max-width:none;height:100vh;max-height:none;border:0;border-radius:0;box-shadow:none}
+  html.ap-popout #apStep2{height:calc(100vh - 3rem)}
   .ap2-dot{width:14px;height:14px;border-radius:4px;flex:0 0 auto;margin-top:.5rem;background:var(--line-2)}
   .ap2-titles{flex:1 1 auto;min-width:0}
   .ap2-titles .ap-sub{margin:.25rem 0 0}
@@ -6887,6 +6893,7 @@
             <button type="button" data-scope="single" aria-pressed="true">This planting</button>
             <button type="button" data-scope="group" aria-pressed="false">Whole group</button>
           </div>
+          <button class="ap-x ap2-pop" id="apPopOut" type="button" title="Pop out into its own window" aria-label="Pop out into its own window">⧉</button>
           <button class="ap-x ap2-x" id="apClose2" title="Close" aria-label="Close">✕</button>
         </div>
 
@@ -7542,6 +7549,10 @@ async function refreshPlantingTasks(){
 
 // Read once at startup, before anything can rewrite the URL.
 const START_VIEW = new URLSearchParams(location.search).get("view");
+// Edit planting popped out into its own window (apPopOut): this window shows only that dialog,
+// and closes itself when the dialog closes. Saves reach the main window through the sync channel.
+const POPOUT = (()=>{ const q=new URLSearchParams(location.search); return q.get("popout")==="edit" ? {pid:q.get("pid"), scope:q.get("scope")} : null; })();
+if(POPOUT) document.documentElement.classList.add("ap-popout");
 async function loadAll(opts){
   // quiet: a background sync — no "reading the base…" cover, and a failure is thrown back to the
   // sync layer (which retries) instead of dropping the user onto the sign-in gate.
@@ -7809,6 +7820,11 @@ async function loadAll(opts){
       // A window opened with "Open in new window" names its page in the URL; that beats the saved one.
       if(START_VIEW && VIEW_RAIL[START_VIEW]) showView(START_VIEW);
       else if(currentView) showView(currentView);   // writes ?view= for this window
+      if(POPOUT){
+        const pp=(data.plantings||[]).find(x=>x.id===POPOUT.pid);
+        if(pp){ apOpenEdit(pp); if(POPOUT.scope==="group" && apEditMembers.length>1) apSetScope("group"); document.title=`Edit ${pp.crop}${pp.variety?" · "+pp.variety:""}`; }
+        else { alert("That planting couldn't be found — it may have been deleted."); window.close(); }
+      }
     }
   }catch(e){
     console.error(e);
@@ -16731,6 +16747,7 @@ function apSelectTab(name){
 // filling the form, so it doubles as the "dialog just opened" reset.
 function apShowTab(){
   apJobOpen=-1; apDueUndo=null;
+  $ap("apPopOut").hidden = apMode!=="edit" || !!POPOUT || window.matchMedia("(max-width:760px)").matches;
   if(apMode==="edit"){ $ap("apCount").value="1"; $ap("apGap").value="14"; }
   apSetSuggestOpen(false);
   $ap("apCropDot").style.background = apCropId ? cropColor(apCropId) : "";
@@ -17814,7 +17831,15 @@ function apOpen(){
   $ap("apModal").classList.add("open");
   setTimeout(()=>$ap("apCropSearch").focus(),30);
 }
-function apClose(){ $ap("apModal").classList.remove("open"); }
+function apClose(){ $ap("apModal").classList.remove("open"); if(POPOUT) window.close(); }
+function apPopOut(){
+  if(apMode!=="edit" || !apEditPlanting) return;
+  const id=apEditPlanting.id, scope=apEditScope;
+  const url=`${location.pathname}?popout=edit&pid=${encodeURIComponent(id)}&scope=${scope}`;
+  const w=window.open(url, "rb-edit-"+id, "popup,width=1100,height=940");
+  if(!w){ alert("The browser blocked the new window — allow pop-ups for this site and try again."); return; }
+  apClose();
+}
 
 // Last word before a planting is written to a bed with a recorded problem. Only "Avoid"-severity
 // issues interrupt — an "Advisory" one has already had its say in the sidebar, and making every
@@ -18154,6 +18179,7 @@ async function apDoDelete(){
 $ap("tlAddBtn").onclick=apOpen;
 $ap("apClose1").onclick=apClose;
 $ap("apClose2").onclick=apClose;
+$ap("apPopOut").onclick=apPopOut;
 $ap("apCancel").onclick=apClose;
 $ap("apBack").onclick=()=>{ $ap("apStep2").style.display="none"; $ap("apStep1").style.display="block"; apRenderCropList($ap("apCropSearch").value); };
 $ap("apCreate").onclick=()=>{ apMode==="edit" ? apDoSave() : apDoCreate(); };
