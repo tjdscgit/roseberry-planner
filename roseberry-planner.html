@@ -577,6 +577,18 @@
   @media (max-width:760px){
     #bdBulkBar{position:fixed;left:.6rem;right:.6rem;bottom:calc(64px + env(safe-area-inset-bottom,0px));top:auto;z-index:40;margin:0}
   }
+  /* Planting bulk edit: Ctrl/Shift-click bars on Timeline or Crop map, or Select in the panel */
+  .pl-bulk-sel{outline:2.5px solid var(--steel)!important;outline-offset:1px;box-shadow:0 0 0 4px color-mix(in srgb,var(--steel) 30%,transparent)!important}
+  #plBulkBar{position:fixed;left:50%;transform:translateX(-50%);bottom:1rem;z-index:55;display:flex;align-items:center;gap:.6rem;
+    padding:.55rem .8rem;border:1px solid var(--line-2);border-radius:12px;background:var(--paper-2);
+    box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:calc(100vw - 1.2rem)}
+  #plBulkBar[hidden]{display:none}
+  #plBulkBar .pl-bulk-n{font-weight:600;white-space:nowrap}
+  #plBulkBar .pl-bulk-hint{font-size:.74rem;color:var(--ink-2)}
+  @media (max-width:760px){ #plBulkBar{bottom:calc(64px + env(safe-area-inset-bottom,0px));left:.6rem;right:.6rem;transform:none;flex-wrap:wrap}
+    #plBulkBar .pl-bulk-hint{display:none} }
+  .pl-bulk-row{display:flex;gap:.5rem;align-items:center}
+  .pl-bulk-row .cr-num{width:5rem}
   .bd-bulk-grid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.9rem}
   .bd-bulk-grid .ap-field.wide{grid-column:1/-1}
   .bd-bulk-grid .cr-num{width:100%;box-sizing:border-box}
@@ -2611,9 +2623,10 @@
   .btn-danger:disabled{opacity:.5;cursor:default}
 
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
-  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal,#bdBulkModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+  #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal,#bdBulkModal,#plBulkModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
-  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open,#bdBulkModal.open{display:flex}
+  #apModal.open,#trpModal.open,#sprayModal.open,#znModal.open,#mfModal.open,#bbModal.open,#bdBulkModal.open,#plBulkModal.open{display:flex}
+  #plBulkModal{z-index:72}
   #znModal{z-index:70}   /* opened from the Crop Map toolbar, same as the tarp editor */
   #mfModal{z-index:70}   /* opened from on top of the Farm Map's own bed/block panels */
   .zn-parked-row{display:flex;align-items:center;gap:.6rem;justify-content:space-between;
@@ -7297,6 +7310,41 @@
   </div>
 </div>
 
+<div id="plBulkBar" hidden>
+  <span class="pl-bulk-n" id="plBulkN"></span>
+  <span class="pl-bulk-hint">Ctrl/Shift-click bars to add more</span>
+  <button class="btn-primary" type="button" id="plBulkEdit">Edit</button>
+  <button class="btn-ghost" type="button" id="plBulkClear">Clear</button>
+</div>
+
+<div id="plBulkModal" aria-hidden="true">
+  <div class="ap-card" style="width:min(500px,100%);max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="plBulkHead">
+    <button class="ap-x" id="plBulkClose" title="Close">✕</button>
+    <div class="ap-head" id="plBulkHead">Edit plantings</div>
+    <div class="bd-bulk-note" id="plBulkWho"></div>
+    <div class="bd-bulk-note">Anything left on “No change” or blank stays as it is.</div>
+    <div class="bd-bulk-grid">
+      <label class="ap-field wide"><span>Move dates</span>
+        <span class="pl-bulk-row">
+          <input class="cr-num" type="number" min="0" step="1" id="plbShiftN" placeholder="0">
+          <select id="plbShiftUnit"><option value="7">weeks</option><option value="1">days</option></select>
+          <select id="plbShiftDir"><option value="1">later</option><option value="-1">earlier</option></select>
+        </span></label>
+      <div class="bd-bulk-note" style="grid-column:1/-1;margin-top:-.4rem">Moves what hasn't happened yet: a planting not sown moves from its sow date, one in the tray from plant-out, one in the ground just its harvest. Open jobs and a planned tarp move with it, the same as Catch-up's Push.</div>
+      <label class="ap-field"><span>Status</span><select id="plbStatus"><option value="">No change</option>
+        <option>Planned</option><option>Seeded</option><option>In ground</option><option>Harvesting</option><option>Finished</option></select></label>
+      <label class="ap-field" id="plbVarWrap"><span>Variety</span><input type="text" id="plbVariety" list="plbVarList" placeholder="No change"><datalist id="plbVarList"></datalist></label>
+      <label class="ap-field wide"><span>Add to notes</span><input type="text" id="plbNotes" placeholder="No change"></label>
+      <label class="bd-bulk-check"><input type="checkbox" id="plbSkip"><span>Skip these plantings (kept on record, off the plan; their open jobs and planned tarp are deleted)</span></label>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
+      <button class="btn-primary" id="plbApply">Apply</button>
+      <button class="btn-ghost" id="plbCancel">Cancel</button>
+      <span class="sub" id="plbStatusMsg"></span>
+    </div>
+  </div>
+</div>
+
 <div id="bdBulkModal" aria-hidden="true">
   <div class="ap-card" style="width:min(520px,100%);max-height:92vh;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="bdBulkHead">
     <button class="ap-x" id="bdBulkClose" title="Close">✕</button>
@@ -11247,11 +11295,13 @@ function cmDrawBlockBars(grid, beds, plantings){
       bar.appendChild(l);
     }
 
+    bar.dataset.pid=(p.__orig||p).id;
+    if(plSel.has(bar.dataset.pid)) bar.classList.add("pl-bulk-sel");
     if(cmIsMobile()){
       bar.addEventListener("click",()=>{ if(!cmLocked) cmOpenPanel(p.__orig||p); });
     }else{
       bar.draggable=true;
-      bar.addEventListener("click",e=>{ e.stopPropagation(); if(!cmLocked) cmOpenPanel(p.__orig||p); });
+      bar.addEventListener("click",e=>{ e.stopPropagation(); if(plSelModClick(e,(p.__orig||p).id)) return; if(!cmLocked) cmOpenPanel(p.__orig||p); });
       bar.addEventListener("dragstart",e=>{
         if(cmLocked){e.preventDefault();return;}
         cmDragStart(e,p);
@@ -15481,7 +15531,9 @@ function tlAddBar(rowEl,orig,b){
     +`Sow ${fmt(p.sow)}${p.tp?"  ·  TP "+fmt(p.tp):""}\nHarvest ${fmt(p.h1)} – ${fmt(p.h2)}`
     +(behind?"\n⚠ Behind schedule":"")
     +(p.failed?`\n✕ Crop failure${p.failureDate?" · "+fmt(p.failureDate):""}`:"");
-  bar.onclick=e=>{e.stopPropagation();tlOpenPanel(orig);};
+  bar.dataset.pid=orig.id;
+  if(plSel.has(orig.id)) bar.classList.add("pl-bulk-sel");
+  bar.onclick=e=>{e.stopPropagation(); if(plSelModClick(e,orig.id)) return; tlOpenPanel(orig);};
   bar.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); tlShowCtxMenu(e,{kind:"planting", p:orig}); };
   if(p.group) bar.dataset.group=p.group;
   if(p.failed){
@@ -15888,6 +15940,123 @@ function tlSync(){
 // ---- Planting details panel: click a bar to see a read-only summary docked to the right of the
 // timeline (Heirloom-style), with an Edit Planting button to open the full dialog instead of
 // jumping straight into edit mode on every click.
+/* ---- Planting bulk edit. Ctrl/Cmd/Shift-click bars on Timeline or Crop map (or Select in the
+   planting panel, which is how it works on a phone) to collect plantings; a floating bar then
+   opens one dialog that moves their dates, sets status/variety, adds a note, or skips them.
+   Date moves go through Catch-up's own write path (cuShift → cuCommit), so jobs and planned
+   tarps follow exactly as they do for a Push. ---- */
+let plSel=new Set();
+function plSelToggle(id){
+  if(plSel.has(id)) plSel.delete(id); else plSel.add(id);
+  plSelPaint();
+}
+function plSelModClick(e,id){
+  if(!(e.ctrlKey||e.metaKey||e.shiftKey)) return false;
+  plSelToggle(id); return true;
+}
+function plSelPaint(){
+  const live=new Set((data.plantings||[]).map(p=>p.id));
+  [...plSel].forEach(id=>{ if(!live.has(id)) plSel.delete(id); });
+  document.querySelectorAll("[data-pid]").forEach(el=>el.classList.toggle("pl-bulk-sel", plSel.has(el.dataset.pid)));
+  const bar=document.getElementById("plBulkBar"); if(!bar) return;
+  const n=plSel.size;
+  bar.hidden=!n;
+  document.getElementById("plBulkN").textContent=`${n} planting${n===1?"":"s"} selected`;
+}
+function plBulkSelected(){ return (data.plantings||[]).filter(p=>plSel.has(p.id)); }
+function plBulkOpen(){
+  const ps=plBulkSelected(); if(!ps.length) return;
+  const name=p=>`${p.crop}${p.variety?" "+p.variety:""}`;
+  document.getElementById("plBulkHead").textContent=`Edit ${ps.length} planting${ps.length===1?"":"s"}`;
+  const names=ps.map(name);
+  document.getElementById("plBulkWho").textContent=names.length>10?names.slice(0,10).join(", ")+` and ${names.length-10} more`:names.join(", ");
+  // Variety only makes sense when they're all the same crop.
+  const crops=new Set(ps.map(p=>p.cropId||p.crop));
+  const varWrap=document.getElementById("plbVarWrap");
+  varWrap.hidden=crops.size!==1;
+  if(crops.size===1){
+    const c=ps[0];
+    const vars=new Set((data.plantings||[]).filter(p=>(p.cropId||p.crop)===(c.cropId||c.crop)&&p.variety).map(p=>p.variety));
+    document.getElementById("plbVarList").innerHTML=[...vars].sort().map(v=>`<option value="${esc(v)}">`).join("");
+  }
+  ["plbShiftN","plbVariety","plbNotes","plbStatus"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("plbShiftUnit").value="7"; document.getElementById("plbShiftDir").value="1";
+  document.getElementById("plbSkip").checked=false;
+  document.getElementById("plbStatusMsg").textContent="";
+  document.getElementById("plbApply").disabled=false;
+  const m=document.getElementById("plBulkModal"); m.classList.add("open"); m.setAttribute("aria-hidden","false");
+}
+function plBulkClose(){
+  const m=document.getElementById("plBulkModal"); m.classList.remove("open"); m.setAttribute("aria-hidden","true");
+}
+// Which milestone a bulk move starts from: the next one that hasn't happened, else the harvest.
+function plBulkShiftFrom(p){
+  return PlannerShared.cuMovable(p) || (p.h1?"h1":(p.h2?"h2":null));
+}
+async function plBulkApply(){
+  const ps=plBulkSelected(); if(!ps.length){ plBulkClose(); return; }
+  const g=id=>document.getElementById(id).value;
+  const delta=(parseInt(g("plbShiftN"),10)||0)*(+g("plbShiftUnit"))*(+g("plbShiftDir"));
+  const status=g("plbStatus"), variety=g("plbVariety").trim(), note=g("plbNotes").trim();
+  const skip=document.getElementById("plbSkip").checked;
+  const useVar=!document.getElementById("plbVarWrap").hidden && variety;
+  if(!delta && !status && !useVar && !note && !skip){ alert("Nothing to change — every field is on No change."); return; }
+  if(skip && !confirm(`Skip ${ps.length} planting${ps.length===1?"":"s"}? Their open jobs and planned tarps are deleted.`)) return;
+
+  const btn=document.getElementById("plbApply"), msg=document.getElementById("plbStatusMsg");
+  btn.disabled=true; msg.textContent="Saving…";
+  const notMoved=[];
+  try{
+    if(delta){
+      const w={plantings:{}, tasks:{}, tarps:{}};
+      ps.forEach(p=>{
+        if(p.status==="Finished"){ notMoved.push(p); return; }
+        const ms=plBulkShiftFrom(p); if(!ms){ notMoved.push(p); return; }
+        const sh=PlannerShared.cuShift(data, p, ms, delta, true);
+        if(!sh.moves.length){ notMoved.push(p); return; }
+        sh.moves.forEach(m=>{ (w.plantings[p.id] ||= {})[m.key]=m.to; });
+        sh.tasks.forEach(t=>{ w.tasks[t.t.id]=t.to; });
+        if(sh.moves.some(m=>m.key==="h2")) w.tarps[p.id]=delta;
+      });
+      await cuCommit(w);
+    }
+    const fields={}, local={};
+    if(status){ fields[CFG.f.pl_status]=status; local.status=status; }
+    if(useVar){ fields[CFG.f.pl_var]=variety; local.variety=variety; }
+    if(Object.keys(fields).length || note){
+      for(let i=0;i<ps.length;i+=10){
+        await Promise.all(ps.slice(i,i+10).map(async p=>{
+          const f={...fields}, l={...local};
+          if(note){ l.notes=p.notes?`${p.notes}; ${note}`:note; f[CFG.f.pl_notes]=l.notes; }
+          await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, f);
+          Object.assign(p,l);
+        }));
+      }
+    }
+    if(skip) await cuSkip(ps.map(p=>p.id));
+    rebuildDerived();
+  }catch(e){
+    console.error("bulk planting edit", e);
+    alert("Couldn't save all of it: "+e.message+"\n\nReloading so the page shows what did save.");
+    try{ await loadAll(); }catch(_){}
+  }
+  plBulkClose();
+  if(skip) plSel.clear();
+  tarpRefreshViews(); try{ renderSidebar(); }catch(_){}
+  plSelPaint();
+  if(notMoved.length) alert(`Dates not moved for ${notMoved.length} (finished, or no dates to move): `
+    +notMoved.map(p=>`${p.crop}${p.variety?" "+p.variety:""}`).join(", "));
+}
+function plBulkWire(){
+  const m=document.getElementById("plBulkModal"); if(!m || m._wired) return; m._wired=true;
+  document.getElementById("plBulkEdit").onclick=plBulkOpen;
+  document.getElementById("plBulkClear").onclick=()=>{ plSel.clear(); plSelPaint(); };
+  document.getElementById("plBulkClose").onclick=plBulkClose;
+  document.getElementById("plbCancel").onclick=plBulkClose;
+  document.getElementById("plbApply").onclick=plBulkApply;
+  m.onclick=e=>{ if(e.target===m) plBulkClose(); };
+}
+
 let tlSelectedPlantingId=null;
 function tlOpenPanel(p){
   tlSelectedPlantingId=p.id;
@@ -16182,6 +16351,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     <div class="tl-tab-body">${body}</div>
     <div class="tl-panel-actions">
       <button type="button" class="btn-primary">Edit planting</button>
+      <button type="button" class="btn-ghost tl-bulk-sel-btn" title="Add to a group of plantings to edit together">${plSel.has(p.id)?"✓ Selected":"Select"}</button>
       <button type="button" class="btn-ghost tl-remove-crop-btn" style="color:var(--clay)">Remove</button>
     </div>`;
 
@@ -16190,6 +16360,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     panel._tlTab=b.dataset.tltab; tlRenderPanel(p, panel, closeFn, opts);
   });
   panel.querySelector(".tl-remove-crop-btn").onclick=()=>tlOpenRemoveCropModal(p, panel, closeFn, opts);
+  panel.querySelector(".tl-bulk-sel-btn").onclick=()=>{ plSelToggle(p.id); tlRenderPanel(p, panel, closeFn, opts); };
   const createJobs=panel.querySelector(".tl-all-create");
   if(createJobs) createJobs.onclick=async ()=>{
     createJobs.disabled=true; createJobs.textContent="Creating…";
@@ -20580,6 +20751,7 @@ function bpWire(){
   if(addBedBtn) addBedBtn.onclick=bdAddBed;
   const bbOpenBtn=document.getElementById("bbOpenBtn");
   if(bbOpenBtn) bbOpenBtn.onclick=bbOpen;
+  plBulkWire();
   const bulkModal=document.getElementById("bdBulkModal");
   if(bulkModal){
     document.getElementById("bdBulkEdit").onclick=bdBulkOpen;
