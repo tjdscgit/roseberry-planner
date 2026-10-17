@@ -883,6 +883,135 @@
   .lbl:not(text){font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
   .mono{font-family:var(--mono)}
 
+  /* ---- Crops page (desktop, 2026-10-18): list of crops/varieties + one crop's sheet. Phase colours
+     are fixed mid-tones with white text, so they read on both the light and dark paper. */
+  .cs{position:absolute;inset:0;display:flex;min-height:0;overflow:hidden}
+  .cs[hidden]{display:none}
+  .cs-list{width:272px;flex:0 0 auto;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--paper-2)}
+  .cs-list-min{width:48px;align-items:center;padding-top:.8rem;gap:.8rem}
+  .cs-min-lbl{writing-mode:vertical-rl;font-size:13px;color:var(--ink-2);white-space:nowrap}
+  .cs-list-head{display:flex;align-items:center;gap:.4rem;height:var(--vw-title-h);flex:0 0 auto;padding:0 .6rem;border-bottom:1px solid var(--line)}
+  .cs-search{margin:.6rem .7rem .4rem}
+  .cs-search{display:flex}
+  .cs-search input{width:100%;min-width:0;box-sizing:border-box}
+  .cs-pills{display:flex;gap:6px;padding:0 .7rem .5rem}
+  .cs-pill{height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line-2);background:transparent;color:var(--ink-2);font:inherit;font-size:12px;cursor:pointer}
+  .cs-pill.on{border-color:var(--steel);background:var(--sel);color:var(--ink)}
+  .cs-list-body{flex:1;overflow:auto;padding:0 .4rem .8rem;display:flex;flex-direction:column}
+  .cs-li{display:flex;align-items:center;gap:8px;width:100%;min-height:36px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+  .cs-li:hover{background:var(--hover)}
+  .cs-li.on{background:var(--sel);font-weight:650;box-shadow:inset 3px 0 0 var(--steel)}
+  .cs-li-v{padding-left:34px;font-size:13px;min-height:32px}
+  .cs-chev{width:14px;flex:0 0 14px;font-size:11px;color:var(--ink-2);text-align:center}
+  .cs-li-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-li-n{font-size:12px;font-weight:400;color:var(--ink-2)}
+  .cs-li-n.warn,.cs-li-n.ovr{color:var(--clay)}
+  .cs-li-n.quiet{color:var(--ink-2);font-style:italic}
+  .cs-list-foot{border-top:1px solid var(--line);padding:.6rem .9rem;font-size:13px}
+  .cs-list-foot a,.cs-head a,.cs-card a{color:var(--steel)}
+  .cs-main{flex:1;min-width:0;overflow:auto;padding:1.2rem 2rem 2.5rem;display:flex;flex-direction:column;gap:1.1rem}
+  .cs-main>*{flex:0 0 auto}
+  .cs-empty{padding:2rem;color:var(--ink-2);font-size:14px}
+  .cs-head{display:flex;align-items:flex-end;gap:.8rem}
+  .cs-crumb{font-size:12px;color:var(--ink-2)}
+  .cs-title{margin:.15rem 0 0;font-size:28px;font-weight:650;display:flex;align-items:center;gap:.6rem}
+  .cs-title .ap-crop-dot{width:14px;height:14px}
+  .cs-title-sub{font-size:14px;font-weight:400;color:var(--ink-2)}
+  .cs-saved{font-size:13px;color:var(--ok)}
+  .cs-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+  .cs-tab{height:40px;padding:0 14px;border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:14px;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+  .cs-tab.on{color:var(--ink);font-weight:650;box-shadow:inset 0 -2px 0 var(--steel)}
+  .cs-tab-sub{font-weight:400;color:var(--ink-2)}
+  .cs-tab-add{color:var(--steel)}
+  .cs-dot{width:7px;height:7px;border-radius:50%;background:var(--clay)}
+  .cs-editbar{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;padding:.6rem .9rem;border-radius:10px;background:var(--sel);border:1px solid var(--steel-soft);font-size:13px}
+  .cs-editbar b{font-size:14px}
+  .cs-seg2{display:flex;border:1px solid var(--steel);border-radius:8px;overflow:hidden}
+  .cs-seg2 button{height:32px;padding:0 12px;border:0;background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+  .cs-seg2 button.on{background:var(--steel);color:#fff;font-weight:650}
+  .cs-banner{display:flex;align-items:center;gap:.8rem;padding:.6rem .9rem;border-radius:10px;background:var(--paper-2);border:1px solid var(--line);font-size:13px;color:var(--ink-2)}
+  .cs-banner b{color:var(--ink)}
+  .cs-banner .cs-dot{flex:0 0 auto;width:10px;height:10px}
+  .cs-card{background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem;display:flex;flex-direction:column;gap:.85rem;min-width:0}
+  .cs-card-h{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap}
+  .cs-card-h h3{margin:0;font-size:14px}
+  .cs-card-h .sub{font-size:12px;color:var(--ink-2)}
+  .cs-card-h select{height:32px}
+  .cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.1rem}
+  .cs-life{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;align-items:center}
+  .cs-life-name{font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-life-name.cmp{font-weight:400;color:var(--ink-2)}
+  .cs-bar{position:relative;height:36px;border-radius:8px;background:var(--paper-3);overflow:hidden}
+  .cs-bar.small{height:22px;opacity:.6;border-radius:6px}
+  .cs-bar.empty{display:flex;align-items:center;padding:0 12px;font-size:12px;color:var(--ink-2)}
+  .cs-seg{position:absolute;top:0;bottom:0;display:flex;align-items:center;padding:0 10px;color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden}
+  .cs-bar.small .cs-seg{font-size:11px;font-weight:500}
+  .cs-cmp-note{font-size:12px;color:var(--ink-2)}
+  .cs-cmp-note b{color:var(--ink)}
+  .cs-strip{position:relative;border-radius:8px;background:var(--paper-3)}
+  .cs-jl{position:absolute;height:3px}
+  .cs-jd{position:absolute;width:11px;height:11px;border-radius:2px;transform:rotate(45deg)}
+  .cs-jt{position:absolute;font-size:12px;white-space:nowrap;color:var(--ink)}
+  .cs-axis{position:relative;height:16px;font-family:var(--mono);font-size:11px;color:var(--ink-2)}
+  .cs-axis span{position:absolute;white-space:nowrap;transform:translateX(-50%)}
+  .cs-axis span:first-child{transform:none}
+  .cs-axis span:last-child:not(:first-child){transform:translateX(-100%)}
+  .cs-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+  .cs-tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;background:var(--paper);border:1px solid var(--line)}
+  .cs-tile.ovr{border-color:var(--clay)}
+  .cs-tile-l{font-size:12px;color:var(--ink-2)}
+  .cs-tile-v{font-family:var(--mono);font-size:21px;font-weight:650}
+  .cs-tile.ovr .cs-tile-v{color:var(--clay)}
+  .cs-tile-f{font-size:12px;color:var(--ink-2)}
+  .cs-dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px;font-size:14px}
+  .cs-dl dt{color:var(--ink-2)}
+  .cs-dl dd{margin:0}
+  .cs-dl dd.ovr{color:var(--clay)}
+  .cs-dl dd.none{color:var(--ink-2)}
+  .cs-from{font-size:12px;color:var(--ink-2)}
+  .cs-bed{display:block;width:100%;height:88px;border-radius:8px;background:color-mix(in srgb,#8a6a45 22%,var(--paper-3));border:1px solid var(--line)}
+  .cs-est{margin:0;font-size:13px;color:var(--steel);background:var(--sel);border-radius:8px;padding:9px 12px}
+  .cs-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+  .cs-f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2);min-width:0}
+  .cs-fbox{display:flex;align-items:center;height:40px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);overflow:hidden}
+  .cs-f.inh .cs-fbox{border-style:dashed}
+  .cs-f.ovr .cs-fbox{border-color:var(--clay);background:var(--clay-tint)}
+  .cs-fbox input,.cs-fbox select{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:15px;padding:0 10px}
+  .cs-f.ovr .cs-fbox input,.cs-f.ovr .cs-fbox select{color:var(--clay)}
+  .cs-fbox input::placeholder{color:var(--ink-2);opacity:.75}
+  .cs-reset{width:34px;height:100%;border:0;background:transparent;color:var(--clay);font-size:16px;cursor:pointer}
+  .cs-fnote{min-height:14px}
+  .cs-fnote.ovr{color:var(--clay)}
+  .cs-tt{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.4fr) minmax(0,1.4fr) 90px minmax(0,1.1fr);gap:0 14px;align-items:center}
+  .cs-tt-h{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .cs-tr{min-height:44px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;text-align:left;cursor:pointer;width:100%;padding:0}
+  .cs-tr:hover{background:var(--hover)}
+  .cs-tr .ovr{color:var(--clay)}
+  .cs-tr .dim{color:var(--ink-2);font-size:12px}
+  .cs-sw{display:inline-block;width:9px;height:9px;border-radius:2px;transform:rotate(45deg);margin-right:10px}
+  /* Add/edit task dialog */
+  .cs-dlg-back{position:fixed;inset:0;z-index:300;background:rgba(10,12,14,.55);display:flex;align-items:center;justify-content:center;padding:1rem}
+  .cs-dlg{width:min(880px,100%);max-height:calc(100vh - 2rem);display:flex;flex-direction:column;background:var(--paper-2);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;color:var(--ink)}
+  .cs-dlg-h,.cs-dlg-f{display:flex;align-items:center;gap:.7rem;padding:.9rem 1.3rem;flex:0 0 auto}
+  .cs-dlg-h{border-bottom:1px solid var(--line)} .cs-dlg-f{border-top:1px solid var(--line)}
+  .cs-dlg-h h2{margin:0;font-size:18px}
+  .cs-dlg-b{display:flex;min-height:0;flex:1;overflow:hidden}
+  .cs-dlg-lib{width:260px;flex:0 0 auto;border-right:1px solid var(--line);padding:.9rem;display:flex;flex-direction:column;gap:6px;overflow:auto}
+  .cs-dlg-main{flex:1;min-width:0;padding:1.1rem 1.3rem;display:flex;flex-direction:column;gap:.9rem;overflow:auto}
+  .cs-step{font-size:12px;color:var(--ink-2)}
+  .cs-anchors{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .cs-anchor{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 11px;border-radius:8px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+  .cs-anchor small{font-weight:400;font-size:12px;color:var(--ink-2)}
+  .cs-anchor.on{border-color:var(--steel);background:var(--sel)}
+  .cs-when{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:15px}
+  .cs-step-in{display:flex;height:40px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);overflow:hidden}
+  .cs-step-in button{width:36px;border:0;background:transparent;color:var(--ink);font-size:18px;cursor:pointer}
+  .cs-step-in input{width:52px;text-align:center;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px}
+  .cs-scope{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .cs-scope button{text-align:left;padding:9px 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:inherit;display:flex;flex-direction:column;gap:2px;cursor:pointer}
+  .cs-scope button small{font-size:12px;color:var(--ink-2)}
+  .cs-scope button.on{border-color:var(--clay);background:var(--clay-tint)}
+
   /* ---- Crop defaults: 21 columns will not fit any screen honestly. The table carries the groups
      you are scanning; the panel holds the full set for whichever crop is selected. Both edit the
      same records through the same save path — the panel reuses the stacked form the phone uses. */
@@ -5214,6 +5343,9 @@
       <aside class="cr-panel" id="crPanel" hidden></aside>
       </div>
       <!-- /.cr-split -->
+      <!-- Desktop Crops page (2026-10-18): crop/variety list + one crop's sheet, Crop tasks folded in.
+           Drawn by csRender(); the table above stays as the fallback markup and is hidden on desktop. -->
+      <div class="cs" id="csRoot" hidden></div>
       <div class="cr-mobile-list" id="crMobileList"></div>
     </section>
 
@@ -9877,7 +10009,8 @@ const RAIL_GROUPS = {
     { name:"Ground", views:[["beds","Beds"],["bedsetup","Bed setup"],["fieldwalk","Field walk"]] },
   ]},
   crops: { label:"Crops", groups:[
-    { name:"Planting", views:[["crops","Crop defaults"],["croptasks","Crop tasks"],["tasklib","Task library"]] },
+    // Crop tasks now lives on each crop's sheet (Crops); showView redirects the old view id.
+    { name:"Planting", views:[["crops","Crops"],["tasklib","Task library"]] },
     { name:"Stock",    views:[["seedbook","Seed book"],["misc","Tray types"]] },
     { name:"Selling",  views:[["outlets","Sales outlets"],["season","Season"]] },
   ]},
@@ -10053,6 +10186,8 @@ function showView(view){
   // Bed prep is Field walk's Prep tab now. The old name still works — the menu shortcut, This
   // week's bed-prep links and a saved last-view all arrive here.
   if(view==="bedprep"){ fwPane="prep"; view="fieldwalk"; }
+  // Crop tasks is a section of each crop's sheet now (desktop). Phones keep the old page for now.
+  if(view==="croptasks" && !cmIsMobile()) view="crops";
   if(typeof currentView!=="undefined" && currentView && currentView!==view && !backNavigating){
     viewHistory.push(currentView); if(viewHistory.length>30) viewHistory.shift();
     backRearm();   // moved on inside the 2s "press back again to exit" window — don't exit next time
@@ -18970,7 +19105,9 @@ function buildCropsTab(filter){
     const n=Object.keys(data.crops||{}).length;
     return n ? `${n} crop${n===1?"":"s"}` : "";
   });
-  if(cmIsMobile()){ buildCrMobileList(); return; }
+  const csRoot=document.getElementById("csRoot"), crSplit=document.querySelector("#view-crops .cr-split");
+  if(cmIsMobile()){ if(csRoot) csRoot.hidden=true; if(crSplit) crSplit.style.display=""; buildCrMobileList(); return; }
+  if(csRoot){ csRoot.hidden=false; if(crSplit) crSplit.style.display="none"; csRender(); return; }
   crApplyGroups();
   const body=document.getElementById("crBody"); if(!body) return;
   const q=(filter!=null?filter:(document.getElementById("crSearch").value||"")).trim().toLowerCase();
@@ -19133,6 +19270,520 @@ function crAddVarietyRow(c){
   };
   return tr;
 }
+/* ---------- Crops page (desktop, 2026-10-18): list + one crop's sheet ----------
+   Read mode shows the crop (or one variety) as a lifecycle bar with its jobs on it, a few big
+   numbers and short label/value lists; Edit turns the same sheet into fields. A variety only stores
+   what it changes — blank means "follow the crop", shown dashed; a value of its own shows orange.
+   Crop tasks (the old Crop tasks page) are a section here, edited through the task dialog.
+   Saves go through the same functions the old table used (crSaveWithYield, saveVarietyField,
+   saveCropType, the Crop Tasks fields + ctMaybePropagate), so nothing about storage changed. */
+let csCrop=null, csVar=null, csEdit=false, csCompare=null, csQuery="", csFilter="all", csDlg=null;
+let csListOpen=(()=>{ try{ return localStorage.getItem("csListOpen")!=="0"; }catch(_){ return true; } })();
+const csExpanded=new Set(), csCollapsed=new Set();
+const CS_PHASE={n:"#3C7286", g:"#3F7D46", h:"#C64A2E"};
+const CS_JOB_COLORS=["#3C7286","#B08A2E","#3F7D46","#7E5BA6","#C64A2E","#2F7F86"];
+const CS_UNITS={nursery:" d",dtm:" d",window:" d",gap:" d",rowSpacing:" cm",plantSpacing:" cm",pickEvery:" d",daysToGerminate:" d",germTemp:" °C"};
+const CS_LIFE_KEYS=["method","nursery","dtm","window","gap"];
+const csBlank=x=>x===null||x===undefined||x===""||(typeof x==="number"&&isNaN(x));
+const csField=k=>CR_ROW_FIELDS.find(f=>f.k===k);
+const csCropName=()=>data.crops[csCrop]||"Crop";
+function csDefs(cropId, varId){
+  const cd=data.cropDefs[cropId]||{}, v=varId?(data.varietiesById[varId]||{}):null, out={};
+  DEFAULT_KEYS.forEach(k=>{ out[k]=(v && !csBlank(v[k])) ? v[k] : cd[k]; });
+  return out;
+}
+function csOver(varId,k){ const v=varId&&data.varietiesById[varId]; return !!v && !csBlank(v[k]); }
+function csOverCount(varId){
+  return DEFAULT_KEYS.filter(k=>csOver(varId,k)).length + (data.cropTasks||[]).filter(ct=>ct.varietyId===varId).length;
+}
+const csIsTransplant=d=>/transplant/i.test(d.method||"");
+// Days from sowing: transplant at the end of the nursery; Days to maturity counts from transplant
+// for transplanted crops (as the Add-planting dialog does), so first pick = nursery + DTM.
+function csDays(d){
+  const n=csIsTransplant(d)?(+d.nursery||0):0, g=+d.dtm||0, h=+d.window||0;
+  return {n,g,h,tp:n,h1:n+g,h2:n+g+h,total:n+g+h};
+}
+function csCropHasGaps(id){ const d=data.cropDefs[id]||{}; return csBlank(d.dtm)||csBlank(d.window)||(csIsTransplant(d)&&csBlank(d.nursery)); }
+const csCropHasTasks=id=>(data.cropTasks||[]).some(ct=>ct.cropId===id);
+function csFmt(k,v){
+  if(csBlank(v)) return "—";
+  if(k==="price") return "$"+(+v).toFixed(2);
+  return String(v)+(CS_UNITS[k]||"");
+}
+function csWhen(anchor, offset){
+  const o=+offset||0;
+  return !anchor ? "—" : o===0 ? anchor : `${anchor} ${o>0?"+":"−"}${Math.abs(o)} d`;
+}
+
+/* ---- list ---- */
+function csListRows(){
+  const q=csQuery.trim().toLowerCase();
+  let ids=Object.keys(data.crops||{}).sort((a,b)=>data.crops[a].localeCompare(data.crops[b]));
+  if(csFilter==="notasks") ids=ids.filter(id=>!csCropHasTasks(id));
+  if(csFilter==="gaps") ids=ids.filter(csCropHasGaps);
+  const out=[];
+  ids.forEach(id=>{
+    const vs=data.varietiesByCrop[id]||[];
+    const nameHit=!q || data.crops[id].toLowerCase().includes(q);
+    const vHits=q ? vs.filter(v=>v.name.toLowerCase().includes(q)) : vs;
+    if(!nameHit && !vHits.length) return;
+    const open=((csExpanded.has(id) || id===csCrop) && !csCollapsed.has(id)) || (!!q && !nameHit);
+    const note=csCropHasGaps(id) ? `<span class="cs-li-n warn" title="Days to maturity, harvest window or nursery days missing">gaps</span>`
+      : !csCropHasTasks(id) ? `<span class="cs-li-n quiet">no tasks</span>`
+      : vs.length ? `<span class="cs-li-n">${vs.length}</span>` : "";
+    out.push(`<button type="button" class="cs-li${id===csCrop&&!csVar?" on":""}" data-cs-crop="${esc(id)}">`
+      +`<span class="cs-chev" data-cs-chev="${esc(id)}">${vs.length?(open?"▾":"▸"):""}</span>`
+      +`<span class="ap-crop-dot" style="background:${cropColor(id)}"></span>`
+      +`<span class="cs-li-name">${esc(data.crops[id])}</span>${note}</button>`);
+    if(open) (nameHit?vs:vHits).forEach(v=>{
+      const n=csOverCount(v.id);
+      out.push(`<button type="button" class="cs-li cs-li-v${v.id===csVar?" on":""}" data-cs-crop="${esc(id)}" data-cs-var="${esc(v.id)}">`
+        +`<span class="cs-li-name">${esc(v.name)}</span>${n?`<span class="cs-li-n ovr">${n} changed</span>`:""}</button>`);
+    });
+  });
+  return out.join("") || `<div class="cs-empty">${Object.keys(data.crops||{}).length?"Nothing matches.":"No crops loaded yet."}</div>`;
+}
+function csListPaneHTML(){
+  if(!csListOpen) return `<aside class="cs-list cs-list-min">`
+    +`<button type="button" class="icon-btn" data-cs-act="list" aria-label="Show crop list" title="Show crop list">›</button>`
+    +`<span class="cs-min-lbl">${esc(csCropName()+(csVar&&data.varietiesById[csVar]?" › "+data.varietiesById[csVar].name:""))}</span></aside>`;
+  const ids=Object.keys(data.crops||{});
+  const counts={all:ids.length, notasks:ids.filter(id=>!csCropHasTasks(id)).length, gaps:ids.filter(csCropHasGaps).length};
+  return `<aside class="cs-list"><div class="cs-list-head">`
+    +`<button type="button" class="icon-btn" data-cs-act="list" aria-label="Hide crop list" title="Hide crop list">‹</button>`
+    +`<span class="vw-name">Crops</span><span class="spacer"></span>`
+    +`<button type="button" class="icon-btn" data-cs-act="newcrop" aria-label="New crop" title="New crop">＋</button></div>`
+    +`<div class="tl-search cs-search"><input type="text" id="csSearch" placeholder="Search crops &amp; varieties…" autocomplete="off" spellcheck="false" value="${esc(csQuery)}"></div>`
+    +`<div class="cs-pills">${[["all","All"],["notasks","No tasks"],["gaps","Gaps"]].map(([k,l])=>
+        `<button type="button" class="cs-pill${csFilter===k?" on":""}" data-cs-filter="${k}">${l} ${counts[k]}</button>`).join("")}</div>`
+    +`<div class="cs-list-body" id="csListBody">${csListRows()}</div>`
+    +`<div class="cs-list-foot"><a href="#" data-cs-act="tasklib">Task library ›</a></div></aside>`;
+}
+
+/* ---- lifecycle bar, jobs strip ---- */
+function csBarHTML(d,S,big,lo){
+  lo=lo||0;
+  const t=csDays(d), pct=x=>((x-lo)/S*100).toFixed(2)+"%", wpct=x=>(x/S*100).toFixed(2)+"%";
+  if(!t.total) return `<div class="cs-bar ${big?"big":"small"} empty">No timings set</div>`;
+  const pe=+d.pickEvery>0?` · every ${+d.pickEvery} d`:"";
+  const seg=(l,w,c,lab)=>w>0?`<div class="cs-seg" style="left:${pct(l)};width:${wpct(w)};background:${c}" title="${esc(lab)}">${esc(lab)}</div>`:"";
+  return `<div class="cs-bar ${big?"big":"small"}">`
+    +seg(0,t.n,CS_PHASE.n,big?`Nursery ${t.n} d`:String(t.n))
+    +seg(t.n,t.g,CS_PHASE.g,big?`Growing ${t.g} d`:String(t.g))
+    +seg(t.h1,t.h,CS_PHASE.h,big?`Picking ${t.h} d${pe}`:`${t.h}${pe}`)+`</div>`;
+}
+function csJobs(d){
+  const t=csDays(d), A={"Sow":0,"Transplant":t.tp,"First harvest":t.h1,"Last harvest":t.h2};
+  return resolveTasksForCropVariety(csCrop,csVar).map(s=>{
+    const a=A[s.anchor]; const day=a==null?null:a+(+s.offset||0);
+    const end=(day!=null && +s.repeat>0) ? Math.max(day,(s.until&&A[s.until]!=null)?A[s.until]:t.h2) : null;
+    return {...s, day, end};
+  }).sort((a,b)=>(a.day??1e9)-(b.day??1e9) || a.task.name.localeCompare(b.task.name));
+}
+function csCompareOptions(){
+  const vs=data.varietiesByCrop[csCrop]||[], opts=[];
+  if(csVar) opts.push(["crop", csCropName()+" (crop)"]);
+  vs.filter(v=>v.id!==csVar).forEach(v=>opts.push([v.id, v.name]));
+  return opts;
+}
+function csLifeHTML(){
+  const d=csDefs(csCrop,csVar), t=csDays(d), jobs=csJobs(d).filter(j=>j.day!=null);
+  const opts=csCompareOptions();
+  if(csCompare && !opts.some(o=>o[0]===csCompare)) csCompare=null;
+  const cd=csCompare ? (csCompare==="crop" ? csDefs(csCrop,null) : csDefs(csCrop,csCompare)) : null;
+  const ct=cd?csDays(cd):null;
+  const lo=Math.min(0, ...jobs.map(j=>j.day));
+  const S=(Math.max(30, t.total, ct?ct.total:0, ...jobs.map(j=>Math.max(j.day,j.end||0)))-lo)*1.04;
+  const pct=x=>((x-lo)/S*100).toFixed(2)+"%";
+  const stripPx=Math.max(300,(document.getElementById("csMain")?.clientWidth||1000)-200);
+  const myName=csVar?(data.varietiesById[csVar]||{}).name:csCropName();
+  const cmpName=cd?(csCompare==="crop"?csCropName():(data.varietiesById[csCompare]||{}).name):"";
+  // jobs strip: greedy lanes so labels don't overlap (label width guessed at ~7px a character on ~900px)
+  const lanes=[], placed=jobs.map((j,i)=>{
+    const w=(j.task.name.length*7+30)/stripPx*S, end=Math.max(j.day+w, j.end||0);
+    let lane=lanes.findIndex(x=>x<=j.day); if(lane<0){ lane=lanes.length; lanes.push(0); }
+    lanes[lane]=end; return {...j, lane, color:CS_JOB_COLORS[i%CS_JOB_COLORS.length]};
+  });
+  const stripH=Math.max(1,lanes.length)*32+10;
+  const strip=placed.length ? `<div class="cs-strip" style="height:${stripH}px">`+placed.map(j=>{
+      const y=8+j.lane*32;
+      return (j.end!=null&&j.end>j.day?`<div class="cs-jl" style="top:${y+4}px;left:${pct(j.day)};width:${((j.end-j.day)/S*100).toFixed(2)}%;background:repeating-linear-gradient(90deg,${j.color} 0 6px,transparent 6px 10px)"></div>`:"")
+        +`<div class="cs-jd" style="top:${y}px;left:calc(${pct(j.day)} - 5px);background:${j.color}"></div>`
+        +`<div class="cs-jt" style="top:${y+12}px;left:calc(${pct(j.day)} - 4px)">${esc(j.task.name)}</div>`;
+    }).join("")+`</div>`
+    : `<div class="cs-strip cs-empty" style="padding:.7rem 1rem;font-size:13px">No jobs yet — add them under Tasks.</div>`;
+  const ticks=[["Sow",0]].concat(csIsTransplant(d)&&t.n?[["Transplant",t.tp]]:[]).concat(t.g?[["First pick",t.h1]]:[]).concat(t.h?[["Last pick",t.h2]]:[]);
+  let cmpNote="";
+  if(ct && ct.total && t.total){
+    const dh=ct.h1-t.h1, dw=t.h-ct.h;
+    const a = dh===0 ? `starts picking the same day as ${esc(cmpName)}` : `starts picking <b>${Math.abs(dh)} day${Math.abs(dh)===1?"":"s"} ${dh>0?"sooner":"later"}</b> than ${esc(cmpName)}`;
+    const b = dw===0 ? "" : ` and picks ${Math.abs(dw)} day${Math.abs(dw)===1?"":"s"} ${dw>0?"longer":"shorter"}`;
+    const sp=`${cd.rows||"—"} row${+cd.rows===1?"":"s"} · ${csFmt("plantSpacing",cd.plantSpacing)} · ${esc(cd.harvestUnit||"—")}${csBlank(cd.price)?"":" · "+csFmt("price",cd.price)}`;
+    cmpNote=`<span></span><span class="cs-cmp-note">${esc(myName)} ${a}${b}. ${esc(cmpName)}: ${sp}.</span>`;
+  }
+  return `<div class="cs-card-h"><h3>Lifecycle &amp; jobs</h3>`
+    +`<span class="sub">${t.total?`sow → last pick ≈ ${t.total} days`:"set the timings to draw this"}</span><span class="spacer" style="flex:1"></span>`
+    +(opts.length?`<label class="sub" style="display:flex;align-items:center;gap:8px">Compare with <select id="csCompare"><option value="">None</option>`
+      +opts.map(([v,l])=>`<option value="${esc(v)}"${v===csCompare?" selected":""}>${esc(l)}</option>`).join("")+`</select></label>`:"")
+    +`</div><div class="cs-life"><span class="cs-life-name">${esc(myName)}</span>${csBarHTML(d,S,true,lo)}`
+    +(cd?`<span class="cs-life-name cmp">${esc(cmpName)}</span>${csBarHTML(cd,S,false,lo)}${cmpNote}`:"")
+    +`<span class="cs-life-name cmp">Jobs</span>${strip}`
+    +`<span></span><div class="cs-axis">${ticks.map(([l,x])=>`<span style="left:${pct(x)}">${l} ${x}</span>`).join("")}</div></div>`;
+}
+
+/* ---- read-mode pieces ---- */
+function csTileHTML(k,label,val){
+  const ovr=csOver(csVar,k), cd=data.cropDefs[csCrop]||{};
+  const from=!csVar ? "" : ovr ? `${esc(csCropName())}: ${esc(csFmt(k,cd[k]))}` : `same as ${esc(csCropName())}`;
+  return `<div class="cs-tile${ovr?" ovr":""}"><span class="cs-tile-l">${esc(label)}</span>`
+    +`<span class="cs-tile-v">${esc(val!=null?val:csFmt(k,csDefs(csCrop,csVar)[k]))}</span><span class="cs-tile-f">${from}</span></div>`;
+}
+function csDlHTML(keys){
+  const d=csDefs(csCrop,csVar), cd=data.cropDefs[csCrop]||{};
+  return `<dl class="cs-dl">`+keys.map(k=>{
+    const f=csField(k), ovr=csOver(csVar,k), v=d[k];
+    const extra=ovr?` <span class="cs-from">· ${esc(csCropName())} ${esc(csFmt(k,cd[k]))}</span>`:"";
+    return `<dt>${esc(f?f.label:k)}</dt><dd class="${ovr?"ovr":csBlank(v)?"none":""}">${csBlank(v)?"— not set":esc(csFmt(k,v))}${extra}</dd>`;
+  }).join("")+`</dl>`;
+}
+// The bed from above: ~2 m of it, each row a line with a plant at every in-row spacing.
+function csBedSVG(d){
+  const rows=Math.min(12,Math.max(0,Math.round(+d.rows||0))), ps=+d.plantSpacing||0;
+  if(!rows||!ps) return `<div class="cs-bed cs-empty" style="display:flex;align-items:center;padding:0 1rem;font-size:13px">Set rows and plant spacing to draw the bed</div>`;
+  const W=400,H=88,len=200, n=Math.min(80,Math.floor(len/ps)+1), r=Math.max(2,Math.min(7,ps/len*W*0.35, (H-16)/rows*0.35));
+  let s="";
+  for(let i=0;i<rows;i++){
+    const y=8+(i+0.5)*(H-16)/rows;
+    s+=`<line x1="8" x2="${W-8}" y1="${y}" y2="${y}" stroke="currentColor" stroke-opacity=".25"/>`;
+    for(let j=0;j<n;j++){ const x=12+(j*ps)/len*(W-24); if(x<=W-12) s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="var(--ok)"/>`; }
+  }
+  return `<svg class="cs-bed" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Bed from above: ${rows} row${rows===1?"":"s"}, plants ${ps} cm apart">${s}</svg>`;
+}
+function csYieldNote(d){
+  const c=PlannerShared.yieldFromSpacing(d), y=!csBlank(d.yield)?+d.yield:(c?c.v:null);
+  if(y==null) return "";
+  const unit=d.harvestUnit||"units", per=Math.round(y*30*10)/10;
+  return `<p class="cs-est">≈ ${y} ${esc(unit)} per bed metre · a 30 m bed ≈ ${per.toLocaleString()} ${esc(unit)}${c?` <span class="cs-from">(${esc(c.text)})</span>`:""}</p>`;
+}
+function csUsedHTML(){
+  const vName=csVar?(data.varietiesById[csVar]||{}).name:null;
+  const match=p=>p.cropId===csCrop && (!csVar || varietyIdForPlantingText(csCrop,p.variety)===csVar);
+  const yr=String(new Date().getFullYear());
+  const season=(data.plantings||[]).filter(p=>match(p) && String(p.sow||p.tp||"").startsWith(yr)).length;
+  const live=(data.plantingsActive||[]).filter(match).length;
+  return `<div class="cs-tiles"><div class="cs-tile"><span class="cs-tile-l">Plantings in ${yr}</span><span class="cs-tile-v">${season}</span></div>`
+    +`<div class="cs-tile"><span class="cs-tile-l">Under way now</span><span class="cs-tile-v">${live}</span></div></div>`
+    +`<dl class="cs-dl"><dt>Seed</dt><dd><a href="#" data-cs-act="seedbook">Seed book ›</a></dd>`
+    +`<dt>Timeline</dt><dd><a href="#" data-cs-act="timeline">See ${esc(vName||csCropName())} plantings ›</a></dd></dl>`
+    +`<span class="cs-from">Changes here only shape new plantings. Task changes offer to update ones already on the timeline.</span>`;
+}
+
+/* ---- edit-mode fields ---- */
+function csInputHTML(k){
+  const f=csField(k); if(!f) return "";
+  const cd=data.cropDefs[csCrop]||{}, v=csVar?data.varietiesById[csVar]:null, rec=v||cd;
+  const val=csBlank(rec[k])?"":rec[k], inh=v?cd[k]:null, ovr=!!v&&!csBlank(v[k]);
+  let ctl;
+  if(f.type==="select"){
+    let opts=(typeof f.options==="function"?f.options():f.options).slice();
+    if(val!=="" && !opts.includes(String(val))) opts.push(String(val));
+    const blank=v && !csBlank(inh) ? `${inh} (from ${csCropName()})` : "—";
+    ctl=`<select data-cs-k="${k}"><option value="">${esc(blank)}</option>`
+      +opts.map(o=>`<option${String(o)===String(val)?" selected":""}>${esc(o)}</option>`).join("")+`</select>`;
+  }else{
+    const ph=v && !csBlank(inh) ? String(inh) : (k==="yield" && PlannerShared.yieldFromSpacing(csDefs(csCrop,csVar)) ? String(PlannerShared.yieldFromSpacing(csDefs(csCrop,csVar)).v) : "");
+    ctl=`<input type="number" min="0" step="${f.step}" data-cs-k="${k}" value="${esc(String(val))}" placeholder="${esc(ph)}">`;
+  }
+  const reset=ovr?`<button type="button" class="cs-reset" data-cs-reset="${k}" title="Go back to ${esc(csCropName())}'s value" aria-label="Reset to ${esc(csCropName())}">↺</button>`:"";
+  const note=v ? (ovr?`<span class="cs-fnote ovr">${esc(csCropName())}: ${esc(csFmt(k,inh))}</span>`:`<span class="cs-fnote">from ${esc(csCropName())}</span>`)
+    : (k==="yield" ? `<span class="cs-fnote">${cd.yieldTyped?"typed in":"worked out from spacing"}</span>` : `<span class="cs-fnote"></span>`);
+  return `<label class="cs-f${v?(ovr?" ovr":" inh"):""}" data-cs-fld="${k}"><span class="cs-flab">${esc(f.label)}</span><span class="cs-fbox">${ctl}${reset}</span>${note}</label>`;
+}
+const csFieldsHTML=keys=>`<div class="cs-fields">${keys.map(csInputHTML).join("")}</div>`;
+
+/* ---- tasks section ---- */
+function csTaskRowsFor(taskId){
+  const all=data.cropTasks||[];
+  return { varRow: csVar ? all.find(ct=>ct.varietyId===csVar && ct.taskId===taskId) : null,
+           cropRow: all.find(ct=>ct.cropId===csCrop && !ct.varietyId && ct.taskId===taskId) };
+}
+function csTasksHTML(){
+  const jobs=csJobs(csDefs(csCrop,csVar));
+  const vName=csVar?(data.varietiesById[csVar]||{}).name:"";
+  const mins=jobs.reduce((s,j)=>s+(+j.duration||0),0);
+  const head=`<div class="cs-card-h"><h3>Tasks</h3><span class="sub">${jobs.length} job${jobs.length===1?"":"s"}${mins?` · ${Math.round(mins)} min per 15 m of bed, counting each once`:""}</span>`
+    +`<span class="spacer" style="flex:1"></span><button type="button" class="btn-ghost" data-cs-act="addtask">＋ Add task</button></div>`;
+  if(!jobs.length) return head+`<div class="cs-empty" style="padding:.4rem 0">No tasks for ${esc(vName||csCropName())} yet. Add one from the Task library and it lands on the lifecycle above.</div>`;
+  return head+`<div class="cs-tt cs-tt-h"><span>Task</span><span>When</span><span>Repeats</span><span>Min / 15 m</span><span>From</span></div>`
+    +jobs.map((j,i)=>{
+      const {varRow,cropRow}=csTaskRowsFor(j.taskId), row=varRow||cropRow;
+      const own=row && ctOverrideCount(row)>0;
+      const from=varRow ? `<span class="ovr">${esc(vName)} only</span>` : esc(csCropName());
+      const rep=+j.repeat>0 ? `every ${j.repeat} d${j.until?` until ${esc(j.until)}`:""}` : "once";
+      return `<button type="button" class="cs-tr cs-tt" data-cs-task="${esc(j.taskId)}">`
+        +`<span><span class="cs-sw" style="background:${CS_JOB_COLORS[i%CS_JOB_COLORS.length]}"></span>${esc(j.task.name)}</span>`
+        +`<span class="${varRow&&ctIsOverride(varRow,"offset")||varRow&&ctIsOverride(varRow,"anchor")?"ovr":""}">${esc(csWhen(j.anchor,j.offset))}</span>`
+        +`<span class="dim">${rep}</span><span>${csBlank(j.duration)?"—":esc(String(j.duration))}</span>`
+        +`<span>${from} <span class="dim">· ${own?"own timing":"library timing"}</span></span></button>`;
+    }).join("");
+}
+
+/* ---- the sheet ---- */
+function csBannerHTML(){
+  const cname=csCropName(), v=csVar?data.varietiesById[csVar]:null, vs=data.varietiesByCrop[csCrop]||[];
+  if(!v) return vs.length&&!csEdit ? `<div class="cs-banner"><span>Varieties follow these values unless they set their own.</span></div>` : "";
+  const n=csOverCount(csVar);
+  return `<div class="cs-banner"><span class="cs-dot"></span><span style="flex:1">`
+    +(n ? `Orange = set on <b>${esc(v.name)}</b> (${n}). Everything else follows ${esc(cname)}, and ${esc(cname)}'s tasks follow the Task library.`
+        : `${esc(v.name)} follows ${esc(cname)} for everything. Edit to give it values of its own.`)+`</span>`
+    +(DEFAULT_KEYS.some(k=>csOver(csVar,k))?`<button type="button" class="btn-ghost" data-cs-act="resetall">Reset all to ${esc(cname)}</button>`:"")+`</div>`;
+}
+function csSheetHTML(){
+  const cd=data.cropDefs[csCrop]||{}, cname=csCropName(), v=csVar?data.varietiesById[csVar]:null;
+  const d=csDefs(csCrop,csVar), vs=data.varietiesByCrop[csCrop]||[], t=csDays(d);
+  const head=`<div class="cs-head"><div><span class="cs-crumb">${esc(cd.type||"No family set")} · ${esc(d.method||"method not set")}`
+    +(v?` · <a href="#" data-cs-act="tocrop">${esc(cname)}</a> ›`:"")+`</span>`
+    +`<h2 class="cs-title"><span class="ap-crop-dot" style="background:${cropColor(csCrop)}"></span>${esc(v?v.name:cname)}`
+    +`<span class="cs-title-sub">${v?esc(cname)+" variety":vs.length?`${vs.length} variet${vs.length===1?"y":"ies"}`:"crop defaults"}</span></h2></div>`
+    +`<span class="spacer" style="flex:1"></span><span class="cs-saved" id="csSaved"></span>`
+    +(csEdit?`<button type="button" class="btn-primary" data-cs-act="done">Done</button>`:`<button type="button" class="btn-primary" data-cs-act="edit">Edit</button>`)+`</div>`;
+  const tabs=`<nav class="cs-tabs" aria-label="Varieties"><button type="button" class="cs-tab${!csVar?" on":""}" data-cs-tab="">${esc(cname)} <span class="cs-tab-sub">(crop)</span></button>`
+    +vs.map(x=>`<button type="button" class="cs-tab${x.id===csVar?" on":""}" data-cs-tab="${esc(x.id)}">${esc(x.name)}${csOverCount(x.id)?`<span class="cs-dot" title="Has values of its own"></span>`:""}</button>`).join("")
+    +`<button type="button" class="cs-tab cs-tab-add" data-cs-act="newvar">＋ Variety</button></nav>`;
+  const editbar=!csEdit?"":`<div class="cs-editbar"><b>Editing ${esc(v?v.name:cname)}</b><span>Saves as you go · shapes new plantings</span><span class="spacer" style="flex:1"></span>`
+    +(v||vs.length?`<span>Saving to</span><div class="cs-seg2" role="group" aria-label="Save changes to">`
+      +`<button type="button" class="${v?"on":""}" data-cs-scope="var"${v?"":" disabled"}>${v?esc(v.name)+" only":"A variety (pick a tab)"}</button>`
+      +`<button type="button" class="${v?"":"on"}" data-cs-scope="crop">${esc(cname)} · all ${vs.length} variet${vs.length===1?"y":"ies"}</button></div>`:"")+`</div>`;
+  const banner=csBannerHTML();
+  const climate=(()=>{ if(!(+d.dtm>0)) return null; const yr=new Date().getFullYear(), vals=[];
+    for(let m=0;m<12;m++) vals.push(climateAdjustedDTM(cname, +d.dtm, `${yr}-${String(m+1).padStart(2,"0")}-15`));
+    return `${Math.min(...vals)}–${Math.max(...vals)} d`; })();
+  const lifeTop=`<section class="cs-card" id="csLife">${csLifeHTML()}</section>`;
+  const tiles=csEdit
+    ? `<section class="cs-card"><div class="cs-card-h"><h3>Timing</h3>${!v?`<label class="sub" style="display:flex;align-items:center;gap:8px">Family <select data-cs-type>${crTypeOptionsHTML(cd.type)}</select></label>`:""}</div>${csFieldsHTML(CS_LIFE_KEYS)}</section>`
+    : `<div class="cs-tiles">${csIsTransplant(d)?csTileHTML("nursery","Days in nursery"):""}${csTileHTML("dtm","Days to maturity")}`
+      +`${csTileHTML("window","Harvest window")}${csTileHTML("gap","Succession gap")}`
+      +`<div class="cs-tile"><span class="cs-tile-l">Maturity across the year</span><span class="cs-tile-v" style="font-size:17px;line-height:29px">${climate||"—"}</span><span class="cs-tile-f">climate-adjusted</span></div></div>`;
+  const card=(title,body,id)=>`<section class="cs-card"${id?` id="${id}"`:""}><div class="cs-card-h"><h3>${title}</h3></div>${body}</section>`;
+  const bed=card("In the bed", `<div id="csBedPic">${csBedSVG(d)}</div>`+(csEdit?csFieldsHTML(["rows","rowSpacing","plantSpacing","seeder"]):csDlHTML(["rows","rowSpacing","plantSpacing","seeder"])));
+  const harvest=card("Harvest &amp; yield", (csEdit?csFieldsHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick","yield"]):csDlHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick"]))+`<div id="csYield">${csYieldNote(d)}</div>`);
+  const nursery=card("Nursery", csEdit?csFieldsHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]):csDlHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]));
+  const used=card("Where it's used", csUsedHTML());
+  return head+tabs+editbar+`<div id="csBannerWrap">${banner}</div>`+lifeTop+tiles
+    +`<section class="cs-card" id="csTasks">${csTasksHTML()}</section>`
+    +`<div class="cs-grid">${bed}${harvest}${nursery}${used}</div>`
+    +(t.total?"":"");
+}
+function csRender(){
+  const root=document.getElementById("csRoot"); if(!root) return;
+  const ids=Object.keys(data.crops||{}).sort((a,b)=>data.crops[a].localeCompare(data.crops[b]));
+  if(csCrop && !data.crops[csCrop]){ csCrop=null; csVar=null; }
+  if(!csCrop) csCrop=(crSelected&&data.crops[crSelected])?crSelected:(ids[0]||null);
+  if(csVar && !data.varietiesById[csVar]) csVar=null;
+  const scroll=document.getElementById("csMain")?.scrollTop||0;
+  root.innerHTML=csListPaneHTML()+`<div class="cs-main" id="csMain">${csCrop?csSheetHTML():`<div class="cs-empty">No crops yet — add one with ＋.</div>`}</div>`;
+  const main=document.getElementById("csMain"); if(main) main.scrollTop=scroll;
+  csBind(root);
+}
+// After a save in edit mode: redraw everything that reads the values, but not the fields themselves,
+// so the box you've just tabbed into keeps its focus.
+function csRefreshDerived(changedKey){
+  const d=csDefs(csCrop,csVar);
+  const life=document.getElementById("csLife"); if(life) life.innerHTML=csLifeHTML();
+  const bed=document.getElementById("csBedPic"); if(bed) bed.innerHTML=csBedSVG(d);
+  const y=document.getElementById("csYield"); if(y) y.innerHTML=csYieldNote(d);
+  const lb=document.getElementById("csListBody"); if(lb) lb.innerHTML=csListRows();
+  const fld=changedKey && document.querySelector(`#csMain [data-cs-fld="${changedKey}"]`);
+  if(fld) fld.outerHTML=csInputHTML(changedKey);
+  const bw=document.getElementById("csBannerWrap"); if(bw) bw.innerHTML=csBannerHTML();
+  const s=document.getElementById("csSaved"); if(s){ s.textContent="Saved"; clearTimeout(s._t); s._t=setTimeout(()=>{ s.textContent=""; },1800); }
+}
+async function csSaveField(k, raw){
+  const val=SELECT_DEFAULT_KEYS.has(k) ? raw : (raw===""?"":(+raw));
+  if(csVar) await saveVarietyField(csVar,k,val);
+  else await crSaveWithYield(csCrop,k,val,null);
+  csRefreshDerived(k);
+}
+function csBind(root){
+  const s=document.getElementById("csSearch");
+  if(s) s.oninput=()=>{ csQuery=s.value; const lb=document.getElementById("csListBody"); if(lb) lb.innerHTML=csListRows(); };
+  const cmp=document.getElementById("csCompare");
+  if(root._csBound) return;
+  root._csBound=true;
+  root.addEventListener("change", async e=>{
+    const el=e.target;
+    if(el.id==="csCompare"){ csCompare=el.value||null; const l=document.getElementById("csLife"); if(l) l.innerHTML=csLifeHTML(); return; }
+    if(el.matches("[data-cs-type]")){ await saveCropType(csCrop, el.value||null); csRefreshDerived(); return; }
+    if(el.matches("[data-cs-k]")) await csSaveField(el.dataset.csK, el.value);
+  });
+  root.addEventListener("click", async e=>{
+    const el=e.target.closest("[data-cs-act],[data-cs-crop],[data-cs-tab],[data-cs-filter],[data-cs-reset],[data-cs-scope],[data-cs-task]");
+    if(!el || !root.contains(el)) return;
+    if(el.tagName==="A") e.preventDefault();
+    const chev=e.target.closest("[data-cs-chev]");
+    if(chev && chev.textContent){ const id=chev.dataset.csChev;
+      const isOpen=(csExpanded.has(id)||id===csCrop) && !csCollapsed.has(id);
+      if(isOpen){ csExpanded.delete(id); csCollapsed.add(id); } else { csExpanded.add(id); csCollapsed.delete(id); }
+      return csRender(); }
+    if(el.dataset.csCrop!==undefined){
+      csCrop=el.dataset.csCrop; csVar=el.dataset.csVar||null; csCompare=null; crSelected=csCrop;
+      csExpanded.add(csCrop); csCollapsed.delete(csCrop); return csRender();
+    }
+    if(el.dataset.csTab!==undefined){ csVar=el.dataset.csTab||null; csCompare=null; return csRender(); }
+    if(el.dataset.csFilter){ csFilter=el.dataset.csFilter; return csRender(); }
+    if(el.dataset.csReset){ const k=el.dataset.csReset; await saveVarietyField(csVar,k,null); return csRefreshDerived(k); }
+    if(el.dataset.csScope){ if(el.dataset.csScope==="crop"){ csVar=null; csRender(); } return; }
+    if(el.dataset.csTask){ return csOpenTaskDlg(el.dataset.csTask); }
+    const act=el.dataset.csAct;
+    if(act==="list"){ csListOpen=!csListOpen; try{ localStorage.setItem("csListOpen",csListOpen?"1":"0"); }catch(_){} return csRender(); }
+    if(act==="edit"){ csEdit=true; return csRender(); }
+    if(act==="done"){ csEdit=false; return csRender(); }
+    if(act==="tocrop"){ csVar=null; return csRender(); }
+    if(act==="tasklib") return showView("tasklib");
+    if(act==="seedbook") return showView("seedbook");
+    if(act==="timeline") return showView("timeline");
+    if(act==="newcrop"){ const id=await crAddCrop(); if(id){ csCrop=id; csVar=null; csEdit=true; csRender(); } return; }
+    if(act==="newvar"){ const id=await crAddVariety(csCrop, csCropName()); if(id){ csVar=id; csEdit=true; csRender(); } return; }
+    if(act==="resetall"){
+      const v=data.varietiesById[csVar]; if(!v) return;
+      const keys=DEFAULT_KEYS.filter(k=>csOver(csVar,k));
+      if(!confirm(`Clear ${v.name}'s own values (${keys.length}) so it follows ${csCropName()} again?\n\nIts own tasks are kept — remove those from the Tasks list.`)) return;
+      for(const k of keys) await saveVarietyField(csVar,k,null);
+      return csRender();
+    }
+    if(act==="addtask") return csOpenTaskDlg(null);
+  });
+}
+
+/* ---- add / edit task dialog ---- */
+function csOpenTaskDlg(taskId){
+  const vs=data.varietiesByCrop[csCrop]||[];
+  if(taskId){
+    const {varRow,cropRow}=csTaskRowsFor(taskId);
+    const s=effectiveScheduleForTask(csCrop,csVar,taskId)||{};
+    csDlg={mode:"edit", taskId, scope: varRow?"var":"crop", q:"",
+      anchor:s.anchor||"Sow", offset:+s.offset||0, repeat:s.repeat??null, until:s.until||"", duration:s.duration??null};
+  }else{
+    csDlg={mode:"add", taskId:null, scope: csVar?"var":"crop", q:"", anchor:"Transplant", offset:0, repeat:null, until:"", duration:null};
+  }
+  csDrawDlg();
+}
+function csDlgPick(taskId){
+  const s=effectiveScheduleForTask(csCrop,csVar,taskId)||{};
+  Object.assign(csDlg,{taskId, anchor:s.anchor||"Transplant", offset:+s.offset||0, repeat:s.repeat??null, until:s.until||"", duration:s.duration??null});
+}
+function csDlgLibHTML(){
+  const have=new Set(resolveTasksForCropVariety(csCrop,csVar).map(s=>s.taskId));
+  const q=csDlg.q.trim().toLowerCase();
+  const list=(data.tasks||[]).filter(t=>!have.has(t.id) && (!q || t.name.toLowerCase().includes(q))).sort((a,b)=>a.name.localeCompare(b.name));
+  return list.length ? list.map(t=>`<button type="button" class="cs-li${t.id===csDlg.taskId?" on":""}" data-dlg-pick="${esc(t.id)}"><span class="cs-li-name">${esc(t.name)}</span><span class="cs-li-n">${esc(csWhen(t.anchor,t.offset))}</span></button>`).join("")
+    : `<div class="cs-empty" style="padding:.5rem">${(data.tasks||[]).length?"No library task matches.":"The Task library is empty."}</div>`;
+}
+function csDlgPrevHTML(){
+  const d=csDefs(csCrop,csVar), t=csDays(d), A={"Sow":0,"Transplant":t.tp,"First harvest":t.h1,"Last harvest":t.h2};
+  const day=(A[csDlg.anchor]??0)+(+csDlg.offset||0), S=Math.max(30,t.total,day)*1.04, pct=x=>(Math.max(0,x)/S*100).toFixed(2)+"%";
+  const name=csDlg.taskId?(ctTaskById(csDlg.taskId)||{}).name:"This task";
+  return csBarHTML(d,S,false)+`<div style="position:relative;height:34px;margin-top:6px"><span class="cs-jd" style="top:0;left:calc(${pct(day)} - 5px);background:#B08A2E"></span>`
+    +`<span class="cs-jt" style="top:14px;left:calc(${pct(day)} - 4px)">${esc(name)} · day ${day}</span></div>`;
+}
+function csDrawDlg(){
+  let back=document.getElementById("csDlgBack");
+  if(!csDlg){ if(back) back.remove(); return; }
+  if(!back){ back=document.createElement("div"); back.id="csDlgBack"; back.className="cs-dlg-back open"; document.body.appendChild(back);
+    back.addEventListener("mousedown",e=>{ if(e.target===back){ csDlg=null; csDrawDlg(); } });
+    back.addEventListener("click",csDlgClick); back.addEventListener("input",csDlgInput); }
+  const cname=csCropName(), v=csVar?data.varietiesById[csVar]:null, vs=data.varietiesByCrop[csCrop]||[];
+  const d=csDefs(csCrop,csVar), t=csDays(d), A={"Sow":0,"Transplant":t.tp,"First harvest":t.h1,"Last harvest":t.h2};
+  const task=csDlg.taskId?ctTaskById(csDlg.taskId):null, o=+csDlg.offset||0;
+  const until=["", ...TASK_ANCHORS];
+  const est=csBlank(csDlg.duration)?"":`≈ ${Math.round(+csDlg.duration*2)} min on a 30 m bed${+csDlg.repeat>0?", each time":""}`;
+  back.innerHTML=`<div class="cs-dlg" role="dialog" aria-modal="true" aria-label="${csDlg.mode==="add"?"Add task":"Edit task"}">`
+    +`<div class="cs-dlg-h"><h2>${csDlg.mode==="add"?"Add task":esc(task?task.name:"Task")}</h2><span class="sub">${csDlg.mode==="add"?"to ":""}${esc(cname)}${v?" › "+esc(v.name):""}</span><span class="spacer" style="flex:1"></span>`
+    +`<button type="button" class="icon-btn" data-dlg="close" aria-label="Close">✕</button></div>`
+    +`<div class="cs-dlg-b">`
+    +(csDlg.mode==="add"?`<div class="cs-dlg-lib"><span class="cs-step">1 · Pick from the Task library</span>`
+      +`<div class="tl-search"><input type="text" id="csDlgQ" placeholder="Search tasks…" autocomplete="off" value="${esc(csDlg.q)}" style="width:100%"></div>`
+      +`<div id="csDlgList" style="display:flex;flex-direction:column">${csDlgLibHTML()}</div><span style="flex:1"></span>`
+      +`<a href="#" data-dlg="lib" style="font-size:13px;color:var(--steel)">New tasks are made in the Task library ›</a></div>`:"")
+    +`<div class="cs-dlg-main">`
+    +(csDlg.mode==="add"&&!task?`<div class="cs-empty" style="padding:0">Pick a task on the left. Its library timing fills in here, and you can change it for ${esc(v?v.name:cname)}.</div>`:
+      `<span class="cs-step">${csDlg.mode==="add"?"2 · ":""}When does it happen?</span>`
+      +`<div class="cs-when"><span class="cs-step-in"><button type="button" data-dlg="minus" aria-label="Fewer days">−</button><input id="csDlgDays" type="number" min="0" value="${Math.abs(o)}" aria-label="Days"><button type="button" data-dlg="plus" aria-label="More days">+</button></span>`
+      +`<span>days</span><div class="cs-seg2" role="group" aria-label="Before or after"><button type="button" class="${o<0?"on":""}" data-dlg="before">before</button><button type="button" class="${o>=0?"on":""}" data-dlg="after">after</button></div></div>`
+      +`<div class="cs-anchors" role="group" aria-label="Counted from">${TASK_ANCHORS.map(a=>`<button type="button" class="cs-anchor${csDlg.anchor===a?" on":""}" data-dlg-anchor="${esc(a)}">${esc(a)}<small>day ${A[a]}</small></button>`).join("")}</div>`
+      +`<div id="csDlgPrev">${csDlgPrevHTML()}</div>`
+      +`<span class="cs-step">${csDlg.mode==="add"?"3 · ":""}Details</span>`
+      +`<div class="cs-fields"><label class="cs-f">Repeats<span class="cs-fbox"><select id="csDlgRep"><option value="">Once</option><option value="every"${+csDlg.repeat>0?" selected":""}>Every N days</option></select></span></label>`
+      +(+csDlg.repeat>0?`<label class="cs-f">Every (days)<span class="cs-fbox"><input id="csDlgEvery" type="number" min="1" value="${esc(String(csDlg.repeat))}"></span></label>`
+        +`<label class="cs-f">Until<span class="cs-fbox"><select id="csDlgUntil">${until.map(u=>`<option value="${esc(u)}"${u===(csDlg.until||"")?" selected":""}>${u?esc(u):"Last harvest (default)"}</option>`).join("")}</select></span></label>`:"")
+      +`<label class="cs-f">Min / 15 m of bed<span class="cs-fbox"><input id="csDlgMin" type="number" min="0" step="0.01" value="${csBlank(csDlg.duration)?"":esc(String(csDlg.duration))}"></span></label></div>`
+      +(v?`<span class="cs-step">${csDlg.mode==="add"?"4 · ":""}${csDlg.mode==="add"?"Add it to":"Save it for"}</span><div class="cs-scope" role="radiogroup">`
+        +`<button type="button" role="radio" aria-checked="${csDlg.scope==="var"}" class="${csDlg.scope==="var"?"on":""}" data-dlg-scope="var"><b>${esc(v.name)} only</b><small>Other ${esc(cname)} varieties unchanged</small></button>`
+        +`<button type="button" role="radio" aria-checked="${csDlg.scope==="crop"}" class="${csDlg.scope==="crop"?"on":""}" data-dlg-scope="crop"><b>All ${esc(cname)} varieties</b><small>${esc(vs.map(x=>x.name).join(", ")||cname)}</small></button></div>`:""))
+    +`</div></div>`
+    +`<div class="cs-dlg-f"><span class="sub">${est}</span><span class="spacer" style="flex:1"></span>`
+    +(csDlg.mode==="edit"?`<button type="button" class="btn-danger" data-dlg="remove">Remove</button>`:"")
+    +`<button type="button" class="btn-ghost" data-dlg="close">Cancel</button>`
+    +`<button type="button" class="btn-primary" data-dlg="save"${task?"":" disabled"}>${csDlg.mode==="add"?"Add task":"Save"}</button></div></div>`;
+}
+function csDlgInput(e){
+  const el=e.target; if(!csDlg) return;
+  if(el.id==="csDlgQ"){ csDlg.q=el.value; const l=document.getElementById("csDlgList"); if(l) l.innerHTML=csDlgLibHTML(); return; }
+  if(el.id==="csDlgDays"){ const n=Math.abs(+el.value||0); csDlg.offset=(+csDlg.offset<0?-n:n); }
+  if(el.id==="csDlgEvery") csDlg.repeat=+el.value>0?+el.value:null;
+  if(el.id==="csDlgMin") csDlg.duration=el.value===""?null:+el.value;
+  if(el.id==="csDlgUntil") csDlg.until=el.value;
+  if(el.id==="csDlgRep"){ csDlg.repeat=el.value?(+csDlg.repeat>0?csDlg.repeat:7):null; return csDrawDlg(); }
+  const p=document.getElementById("csDlgPrev"); if(p) p.innerHTML=csDlgPrevHTML();
+}
+async function csDlgClick(e){
+  const el=e.target.closest("[data-dlg],[data-dlg-pick],[data-dlg-anchor],[data-dlg-scope]"); if(!el||!csDlg) return;
+  if(el.tagName==="A") e.preventDefault();
+  if(el.dataset.dlgPick){ csDlgPick(el.dataset.dlgPick); return csDrawDlg(); }
+  if(el.dataset.dlgAnchor){ csDlg.anchor=el.dataset.dlgAnchor; return csDrawDlg(); }
+  if(el.dataset.dlgScope){ csDlg.scope=el.dataset.dlgScope; return csDrawDlg(); }
+  const a=el.dataset.dlg, o=+csDlg.offset||0;
+  if(a==="close"){ csDlg=null; return csDrawDlg(); }
+  if(a==="lib"){ csDlg=null; csDrawDlg(); return showView("tasklib"); }
+  if(a==="minus"||a==="plus"){ const n=Math.max(0,Math.abs(o)+(a==="plus"?1:-1)); csDlg.offset=o<0?-n:n; return csDrawDlg(); }
+  if(a==="before"){ csDlg.offset=-Math.abs(o); return csDrawDlg(); }
+  if(a==="after"){ csDlg.offset=Math.abs(o); return csDrawDlg(); }
+  if(a==="remove"){
+    const {varRow,cropRow}=csTaskRowsFor(csDlg.taskId), row=(csDlg.scope==="var"&&varRow)||cropRow||varRow;
+    if(!row) return;
+    const name=(ctTaskById(row.taskId)||{}).name||"task";
+    csDlg=null; csDrawDlg();
+    await ctDeleteTask(row.id, name);
+    return csRender();
+  }
+  if(a==="save") return csDlgSave();
+}
+async function csDlgSave(){
+  const s=csDlg; if(!s||!s.taskId) return;
+  const varietyId=(csVar && s.scope==="var") ? csVar : null;
+  const task=ctTaskById(s.taskId);
+  const vals={anchor:s.anchor||"", offset:+s.offset||0, repeat:+s.repeat>0?+s.repeat:null, until:+s.repeat>0?(s.until||""):"", duration:csBlank(s.duration)?null:+s.duration};
+  const F=k=>CFG.f[CT_FIELD[k]];
+  const fields={[F("anchor")]:vals.anchor||null, [F("offset")]:vals.offset, [F("repeat")]:vals.repeat, [F("until")]:vals.until||null, [F("duration")]:vals.duration};
+  let row=(data.cropTasks||[]).find(ct=>ct.cropId===csCrop && ct.taskId===s.taskId && (varietyId ? ct.varietyId===varietyId : !ct.varietyId));
+  try{
+    if(row){
+      await atPatch(CFG.farmBase, CFG.tables.cropTasks, row.id, fields);
+      Object.assign(row, vals);
+    }else{
+      const cname=csCropName(), vName=varietyId?(data.varietiesById[varietyId]||{}).name:"";
+      const created=await atCreate(CFG.farmBase, CFG.tables.cropTasks, [{...fields,
+        [CFG.f.ct_task]:[s.taskId], [CFG.f.ct_crop]:[csCrop], ...(varietyId?{[CFG.f.ct_variety]:[varietyId]}:{}),
+        [CFG.f.ct_label]:`${cname}${vName?" · "+vName:""} — ${task?task.name:"Task"}`}]);
+      row={id:created[0].id, taskId:s.taskId, cropId:csCrop, varietyId, ...vals};
+      data.cropTasks.push(row);
+    }
+  }catch(e){ console.error(e); alert("Couldn't save the task:\n"+e.message); return; }
+  csDlg=null; csDrawDlg(); csRender();
+  await ctMaybePropagate(csCrop, varietyId, s.taskId);
+}
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && csDlg){ csDlg=null; csDrawDlg(); } });
+
 // Inline sparkline of climate-adjusted DTM across the 12 months (dotted = nominal), Heirloom-style.
 function crvSparkline(cropName, nominal){
   if(nominal==null||isNaN(nominal)||nominal<=0) return `<span class="cr-spark-dash">—</span>`;
