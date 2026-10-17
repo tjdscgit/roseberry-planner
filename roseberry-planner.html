@@ -2652,7 +2652,6 @@
   #apModal .ap-card{width:min(1000px,100%);padding:1.6rem 2rem 1.3rem}
   #apStep2{height:min(820px,calc(92vh - 3rem));flex-direction:column}
   .ap2-head{display:flex;align-items:flex-start;gap:1rem}
-  .ap2-pop{position:static;flex:0 0 auto;font-size:1.05rem;padding:0 .2rem;margin-top:.1rem}
   html.ap-popout .ap2-pop{display:none}
   /* popped-out window: the dialog is the whole window, no backdrop or margin */
   html.ap-popout #apModal{padding:0;background:var(--paper)}
@@ -2663,7 +2662,13 @@
   .ap2-titles .ap-sub{margin:.25rem 0 0}
   .ap2-head .seg{flex:0 0 auto;margin-top:.15rem}
   .ap2-head .seg button{padding:.5rem .8rem;font-size:.66rem}
-  .ap2-x{position:static;flex:0 0 auto;width:2.4rem;height:2.4rem;margin:-.3rem -.6rem 0 0}
+  /* header icon buttons (pop out, close): same square, same stroke icons, centred on the scope toggle */
+  .ap2-x,.ap2-pop{position:static;flex:0 0 auto;width:2.1rem;height:2.1rem;display:inline-flex;align-items:center;justify-content:center;
+    padding:0;border-radius:8px;color:var(--ink-2);margin-top:.05rem}
+  .ap2-pop{margin-left:-.6rem}
+  .ap2-x{margin-right:-.5rem}
+  .ap2-x:hover,.ap2-pop:hover{background:var(--hover,var(--line));color:var(--ink)}
+  .ap2-pop[hidden]{display:none}
   .ap2-tabs{display:flex;gap:.2rem;margin:1rem 0 0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
   .ap2-tab{display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;border:0;background:none;cursor:pointer;
     padding:.6rem .9rem .75rem;margin-bottom:-1px;border-bottom:2px solid transparent;color:var(--ink-2);
@@ -6893,8 +6898,8 @@
             <button type="button" data-scope="single" aria-pressed="true">This planting</button>
             <button type="button" data-scope="group" aria-pressed="false">Whole group</button>
           </div>
-          <button class="ap-x ap2-pop" id="apPopOut" type="button" title="Pop out into its own window" aria-label="Pop out into its own window">⧉</button>
-          <button class="ap-x ap2-x" id="apClose2" title="Close" aria-label="Close">✕</button>
+          <button class="ap-x ap2-pop" id="apPopOut" type="button" title="Pop out into its own window" aria-label="Pop out into its own window"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M9.5 2.5h4v4M13.5 2.5 8 8M12 9.5v3a1 1 0 0 1-1 1H3.5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button class="ap-x ap2-x" id="apClose2" title="Close" aria-label="Close"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
         </div>
 
         <div class="ap2-tabs" role="tablist" id="apTabBar" aria-label="Planting sections">
