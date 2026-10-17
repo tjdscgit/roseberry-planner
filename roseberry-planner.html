@@ -5296,7 +5296,6 @@
             <tr>
               <th>Bed</th>
               <th title="A grouping tag for this bed — informational only, doesn't affect rotation or scheduling">Category</th>
-              <th title="Whether this bed is under cover (tunnel/hoophouse) — affects which crops/timing make sense here">Tunnel</th>
               <th title="Bed length in metres, along its long axis — with Width, draws the bed to true scale on the Farm map">Length m</th>
               <th title="Bed width in metres, across its short axis — with Length, draws the bed to true scale on the Farm map">Width m</th>
               <th title="Position of this bed within its block, lowest first — sets left-to-right/top-to-bottom order on the Farm map. Blank falls back to sorting by bed name">Order</th>
@@ -7298,9 +7297,6 @@
       <label class="ap-field" style="flex:1 1 0"><span>Category</span>
         <select id="bbCategory"></select>
       </label>
-      <label class="ap-field" style="flex:0 0 auto;flex-direction:row;align-items:center;gap:.4rem">
-        <input type="checkbox" id="bbTunnel"><span>Under tunnel</span>
-      </label>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
       <button class="btn-primary" id="bbSave">Create beds</button>
@@ -7689,8 +7685,8 @@ async function loadAll(opts){
       block:(b.fields[F.bed_block]||"").trim(),
       len:num(b.fields[F.bed_len]), wid:num(b.fields[F.bed_wid]),
       order:num(b.fields[F.bed_order]),
-      category:b.fields[F.bed_category]||"",
-      tunnel:!!b.fields[F.bed_tunnel],
+      // Category defaults to Field; an old "under tunnel" tick with no category reads as Tunnel.
+      category:b.fields[F.bed_category]||(b.fields[F.bed_tunnel]?"Tunnel":"Field"),
       notes:b.fields[F.bed_notes]||"",
       // Irrigation: null means inherit (bed -> block -> farm). See PlannerShared.irrigSpecFor.
       // method: 'drip' or 'overhead' (wobblers etc); precipRate only matters for overhead.
@@ -19085,7 +19081,6 @@ function bdRenderPanel(){
       +`<div class="bd-field"><span>Block</span><span class="bd-c">${esc(bed.block||"—")}</span></div>`
       +`<div class="bd-field"><span>Size</span><span class="bd-c">${bed.length?esc(bed.length+" × "+(bed.width||"?")+" m"):"—"}</span></div>`
       +`<div class="bd-field"><span>Category</span><span class="bd-c">${esc(bed.category||"—")}</span></div>`
-      +`<div class="bd-field"><span>Under cover</span><span class="bd-c">${bed.tunnel?"Yes":"No"}</span></div>`
       +(issues.length?`<div class="lbl" style="margin:.9rem 0 .4rem">Issues</div>`
         +issues.map(i=>`<div class="bd-c" style="margin-bottom:.3rem">${esc(i.kind||i.name||"Issue")}${i.severity?` · ${esc(i.severity)}`:""}</div>`).join(""):"")
       +`<div class="lbl" style="margin:.9rem 0 .4rem">Recent prep</div>`
@@ -19430,7 +19425,7 @@ async function bkApplyResize(blk, td){
       created.forEach((rec,i)=>{
         const s=specs[i];
         data.beds.push({id:rec.id, name:s.name, block:blk.name, len, wid, order:s.order,
-          category:"", tunnel:false, notes:"", method:"", precipRate:null,
+          category:"Field", notes:"", method:"", precipRate:null,
           emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
       });
     }else if(targetCount<beds.length){
@@ -19488,7 +19483,6 @@ function bdBedRow(bed){
   tr.innerHTML=
     `<td><strong>${esc(bed.name)}</strong>${prepChip}</td>`
    +`<td><select data-k="category">${bdSelectHTML(BD_CATEGORIES,bed.category,"—")}</select></td>`
-   +`<td style="text-align:center"><input type="checkbox" data-k="tunnel"${bed.tunnel?" checked":""}></td>`
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="len" value="${bed.len??""}"></td>`
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></td>`
    +`<td><input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></td>`
@@ -19496,7 +19490,6 @@ function bdBedRow(bed){
    +`<td><button type="button" class="bd-expand">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`
    +`<td><button type="button" class="icon-btn bd-delete" title="Delete bed">🗑</button></td>`;
   tr.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
-  tr.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
   tr.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
   ["len","wid","order"].forEach(k=>{
     tr.querySelector(`[data-k="${k}"]`).onchange=e=>saveBed(bed.id,k,e.target.value===""?null:(+e.target.value));
@@ -19671,7 +19664,7 @@ function bdIssueCard(bed,i){
 }
 
 /* ---- Bed + issue writes. Optimistic with rollback, same shape as saveTrayType. ---- */
-const BD_BED_FIELDS={ category:"bed_category", tunnel:"bed_tunnel", notes:"bed_notes",
+const BD_BED_FIELDS={ category:"bed_category", notes:"bed_notes",
                       len:"bed_len", wid:"bed_wid", order:"bed_order",
                       method:"bed_method", precipRate:"bed_precip",
                       emitSpacing:"bed_emitSpacing", emitFlow:"bed_emitFlow",
@@ -19775,7 +19768,7 @@ async function bdAddBed(){
   try{
     const created=await atCreate(CFG.farmBase, CFG.tables.beds, [fields]);
     data.beds.push({id:created[0].id, name, block, len:null, wid:null, order:null,
-      category:"", tunnel:false, notes:"", method:"", precipRate:null,
+      category:"Field", notes:"", method:"", precipRate:null,
       emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
     if(block) await bkEnsureBlock(block);
     rebuildDerived();
@@ -19831,8 +19824,7 @@ function bbOpen(){
   document.getElementById("bbCount").value="6";
   document.getElementById("bbLen").value="";
   document.getElementById("bbWid").value="";
-  document.getElementById("bbCategory").innerHTML=bdSelectHTML(BD_CATEGORIES,"","—");
-  document.getElementById("bbTunnel").checked=false;
+  document.getElementById("bbCategory").innerHTML=bdSelectHTML(BD_CATEGORIES,"Field","—");
   bbUpdatePreview();
   document.getElementById("bbModal").classList.add("open");
   document.getElementById("bbModal").setAttribute("aria-hidden","false");
@@ -19852,7 +19844,6 @@ async function bbSave(){
   const len=document.getElementById("bbLen").value===""?null:+document.getElementById("bbLen").value;
   const wid=document.getElementById("bbWid").value===""?null:+document.getElementById("bbWid").value;
   const category=document.getElementById("bbCategory").value;
-  const tunnel=document.getElementById("bbTunnel").checked;
 
   const specs=[];
   for(let i=0;i<count;i++){
@@ -19861,7 +19852,6 @@ async function bbSave(){
     if(len!=null) fields[CFG.f.bed_len]=len;
     if(wid!=null) fields[CFG.f.bed_wid]=wid;
     if(category) fields[CFG.f.bed_category]=category;
-    if(tunnel) fields[CFG.f.bed_tunnel]=true;
     specs.push({name, order:n, fields});
   }
   const existing=new Set((data.beds||[]).map(b=>b.name));
@@ -19874,7 +19864,7 @@ async function bbSave(){
     created.forEach((rec,i)=>{
       const s=specs[i];
       data.beds.push({id:rec.id, name:s.name, block, len, wid, order:s.order,
-        category, tunnel, notes:"", method:"", precipRate:null,
+        category, notes:"", method:"", precipRate:null,
         emitSpacing:null, emitFlow:null, lines:null, wetWidth:null, soil:""});
     });
     await bkEnsureBlock(block);
@@ -20923,7 +20913,7 @@ function bdBuildMobile(){
       + groups[blk].map(b=>{
           const n=bedIssuesOn(b.id).length;
           return `<button type="button" class="bd-mob-row" data-bed="${b.id}">`
-            +`<span>${esc(b.name)}${b.tunnel?' <span class="bd-mob-tag">tunnel</span>':""}</span>`
+            +`<span>${esc(b.name)}${b.category==="Tunnel"?' <span class="bd-mob-tag">tunnel</span>':""}</span>`
             +`<span class="bd-chip${n?"":" bd-chip-none"}">${n||"–"}</span>`
           +`</button>`;
         }).join("")).join("");
@@ -20934,7 +20924,6 @@ function bdBuildMobile(){
     <div class="bd-mob-title">${esc(bed.name)}${bed.block?` · Block ${esc(bed.block)}`:""}</div>
     <div class="bd-mob-form">
       <label>Category<select data-k="category">${bdSelectHTML(BD_CATEGORIES,bed.category,"—")}</select></label>
-      <label class="bd-mob-check"><input type="checkbox" data-k="tunnel"${bed.tunnel?" checked":""}> Under tunnel</label>
       <label>Length m<input class="cr-num" type="number" min="0" step="0.1" data-k="len" value="${bed.len??""}"></label>
       <label>Width m<input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></label>
       <label>Order in block<input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></label>
@@ -20948,7 +20937,6 @@ function bdBuildMobile(){
   box.querySelector(".bd-mob-back").onclick=()=>{ bdMobileBed=null; bdBuildMobile(); };
   box.querySelector("#bdMobDelete").onclick=()=>bdDeleteBed(bed);
   box.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
-  box.querySelector('[data-k="tunnel"]').onchange=e=>saveBed(bed.id,"tunnel",e.target.checked);
   box.querySelector('[data-k="notes"]').onchange=e=>saveBed(bed.id,"notes",e.target.value.trim());
   ["len","wid","order"].forEach(k=>{
     box.querySelector(`[data-k="${k}"]`).onchange=e=>saveBed(bed.id,k,e.target.value===""?null:(+e.target.value));
