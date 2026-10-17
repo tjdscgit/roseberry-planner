@@ -321,6 +321,13 @@
   /* Dripline panel. Set apart from the issue cards above it because it describes the bed's
      plumbing, not a problem with the bed — a dashed edge reads as "reference", not "attention". */
   .bd-irrig{border-style:dashed}
+  .bd-irrig-sec{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);margin:.2rem 0 -.2rem}
+  .bd-irrig-btn{white-space:nowrap}
+  .bd-irrig-btn.on{border-color:var(--steel);color:var(--steel)}
+  .iz-card{border:1px dashed var(--line-2);border-radius:9px;padding:.6rem .7rem;margin:.2rem 0 .5rem;display:flex;flex-direction:column;gap:.5rem}
+  .iz-head{display:flex;align-items:center;gap:.6rem}
+  .iz-head .iz-name{flex:1 1 auto;font-weight:600}
+  .iz-rate{font-family:var(--mono);font-size:.8rem;color:var(--steel);white-space:nowrap}
   .bd-irrig-hd{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;
     letter-spacing:.06em;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:.5rem;align-items:baseline}
   .bd-irrig-sub{text-transform:none;letter-spacing:0;font-size:.7rem;color:var(--ink-3,var(--ink-2));
@@ -5344,6 +5351,7 @@
               <th title="Bed width in metres, across its short axis — with Length, draws the bed to true scale on the Farm map">Width m</th>
               <th title="Position of this bed within its block, lowest first — sets left-to-right/top-to-bottom order on the Farm map. Blank falls back to sorting by bed name">Order</th>
               <th>Notes</th>
+              <th title="Drip and/or overhead on this bed, and its run time for 10 mm — click to edit">Irrigation</th>
               <th title="Issues flagged against this bed (nutrition, weeds, disease, etc.) that rule out certain crops — advisory, never blocks a planting">Issues</th>
               <th></th>
             </tr>
@@ -7362,15 +7370,19 @@
     </div>
     <div class="ap-sect">Irrigation &amp; soil</div>
     <div class="bd-bulk-grid" style="margin-top:.2rem">
-      <label class="ap-field"><span>Method</span><select id="bdbMethod">
-        <option value="">No change</option><option value="__inherit">Use block default</option>
-        <option>Drip</option><option>Overhead</option></select></label>
+      <label class="ap-field"><span>Drip</span><select id="bdbDrip">
+        <option value="">No change</option><option value="on">On</option><option value="off">Off</option>
+        <option value="__inherit">Use block default</option></select></label>
+      <label class="ap-field"><span>Overhead</span><select id="bdbOverhead">
+        <option value="">No change</option><option value="on">On</option><option value="off">Off</option>
+        <option value="__inherit">Use block default</option></select></label>
+      <label class="ap-field"><span>Overhead zone</span><select id="bdbZone"></select></label>
       <label class="ap-field"><span>Soil type</span><select id="bdbSoil"></select></label>
       <label class="ap-field"><span>Emitter spacing cm</span><input class="cr-num" type="number" min="0" step="1" id="bdbEmitSpacing" placeholder="No change"></label>
       <label class="ap-field"><span>Emitter flow L/hr</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbEmitFlow" placeholder="No change"></label>
       <label class="ap-field"><span>Driplines per bed</span><input class="cr-num" type="number" min="0" step="1" id="bdbLines" placeholder="No change"></label>
       <label class="ap-field"><span>Wetted width m</span><input class="cr-num" type="number" min="0" step="0.05" id="bdbWetWidth" placeholder="No change"></label>
-      <label class="ap-field"><span>Precipitation mm/hr</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbPrecip" placeholder="No change"></label>
+      <label class="ap-field"><span>Measured overhead mm/hr</span><input class="cr-num" type="number" min="0" step="0.1" id="bdbPrecip" placeholder="No change"></label>
       <label class="bd-bulk-check"><input type="checkbox" id="bdbIrrigReset"><span>Clear all irrigation numbers (use block defaults)</span></label>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:1.4rem">
@@ -7548,7 +7560,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, mapFeatures:[] };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, irrigZones:[], mapFeatures:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -7687,7 +7699,7 @@ async function loadAll(opts){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings, boardNotes, boardReplies, boardTallies] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings, boardNotes, boardReplies, boardTallies, irrigZones] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -7728,6 +7740,7 @@ async function loadAll(opts){
       fwFetch(CFG.tables.mapFeatures),
       fwFetch(CFG.tables.farmSettings),
       fwFetch(CFG.tables.boardNotes), fwFetch(CFG.tables.boardReplies), fwFetch(CFG.tables.boardTallies),
+      fwFetch(CFG.tables.irrigZones),
     ]);
     if(lt){ LOAD_TRACK=null; loadMsg("drawing the planner…"); }
     const F = CFG.f;
@@ -7791,6 +7804,8 @@ async function loadAll(opts){
       emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
       lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
       soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
+      drip:PlannerShared.triBool(b.fields[F.blk_drip]), overhead:PlannerShared.triBool(b.fields[F.blk_overhead]),
+      zoneId:b.fields[F.blk_zone]||"",
       rot:num(b.fields[F.blk_rot]), label:b.fields[F.blk_label]||null,
     }));
     fmSyncBlockMapPrefs();
@@ -7809,6 +7824,9 @@ async function loadAll(opts){
       emitSpacing:num(b.fields[F.bed_emitSpacing]), emitFlow:num(b.fields[F.bed_emitFlow]),
       lines:num(b.fields[F.bed_lines]), wetWidth:num(b.fields[F.bed_wetWidth]),
       soil:b.fields[F.bed_soil]||"",
+      // Drip and overhead are separate switches (both can be on); zoneId is the overhead zone.
+      drip:PlannerShared.triBool(b.fields[F.bed_drip]), overhead:PlannerShared.triBool(b.fields[F.bed_overhead]),
+      zoneId:b.fields[F.bed_zone]||"",
     }));
 
     data.bedIssues = PlannerShared.parseBedIssues(bedIssues);
@@ -7919,6 +7937,7 @@ async function loadAll(opts){
     data.weatherByDate = PlannerShared.indexWeatherByDate(data.weatherObs);
     data.irrigEvents   = PlannerShared.parseIrrigationEvents(irrigEvents);
     data.irrigSettings = PlannerShared.parseIrrigSettings(irrigSettings);
+    data.irrigZones = PlannerShared.parseIrrigZones(irrigZones);
     fmSyncSatShared(farmSettings);
     data.farmSettings = ((farmSettings||[]).find(r=>r.id==="farm")||{}).fields || {};
     lastLoadAt = Date.now();
@@ -19211,6 +19230,7 @@ document.getElementById("crSearchClear").addEventListener("click",()=>{
 const BD_ISSUE_TYPES=["Nutrition","Weed pressure","Disease","Pest","Drainage","Soil structure","Contamination","Other"];
 const BD_SEVERITIES=["Advisory","Avoid"];
 const BD_CATEGORIES=["Field","Tunnel","Nursery","Perennial","Trial","Retired"];
+let bdIrrigOpen=new Set(); // bed ids whose irrigation sub-row is open
 let bdExpanded=new Set();   // bed ids whose issue sub-rows are open
 let bdSel=new Set();       // bulk edit: ticked bed ids (survives redraws, pruned to beds that still exist)
 let bdSelLast=null;        // last ticked bed, the anchor for shift-click ranges
@@ -19417,7 +19437,7 @@ function buildBedSetupTab(){
   (data.blocks||[]).forEach(b=>{ const n=String(b.name||"").trim(); if(n) blockNames.add(n); });
   const keys=Array.from(blockNames).sort((a,b)=>blockCmp(a,b));
   if(!keys.length){
-    body.innerHTML=`<tr><td colspan="10"><div class="cr-empty">No beds yet.</div></td></tr>`;
+    body.innerHTML=`<tr><td colspan="11"><div class="cr-empty">No beds yet.</div></td></tr>`;
     return;
   }
   keys.forEach(blkName=>{
@@ -19427,7 +19447,7 @@ function buildBedSetupTab(){
     const expanded=bkExpanded.has(key);
     const collapsed=bdBlockCollapsed.has(key);
     const hd=document.createElement("tr"); hd.className="bd-blockrow";
-    hd.innerHTML=`<td colspan="10"><div class="bd-blockrow-inner">`
+    hd.innerHTML=`<td colspan="11"><div class="bd-blockrow-inner">`
      +`<span class="bd-blockrow-chevron${collapsed?" is-collapsed":""}">▾</span>`
      +`<span class="bd-blockrow-label">Block ${esc(blkName)}</span>`
      +`<span class="bd-blockrow-meta">${bkRowMetaHTML(blockRec, beds)}</span>`
@@ -19457,7 +19477,7 @@ function buildBedSetupTab(){
     body.appendChild(hd);
     if(expanded && blockRec){
       const er=document.createElement("tr"); er.className="bd-blockeditrow";
-      const td=document.createElement("td"); td.colSpan=10;
+      const td=document.createElement("td"); td.colSpan=11;
       td.innerHTML=bkBlockEditInlineHTML(blockRec, beds);
       er.appendChild(td);
       body.appendChild(er);
@@ -19465,6 +19485,7 @@ function buildBedSetupTab(){
     }
     if(!collapsed) beds.forEach(bed=>{
       body.appendChild(bdBedRow(bed));
+      if(bdIrrigOpen.has(bed.id)) body.appendChild(bdIrrigRow(bed));
       if(bdExpanded.has(bed.id)) body.appendChild(bdIssuesRow(bed));
     });
   });
@@ -19480,6 +19501,7 @@ function bdSelectHTML(options, val, blank){
    fields nothing else lets you touch. One card per block, same visual language as a bed issue
    card. ---- */
 const BK_BLOCK_FIELDS={ method:"blk_method", precipRate:"blk_precip",
+                        drip:"blk_drip", overhead:"blk_overhead", zoneId:"blk_zone",
                         emitSpacing:"blk_emitSpacing", emitFlow:"blk_emitFlow",
                         lines:"blk_lines", wetWidth:"blk_wetWidth", soil:"blk_soil",
                         irrigNotes:"blk_irrigNotes" };
@@ -19533,7 +19555,12 @@ const bkExpanded = new Set();   // block ids (or "orphan:<name>") currently expa
 const bdBlockCollapsed = new Set();   // block ids (or "orphan:<name>") whose bed rows are hidden
 function bkIrrigSummary(blk){
   const set=data.irrigSettings||{};
-  const method=(blk.method||set.method||"drip").toLowerCase()==="overhead" ? "Overhead" : "Drip";
+  const sys=PlannerShared.irrigSystemsFor({block:blk.name}, data.blocks, set, data.irrigZones);
+  const zones=(data.irrigZones||[]).filter(z=>z.block===blk.name);
+  const parts=[];
+  if(sys.drip) parts.push("Drip");
+  if(sys.overhead) parts.push(zones.length>1 ? `Overhead (${zones.length} zones)` : "Overhead");
+  const method=parts.join(" + ")||"No irrigation";
   const soil=blk.soil||set.soil||"";
   return soil ? `${method} · ${soil}` : method;
 }
@@ -19566,27 +19593,130 @@ function bkfIrrigFieldsHTML(blk){
     `<label class="bd-irrig-f"><span>${esc(label)}</span>`
    +`<input class="cr-num" type="number" min="0" step="${step}" data-bk="${k}" value="${val??""}"`
    +` placeholder="${esc(String(shown??"—"))} (from farm)"></label>`;
-  const method=(blk.method||set.method||"drip").toLowerCase()==="overhead" ? "overhead" : "drip";
+  const legacy = blk.drip==null && blk.overhead==null && blk.method;
+  const sys=PlannerShared.irrigSystemsFor({block:blk.name}, data.blocks, set, data.irrigZones);
   const soils=Object.keys(PlannerShared.SOIL_TYPES);
-  const methodField=
-    `<label class="bd-irrig-f"><span>Irrigation method</span><select data-bk="method">`
-   +`<option value="">— ${method==="overhead"?"Overhead":"Drip"} (from farm)</option>`
-   +`<option value="Drip"${blk.method==="Drip"?" selected":""}>Drip</option>`
-   +`<option value="Overhead"${blk.method==="Overhead"?" selected":""}>Overhead</option>`
-   +`</select></label>`;
-  const soilField=
-    `<label class="bd-irrig-f"><span>Soil type</span><select data-bk="soil">`
+  const zones=(data.irrigZones||[]).filter(z=>z.block===blk.name);
+  let h=`<label class="bd-irrig-f"><span>Drip</span>${irSysSelect("data-bksys","drip",legacy?null:blk.drip,!!set.drip,"farm")}</label>`
+   +`<label class="bd-irrig-f"><span>Overhead</span>${irSysSelect("data-bksys","overhead",legacy?null:blk.overhead,!!set.overhead,"farm")}</label>`
+   +`<label class="bd-irrig-f"><span>Soil type</span><select data-bk="soil">`
    +`<option value="">— ${esc(set.soil||"")} (from farm)</option>`
    +soils.map(o=>`<option${o===blk.soil?" selected":""}>${esc(o)}</option>`).join("")
    +`</select></label>`;
-  return method==="overhead"
-    ? methodField + soilField + numCell("precipRate","Precipitation rate mm/hr","0.1",blk.precipRate,set.precipRate)
-    : methodField + soilField
-      + numCell("emitSpacing","Emitter spacing cm","1",blk.emitSpacing,set.emitSpacing)
+  if(sys.drip) h+=numCell("emitSpacing","Emitter spacing cm","1",blk.emitSpacing,set.emitSpacing)
       + numCell("emitFlow","Emitter flow L/hr","0.1",blk.emitFlow,set.emitFlow)
       + numCell("lines","Driplines per bed","1",blk.lines,set.lines)
       + numCell("wetWidth","Wetted width m","0.05",blk.wetWidth,set.wetWidth);
+  if(sys.overhead && zones.length>1)
+    h+=`<label class="bd-irrig-f"><span>Default zone for beds</span><select data-bkzone="1">`
+      +`<option value="">— none (set per bed)</option>`
+      +zones.map(z=>`<option value="${esc(z.id)}"${z.id===blk.zoneId?" selected":""}>${esc(z.name)}</option>`).join("")+`</select></label>`;
+  return h;
 }
+
+/* ---- Overhead zones: one solenoid's heads. Edited under the block they water. Picking a head
+   and nozzle from the catalogue fills head flow and throw at the chosen pressure; everything is
+   still a plain field so a head that isn't in the catalogue can be typed in. ---- */
+const IZ_FIELDS={ name:"iz_name", block:"iz_block", headModel:"iz_head", nozzle:"iz_nozzle", pressure:"iz_pressure",
+  headFlow:"iz_headFlow", heads:"iz_heads", laterals:"iz_laterals", risers:"iz_risers",
+  latSpacing:"iz_latSpacing", risSpacing:"iz_risSpacing", areaW:"iz_areaW", areaL:"iz_areaL",
+  throwDia:"iz_throw", latPipe:"iz_latPipe", headerPipe:"iz_headerPipe", supply:"iz_supply",
+  measured:"iz_measured", order:"iz_order", notes:"iz_notes" };
+const IZ_TEXT=new Set(["name","block","headModel","nozzle","supply","notes"]);
+async function izSave(z, vals){
+  const fields={}; Object.entries(vals).forEach(([k,v])=>fields[CFG.f[IZ_FIELDS[k]]]=v);
+  const prev={}; Object.keys(vals).forEach(k=>prev[k]=z[k]);
+  Object.assign(z, vals);
+  try{ await atPatch(CFG.farmBase, CFG.tables.irrigZones, z.id, fields); }
+  catch(e){ Object.assign(z, prev); console.error(e); alert("Couldn't save zone:\n"+e.message); }
+}
+async function izAdd(blk){
+  const mine=(data.irrigZones||[]).filter(z=>z.block===blk.name);
+  const last=mine[mine.length-1];
+  const vals={ name:`${blk.name} zone ${mine.length+1}`, block:blk.name,
+    headModel:last?last.headModel:"Hunter Xcel-Wobbler", nozzle:last?last.nozzle:"#6 Gold (2.38 mm)",
+    pressure:last?last.pressure:1.72, headFlow:last?last.headFlow:279, throwDia:last?last.throwDia:14,
+    latPipe:last?last.latPipe:19, headerPipe:last?last.headerPipe:25,
+    order:Math.max(0,...(data.irrigZones||[]).map(z=>z.order||0))+1 };
+  const fields={}; Object.entries(vals).forEach(([k,v])=>{ if(v!=null) fields[CFG.f[IZ_FIELDS[k]]]=v; });
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.irrigZones, [fields]);
+    data.irrigZones=PlannerShared.parseIrrigZones((data.irrigZones||[]).map(izToRecord).concat([{id:rec.id, fields}]));
+  }catch(e){ console.error(e); alert("Couldn't add zone:\n"+e.message); }
+  buildBedSetupTab();
+}
+function izToRecord(z){ const fields={}; Object.entries(IZ_FIELDS).forEach(([k,f])=>fields[CFG.f[f]]=z[k]); return {id:z.id, fields}; }
+async function izDelete(z){
+  const users=(data.beds||[]).filter(b=>b.zoneId===z.id).length + (data.blocks||[]).filter(b=>b.zoneId===z.id).length;
+  if(!confirm(`Delete zone "${z.name}"?${users?`\n\n${users} bed/block${users===1?"":"s"} point at it and will fall back to the block default.`:""}`)) return;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.irrigZones, [z.id]);
+    data.irrigZones=(data.irrigZones||[]).filter(x=>x.id!==z.id);
+  }catch(e){ console.error(e); alert("Couldn't delete zone:\n"+e.message); }
+  buildBedSetupTab();
+}
+const IZ_WARN={
+  wide_laterals:w=>`Laterals ${irNum(w.spacing,2)} m apart with a ${irNum(w.throwDia,1)} m throw — past 65% of the throw, expect dry strips between laterals.`,
+  wide_risers:w=>`Risers ${irNum(w.spacing,2)} m apart with a ${irNum(w.throwDia,1)} m throw — past 65% of the throw, expect dry patches.`,
+  lateral_velocity:w=>`Water in the ${irNum(w.pipeMm,0)} mm lateral runs at ~${irNum(w.mps,1)} m/s — over 1.5 m/s, friction will drop the pressure at the last heads.`,
+};
+function izCardHTML(z){
+  const zp=PlannerShared.zonePrecip(z);
+  const heads=Object.keys(PlannerShared.SPRINKLER_HEADS);
+  const nozzles=z.headModel && PlannerShared.SPRINKLER_HEADS[z.headModel] ? Object.keys(PlannerShared.SPRINKLER_HEADS[z.headModel].nozzles) : [];
+  const num=(k,label,step,ph)=>`<label class="bd-irrig-f"><span>${esc(label)}</span><input class="cr-num" type="number" min="0" step="${step}" data-iz="${k}" value="${z[k]??""}"${ph?` placeholder="${esc(ph)}"`:""}></label>`;
+  const how={measured:"catch-can reading", area:"heads × flow ÷ zone area", spacing:"head flow ÷ riser × lateral spacing"}[zp.how];
+  return `<div class="iz-card" data-izid="${esc(z.id)}">`
+   +`<div class="iz-head"><input type="text" class="iz-name" data-iz="name" value="${esc(z.name)}">`
+   +`<span class="iz-rate">${zp.rate>0?`${irNum(zp.rate,2)} mm/hr`:"no rate yet"}</span>`
+   +`<button type="button" class="icon-btn iz-del" title="Delete zone">🗑</button></div>`
+   +`<div class="bd-irrig-grid">`
+     +`<label class="bd-irrig-f"><span>Sprinkler head</span><select data-iz="headModel"><option value="">— other / typed in</option>`
+       +heads.map(h=>`<option${h===z.headModel?" selected":""}>${esc(h)}</option>`).join("")+`</select></label>`
+     +(nozzles.length?`<label class="bd-irrig-f"><span>Nozzle</span><select data-iz="nozzle"><option value="">—</option>`
+       +nozzles.map(n=>`<option${n===z.nozzle?" selected":""}>${esc(n)}</option>`).join("")+`</select></label>`
+       :`<label class="bd-irrig-f"><span>Nozzle</span><input type="text" data-iz="nozzle" value="${esc(z.nozzle||"")}"></label>`)
+     +num("pressure","Pressure bar","0.01")
+     +num("headFlow","Head flow L/hr","1")
+     +num("throwDia","Throw diameter m","0.1")
+     +num("heads","Heads","1", z.laterals&&z.risers?String(z.laterals*z.risers):"")
+     +num("laterals","Laterals","1")
+     +num("risers","Risers per lateral","1")
+     +num("latSpacing","Lateral spacing m","0.01")
+     +num("risSpacing","Riser spacing m","0.01")
+     +num("areaW","Zone width m","0.1")
+     +num("areaL","Zone length m","0.1")
+     +num("latPipe","Lateral pipe mm","1")
+     +num("headerPipe","Header pipe mm","1")
+     +`<label class="bd-irrig-f"><span>Supply / riser</span><input type="text" data-iz="supply" value="${esc(z.supply||"")}"></label>`
+     +num("measured","Measured mm/hr","0.1","catch-can, overrides")
+   +`</div>`
+   +`<div class="bd-irrig-out">${zp.rate>0?`${irNum(zp.rate,2)} mm/hr from ${how}${zp.flowLph?` · zone flow ${irNum(zp.flowLph/60,1)} L/min`:""}`:"Enter head flow plus zone size or spacing to get a rate."}`
+     +(zp.warnings||[]).map(w=>`<span class="bd-irrig-warn">${esc(IZ_WARN[w.code]?IZ_WARN[w.code](w):w.code)}</span>`).join("")
+   +`</div></div>`;
+}
+function izWire(root){
+  root.querySelectorAll(".iz-card").forEach(card=>{
+    const z=(data.irrigZones||[]).find(x=>x.id===card.dataset.izid); if(!z) return;
+    card.querySelector(".iz-del").onclick=()=>izDelete(z);
+    card.querySelectorAll("[data-iz]").forEach(el=>{
+      el.onchange=async e=>{
+        const k=el.dataset.iz;
+        const v = IZ_TEXT.has(k) ? (e.target.value||"") : (e.target.value===""?null:(+e.target.value));
+        const vals={[k]:v};
+        // Head, nozzle or pressure changed: refill flow and throw from the catalogue.
+        if(k==="headModel"||k==="nozzle"||k==="pressure"){
+          const t={...z, ...vals};
+          const hit=PlannerShared.sprinklerLookup(t.headModel, t.nozzle, t.pressure);
+          if(hit){ vals.headFlow=Math.round(hit.flow); vals.throwDia=Math.round(hit.throwDia*10)/10; }
+        }
+        await izSave(z, vals);
+        buildBedSetupTab();
+      };
+    });
+  });
+}
+
 function bkBlockEditInlineHTML(blk, beds){
   const size=bkBedSizeSummary(beds);
   const resizeNote = beds.length
@@ -19617,6 +19747,9 @@ function bkBlockEditInlineHTML(blk, beds){
 
    +`<div class="ap-sect" style="margin-top:.3rem">${esc(irrigHd)} &amp; soil<span class="bd-irrig-sub" style="margin-left:.5rem">blank = inherit the farm default</span></div>`
    +`<div class="bd-irrig-grid">${bkfIrrigFieldsHTML(blk)}</div>`
+   +`<div class="ap-sect" style="margin-top:.3rem">Overhead zones<span class="bd-irrig-sub" style="margin-left:.5rem">one solenoid each — the rate is worked out from the heads</span></div>`
+   +(data.irrigZones||[]).filter(z=>z.block===blk.name).map(izCardHTML).join("")
+   +`<div><button class="btn-ghost bkf-addzone" type="button">＋ Add zone</button></div>`
    +`<label class="ap-field" style="margin-top:.2rem"><span>Irrigation notes</span><input type="text" class="bkf-notes" value="${esc(blk.irrigNotes||"")}"></label>`
   +`</div>`;
 }
@@ -19633,6 +19766,21 @@ function bkWireBlockEditInline(td, blk){
     };
   });
   td.querySelector(".bkf-apply").onclick=()=>bkApplyResize(blk, td);
+  td.querySelectorAll("[data-bksys]").forEach(el=>el.onchange=async e=>{
+    const k=el.dataset.bksys;
+    if(blk.drip==null && blk.overhead==null && blk.method){
+      const sys=PlannerShared.irrigSystemsFor({block:blk.name}, data.blocks, data.irrigSettings, data.irrigZones);
+      const other=k==="drip"?"overhead":"drip";
+      await saveBlock(blk.id, other, sys[other]);
+      await saveBlock(blk.id, "method", "");
+    }
+    await saveBlock(blk.id, k, irSysVal(e.target.value));
+    buildBedSetupTab();
+  });
+  const zsel=td.querySelector("[data-bkzone]");
+  if(zsel) zsel.onchange=e=>saveBlock(blk.id,"zoneId",e.target.value||"").then(buildBedSetupTab);
+  td.querySelector(".bkf-addzone").onclick=()=>izAdd(blk);
+  izWire(td);
 }
 
 // Bulk bed-count / bed-size control. Growing extends the existing F1,F2… naming pattern (or falls
@@ -19735,7 +19883,8 @@ function bdBedRow(bed){
    +`<td><input class="cr-num" type="number" min="0" step="0.1" data-k="wid" value="${bed.wid??""}"></td>`
    +`<td><input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></td>`
    +`<td><input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></td>`
-   +`<td><button type="button" class="bd-expand">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`
+   +`<td><button type="button" class="bd-expand bd-irrig-btn${bdIrrigOpen.has(bed.id)?" on":""}">${esc(bdIrrigSummary(bed))}</button></td>`
+   +`<td><button type="button" class="bd-expand bd-issues-btn">${chip} ${bdExpanded.has(bed.id)?"Hide":"Issues"}</button></td>`
    +`<td><button type="button" class="icon-btn bd-delete" title="Delete bed">🗑</button></td>`;
   tr.querySelector(".bd-sel").onclick=e=>{ bdSelClick(bed.id,e.shiftKey); buildBedSetupTab(); };
   tr.querySelector('[data-k="category"]').onchange=e=>saveBed(bed.id,"category",e.target.value);
@@ -19743,7 +19892,8 @@ function bdBedRow(bed){
   ["len","wid","order"].forEach(k=>{
     tr.querySelector(`[data-k="${k}"]`).onchange=e=>saveBed(bed.id,k,e.target.value===""?null:(+e.target.value));
   });
-  tr.querySelector(".bd-expand").onclick=()=>{
+  tr.querySelector(".bd-irrig-btn").onclick=()=>{ if(bdIrrigOpen.has(bed.id)) bdIrrigOpen.delete(bed.id); else bdIrrigOpen.add(bed.id); buildBedSetupTab(); };
+  tr.querySelector(".bd-issues-btn").onclick=()=>{
     bdExpanded.has(bed.id) ? bdExpanded.delete(bed.id) : bdExpanded.add(bed.id);
     buildBedSetupTab();
   };
@@ -19754,7 +19904,7 @@ function bdBedRow(bed){
 // The expanded panel under a bed: one block per issue, plus an add button.
 function bdIssuesRow(bed){
   const tr=document.createElement("tr"); tr.className="bd-issuerow";
-  const td=document.createElement("td"); td.colSpan=10;
+  const td=document.createElement("td"); td.colSpan=11;
   const wrap=document.createElement("div"); wrap.className="bd-issues";
   const issues=bedIssuesOn(bed.id);
   if(!issues.length){
@@ -19767,9 +19917,24 @@ function bdIssuesRow(bed){
   add.type="button"; add.className="cr-add-variety"; add.textContent="+ Add issue…";
   add.onclick=async()=>{ if(await bdAddIssue(bed)) buildBedSetupTab(); };
   wrap.appendChild(add);
+  td.appendChild(wrap); tr.appendChild(td);
+  return tr;
+}
+function bdIrrigRow(bed){
+  const tr=document.createElement("tr"); tr.className="bd-issuerow";
+  const td=document.createElement("td"); td.colSpan=11;
+  const wrap=document.createElement("div"); wrap.className="bd-issues";
   wrap.appendChild(bdIrrigCard(bed));
   td.appendChild(wrap); tr.appendChild(td);
   return tr;
+}
+// "Drip + OH Z5 — Plot E", "Drip", "Overhead", "None" — what the row's button says.
+function bdIrrigSummary(bed){
+  const sys=PlannerShared.irrigSystemsFor(bed, data.blocks, data.irrigSettings, data.irrigZones);
+  const parts=[];
+  if(sys.drip) parts.push("Drip");
+  if(sys.overhead) parts.push(sys.zone ? `OH ${sys.zone.name.split(" ")[0]}` : "Overhead");
+  return parts.length ? parts.join(" + ") : "None";
 }
 
 /* ---- Dripline on this bed. Lives in the expanded row rather than the main table because the
@@ -19785,78 +19950,107 @@ function irNum(v,d=1){ return (v==null||!isFinite(v)) ? "—" : (+v).toFixed(d).
 // parsing, so the set of string keys is named once here rather than re-checked at each call site.
 const BD_IRRIG_STRING_KEYS=new Set(["method","soil"]);
 
+// A tri-state select for a system switch: blank inherits (and says what it would inherit), or
+// force it on/off on this bed or block.
+function irSysSelect(attr, key, val, inherited, fromLabel){
+  return `<select ${attr}="${key}">`
+   +`<option value="">— ${inherited?"On":"Off"}${fromLabel?` (from ${esc(fromLabel)})`:""}</option>`
+   +`<option value="on"${val===true?" selected":""}>On</option>`
+   +`<option value="off"${val===false?" selected":""}>Off</option></select>`;
+}
+const irSysVal=v=>v==="on"?true:v==="off"?false:null;
+function irZoneOptions(selectedId, inheritedZone, fromLabel){
+  return `<option value="">— ${inheritedZone?esc(inheritedZone.name):"none"}${fromLabel?` (from ${esc(fromLabel)})`:""}</option>`
+    +(data.irrigZones||[]).map(z=>`<option value="${esc(z.id)}"${z.id===selectedId?" selected":""}>${esc(z.name)}</option>`).join("");
+}
+// One line per system: rate and what 10 mm takes.
+function irSpecLine(spec){
+  if(spec.method==="overhead"){
+    if(!spec.known) return `<b>Overhead</b> · no precipitation rate — pick a zone or enter a measured rate.`;
+    const how = spec.from.precipRate==="zone" ? ` from ${esc(spec.zone.name)}${spec.zoneHow==="measured"?" (catch-can)":" (hardware)"}`
+      : spec.from.precipRate==="bed" ? " (entered on this bed)" : ` (from ${esc(spec.from.precipRate)})`;
+    return `<b>Overhead</b> · ${irNum(spec.appRateMmHr,1)} mm/hr${how} · 10 mm takes ${irNum(PlannerShared.irrigRunTime(spec,10).minutes,0)} min`
+      +(spec.unmeasured?` <span class="bd-irrig-warn">Still the built-in 8 mm/hr placeholder — pick this bed's zone.</span>`:"");
+  }
+  if(!spec.known) return `<b>Drip</b> · bed length is blank, so no run time can be worked out.`;
+  return `<b>Drip</b> · ${spec.emitters} emitters · ${irNum(spec.flowLph,0)} L/hr · ${irNum(spec.appRateMmHr,1)} mm/hr · 10 mm takes ${irNum(PlannerShared.irrigRunTime(spec,10).minutes,0)} min`;
+}
+
 function bdIrrigCard(bed){
   const box=document.createElement("div");
   box.className="bd-issue bd-irrig";
-  const spec=PlannerShared.irrigSpecFor(bed, data.blocks, data.irrigSettings);
-  const src=k=>spec.from[k]==="bed" ? "" : ` (from ${spec.from[k]})`;
+  const Z=data.irrigZones, set=data.irrigSettings;
+  const sys=PlannerShared.irrigSystemsFor(bed, data.blocks, set, Z);
+  // What this bed would get with its own switches cleared — for the "inherit" option labels.
+  const inh=PlannerShared.irrigSystemsFor(Object.assign({}, bed, {drip:null, overhead:null, zoneId:"", method:""}), data.blocks, set, Z);
+  const dripSpec=PlannerShared.irrigSpecFor(bed, data.blocks, set, Z, "drip");
+  const ohSpec=PlannerShared.irrigSpecFor(bed, data.blocks, set, Z, "overhead");
+  const src=(spec,k)=>spec.from[k]==="bed" ? "" : ` (from ${spec.from[k]})`;
   const soils=Object.keys(PlannerShared.SOIL_TYPES);
-  const numCell=(k,label,step,val,shown)=>
+  const numCell=(spec,k,label,step,val,shown)=>
     `<label class="bd-irrig-f"><span>${esc(label)}</span>`
    +`<input class="cr-num" type="number" min="0" step="${step}" data-ik="${k}" value="${val??""}"`
-   +` placeholder="${esc(String(shown??"—"))}${esc(src(k))}"></label>`;
+   +` placeholder="${esc(String(shown==null?"—":irNum(shown,2)))}${esc(src(spec,k))}"></label>`;
+  const legacy = bed.drip==null && bed.overhead==null && bed.method;
 
-  // The method select shows the effective (inherited) method as its blank-option label, same idiom
-  // as the soil select below it — but switching it re-renders the whole card, since drip and
-  // overhead show a different field set entirely rather than one field changing value.
-  const methodField=
-    `<label class="bd-irrig-f"><span>Irrigation method</span><select data-ik="method">`
-   +`<option value="">— ${spec.method==="overhead"?"Overhead":"Drip"}${esc(src("method"))}</option>`
-   +`<option value="Drip"${bed.method==="Drip"?" selected":""}>Drip</option>`
-   +`<option value="Overhead"${bed.method==="Overhead"?" selected":""}>Overhead</option>`
-   +`</select></label>`;
-
-  const soilField=
-    `<label class="bd-irrig-f"><span>Soil type</span><select data-ik="soil">`
-   +`<option value="">— ${esc(spec.soil)}${esc(src("soil"))}</option>`
-   +soils.map(o=>`<option${o===bed.soil?" selected":""}>${esc(o)}</option>`).join("")
-   +`</select></label>`;
-
-  const fields = spec.method==="overhead"
-    ? methodField + soilField
-      + numCell("precipRate","Precipitation rate mm/hr","0.1",bed.precipRate,spec.precipRate)
-    : methodField + soilField
-      + numCell("emitSpacing","Emitter spacing cm","1",bed.emitSpacing,spec.emitSpacing)
-      + numCell("emitFlow","Emitter flow L/hr","0.1",bed.emitFlow,spec.emitFlow)
-      + numCell("lines","Driplines per bed","1",bed.lines,spec.lines)
-      + numCell("wetWidth","Wetted width m","0.05",bed.wetWidth,spec.wetWidth);
-
-  const outLine = !spec.known
-    ? (spec.method==="overhead"
-        ? `No precipitation rate recorded, so no run time can be worked out for this bed.`
-        : `Bed length is blank, so no run time can be worked out for this bed.`)
-    : spec.method==="overhead"
-      ? `${irNum(spec.appRateMmHr,1)} mm/hr over the whole bed · 10 mm takes `
-        +`${irNum(PlannerShared.irrigRunTime(spec,10).minutes,0)} min`
-        +(spec.unmeasured ? ` <span class="bd-irrig-warn">— still the built-in placeholder, not a `
-          +`catch-can reading. Set several straight-sided cans across the wetted area, run the `
-          +`system a timed 30–60 min, and enter the depth collected ÷ hours run.</span>` : "")
-      : `${spec.emitters} emitters · ${irNum(spec.flowLph,0)} L/hr · `
-        +`${irNum(spec.appRateMmHr,1)} mm/hr · 10 mm takes `
-        +`${irNum(PlannerShared.irrigRunTime(spec,10).minutes,0)} min`;
-
-  box.innerHTML=
-    `<div class="bd-irrig-hd">${spec.method==="overhead"?"Overhead":"Dripline"} &amp; soil`
-   +`<span class="bd-irrig-sub">blank = inherit from ${esc(spec.blockName||"the farm default")}</span></div>`
-   +`<div class="bd-irrig-grid">${fields}</div>`
-   +`<div class="bd-irrig-out">${outLine}${
-       spec.blockMatch && spec.blockMatch.ambiguous
+  let html=`<div class="bd-irrig-hd">Irrigation &amp; soil<span class="bd-irrig-sub">blank = inherit from ${esc(dripSpec.blockName||"the farm default")}</span></div>`
+   +`<div class="bd-irrig-grid">`
+     +`<label class="bd-irrig-f"><span>Drip</span>${irSysSelect("data-isys","drip",legacy?null:bed.drip,inh.drip,inh.from.drip)}</label>`
+     +`<label class="bd-irrig-f"><span>Overhead</span>${irSysSelect("data-isys","overhead",legacy?null:bed.overhead,inh.overhead,inh.from.overhead)}</label>`
+     +`<label class="bd-irrig-f"><span>Soil type</span><select data-ik="soil"><option value="">— ${esc(dripSpec.soil)}${esc(src(dripSpec,"soil"))}</option>`
+       +soils.map(o=>`<option${o===bed.soil?" selected":""}>${esc(o)}</option>`).join("")+`</select></label>`
+   +`</div>`;
+  if(sys.drip){
+    html+=`<div class="bd-irrig-sec">Drip tape</div><div class="bd-irrig-grid">`
+      +numCell(dripSpec,"emitSpacing","Emitter spacing cm","1",bed.emitSpacing,dripSpec.emitSpacing)
+      +numCell(dripSpec,"emitFlow","Emitter flow L/hr","0.1",bed.emitFlow,dripSpec.emitFlow)
+      +numCell(dripSpec,"lines","Driplines per bed","1",bed.lines,dripSpec.lines)
+      +numCell(dripSpec,"wetWidth","Wetted width m","0.05",bed.wetWidth,dripSpec.wetWidth)
+    +`</div>`;
+  }
+  if(sys.overhead){
+    const zInh=PlannerShared.irrigSystemsFor(Object.assign({}, bed, {zoneId:""}), data.blocks, set, Z).zone;
+    html+=`<div class="bd-irrig-sec">Overhead</div><div class="bd-irrig-grid">`
+      +`<label class="bd-irrig-f"><span>Zone</span><select data-izone="1">${irZoneOptions(bed.zoneId, zInh, zInh?"block":"")}</select></label>`
+      +`<label class="bd-irrig-f"><span>Measured rate mm/hr</span><input class="cr-num" type="number" min="0" step="0.1" data-ik="precipRate" value="${bed.precipRate??""}" placeholder="only if catch-can tested"></label>`
+    +`</div>`;
+  }
+  const lines=[];
+  if(sys.drip) lines.push(irSpecLine(dripSpec));
+  if(sys.overhead) lines.push(irSpecLine(ohSpec));
+  if(!lines.length) lines.push("No irrigation on this bed — it won't appear on the Irrigation page.");
+  html+=`<div class="bd-irrig-out">${lines.join("<br>")}${
+       dripSpec.blockMatch && dripSpec.blockMatch.ambiguous
          ? ` <span class="bd-irrig-warn">Block "${esc(bed.block)}" matches ${
-             esc(spec.blockMatch.candidates.map(c=>c.name).join(" and "))
-           } — using ${esc(spec.blockName)}. Rename the bed's block to be sure.</span>`
-         : ""
-     }</div>`;
+             esc(dripSpec.blockMatch.candidates.map(c=>c.name).join(" and "))
+           } — using ${esc(dripSpec.blockName)}. Rename the bed's block to be sure.</span>`
+         : ""}</div>`;
+  box.innerHTML=html;
 
+  const redraw=()=>buildBedSetupTab();
   box.querySelectorAll('[data-ik]').forEach(el=>{
     el.onchange=async e=>{
       const k=el.dataset.ik;
-      const v = BD_IRRIG_STRING_KEYS.has(k) ? (e.target.value||"")
-                                            : (e.target.value===""?null:(+e.target.value));
-      await saveBed(bed.id,k,v);
-      buildBedSetupTab();   // the derived line above is now stale whichever way the write went, and a
-                         // method switch changes which fields this card even shows
+      const v = BD_IRRIG_STRING_KEYS.has(k) ? (e.target.value||"") : (e.target.value===""?null:(+e.target.value));
+      await saveBed(bed.id,k,v); redraw();
     };
   });
+  box.querySelectorAll('[data-isys]').forEach(el=>{
+    el.onchange=async e=>{
+      const k=el.dataset.isys, v=irSysVal(e.target.value);
+      // The first switch touched on a bed that only had the old single method takes the other
+      // one along too, so the old method doesn't keep deciding the half that wasn't touched.
+      if(legacy){
+        const other=k==="drip"?"overhead":"drip";
+        await saveBed(bed.id, other, sys[other]);
+      }
+      await saveBed(bed.id,k,v);
+      if(legacy) await saveBed(bed.id,"method","");
+      redraw();
+    };
+  });
+  const zs=box.querySelector('[data-izone]');
+  if(zs) zs.onchange=async e=>{ await saveBed(bed.id,"zoneId",e.target.value||""); redraw(); };
   return box;
 }
 
@@ -19914,6 +20108,7 @@ function bdIssueCard(bed,i){
 
 /* ---- Bed + issue writes. Optimistic with rollback, same shape as saveTrayType. ---- */
 const BD_BED_FIELDS={ category:"bed_category", notes:"bed_notes",
+                      drip:"bed_drip", overhead:"bed_overhead", zoneId:"bed_zone",
                       len:"bed_len", wid:"bed_wid", order:"bed_order",
                       method:"bed_method", precipRate:"bed_precip",
                       emitSpacing:"bed_emitSpacing", emitFlow:"bed_emitFlow",
@@ -20102,7 +20297,9 @@ function bdBulkOpen(){
   document.getElementById("bdbSoil").innerHTML=`<option value="">No change</option><option value="__inherit">Use block default</option>`
     +Object.keys(PlannerShared.SOIL_TYPES).map(o=>`<option>${esc(o)}</option>`).join("");
   ["bdbLen","bdbWid","bdbNotes","bdbEmitSpacing","bdbEmitFlow","bdbLines","bdbWetWidth","bdbPrecip"].forEach(id=>document.getElementById(id).value="");
-  ["bdbNotesMode","bdbMethod"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("bdbZone").innerHTML=`<option value="">No change</option><option value="__inherit">Use block default</option>`
+    +(data.irrigZones||[]).map(z=>`<option value="${esc(z.id)}">${esc(z.name)}</option>`).join("");
+  ["bdbNotesMode","bdbDrip","bdbOverhead","bdbZone"].forEach(id=>document.getElementById(id).value="");
   document.getElementById("bdbIrrigReset").checked=false;
   document.getElementById("bdbStatus").textContent="";
   document.getElementById("bdbApply").disabled=false;
@@ -20118,7 +20315,12 @@ async function bdBulkApply(){
   if(g("bdbCategory")) set.category=g("bdbCategory");
   if(numOrSkip("bdbLen")!==undefined) set.len=numOrSkip("bdbLen");
   if(numOrSkip("bdbWid")!==undefined) set.wid=numOrSkip("bdbWid");
-  if(g("bdbMethod")) set.method=g("bdbMethod")==="__inherit"?"":g("bdbMethod");
+  ["Drip","Overhead"].forEach(n=>{
+    const v=g("bdb"+n); if(!v) return;
+    set[n.toLowerCase()] = v==="__inherit" ? null : v==="on";
+    set.method="";   // the old single method stops deciding once a switch is set
+  });
+  if(g("bdbZone")) set.zoneId=g("bdbZone")==="__inherit"?"":g("bdbZone");
   if(g("bdbSoil")) set.soil=g("bdbSoil")==="__inherit"?"":g("bdbSoil");
   const irrigKeys={emitSpacing:"bdbEmitSpacing",emitFlow:"bdbEmitFlow",lines:"bdbLines",wetWidth:"bdbWetWidth",precipRate:"bdbPrecip"};
   if(document.getElementById("bdbIrrigReset").checked) Object.keys(irrigKeys).forEach(k=>set[k]=null);
@@ -21332,6 +21534,8 @@ function bdBuildMobile(){
       <label>Order in block<input class="cr-num" type="number" min="0" step="1" data-k="order" value="${bed.order??""}"></label>
       <label>Notes<input type="text" data-k="notes" value="${esc(bed.notes||"")}" placeholder="—"></label>
     </div>
+    <div class="ap-sect">Irrigation</div>
+    <div id="bdMobIrrig"></div>
     <div class="ap-sect">Issues</div>
     <div id="bdMobIssues"></div>
     <div class="ap-sect">Prep</div>
@@ -21344,6 +21548,7 @@ function bdBuildMobile(){
   ["len","wid","order"].forEach(k=>{
     box.querySelector(`[data-k="${k}"]`).onchange=e=>saveBed(bed.id,k,e.target.value===""?null:(+e.target.value));
   });
+  box.querySelector("#bdMobIrrig").appendChild(bdIrrigCard(bed));
   const wrap=box.querySelector("#bdMobIssues");
   const issues=bedIssuesOn(bed.id);
   if(!issues.length) wrap.innerHTML=`<div class="cr-empty">No issues recorded for this bed.</div>`;
@@ -28613,7 +28818,7 @@ function irPlan(){
   return PlannerShared.irrigPlan({
     beds:data.beds, blocks:data.blocks, plantings:data.plantingsActive || data.plantings,
     weatherByDate:data.weatherByDate, weatherObs:data.weatherObs,
-    irrigEvents:data.irrigEvents, irrigSettings:data.irrigSettings,
+    irrigEvents:data.irrigEvents, irrigSettings:data.irrigSettings, irrigZones:data.irrigZones,
   }, todayISO());
 }
 
@@ -28757,14 +28962,20 @@ function irSoonest(blocks){
   if(!withDays.length) return "not something the data can say yet";
   const b=withDays[0];
   const d=Math.round(b.daysToTrigger);
-  return `${b.block} in about ${d===0?"a day":d+" day"+(d===1?"":"s")}`;
+  return `${irValveTitle(b)} in about ${d===0?"a day":d+" day"+(d===1?"":"s")}`;
 }
 
+// "Z5 — Plot E · overhead", "Block E · drip", or plain "Block E" for beds with nothing switched on.
+function irValveTitle(b){
+  if(b.method==="overhead") return b.zone ? `${b.zone.name} · overhead` : `Block ${b.blockName} · overhead`;
+  if(b.method==="drip") return `Block ${b.blockName} · drip`;
+  return `Block ${b.block}`;
+}
 function irBlockCard(b, set, due){
   const open=IR_EXPANDED.has(b.block);
   const days=Math.round(b.daysToTrigger);
   let html=`<div class="ir-card ir-block ${due?"due":"ok"}">
-    <h3><span class="ir-blocktitle">Block ${esc(b.block)}</span>
+    <h3><span class="ir-blocktitle">${esc(irValveTitle(b))}</span>
       <span class="ir-blockstate ${due?"due":""}">${
         due ? "needs water"
             : (isFinite(b.daysToTrigger) ? `ok · ~${days<=0?"today":days+"d"}` : "ok")
@@ -29034,10 +29245,13 @@ async function irLogSave(){
   const mms=rows.map(r=>r.mm).filter(v=>v!=null);
   const mm = mms.length ? mms.reduce((a,b)=>a+b,0)/mms.length : null;
 
+  // A valve is now a zone or one system on a block, not always a whole block, so the beds it
+  // covered are always written out — an empty list would credit every bed in the block.
+  const valve=irPlan().blocks.find(x=>x.block===irLogState.block);
   const fields={
     [CFG.f.ie_date]: date,
-    [CFG.f.ie_block]: irLogState.block,
-    [CFG.f.ie_beds]: irLogState.beds.size ? [...irLogState.beds] : [],
+    [CFG.f.ie_block]: valve && valve.blockName ? valve.blockName : irLogState.block,
+    [CFG.f.ie_beds]: irLogState.beds.size ? [...irLogState.beds] : (valve ? valve.beds.map(x=>x.bed.id) : []),
     [CFG.f.ie_minutes]: minutes,
     [CFG.f.ie_mm]: mm==null ? null : Math.round(mm*100)/100,
     [CFG.f.ie_source]: "logged",

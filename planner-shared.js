@@ -87,6 +87,9 @@
       weatherObs:       "tblWXobs",           // "Weather Observations" — one row per day per station
       irrigEvents:      "tblIRevents",        // "Irrigation Events"
       irrigSettings:    "tblIRsettings",      // "Irrigation Settings" — one row, id 'farm'
+      // Overhead zones — one solenoid each: a run of wobbler heads on risers, described by its
+      // hardware so the precipitation rate can be worked out rather than guessed. Supabase-only.
+      irrigZones:       "tblIRzones",         // "Irrigation Zones"
       // Farm Map overlay — irrigation polylines and point markers (pumps, risers, valves, tanks,
       // sheds, dams, ...) drawn on top of the block/bed layout. Supabase-only, placeholder id as
       // above. `map_features` already existed (unused) from the redesign migration — Shape is
@@ -106,6 +109,9 @@
       blk_emitSpacing:"Emitter spacing cm", blk_emitFlow:"Emitter flow L/hr",
       blk_lines:"Dripline count", blk_wetWidth:"Wetted width m", blk_soil:"Soil type",
       blk_irrigNotes:"Irrigation notes",
+      // Drip and overhead are separate systems that can both be on a block or bed (overhead taken
+      // out of a swath and tape put down for zucchini, say). null = inherit, like everything else.
+      blk_drip:"Drip", blk_overhead:"Overhead", blk_zone:"Overhead zone",
       // Farm map's free-angle tilt (degrees) and the block-name label's {dx,dy,locked} offset. Both
       // used to live in each device's localStorage, so a phone never saw the tilt set on the desktop.
       blk_rot:"Map rotation", blk_label:"Map label",
@@ -121,6 +127,13 @@
       bed_method:"Irrigation method", bed_precip:"Precipitation rate mm/hr",
       bed_emitSpacing:"Emitter spacing cm", bed_emitFlow:"Emitter flow L/hr",
       bed_lines:"Dripline count", bed_wetWidth:"Wetted width m", bed_soil:"Soil type",
+      bed_drip:"Drip", bed_overhead:"Overhead", bed_zone:"Overhead zone",
+      iz_name:"Name", iz_block:"Block", iz_head:"Head model", iz_nozzle:"Nozzle", iz_pressure:"Pressure bar",
+      iz_headFlow:"Head flow L/hr", iz_heads:"Heads", iz_laterals:"Laterals", iz_risers:"Risers per lateral",
+      iz_latSpacing:"Lateral spacing m", iz_risSpacing:"Riser spacing m", iz_areaW:"Area width m",
+      iz_areaL:"Area length m", iz_throw:"Throw diameter m", iz_latPipe:"Lateral pipe mm",
+      iz_headerPipe:"Header pipe mm", iz_supply:"Supply", iz_measured:"Measured precipitation mm/hr",
+      iz_order:"Order", iz_notes:"Notes",
       // Bed Issues — what's wrong with a bed and which crops that rules out. `bi_types` is the
       // rotation family (matches Crop.Type), `bi_crops` names individual crops; an issue with both
       // empty is a note on the bed and flags nothing. Blank from/until = unbounded on that side.
@@ -320,6 +333,7 @@
       // Irrigation settings — the single 'farm' row. Shared decisions, deliberately not localStorage.
       is_lat:"Latitude", is_elev:"Elevation m", is_anemHeight:"Anemometer height m",
       is_soil:"Default soil type", is_method:"Default irrigation method",
+      is_drip:"Default drip", is_overhead:"Default overhead",
       is_precip:"Default precipitation rate mm/hr",
       is_emitSpacing:"Default emitter spacing cm",
       is_emitFlow:"Default emitter flow L/hr", is_lines:"Default dripline count",
@@ -372,7 +386,7 @@
     fertApplications:"fert_applications", fertApplicationItems:"fert_application_items",
     fertProducts:"fert_products",
     weatherObs:"weather_observations", irrigEvents:"irrigation_events",
-    irrigSettings:"irrigation_settings",
+    irrigSettings:"irrigation_settings", irrigZones:"irrigation_zones",
     mapFeatures:"map_features", farmSettings:"farm_settings",
     boardNotes:"board_notes", boardReplies:"board_replies", boardTallies:"board_tallies",
   };
@@ -1207,6 +1221,9 @@
     return {crops, cropDefs};
   }
 
+  // true / false / null — null meaning "not set here, inherit".
+  function triBool(v){ return v===true ? true : v===false ? false : null; }
+
   function parseBeds(bedRecords){
     const F=CFG.f;
     return bedRecords.map(b => ({
@@ -1223,6 +1240,8 @@
       emitSpacing:num(b.fields[F.bed_emitSpacing]), emitFlow:num(b.fields[F.bed_emitFlow]),
       lines:num(b.fields[F.bed_lines]), wetWidth:num(b.fields[F.bed_wetWidth]),
       soil:b.fields[F.bed_soil]||"",
+      drip:triBool(b.fields[F.bed_drip]), overhead:triBool(b.fields[F.bed_overhead]),
+      zoneId:b.fields[F.bed_zone]||"",
     }));
   }
 
@@ -1240,6 +1259,8 @@
       emitSpacing:num(b.fields[F.blk_emitSpacing]), emitFlow:num(b.fields[F.blk_emitFlow]),
       lines:num(b.fields[F.blk_lines]), wetWidth:num(b.fields[F.blk_wetWidth]),
       soil:b.fields[F.blk_soil]||"", irrigNotes:b.fields[F.blk_irrigNotes]||"",
+      drip:triBool(b.fields[F.blk_drip]), overhead:triBool(b.fields[F.blk_overhead]),
+      zoneId:b.fields[F.blk_zone]||"",
       rot:num(b.fields[F.blk_rot]), label:b.fields[F.blk_label]||null,
     }));
   }
@@ -2832,6 +2853,10 @@
       anemHeight:pick(F.is_anemHeight, D.anemHeight),
       soil:f[F.is_soil]||D.soil,
       method:f[F.is_method]||D.method,
+      // Which systems a bed has when nothing closer says. Before these two columns existed the
+      // single method decided it, so that is the fallback.
+      drip: triBool(f[F.is_drip])!=null ? f[F.is_drip] : String(f[F.is_method]||D.method).toLowerCase()!=="overhead",
+      overhead: triBool(f[F.is_overhead])!=null ? f[F.is_overhead] : String(f[F.is_method]||"").toLowerCase()==="overhead",
       precipRate:pick(F.is_precip, D.precipRate),
       emitSpacing:pick(F.is_emitSpacing, D.emitSpacing),
       emitFlow:pick(F.is_emitFlow, D.emitFlow),
@@ -2896,34 +2921,161 @@
   // too much with nozzle, pressure and riser height to derive from spacing alone; the only honest
   // figure is a measured one (a catch-can test), so `precipRate` is taken as given rather than
   // calculated.
-  function irrigSpecFor(bed, blocks, settings){
+  // ---- Overhead zones. A zone is one solenoid's worth of heads. Its rate comes from the
+  // hardware: total flow over the area it covers (heads × head flow ÷ width × length), or one
+  // head's flow over its own riser × lateral rectangle when the area isn't entered. A catch-can
+  // reading, when there is one, beats both — it's what actually landed.
+  function parseIrrigZones(records){
+    const F=CFG.f;
+    return (records||[]).map(r=>{ const f=r.fields||{}; return {
+      id:r.id, name:f[F.iz_name]||"Zone", block:(f[F.iz_block]||"").trim(),
+      headModel:f[F.iz_head]||"", nozzle:f[F.iz_nozzle]||"", pressure:num(f[F.iz_pressure]),
+      headFlow:num(f[F.iz_headFlow]), heads:num(f[F.iz_heads]), laterals:num(f[F.iz_laterals]),
+      risers:num(f[F.iz_risers]), latSpacing:num(f[F.iz_latSpacing]), risSpacing:num(f[F.iz_risSpacing]),
+      areaW:num(f[F.iz_areaW]), areaL:num(f[F.iz_areaL]), throwDia:num(f[F.iz_throw]),
+      latPipe:num(f[F.iz_latPipe]), headerPipe:num(f[F.iz_headerPipe]), supply:f[F.iz_supply]||"",
+      measured:num(f[F.iz_measured]), order:num(f[F.iz_order]), notes:f[F.iz_notes]||"",
+    }; }).sort((a,b)=>(a.order??999)-(b.order??999) || String(a.name).localeCompare(String(b.name),undefined,{numeric:true}));
+  }
+  function zoneHeads(z){
+    if(z.heads>0) return z.heads;
+    if(z.laterals>0 && z.risers>0) return z.laterals*z.risers;
+    return null;
+  }
+  function zonePrecip(z){
+    if(!z) return {rate:null, how:null, flowLph:null, warnings:[]};
+    const heads=zoneHeads(z);
+    const flowLph = heads!=null && z.headFlow>0 ? heads*z.headFlow : null;
+    const warnings=[];
+    // Spacing past ~65% of the throw diameter leaves dry patches between heads; head-to-head
+    // (spacing = radius) is the ideal. Flag rather than refuse.
+    const radius = z.throwDia>0 ? z.throwDia/2 : null;
+    if(radius && z.latSpacing>0.65*z.throwDia) warnings.push({code:"wide_laterals", spacing:z.latSpacing, throwDia:z.throwDia});
+    if(radius && z.risSpacing>0.65*z.throwDia) warnings.push({code:"wide_risers", spacing:z.risSpacing, throwDia:z.throwDia});
+    // 19 mm poly carries roughly 1.5 m/s at ~1500 L/hr; past that friction loss eats the pressure
+    // the nozzle table assumes. Only a sanity check — it doesn't change the rate.
+    if(z.latPipe>0 && z.headFlow>0 && z.risers>0){
+      const d=z.latPipe/1000, area=Math.PI*d*d/4;
+      const v=(z.risers*z.headFlow/1000/3600)/area;
+      if(v>1.5) warnings.push({code:"lateral_velocity", mps:v, pipeMm:z.latPipe});
+    }
+    if(z.measured>0) return {rate:z.measured, how:"measured", flowLph, heads, warnings};
+    if(flowLph!=null && z.areaW>0 && z.areaL>0) return {rate:flowLph/(z.areaW*z.areaL), how:"area", flowLph, heads, warnings};
+    if(z.headFlow>0 && z.latSpacing>0 && z.risSpacing>0) return {rate:z.headFlow/(z.latSpacing*z.risSpacing), how:"spacing", flowLph, heads, warnings};
+    return {rate:null, how:null, flowLph, heads, warnings};
+  }
+
+  // Published nozzle tables, so a zone can be filled in by picking head + nozzle + pressure.
+  // Flow L/hr and high-angle throw diameter (m) at 0.46 m riser height, by pressure (bar).
+  const SPRINKLER_HEADS = {
+    "Hunter Xcel-Wobbler": { pressures:[0.69,1.03,1.38,1.72], nozzles:{
+      "#6 Gold (2.38 mm)":       {flow:[177,216,250,279],     throwDia:[11.1,12.5,13.7,14.0]},
+      "#7 Lime (2.78 mm)":       {flow:[241,295,341,382],     throwDia:[12.2,14.2,14.3,15.4]},
+      "#8 Lavender (3.18 mm)":   {flow:[318,388,450,502],     throwDia:[12.8,14.2,14.3,15.7]},
+      "#9 Grey (3.57 mm)":       {flow:[409,500,577,645],     throwDia:[13.4,14.3,15.4,16.0]},
+      "#10 Turquoise (3.97 mm)": {flow:[504,618,713,797],     throwDia:[13.6,14.9,15.4,16.3]},
+      "#11 Yellow (4.37 mm)":    {flow:[611,749,865,968],     throwDia:[13.6,15.4,15.7,16.5]},
+      "#12 Red (4.76 mm)":       {flow:[734,899,1038,1161],   throwDia:[14.0,15.4,15.9,16.6]},
+      "#13 White (5.16 mm)":     {flow:[863,1056,1222,1365],  throwDia:[14.2,15.6,16.0,16.9]},
+      "#14 Blue (5.56 mm)":      {flow:[999,1224,1415,1583],  throwDia:[14.3,15.6,16.2,16.9]},
+    }},
+  };
+  // Flow and throw for a head/nozzle at any pressure, interpolated between the table's columns.
+  function sprinklerLookup(model, nozzle, bar){
+    const h=SPRINKLER_HEADS[model], n=h && h.nozzles[nozzle];
+    if(!n || !(bar>0)) return null;
+    const P=h.pressures;
+    const at=arr=>{
+      if(bar<=P[0]) return arr[0];
+      if(bar>=P[P.length-1]) return arr[arr.length-1];
+      for(let i=1;i<P.length;i++) if(bar<=P[i]){
+        const t=(bar-P[i-1])/(P[i]-P[i-1]); return arr[i-1]+t*(arr[i]-arr[i-1]);
+      }
+    };
+    return {flow:at(n.flow), throwDia:at(n.throwDia), outOfRange: bar<P[0]||bar>P[P.length-1]};
+  }
+
+  // Which systems are on a bed, and which overhead zone it sits in. Each walks bed -> block ->
+  // farm separately. The old single "Irrigation method" still counts where the two new switches
+  // are both blank, so nothing set before they existed changes meaning.
+  function irrigSystemsFor(bed, blocks, settings, zones){
+    const set=settings||parseIrrigSettings([]);
+    const blk=blockMatch(bed, blocks).block;
+    const legacy=(o,key)=>{
+      if(!o || o.drip!=null || o.overhead!=null || !o.method) return null;
+      const m=String(o.method).toLowerCase();
+      return key==="overhead" ? m==="overhead" : m!=="overhead";
+    };
+    const from={};
+    const pick=key=>{
+      for(const [o,tier] of [[bed,"bed"],[blk,"block"]]){
+        if(o && o[key]!=null){ from[key]=tier; return o[key]; }
+        const l=legacy(o,key); if(l!=null){ from[key]=tier; return l; }
+      }
+      from[key]="farm"; return !!set[key];
+    };
+    const drip=pick("drip"), overhead=pick("overhead");
+    const zl=zones||[];
+    let zone=null;
+    if(bed && bed.zoneId){ zone=zl.find(z=>z.id===bed.zoneId)||null; if(zone) from.zone="bed"; }
+    if(!zone && blk && blk.zoneId){ zone=zl.find(z=>z.id===blk.zoneId)||null; if(zone) from.zone="block"; }
+    if(!zone && blk){
+      // A block with exactly one zone needs no explicit link.
+      const mine=zl.filter(z=>z.block && z.block===blk.name);
+      if(mine.length===1){ zone=mine[0]; from.zone="block"; }
+    }
+    return {drip, overhead, zone, from, block:blk};
+  }
+
+  // One spec per system that's on, drip first. Never empty: a bed with both switched off still
+  // gets its drip spec so the page has something to explain.
+  function irrigSpecsFor(bed, blocks, settings, zones){
+    const sys=irrigSystemsFor(bed, blocks, settings, zones);
+    const out=[];
+    if(sys.drip) out.push(irrigSpecFor(bed, blocks, settings, zones, "drip"));
+    if(sys.overhead) out.push(irrigSpecFor(bed, blocks, settings, zones, "overhead"));
+    if(!out.length){ const s=irrigSpecFor(bed, blocks, settings, zones, "drip"); s.off=true; out.push(s); }
+    return out;
+  }
+
+  function irrigSpecFor(bed, blocks, settings, zones, forMethod){
     const set=settings||parseIrrigSettings([]);
     const bm=blockMatch(bed, blocks);
     const blk=bm.block;
     const from={};
+    const sys=irrigSystemsFor(bed, blocks, set, zones);
     const pick=(key, dflt)=>{
       if(bed && bed[key]!=null && bed[key]!==""){ from[key]="bed"; return bed[key]; }
       if(blk && blk[key]!=null && blk[key]!==""){ from[key]="block"; return blk[key]; }
       from[key]="farm"; return dflt;
     };
-    const method = (pick("method", set.method) || "drip").toLowerCase()==="overhead" ? "overhead" : "drip";
+    const method = forMethod==="overhead" || forMethod==="drip" ? forMethod
+      : (sys.drip ? "drip" : sys.overhead ? "overhead" : "drip");
+    from.method = sys.from[method];
     const soil   = pick("soil", set.soil);
     const len=num(bed && bed.len), wid=num(bed && bed.wid);
 
     if(method==="overhead"){
-      const precipRate = pick("precipRate", set.precipRate);
+      // A rate typed on the bed is an override (a catch-can test on that bed). Otherwise the
+      // zone's hardware decides, then a block-level figure, then the farm placeholder.
+      const zp=zonePrecip(sys.zone);
+      let precipRate;
+      if(bed && bed.precipRate!=null){ precipRate=bed.precipRate; from.precipRate="bed"; }
+      else if(zp.rate>0){ precipRate=zp.rate; from.precipRate="zone"; }
+      else precipRate = pick("precipRate", set.precipRate);
       // Whole bed, not a wetted strip — overhead covers everything under the pattern, walkways
       // included on some layouts, but the bed footprint is the number the balance can act on.
       const wetArea = (len!=null && wid!=null) ? len*wid : null;
       const appRateMmHr = precipRate>0 ? precipRate : null;
       return { block:blk, blockName:blk?blk.name:"", blockMatch:bm, from, method,
+               zone:sys.zone, zoneHow:from.precipRate==="zone"?zp.how:null, zoneWarnings:zp.warnings,
                soil, awc:soilAWC(soil), precipRate, wetArea, appRateMmHr,
                eff: set.effOverhead,
                // Still sitting on the shipped placeholder, not a catch-can reading. Distinct from
                // the "which tier supplied it" question `from` already answers -- a farm-level value
                // someone deliberately set from their own test is a real number; this checks whether
                // anyone has touched it at all.
-               unmeasured: precipRate === IRRIG_DEFAULTS.precipRate,
+               unmeasured: from.precipRate==="farm" && precipRate === IRRIG_DEFAULTS.precipRate,
                known: appRateMmHr!=null && appRateMmHr>0 && wetArea>0 };
     }
 
@@ -3557,16 +3709,24 @@
     const ctx = { weatherByDate:data.weatherByDate||{}, plantings:data.plantings||[],
                   blocks:data.blocks||[], settings:set, eventsByBed };
 
-    const byBlock={};
+    // One recommendation per valve. Drip is valved per block; overhead per zone (AB and I each
+    // have two). A bed with both systems sits in both lists — the soil balance is the same bed,
+    // only the run time differs — and the grower picks which one to open.
+    const byValve={}, valveMeta={};
     (data.beds||[]).forEach(bed=>{
-      const spec = irrigSpecFor(bed, data.blocks, set);
-      const bal = irrigBedBalance(bed, Object.assign({}, ctx, {spec}), start, today);
-      const key = spec.blockName || bed.block || "—";
-      (byBlock[key] ||= []).push(bal);
+      irrigSpecsFor(bed, data.blocks, set, data.irrigZones).forEach(spec=>{
+        const bal = irrigBedBalance(bed, Object.assign({}, ctx, {spec}), start, today);
+        const blockName = spec.blockName || bed.block || "—";
+        const key = spec.method==="overhead"
+          ? (spec.zone ? spec.zone.name : `${blockName} · overhead`)
+          : (spec.off ? blockName : `${blockName} · drip`);
+        (byValve[key] ||= []).push(bal);
+        valveMeta[key] ||= {method:spec.off?null:spec.method, zone:spec.method==="overhead"?spec.zone:null, blockName};
+      });
     });
 
-    const blocks = Object.keys(byBlock)
-      .map(name => irrigBlockPlan(name, byBlock[name], set))
+    const blocks = Object.keys(byValve)
+      .map(name => Object.assign(irrigBlockPlan(name, byValve[name], set), valveMeta[name]))
       .sort((a,b)=>{
         if(a.needsWater !== b.needsWater) return a.needsWater ? -1 : 1;
         return (b.driest ? b.driest.stress : 0) - (a.driest ? a.driest.stress : 0);
@@ -3595,7 +3755,8 @@
     CFG, num, PG_TABLES, AT_ID_TO_PG,
     IRRIG_DEFAULTS, SOIL_TYPES, soilAWC,
     parseBlocks, parseWeatherObs, indexWeatherByDate, parseIrrigationEvents, parseIrrigSettings,
-    blockForBed, blockMatch, irrigSpecFor, irrigRunTime,
+    blockForBed, blockMatch, irrigSpecFor, irrigSpecsFor, irrigSystemsFor, irrigRunTime,
+    parseIrrigZones, zonePrecip, zoneHeads, SPRINKLER_HEADS, sprinklerLookup, triBool,
     CLIMATE, WARM_CROPS, isWarmCrop, baseTempFor, CLIMATE_DAMP, climateAdjustedDTM,
     irIsoToDate, irDateToISO, irAddDays, irDiffDays, irDayOfYear,
     svp, et0Ra, et0WindTo2m, et0Daily, ET0_MAX,
