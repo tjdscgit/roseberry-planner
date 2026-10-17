@@ -892,7 +892,7 @@
   .cs-min-lbl{writing-mode:vertical-rl;font-size:13px;color:var(--ink-2);white-space:nowrap}
   .cs-list-head{display:flex;align-items:center;gap:.4rem;height:var(--vw-title-h);flex:0 0 auto;padding:0 .6rem;border-bottom:1px solid var(--line)}
   .cs-search{margin:.6rem .7rem .4rem}
-  .cs-search{display:flex}
+  .cs-search,.cs-search.tl-search{display:flex;width:auto;max-width:none;min-width:0;box-sizing:border-box}
   .cs-search input{width:100%;min-width:0;box-sizing:border-box}
   .cs-pills{display:flex;gap:6px;padding:0 .7rem .5rem}
   .cs-pill{height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line-2);background:transparent;color:var(--ink-2);font:inherit;font-size:12px;cursor:pointer}
@@ -937,7 +937,7 @@
   .cs-card-h h3{margin:0;font-size:14px}
   .cs-card-h .sub{font-size:12px;color:var(--ink-2)}
   .cs-card-h select{height:32px}
-  .cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.1rem}
+  .cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(270px,100%),1fr));gap:1.1rem}
   .cs-life{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;align-items:center}
   .cs-life-name{font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cs-life-name.cmp{font-weight:400;color:var(--ink-2)}
@@ -971,14 +971,14 @@
   .cs-from{font-size:12px;color:var(--ink-2)}
   .cs-bed{display:block;width:100%;height:88px;border-radius:8px;background:color-mix(in srgb,#8a6a45 22%,var(--paper-3));border:1px solid var(--line)}
   .cs-est{margin:0;font-size:13px;color:var(--steel);background:var(--sel);border-radius:8px;padding:9px 12px}
-  .cs-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 20px}
+  .cs-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:6px 20px}
   .cs-f{display:grid;grid-template-columns:minmax(0,1fr) minmax(96px,46%);align-items:center;gap:10px;font-size:13px;color:var(--ink-2);min-width:0;min-height:38px}
   .cs-flab{display:flex;flex-direction:column;line-height:1.25}
   .cs-flab small{font-size:11px;color:var(--clay)}
-  .cs-fbox{display:flex;align-items:center;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);overflow:hidden}
+  .cs-fbox{display:flex;align-items:center;min-width:0;width:100%;box-sizing:border-box;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);overflow:hidden}
   .cs-f.inh .cs-fbox{border-style:dashed}
   .cs-f.ovr .cs-fbox{border-color:var(--clay);background:var(--clay-tint)}
-  .cs-fbox input,.cs-fbox select{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:0 8px}
+  .cs-fbox input,.cs-fbox select{flex:1 1 0;width:0;min-width:0;box-sizing:border-box;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:0 8px}
   .cs-f.ovr .cs-fbox input,.cs-f.ovr .cs-fbox select{color:var(--clay)}
   .cs-fbox input::placeholder{color:var(--ink-2);opacity:.75}
   .cs-f.inh .cs-fbox select{color:var(--ink-2)}
@@ -1014,6 +1014,74 @@
   .cs-scope button{text-align:left;padding:9px 12px;border-radius:8px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:inherit;display:flex;flex-direction:column;gap:2px;cursor:pointer}
   .cs-scope button small{font-size:12px;color:var(--ink-2)}
   .cs-scope button.on{border-color:var(--clay);background:var(--clay-tint)}
+  .cs-back{display:none}
+  /* Crops on a phone: the list OR one crop's sheet, full screen; the task dialog is a bottom sheet. */
+  @media (max-width:760px){
+    #view-crops .cr-split,#view-crops .cr-mobile-list{display:none!important}
+    #view-crops #csRoot .tl-search{display:flex}
+    .cs.cs-phone{flex-direction:column}
+    .cs-phone .cs-list{width:auto;flex:1;border-right:0;background:var(--paper)}
+    .cs-phone .cs-list-head{padding:0 .9rem}
+    .cs-phone .cs-search input{height:42px;font-size:16px}
+    .cs-phone .cs-pills{flex-wrap:wrap}
+    .cs-phone .cs-pill{height:34px;padding:0 14px;font-size:13px}
+    .cs-phone .cs-li{min-height:48px;font-size:15px}
+    .cs-phone .cs-li-v{min-height:44px;font-size:14px}
+    .cs-phone .cs-chev{width:28px;flex-basis:28px;font-size:14px;align-self:stretch;display:flex;align-items:center;justify-content:center}
+    .cs-phone .cs-list-foot{padding:.8rem 1rem}
+    .cs-phone .cs-main{padding:.3rem .8rem 2rem;gap:.8rem}
+    .cs-phone .cs-back{display:inline-flex;align-items:center;align-self:flex-start;height:40px;padding:0 4px;border:0;background:transparent;color:var(--steel);font:inherit;font-size:15px;cursor:pointer}
+    .cs-phone .cs-head{flex-wrap:wrap;align-items:flex-start}
+    .cs-phone .cs-head>div:first-child{flex:1 1 0;min-width:0}
+    .cs-phone .cs-head>.spacer{display:none}
+    .cs-phone .cs-head .btn-primary{margin-left:auto;min-height:40px;padding:0 18px}
+    .cs-phone .cs-title{font-size:23px;flex-wrap:wrap}
+    .cs-phone .cs-tab{height:44px;padding:0 12px}
+    .cs-phone .cs-editbar>.spacer{display:none}
+    .cs-phone .cs-seg2{width:100%}
+    .cs-phone .cs-seg2 button{flex:1;min-height:40px;white-space:normal;line-height:1.2}
+    .cs-phone .cs-card{padding:.9rem;border-radius:10px}
+    .cs-phone .cs-card-h>.spacer{display:none}
+    .cs-phone .cs-card-h label.sub{flex:1 1 100%}
+    .cs-phone .cs-card-h label.sub select{flex:1;min-width:0;height:38px}
+    .cs-phone .cs-life{grid-template-columns:minmax(0,1fr);gap:4px}
+    .cs-phone .cs-life>span:empty{display:none}
+    .cs-phone .cs-life-name{margin-top:4px}
+    .cs-phone .cs-seg{padding:0 6px;font-size:12px}
+    .cs-phone .cs-jt{background:var(--paper-3);padding:0 3px;border-radius:3px}
+    .cs-phone .cs-tiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .cs-phone .cs-tile-v{font-size:19px}
+    .cs-phone .cs-grid{grid-template-columns:minmax(0,1fr);gap:.8rem}
+    .cs-phone .cs-fields{grid-template-columns:minmax(0,1fr);gap:6px}
+    .cs-phone .cs-fbox{height:44px}
+    .cs-phone .cs-fbox input,.cs-phone .cs-fbox select{font-size:16px}
+    .cs-phone .cs-card-h .btn-ghost{margin-left:auto;min-height:38px}
+    .cs-phone .cs-tt-h{display:none}
+    .cs-phone .cs-tt{grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:9px 0}
+    .cs-phone .cs-tt>span:nth-child(1){font-weight:600}
+    .cs-phone .cs-tt>span:nth-child(2){text-align:right;font-size:13px}
+    .cs-phone .cs-tt>span:nth-child(3){font-size:12px}
+    .cs-phone .cs-tt>span:nth-child(4){text-align:right;font-size:12px;color:var(--ink-2)}
+    .cs-phone .cs-tt>span:nth-child(4)::after{content:" min/15 m"}
+    .cs-phone .cs-tt>span:nth-child(5){grid-column:1/-1;font-size:12px}
+    .cs-dlg-back{align-items:flex-end;padding:0}
+    .cs-dlg{width:100%;max-height:92vh;border-radius:16px 16px 0 0;border-bottom:0}
+    .cs-dlg-h,.cs-dlg-f{padding:.75rem 1rem}
+    .cs-dlg-f{flex-wrap:wrap;padding-bottom:calc(.75rem + env(safe-area-inset-bottom,0px))}
+    .cs-dlg-f>.sub{flex:1 1 100%}
+    .cs-dlg-f button{min-height:42px}
+    .cs-dlg-b{flex-direction:column;overflow:auto}
+    .cs-dlg-lib{width:auto;border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+    .cs-dlg-lib #csDlgList{max-height:38vh;overflow:auto}
+    .cs-dlg-lib .cs-li{min-height:44px}
+    .cs-dlg-lib .tl-search input{height:42px;font-size:16px}
+    .cs-dlg-main{overflow:visible;padding:1rem}
+    .cs-anchors{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .cs-scope{grid-template-columns:minmax(0,1fr)}
+    .cs-step-in{height:44px}
+    .cs-step-in button{width:44px}
+    .cs-dlg .cs-fields{grid-template-columns:minmax(0,1fr);gap:6px}
+  }
 
   /* ---- Crop defaults: 21 columns will not fit any screen honestly. The table carries the groups
      you are scanning; the panel holds the full set for whichever crop is selected. Both edit the
@@ -8959,6 +9027,8 @@ function backCandidates(){
   if(fsh && !fsh.hidden && backVisible(fsh)) out.push([fsh,fwCloseWhoSheet]);
   const wbp=document.getElementById("wbPanel");
   if(wbp && cmIsMobile() && wbSel && backVisible(wbp)) out.push([wbp,()=>{ wbSel=null; buildWhiteboard(); }]);
+  const csr=document.getElementById("csRoot");
+  if(csr && currentView==="crops" && cmIsMobile() && csPhoneSheet && !csr.hidden && backVisible(csr)) out.push([csr,csPhoneClose]);
   const csh=document.getElementById("cmSheet");
   if(csh && !csh.hidden && backVisible(csh)) out.push([csh,cmCloseSheet]);
   const hsh=document.getElementById("hvpSheet");
@@ -10189,8 +10259,8 @@ function showView(view){
   // Bed prep is Field walk's Prep tab now. The old name still works — the menu shortcut, This
   // week's bed-prep links and a saved last-view all arrive here.
   if(view==="bedprep"){ fwPane="prep"; view="fieldwalk"; }
-  // Crop tasks is a section of each crop's sheet now (desktop). Phones keep the old page for now.
-  if(view==="croptasks" && !cmIsMobile()) view="crops";
+  // Crop tasks is a section of each crop's sheet now (desktop and phone).
+  if(view==="croptasks") view="crops";
   if(typeof currentView!=="undefined" && currentView && currentView!==view && !backNavigating){
     viewHistory.push(currentView); if(viewHistory.length>30) viewHistory.shift();
     backRearm();   // moved on inside the 2s "press back again to exit" window — don't exit next time
@@ -19109,7 +19179,7 @@ function buildCropsTab(filter){
     return n ? `${n} crop${n===1?"":"s"}` : "";
   });
   const csRoot=document.getElementById("csRoot"), crSplit=document.querySelector("#view-crops .cr-split");
-  if(cmIsMobile()){ if(csRoot) csRoot.hidden=true; if(crSplit) crSplit.style.display=""; buildCrMobileList(); return; }
+  if(!csRoot && cmIsMobile()){ buildCrMobileList(); return; }
   if(csRoot){ csRoot.hidden=false; if(crSplit) crSplit.style.display="none"; csRender(); return; }
   crApplyGroups();
   const body=document.getElementById("crBody"); if(!body) return;
@@ -19281,6 +19351,8 @@ function crAddVarietyRow(c){
    Saves go through the same functions the old table used (crSaveWithYield, saveVarietyField,
    saveCropType, the Crop Tasks fields + ctMaybePropagate), so nothing about storage changed. */
 let csCrop=null, csVar=null, csEdit=false, csCompare=null, csQuery="", csFilter="all", csDlg=null;
+// Phone: the list and the sheet take turns filling the screen; csPhoneSheet says which is showing.
+let csPhoneSheet=false;
 let csListOpen=(()=>{ try{ return localStorage.getItem("csListOpen")!=="0"; }catch(_){ return true; } })();
 const csExpanded=new Set(), csCollapsed=new Set();
 const CS_PHASE={n:"#3C7286", g:"#3F7D46", h:"#C64A2E"};
@@ -19347,13 +19419,14 @@ function csListRows(){
   return out.join("") || `<div class="cs-empty">${Object.keys(data.crops||{}).length?"Nothing matches.":"No crops loaded yet."}</div>`;
 }
 function csListPaneHTML(){
-  if(!csListOpen) return `<aside class="cs-list cs-list-min">`
+  const phone=cmIsMobile();
+  if(!csListOpen && !phone) return `<aside class="cs-list cs-list-min">`
     +`<button type="button" class="icon-btn" data-cs-act="list" aria-label="Show crop list" title="Show crop list">›</button>`
     +`<span class="cs-min-lbl">${esc(csCropName()+(csVar&&data.varietiesById[csVar]?" › "+data.varietiesById[csVar].name:""))}</span></aside>`;
   const ids=Object.keys(data.crops||{});
   const counts={all:ids.length, notasks:ids.filter(id=>!csCropHasTasks(id)).length, gaps:ids.filter(csCropHasGaps).length};
   return `<aside class="cs-list"><div class="cs-list-head">`
-    +`<button type="button" class="icon-btn" data-cs-act="list" aria-label="Hide crop list" title="Hide crop list">‹</button>`
+    +(phone?"":`<button type="button" class="icon-btn" data-cs-act="list" aria-label="Hide crop list" title="Hide crop list">‹</button>`)
     +`<span class="vw-name">Crops</span><span class="spacer"></span>`
     +`<button type="button" class="icon-btn" data-cs-act="newcrop" aria-label="New crop" title="New crop">＋</button></div>`
     +`<div class="tl-search cs-search"><input type="text" id="csSearch" placeholder="Search crops &amp; varieties…" autocomplete="off" spellcheck="false" value="${esc(csQuery)}"></div>`
@@ -19398,21 +19471,24 @@ function csLifeHTML(){
   const lo=Math.min(0, ...jobs.map(j=>j.day));
   const S=(Math.max(30, t.total, ct?ct.total:0, ...jobs.map(j=>Math.max(j.day,j.end||0)))-lo)*1.04;
   const pct=x=>((x-lo)/S*100).toFixed(2)+"%";
-  const stripPx=Math.max(300,(document.getElementById("csMain")?.clientWidth||1000)-200);
+  const phone=cmIsMobile();
+  const stripPx=phone?Math.max(240,(document.getElementById("csMain")?.clientWidth||340)-60):Math.max(300,(document.getElementById("csMain")?.clientWidth||1000)-200);
   const myName=csVar?(data.varietiesById[csVar]||{}).name:csCropName();
   const cmpName=cd?(csCompare==="crop"?csCropName():(data.varietiesById[csCompare]||{}).name):"";
   // jobs strip: greedy lanes so labels don't overlap (label width guessed at ~7px a character on ~900px)
   const lanes=[], placed=jobs.map((j,i)=>{
     const w=(j.task.name.length*7+30)/stripPx*S, end=Math.max(j.day+w, j.end||0);
-    let lane=lanes.findIndex(x=>x<=j.day); if(lane<0){ lane=lanes.length; lanes.push(0); }
+    // phone: one job per lane — the strip is too narrow to share, and a list reads better anyway
+    let lane=phone?-1:lanes.findIndex(x=>x<=j.day); if(lane<0){ lane=lanes.length; lanes.push(0); }
     lanes[lane]=end; return {...j, lane, color:CS_JOB_COLORS[i%CS_JOB_COLORS.length]};
   });
-  const stripH=Math.max(1,lanes.length)*32+10;
+  const stripH=Math.max(1,lanes.length)*(phone?24:32)+10;
   const strip=placed.length ? `<div class="cs-strip" style="height:${stripH}px">`+placed.map(j=>{
-      const y=8+j.lane*32;
+      const y=8+j.lane*(phone?24:32);
       return (j.end!=null&&j.end>j.day?`<div class="cs-jl" style="top:${y+4}px;left:${pct(j.day)};width:${((j.end-j.day)/S*100).toFixed(2)}%;background:repeating-linear-gradient(90deg,${j.color} 0 6px,transparent 6px 10px)"></div>`:"")
         +`<div class="cs-jd" style="top:${y}px;left:calc(${pct(j.day)} - 5px);background:${j.color}"></div>`
-        +`<div class="cs-jt" style="top:${y+12}px;left:calc(${pct(j.day)} - 4px)">${esc(j.task.name)}</div>`;
+        +(phone ? `<div class="cs-jt" style="top:${y-2}px;${(j.day-lo)/S>.5?`right:calc(100% - ${pct(j.day)} + 12px)`:`left:calc(${pct(j.day)} + 12px)`}">${esc(j.task.name)}</div>`
+          : `<div class="cs-jt" style="top:${y+12}px;left:calc(${pct(j.day)} - 4px)">${esc(j.task.name)}</div>`);
     }).join("")+`</div>`
     : `<div class="cs-strip cs-empty" style="padding:.7rem 1rem;font-size:13px">No jobs yet — add them under Tasks.</div>`;
   const ticks=[["Sow",0]].concat(csIsTransplant(d)&&t.n?[["Transplant",t.tp]]:[]).concat(t.g?[["First pick",t.h1]]:[]).concat(t.h?[["Last pick",t.h2]]:[]);
@@ -19431,7 +19507,7 @@ function csLifeHTML(){
     +`</div><div class="cs-life"><span class="cs-life-name">${esc(myName)}</span>${csBarHTML(d,S,true,lo)}`
     +(cd?`<span class="cs-life-name cmp">${esc(cmpName)}</span>${csBarHTML(cd,S,false,lo)}${cmpNote}`:"")
     +`<span class="cs-life-name cmp">Jobs</span>${strip}`
-    +`<span></span><div class="cs-axis">${ticks.map(([l,x])=>`<span style="left:${pct(x)}">${l} ${x}</span>`).join("")}</div></div>`;
+    +`<span></span><div class="cs-axis">${ticks.map(([l,x])=>`<span style="left:${pct(x)}">${phone?({"Sow":"Sow","Transplant":"TP","First pick":"1st","Last pick":"End"})[l]:l} ${x}</span>`).join("")}</div></div>`;
 }
 
 /* ---- read-mode pieces ---- */
@@ -19545,7 +19621,8 @@ function csBannerHTML(){
 function csSheetHTML(){
   const cd=data.cropDefs[csCrop]||{}, cname=csCropName(), v=csVar?data.varietiesById[csVar]:null;
   const d=csDefs(csCrop,csVar), vs=data.varietiesByCrop[csCrop]||[], t=csDays(d);
-  const head=`<div class="cs-head"><div><span class="cs-crumb">${esc(cd.type||"No family set")} · ${esc(d.method||"method not set")}`
+  const head=(cmIsMobile()?`<button type="button" class="cs-back" data-cs-act="phoneback">‹ All crops</button>`:"")
+    +`<div class="cs-head"><div><span class="cs-crumb">${esc(cd.type||"No family set")} · ${esc(d.method||"method not set")}`
     +(v?` · <a href="#" data-cs-act="tocrop">${esc(cname)}</a> ›`:"")+`</span>`
     +`<h2 class="cs-title"><span class="ap-crop-dot" style="background:${cropColor(csCrop)}"></span>${esc(v?v.name:cname)}`
     +`<span class="cs-title-sub">${v?esc(cname)+" variety":vs.length?`${vs.length} variet${vs.length===1?"y":"ies"}`:"crop defaults"}</span></h2></div>`
@@ -19585,7 +19662,11 @@ function csRender(){
   if(!csCrop) csCrop=(crSelected&&data.crops[crSelected])?crSelected:(ids[0]||null);
   if(csVar && !data.varietiesById[csVar]) csVar=null;
   const scroll=document.getElementById("csMain")?.scrollTop||0;
-  root.innerHTML=csListPaneHTML()+`<div class="cs-main" id="csMain">${csCrop?csSheetHTML():`<div class="cs-empty">No crops yet — add one with ＋.</div>`}</div>`;
+  const phone=cmIsMobile();
+  if(phone && !csCrop) csPhoneSheet=false;
+  root.classList.toggle("cs-phone", phone);
+  root.innerHTML=(phone && csPhoneSheet ? "" : csListPaneHTML())
+    +(phone && !csPhoneSheet ? "" : `<div class="cs-main" id="csMain">${csCrop?csSheetHTML():`<div class="cs-empty">No crops yet — add one with ＋.</div>`}</div>`);
   const main=document.getElementById("csMain"); if(main) main.scrollTop=scroll;
   csBind(root);
 }
@@ -19631,7 +19712,9 @@ function csBind(root){
       return csRender(); }
     if(el.dataset.csCrop!==undefined){
       csCrop=el.dataset.csCrop; csVar=el.dataset.csVar||null; csCompare=null; crSelected=csCrop;
-      csExpanded.add(csCrop); csCollapsed.delete(csCrop); return csRender();
+      csExpanded.add(csCrop); csCollapsed.delete(csCrop);
+      if(cmIsMobile()){ csPhoneSheet=true; csEdit=false; csRender(); const m=document.getElementById("csMain"); if(m) m.scrollTop=0; return; }
+      return csRender();
     }
     if(el.dataset.csTab!==undefined){ csVar=el.dataset.csTab||null; csCompare=null; return csRender(); }
     if(el.dataset.csFilter){ csFilter=el.dataset.csFilter; return csRender(); }
@@ -19642,11 +19725,12 @@ function csBind(root){
     if(act==="list"){ csListOpen=!csListOpen; try{ localStorage.setItem("csListOpen",csListOpen?"1":"0"); }catch(_){} return csRender(); }
     if(act==="edit"){ csEdit=true; return csRender(); }
     if(act==="done"){ csEdit=false; return csRender(); }
+    if(act==="phoneback") return csPhoneClose();
     if(act==="tocrop"){ csVar=null; return csRender(); }
     if(act==="tasklib") return showView("tasklib");
     if(act==="seedbook") return showView("seedbook");
     if(act==="timeline") return showView("timeline");
-    if(act==="newcrop"){ const id=await crAddCrop(); if(id){ csCrop=id; csVar=null; csEdit=true; csRender(); } return; }
+    if(act==="newcrop"){ const id=await crAddCrop(); if(id){ csCrop=id; csVar=null; csEdit=true; csPhoneSheet=true; csRender(); } return; }
     if(act==="newvar"){ const id=await crAddVariety(csCrop, csCropName()); if(id){ csVar=id; csEdit=true; csRender(); } return; }
     if(act==="resetall"){
       const v=data.varietiesById[csVar]; if(!v) return;
@@ -19658,6 +19742,8 @@ function csBind(root){
     if(act==="addtask") return csOpenTaskDlg(null);
   });
 }
+
+function csPhoneClose(){ csPhoneSheet=false; csEdit=false; csCompare=null; csRender(); }
 
 /* ---- add / edit task dialog ---- */
 function csOpenTaskDlg(taskId){
@@ -19710,7 +19796,7 @@ function csDrawDlg(){
       +`<div id="csDlgList" style="display:flex;flex-direction:column">${csDlgLibHTML()}</div><span style="flex:1"></span>`
       +`<a href="#" data-dlg="lib" style="font-size:13px;color:var(--steel)">New tasks are made in the Task library ›</a></div>`:"")
     +`<div class="cs-dlg-main">`
-    +(csDlg.mode==="add"&&!task?`<div class="cs-empty" style="padding:0">Pick a task on the left. Its library timing fills in here, and you can change it for ${esc(v?v.name:cname)}.</div>`:
+    +(csDlg.mode==="add"&&!task?`<div class="cs-empty" style="padding:0">Pick a task ${cmIsMobile()?"above":"on the left"}. Its library timing fills in here, and you can change it for ${esc(v?v.name:cname)}.</div>`:
       `<span class="cs-step">${csDlg.mode==="add"?"2 · ":""}When does it happen?</span>`
       +`<div class="cs-when"><span class="cs-step-in"><button type="button" data-dlg="minus" aria-label="Fewer days">−</button><input id="csDlgDays" type="number" min="0" value="${Math.abs(o)}" aria-label="Days"><button type="button" data-dlg="plus" aria-label="More days">+</button></span>`
       +`<span>days</span><div class="cs-seg2" role="group" aria-label="Before or after"><button type="button" class="${o<0?"on":""}" data-dlg="before">before</button><button type="button" class="${o>=0?"on":""}" data-dlg="after">after</button></div></div>`
@@ -19743,7 +19829,9 @@ function csDlgInput(e){
 async function csDlgClick(e){
   const el=e.target.closest("[data-dlg],[data-dlg-pick],[data-dlg-anchor],[data-dlg-scope]"); if(!el||!csDlg) return;
   if(el.tagName==="A") e.preventDefault();
-  if(el.dataset.dlgPick){ csDlgPick(el.dataset.dlgPick); return csDrawDlg(); }
+  if(el.dataset.dlgPick){ csDlgPick(el.dataset.dlgPick); csDrawDlg();
+    if(cmIsMobile()) document.querySelector("#csDlgBack .cs-dlg-main")?.scrollIntoView({block:"start",behavior:"smooth"});
+    return; }
   if(el.dataset.dlgAnchor){ csDlg.anchor=el.dataset.dlgAnchor; return csDrawDlg(); }
   if(el.dataset.dlgScope){ csDlg.scope=el.dataset.dlgScope; return csDrawDlg(); }
   const a=el.dataset.dlg, o=+csDlg.offset||0;
