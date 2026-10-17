@@ -5156,6 +5156,7 @@
           <input type="text" id="crSearch" placeholder="Search crops…" autocomplete="off" spellcheck="false">
           <button type="button" id="crSearchClear" title="Clear search">✕</button>
         </div>
+        <button class="btn-ghost" id="crAddCropBtn" type="button">＋ New crop</button>
       </div>
       <div class="vw-tools">
         <span class="sub">Prefills the Add-planting dialog · saves automatically</span>
@@ -18784,6 +18785,36 @@ async function saveVarietyField(varietyId,key,val){
     buildCropsTab();
   }
 }
+// New crop: just a name to start. It opens straight into its panel so type, timing and spacing
+// can be filled in there, the same as any other crop.
+async function crAddCrop(){
+  const name=(prompt("New crop name:")||"").trim();
+  if(!name) return null;
+  const clash=Object.keys(data.crops||{}).find(id=>String(data.crops[id]).toLowerCase()===name.toLowerCase());
+  if(clash){ alert(`"${data.crops[clash]}" is already a crop.`); return null; }
+  try{
+    const created=await atCreate(CFG.farmBase, CFG.tables.crops, [{"Crop":name}]);
+    const id=created[0].id;
+    data.crops[id]=name;
+    data.cropDefs[id]=readDefaultFields({}, "cr");
+    data.cropDefs[id].type="";
+    data.cropDefs[id].yieldTyped=false;
+    data.varietiesByCrop[id]=[];
+    try{ rebuildDerived(); }catch(_){}
+    if(cmIsMobile()){ crMobileCrop=id; crMobileVariety=null; buildCrMobileList(); }
+    else{
+      const s=document.getElementById("crSearch"); if(s) s.value="";
+      crSelected=id; buildCropsTab();
+      const row=document.querySelector(`#crBody [data-crop="${id}"]`)||[...document.querySelectorAll("#crBody tr")].find(r=>r.textContent.includes(name));
+      if(row) row.scrollIntoView({block:"center"});
+    }
+    return id;
+  }catch(e){
+    console.error(e);
+    alert("Couldn't add crop:\n"+e.message);
+    return null;
+  }
+}
 async function crAddVariety(cropId,cropName){
   const name=(prompt(`New variety of ${cropName}:`)||"").trim();
   if(!name) return null;
@@ -18829,7 +18860,12 @@ function buildCrMobileList(){
 
   if(!crMobileCrop){
     const ids=Object.keys(data.crops||{}).sort((a,b)=>data.crops[a].localeCompare(data.crops[b]));
-    if(!ids.length){ box.innerHTML=`<div class="empty-note">No crops yet.</div>`; return; }
+    const addCrop=document.createElement("button");
+    addCrop.type="button"; addCrop.className="btn-ghost"; addCrop.textContent="＋ New crop";
+    addCrop.style.cssText="align-self:flex-end;margin-bottom:.4rem";
+    addCrop.onclick=crAddCrop;
+    box.appendChild(addCrop);
+    if(!ids.length){ box.insertAdjacentHTML("beforeend",`<div class="empty-note">No crops yet.</div>`); return; }
     ids.forEach(id=>{
       const n=(data.varietiesByCrop[id]||[]).length;
       const row=document.createElement("div"); row.className="cm-chip tl-mobile-row";
@@ -19216,6 +19252,7 @@ document.getElementById("crSearch").addEventListener("input",e=>{
   e.target.closest(".tl-search").classList.toggle("has-val",!!e.target.value);
   buildCropsTab(e.target.value);
 });
+document.getElementById("crAddCropBtn").addEventListener("click",crAddCrop);
 document.getElementById("crSearchClear").addEventListener("click",()=>{
   const inp=document.getElementById("crSearch");
   inp.value=""; inp.closest(".tl-search").classList.remove("has-val");
