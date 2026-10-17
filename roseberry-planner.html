@@ -971,15 +971,18 @@
   .cs-from{font-size:12px;color:var(--ink-2)}
   .cs-bed{display:block;width:100%;height:88px;border-radius:8px;background:color-mix(in srgb,#8a6a45 22%,var(--paper-3));border:1px solid var(--line)}
   .cs-est{margin:0;font-size:13px;color:var(--steel);background:var(--sel);border-radius:8px;padding:9px 12px}
-  .cs-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-  .cs-f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--ink-2);min-width:0}
-  .cs-fbox{display:flex;align-items:center;height:40px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);overflow:hidden}
+  .cs-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 20px}
+  .cs-f{display:grid;grid-template-columns:minmax(0,1fr) minmax(96px,46%);align-items:center;gap:10px;font-size:13px;color:var(--ink-2);min-width:0;min-height:38px}
+  .cs-flab{display:flex;flex-direction:column;line-height:1.25}
+  .cs-flab small{font-size:11px;color:var(--clay)}
+  .cs-fbox{display:flex;align-items:center;height:34px;border:1px solid var(--line-2);border-radius:8px;background:var(--paper);overflow:hidden}
   .cs-f.inh .cs-fbox{border-style:dashed}
   .cs-f.ovr .cs-fbox{border-color:var(--clay);background:var(--clay-tint)}
-  .cs-fbox input,.cs-fbox select{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:15px;padding:0 10px}
+  .cs-fbox input,.cs-fbox select{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:0 8px}
   .cs-f.ovr .cs-fbox input,.cs-f.ovr .cs-fbox select{color:var(--clay)}
   .cs-fbox input::placeholder{color:var(--ink-2);opacity:.75}
-  .cs-reset{width:34px;height:100%;border:0;background:transparent;color:var(--clay);font-size:16px;cursor:pointer}
+  .cs-f.inh .cs-fbox select{color:var(--ink-2)}
+  .cs-reset{width:28px;flex:0 0 auto;height:100%;border:0;background:transparent;color:var(--clay);font-size:16px;cursor:pointer}
   .cs-fnote{min-height:14px}
   .cs-fnote.ovr{color:var(--clay)}
   .cs-tt{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.4fr) minmax(0,1.4fr) 90px minmax(0,1.1fr);gap:0 14px;align-items:center}
@@ -19487,7 +19490,7 @@ function csInputHTML(k){
   if(f.type==="select"){
     let opts=(typeof f.options==="function"?f.options():f.options).slice();
     if(val!=="" && !opts.includes(String(val))) opts.push(String(val));
-    const blank=v && !csBlank(inh) ? `${inh} (from ${csCropName()})` : "—";
+    const blank=v && !csBlank(inh) ? `${inh} ·` : "—";
     ctl=`<select data-cs-k="${k}"><option value="">${esc(blank)}</option>`
       +opts.map(o=>`<option${String(o)===String(val)?" selected":""}>${esc(o)}</option>`).join("")+`</select>`;
   }else{
@@ -19495,9 +19498,10 @@ function csInputHTML(k){
     ctl=`<input type="number" min="0" step="${f.step}" data-cs-k="${k}" value="${esc(String(val))}" placeholder="${esc(ph)}">`;
   }
   const reset=ovr?`<button type="button" class="cs-reset" data-cs-reset="${k}" title="Go back to ${esc(csCropName())}'s value" aria-label="Reset to ${esc(csCropName())}">↺</button>`:"";
-  const note=v ? (ovr?`<span class="cs-fnote ovr">${esc(csCropName())}: ${esc(csFmt(k,inh))}</span>`:`<span class="cs-fnote">from ${esc(csCropName())}</span>`)
-    : (k==="yield" ? `<span class="cs-fnote">${cd.yieldTyped?"typed in":"worked out from spacing"}</span>` : `<span class="cs-fnote"></span>`);
-  return `<label class="cs-f${v?(ovr?" ovr":" inh"):""}" data-cs-fld="${k}"><span class="cs-flab">${esc(f.label)}</span><span class="cs-fbox">${ctl}${reset}</span>${note}</label>`;
+  const note=v ? (ovr?`<small>${esc(csCropName())}: ${esc(csFmt(k,inh))}</small>`:"")
+    : (k==="yield" ? `<small style="color:var(--ink-2)">${cd.yieldTyped?"typed in":"from spacing"}</small>` : "");
+  const tip=v&&!ovr?` title="Following ${esc(csCropName())} — type to set it for this variety"`:"";
+  return `<label class="cs-f${v?(ovr?" ovr":" inh"):""}" data-cs-fld="${k}"${tip}><span class="cs-flab">${esc(f.label)}${note}</span><span class="cs-fbox">${ctl}${reset}</span></label>`;
 }
 const csFieldsHTML=keys=>`<div class="cs-fields">${keys.map(csInputHTML).join("")}</div>`;
 
