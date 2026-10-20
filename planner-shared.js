@@ -2938,6 +2938,72 @@
   // hardware: total flow over the area it covers (heads × head flow ÷ width × length), or one
   // head's flow over its own riser × lateral rectangle when the area isn't entered. A catch-can
   // reading, when there is one, beats both — it's what actually landed.
+  // Jang JP-series rollers (Johnny's comparison chart): code -> hole mm, depth mm, holes, uses.
+  const JANG_ROLLERS = {
+    "A-6": {holeMm:13.5, depthMm:6, holes:6, uses:"large sunflowers, common oats, chickling vetch"},
+    "AA-6": {holeMm:12, depthMm:6, holes:6, uses:"small peas, large sunflowers, common oats"},
+    "C-6": {holeMm:11, depthMm:5.5, holes:6, uses:"popcorn, large sunflowers, barley"},
+    "C-12": {holeMm:11, depthMm:5.5, holes:12, uses:"popcorn, large sunflowers, barley"},
+    "B-12": {holeMm:10, depthMm:7.5, holes:12, uses:"small soybeans, small nasturtiums, field peas"},
+    "BL-12": {holeMm:10, depthMm:7.5, holes:12, uses:"granular or powdered fertiliser"},
+    "G-6": {holeMm:9, depthMm:4.5, holes:6, uses:"pelleted fennel, pelleted parsnip, medium sunflowers, sweet peas, buckwheat, cowpeas, field peas"},
+    "G-12": {holeMm:9, depthMm:4.5, holes:12, uses:"pelleted fennel, pelleted parsnip, medium sunflowers, sweet peas, buckwheat, cowpeas, field peas"},
+    "R-12": {holeMm:9, depthMm:3.5, holes:12, uses:"euphorbia, medium sunflowers, barley, hulless oats, wheat"},
+    "R-24": {holeMm:9, depthMm:3.5, holes:24, uses:"euphorbia, medium sunflowers, barley, hulless oats, wheat"},
+    "Q-6": {holeMm:8, depthMm:3, holes:6, uses:"small melons, medium sunflowers, lovage"},
+    "Q-12": {holeMm:8, depthMm:3, holes:12, uses:"small melons, medium sunflowers, lovage"},
+    "LV-12": {holeMm:8, depthMm:5, holes:12, uses:"swiss chard, large-seeded beets"},
+    "LV-24": {holeMm:8, depthMm:5, holes:24, uses:"swiss chard, large-seeded beets"},
+    "LJ-6": {holeMm:7.5, depthMm:3.7, holes:6, uses:"small-seeded beets, okra, spinach, cilantro, small sunflowers, hairy vetch, pelleted carrots, pelleted lettuce, pelleted onion, swiss chard, basil"},
+    "LJ-12": {holeMm:7.5, depthMm:3.7, holes:12, uses:"small-seeded beets, okra, spinach, cilantro, small sunflowers, hairy vetch, pelleted carrots, pelleted lettuce, pelleted onion, swiss chard, basil"},
+    "LJ-24": {holeMm:7.5, depthMm:3.7, holes:24, uses:"small-seeded beets, okra, spinach, cilantro, small sunflowers, hairy vetch, pelleted carrots, pelleted lettuce, pelleted onion, swiss chard, basil"},
+    "L-12": {holeMm:7, depthMm:2.5, holes:12, uses:"spinach, baby leaf spinach, cumin, agrostemma, centaurea, ryegrass, wheat, sudangrass"},
+    "L-24": {holeMm:7, depthMm:2.5, holes:24, uses:"spinach, baby leaf spinach, cumin, agrostemma, centaurea, ryegrass, wheat, sudangrass"},
+    "MJ-4": {holeMm:6, depthMm:3.5, holes:4, uses:"multiseed pelleted parsley, oilseed radish"},
+    "MJ-6": {holeMm:6, depthMm:3.5, holes:6, uses:"multiseed pelleted parsley, oilseed radish"},
+    "MJ-12": {holeMm:6, depthMm:3.5, holes:12, uses:"multiseed pelleted parsley, oilseed radish"},
+    "MJ-24": {holeMm:6, depthMm:3.5, holes:24, uses:"multiseed pelleted parsley, oilseed radish"},
+    "MM-12": {holeMm:6, depthMm:2.5, holes:12, uses:"cilantro (monogerm), bells of ireland, didiscus, sudangrass"},
+    "MM-24": {holeMm:6, depthMm:2.5, holes:24, uses:"cilantro (monogerm), bells of ireland, didiscus, sudangrass"},
+    "F-6": {holeMm:5, depthMm:2.5, holes:6, uses:"large radish, carrots (#12.5 pellet), sage, baby leaf kale, brassica mixes, tokyo bekana"},
+    "F-12": {holeMm:5, depthMm:2.5, holes:12, uses:"large radish, carrots (#12.5 pellet), sage, baby leaf kale, brassica mixes, tokyo bekana"},
+    "F-24": {holeMm:5, depthMm:2.5, holes:24, uses:"large radish, carrots (#12.5 pellet), sage, baby leaf kale, brassica mixes, tokyo bekana"},
+    "M-6": {holeMm:5, depthMm:2, holes:6, uses:"endive, small daikon radish, anise, garlic chives, leaf fennel, millet"},
+    "M-12": {holeMm:5, depthMm:2, holes:12, uses:"endive, small daikon radish, anise, garlic chives, leaf fennel, millet"},
+    "X-4": {holeMm:4, depthMm:2, holes:4, uses:"brussels sprouts, cabbage, cauliflower, chicory, collards, kale, leeks, mache, onion, small radish, shallots, dill, nigella, phlox, dianthus, larkspur, mustards, clover, baby leaf brassicas"},
+    "X-6": {holeMm:4, depthMm:2, holes:6, uses:"brussels sprouts, cabbage, cauliflower, chicory, collards, kale, leeks, mache, onion, small radish, shallots, dill, nigella, phlox, dianthus, larkspur, mustards, clover, baby leaf brassicas"},
+    "X-12": {holeMm:4, depthMm:2, holes:12, uses:"brussels sprouts, cabbage, cauliflower, chicory, collards, kale, leeks, mache, onion, small radish, shallots, dill, nigella, phlox, dianthus, larkspur, mustards, clover, baby leaf brassicas"},
+    "X-24": {holeMm:4, depthMm:2, holes:24, uses:"brussels sprouts, cabbage, cauliflower, chicory, collards, kale, leeks, mache, onion, small radish, shallots, dill, nigella, phlox, dianthus, larkspur, mustards, clover, baby leaf brassicas"},
+    "Y-4": {holeMm:3.5, depthMm:1.5, holes:4, uses:"broccoli, brussels sprouts, cabbage, chicory, kale, kohlrabi, bunching onion, chives, parsley, ammi, bupleurum, rudbeckia, arugula, crimson clover, millet, baby leaf brassicas"},
+    "Y-6": {holeMm:3.5, depthMm:1.5, holes:6, uses:"broccoli, brussels sprouts, cabbage, chicory, kale, kohlrabi, bunching onion, chives, parsley, ammi, bupleurum, rudbeckia, arugula, crimson clover, millet, baby leaf brassicas"},
+    "Y-12": {holeMm:3.5, depthMm:1.5, holes:12, uses:"broccoli, brussels sprouts, cabbage, chicory, kale, kohlrabi, bunching onion, chives, parsley, ammi, bupleurum, rudbeckia, arugula, crimson clover, millet, baby leaf brassicas"},
+    "Y-24": {holeMm:3.5, depthMm:1.5, holes:24, uses:"broccoli, brussels sprouts, cabbage, chicory, kale, kohlrabi, bunching onion, chives, parsley, ammi, bupleurum, rudbeckia, arugula, crimson clover, millet, baby leaf brassicas"},
+    "YYJ-6": {holeMm:3, depthMm:1.7, holes:6, uses:"basil, columbine"},
+    "YYJ-12": {holeMm:3, depthMm:1.7, holes:12, uses:"basil, columbine"},
+    "YYJ-24": {holeMm:3, depthMm:1.7, holes:24, uses:"basil, columbine"},
+    "YX-4": {holeMm:2.5, depthMm:1.5, holes:4, uses:"broccoli raab, pac choi, basil, root parsley, dianthus, matricaria, shiso, white clover"},
+    "YX-6": {holeMm:2.5, depthMm:1.5, holes:6, uses:"broccoli raab, pac choi, basil, root parsley, dianthus, matricaria, shiso, white clover"},
+    "YX-12": {holeMm:2.5, depthMm:1.5, holes:12, uses:"broccoli raab, pac choi, basil, root parsley, dianthus, matricaria, shiso, white clover"},
+    "YX-24": {holeMm:2.5, depthMm:1.5, holes:24, uses:"broccoli raab, pac choi, basil, root parsley, dianthus, matricaria, shiso, white clover"},
+    "YYX-12": {holeMm:2, depthMm:1.8, holes:12, uses:"wild arugula, claytonia, watercress, amaranth"},
+    "YYX-24": {holeMm:2, depthMm:1.8, holes:24, uses:"wild arugula, claytonia, watercress, amaranth"},
+  };
+  // Sprocket tooth counts the JP-1 ships with (from the chain-cover chart).
+  const JANG_SPROCKETS = [9,10,11,13,14];
+  // Holes per turn for a roller name: the chart first, else the number after the dash ("X-24").
+  function rollerHoles(name){
+    const k=String(name||"").toUpperCase().replace(/\s+/g,"");
+    if(JANG_ROLLERS[k]) return JANG_ROLLERS[k].holes;
+    const m=/-(\d+)\s*$/.exec(k); return m ? +m[1] : null;
+  }
+  // Rollers whose chart "uses" mention this crop — first word match, plural-tolerant.
+  function jangRollerSuggest(cropName){
+    const words=String(cropName||"").toLowerCase().split(/[^a-z]+/).filter(w=>w.length>2)
+      .map(w=>w.replace(/(es|s)$/,""));
+    if(!words.length) return [];
+    return Object.entries(JANG_ROLLERS).filter(([,r])=>words.some(w=>r.uses.includes(w))).map(([code,r])=>({code, ...r}));
+  }
+
   // ---- Seeders. A seeder's name is what crops/plantings store in "Seeder type", so renaming one
   // is a rename everywhere it's used (the page does that). Rollers belong to one seeder.
   function parseSeeders(records){
@@ -3805,6 +3871,7 @@
     parseBlocks, parseWeatherObs, indexWeatherByDate, parseIrrigationEvents, parseIrrigSettings,
     blockForBed, blockMatch, irrigSpecFor, irrigSpecsFor, irrigSystemsFor, irrigRunTime,
     parseSeeders, parseSeederRollers, parseSowingRecords, seederSpacing,
+    JANG_ROLLERS, JANG_SPROCKETS, rollerHoles, jangRollerSuggest,
     parseIrrigZones, zonePrecip, zoneHeads, SPRINKLER_HEADS, sprinklerLookup, triBool,
     CLIMATE, WARM_CROPS, isWarmCrop, baseTempFor, CLIMATE_DAMP, climateAdjustedDTM,
     irIsoToDate, irDateToISO, irAddDays, irDiffDays, irDayOfYear,

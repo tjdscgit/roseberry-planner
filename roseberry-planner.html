@@ -331,6 +331,8 @@
   .sow-grid .sow-wide{grid-column:1/-1}
   .sow-est{margin:.6rem 0 .2rem;min-height:1em}
   .cs-sd-est{margin-top:.5rem}
+  .cs-sd-sug{margin-top:.5rem;line-height:1.5}
+  .sd-rnote{font-size:.72rem;margin:-.1rem 0 .3rem}
   .tl-sow-rec{margin-top:.4rem}
   @media (max-width:760px){ .sow-grid{grid-template-columns:1fr} }
   .bd-irrig-sec{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);margin:.2rem 0 -.2rem}
@@ -7303,8 +7305,8 @@
           </div>
           <div class="ap2-grid4 ap-seedgrid">
             <label class="ap-field"><span>Roller</span><select id="apSeederRoller"><option value="">—</option></select></label>
-            <label class="ap-field ap-sprk"><span>Front sprocket</span><input type="number" id="apFrontSprocket" min="0" step="1"></label>
-            <label class="ap-field ap-sprk"><span>Rear sprocket</span><input type="number" id="apRearSprocket" min="0" step="1"></label>
+            <label class="ap-field ap-sprk"><span>Front sprocket</span><select id="apFrontSprocket"><option value="">—</option><option>9</option><option>10</option><option>11</option><option>13</option><option>14</option></select></label>
+            <label class="ap-field ap-sprk"><span>Rear sprocket</span><select id="apRearSprocket"><option value="">—</option><option>9</option><option>10</option><option>11</option><option>13</option><option>14</option></select></label>
             <label class="ap-field"><span>Brush</span><input type="text" id="apBrush"></label>
             <label class="ap-field"><span>Felt</span><select id="apFelt"><option value="">—</option><option>On</option><option>Off</option></select></label>
             <label class="ap-field" style="grid-column:span 2"><span>Seeder notes</span><input type="text" id="apSeederNotes"></label>
@@ -19284,8 +19286,8 @@ const CR_ROW_FIELDS=[
   {k:"plantSpacing", step:"0.1", label:"Plant spacing (cm)", group:"Row Spacing"},
   {k:"seeder", type:"select", options:()=>sdNames(), label:"Seeder", group:"Row Spacing"},
   {k:"seederRoller", type:"select", options:()=>sdRollerNames(csDefs(csCrop,csVar).seeder), label:"Roller", group:"Seeder"},
-  {k:"frontSprocket", step:"1", label:"Front sprocket", group:"Seeder"},
-  {k:"rearSprocket", step:"1", label:"Rear sprocket", group:"Seeder"},
+  {k:"frontSprocket", type:"select", options:()=>PlannerShared.JANG_SPROCKETS.map(String), label:"Front sprocket", group:"Seeder"},
+  {k:"rearSprocket", type:"select", options:()=>PlannerShared.JANG_SPROCKETS.map(String), label:"Rear sprocket", group:"Seeder"},
   {k:"brush", type:"text", label:"Brush", group:"Seeder"},
   {k:"felt", type:"select", options:["On","Off"], label:"Felt", group:"Seeder"},
   {k:"seederNotes", type:"text", label:"Seeder notes", group:"Seeder"},
@@ -19721,7 +19723,7 @@ function csSheetHTML(){
       +`<div class="cs-tile"><span class="cs-tile-l">Maturity across the year</span><span class="cs-tile-v" style="font-size:17px;line-height:29px">${climate||"—"}</span><span class="cs-tile-f">climate-adjusted</span></div></div>`;
   const card=(title,body,id)=>`<section class="cs-card"${id?` id="${id}"`:""}><div class="cs-card-h"><h3>${title}</h3></div>${body}</section>`;
   const bed=card("In the bed", `<div id="csBedPic">${csBedSVG(d)}</div>`+(csEdit?csFieldsHTML(["rows","rowSpacing","plantSpacing"]):csDlHTML(["rows","rowSpacing","plantSpacing"])))
-    +card("Seeder", (csEdit?csFieldsHTML(sdKeysFor(d.seeder)):csDlHTML(sdKeysFor(d.seeder)))+`<div class="cs-sd-est">${sdSpacingNote(d)}</div>`);
+    +card("Seeder", (csEdit?csFieldsHTML(sdKeysFor(d.seeder)):csDlHTML(sdKeysFor(d.seeder)))+`<div class="cs-sd-est">${sdSpacingNote(d)}</div>`+sdSuggestHTML(csCropName(), d.seeder));
   const harvest=card("Harvest &amp; yield", (csEdit?csFieldsHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick","yield"]):csDlHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick"]))+`<div id="csYield">${csYieldNote(d)}</div>`);
   const nursery=card("Nursery", csEdit?csFieldsHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]):csDlHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]));
   const used=card("Where it's used", csUsedHTML());
@@ -19759,7 +19761,7 @@ function csRefreshDerived(changedKey){
   const s=document.getElementById("csSaved"); if(s){ s.textContent="Saved"; clearTimeout(s._t); s._t=setTimeout(()=>{ s.textContent=""; },1800); }
 }
 async function csSaveField(k, raw){
-  const val=SELECT_DEFAULT_KEYS.has(k) ? raw : (raw===""?"":(+raw));
+  const val=SELECT_DEFAULT_KEYS.has(k) ? raw : (raw===""?"":(+raw));   // sprockets: select, but numeric
   if(csVar) await saveVarietyField(csVar,k,val);
   else await crSaveWithYield(csCrop,k,val,null);
   // The seeder decides which rollers and fields the Seeder card offers, so redraw it whole.
@@ -22479,6 +22481,16 @@ function sdSpacingNote(v){
   if(sd && !(sd.wheel>0) && v.seederRoller) return `<span class="sub">Add ${esc(sd.name)}'s wheel circumference and the roller's hole count on the Trays, seeders &amp; tarps page to get a spacing estimate.</span>`;
   return "";
 }
+// Johnny's chart rollers that list this crop. Owned ones first and marked; shown for a Jang only.
+function sdSuggestHTML(cropName, seederName){
+  const sd=sdByName(seederName); if(!sd || sd.kind!=="Jang") return "";
+  const hits=PlannerShared.jangRollerSuggest(cropName); if(!hits.length) return "";
+  const owned=new Set(sdRollerNames(seederName).map(n=>n.toUpperCase().replace(/\s+/g,"")));
+  hits.sort((a,b)=>(owned.has(b.code)?1:0)-(owned.has(a.code)?1:0));
+  return `<div class="cs-sd-sug sub">Jang chart rollers for ${esc(cropName)}: `
+    +hits.slice(0,8).map(h=>`<span title="${esc(h.holeMm+" mm hole, "+h.depthMm+" mm deep · "+h.uses)}">${owned.has(h.code)?"<b>":""}${esc(h.code)}${owned.has(h.code)?" ✓</b>":""}</span>`).join(", ")
+    +`<br><span style="font-size:.75rem">✓ = you have it. Hover a roller for hole size and what it's for.</span></div>`;
+}
 function sdOptions(list, val){
   const opts=list.slice(); if(val && !opts.includes(val)) opts.push(val);
   return `<option value="">—</option>`+opts.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
@@ -22544,8 +22556,10 @@ async function sdDelete(sd){
   buildMiscTab();
 }
 async function srAdd(sd){
-  const name=(prompt(`New roller for ${sd.name} (e.g. X-24):`)||"").trim(); if(!name) return;
-  const fields={[CFG.f.sr_seeder]:sd.id, [CFG.f.sr_name]:name, [CFG.f.sr_order]:(data.seederRollers||[]).filter(r=>r.seederId===sd.id).length+1};
+  const name=(prompt(`New roller for ${sd.name} (e.g. X-24, LJ-12):`)||"").trim().toUpperCase(); if(!name) return;
+  const holes=PlannerShared.rollerHoles(name), chart=PlannerShared.JANG_ROLLERS[name.replace(/\s+/g,"")];
+  const fields={[CFG.f.sr_seeder]:sd.id, [CFG.f.sr_name]:name, [CFG.f.sr_holes]:holes,
+    [CFG.f.sr_notes]:chart?`${chart.holeMm} mm hole, ${chart.depthMm} mm deep · ${chart.uses}`:null, [CFG.f.sr_order]:(data.seederRollers||[]).filter(r=>r.seederId===sd.id).length+1};
   try{
     const [rec]=await atCreate(CFG.farmBase, CFG.tables.seederRollers, [fields]);
     data.seederRollers=(data.seederRollers||[]).concat(PlannerShared.parseSeederRollers([{id:rec.id, fields}]));
@@ -22591,7 +22605,8 @@ function sdPanelHTML(sd){
      +(rollers.length?rollers.map(r=>`<div class="sd-roller" data-sr="${esc(r.id)}">`
         +`<input type="text" data-srk="name" value="${esc(r.name)}" aria-label="Roller name">`
         +`<input class="cr-num" type="number" min="0" step="1" data-srk="holes" value="${r.holes??""}" placeholder="holes" title="Holes (seed cells) per turn of the roller">`
-        +`<button type="button" class="icon-btn sr-del" title="Delete roller">🗑</button></div>`).join("")
+        +`<button type="button" class="icon-btn sr-del" title="Delete roller">🗑</button></div>`
+        +(r.notes?`<div class="sub sd-rnote">${esc(r.notes)}</div>`:"")).join("")
        :`<div class="sub">No rollers listed yet.</div>`)
      +`<button type="button" class="cr-add-variety" id="srAddBtn">+ Add roller…</button>`
      +`<div class="pn-sect">Recent sowings</div>`
@@ -22635,8 +22650,8 @@ function sowDialog(p, existing){
         <label class="ap-field"><span>Date</span><input type="date" data-sw="date" value="${esc(v.date||"")}"></label>
         <label class="ap-field"><span>Seeder</span><select data-sw="seeder">${sdOptions(sdNames(), v.seeder||"")}</select></label>
         <label class="ap-field"><span>Roller</span><select data-sw="seederRoller">${sdOptions(sdRollerNames(v.seeder), v.seederRoller||"")}</select></label>
-        ${geared?`<label class="ap-field"><span>Front sprocket</span><input type="number" min="0" step="1" data-sw="frontSprocket" value="${v.frontSprocket??""}"></label>
-        <label class="ap-field"><span>Rear sprocket</span><input type="number" min="0" step="1" data-sw="rearSprocket" value="${v.rearSprocket??""}"></label>`:""}
+        ${geared?`<label class="ap-field"><span>Front sprocket</span><select data-sw="frontSprocket" data-num="1">${sdOptions(PlannerShared.JANG_SPROCKETS.map(String), v.frontSprocket!=null?String(v.frontSprocket):"")}</select></label>
+        <label class="ap-field"><span>Rear sprocket</span><select data-sw="rearSprocket" data-num="1">${sdOptions(PlannerShared.JANG_SPROCKETS.map(String), v.rearSprocket!=null?String(v.rearSprocket):"")}</select></label>`:""}
         <label class="ap-field"><span>Brush</span><input type="text" data-sw="brush" value="${esc(v.brush||"")}"></label>
         <label class="ap-field"><span>Felt</span><select data-sw="felt">${sdOptions(["On","Off"], v.felt||"")}</select></label>
         <label class="ap-field"><span>Seed lot</span><input type="text" data-sw="lot" value="${esc(v.lot||"")}" placeholder="packet / lot no."></label>
@@ -22648,7 +22663,7 @@ function sowDialog(p, existing){
     </div>`;
     ov.querySelectorAll("[data-sw]").forEach(el=>el.onchange=()=>{
       const k=el.dataset.sw;
-      v[k]= el.type==="number" ? (el.value===""?null:+el.value) : el.value;
+      v[k]= (el.type==="number"||el.dataset.num) ? (el.value===""?null:+el.value) : el.value;
       if(k==="seeder"){ v.seederRoller=""; draw(); return; }
       ov.querySelector(".sow-est").innerHTML=sdSpacingNote(v);
     });
