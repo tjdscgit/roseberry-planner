@@ -90,6 +90,11 @@
       // Overhead zones — one solenoid each: a run of wobbler heads on risers, described by its
       // hardware so the precipitation rate can be worked out rather than guessed. Supabase-only.
       irrigZones:       "tblIRzones",         // "Irrigation Zones"
+      // Seeders (the farm's own: Jang JP-1, by hand, ...), the rollers each one owns, and one
+      // record per direct sowing of what was actually used. Supabase-only.
+      seeders:          "tblSeeders",
+      seederRollers:    "tblSeederRollers",
+      sowingRecords:    "tblSowingRecords",
       // Farm Map overlay — irrigation polylines and point markers (pumps, risers, valves, tanks,
       // sheds, dams, ...) drawn on top of the block/bed layout. Supabase-only, placeholder id as
       // above. `map_features` already existed (unused) from the redesign migration — Shape is
@@ -165,7 +170,13 @@
       ct_anchor:"Anchor", ct_offset:"Offset days", ct_repeat:"Repeat every (days)", ct_until:"Repeat until",
       ct_duration:"Minutes per 15m bed",
       pt_label:"Label", pt_planting:"Planting", pt_task:"Task", pt_anchor:"Anchor", pt_offset:"Offset days",
-      pt_due:"Due date", pt_done:"Done", pt_doneDate:"Done date", pt_fertApp:"Fert application", pt_sprayApp:"Spray application", pt_start:"Start minute",
+      sd_name:"Name", sd_kind:"Kind", sd_sprockets:"Has sprockets", sd_wheel:"Wheel circumference cm",
+      sd_notes:"Notes", sd_active:"Active", sd_order:"Order",
+      sr_seeder:"Seeder", sr_name:"Name", sr_holes:"Holes per turn", sr_notes:"Notes", sr_order:"Order",
+      so_planting:"Planting", so_date:"Date", so_seeder:"Seeder", so_roller:"Roller", so_front:"Front sprocket",
+      so_rear:"Rear sprocket", so_brush:"Brush", so_felt:"Felt", so_lot:"Seed lot", so_result:"Result",
+      so_beds:"Beds", so_notes:"Notes", so_created:"Created at",
+      pt_due:"Due date", pt_done:"Done", pt_doneDate:"Done date", pt_fertApp:"Fert application", pt_sprayApp:"Spray application", pt_sowRec:"Sowing record", pt_start:"Start minute",
       pt_repeat:"Repeat every (days)", pt_until:"Repeat until", pt_duration:"Minutes per 15m bed",
       pt_assignee:"Assignee", pt_ttid:"TickTick Task ID", pt_gcalid:"Google Cal Event ID",
       // Ops app mirror id — same per-record external-id pattern as pt_ttid/pt_gcalid above.
@@ -194,7 +205,7 @@
       pl_sowDuration:"Sow duration", pl_tpDuration:"Transplant duration",
       pl_h1Assignee:"First harvest assignee", pl_h2Assignee:"Last harvest assignee",
       pl_rows:"Number of rows", pl_rowSpacing:"Spacing between rows cm", pl_plantSpacing:"In-row spacing cm",
-      pl_seeder:"Seeder type", pl_harvestUnit:"Harvest unit", pl_plantsPerUnit:"Plants per unit",
+      pl_seeder:"Seeder type", pl_seederRoller:"Seeder roller", pl_frontSprocket:"Front sprocket", pl_rearSprocket:"Rear sprocket", pl_brush:"Brush", pl_felt:"Felt", pl_seederNotes:"Seeder notes", pl_harvestUnit:"Harvest unit", pl_plantsPerUnit:"Plants per unit",
       pl_price:"Price", pl_yield:"Yield per bed metre", pl_yieldTyped:"Yield typed in", pl_pickEvery:"Pick every days", pl_perPick:"Per plant per pick",
       pl_trayType:"Tray type", pl_seedsPerCell:"Seeds per cell", pl_daysToGerminate:"Days to germinate",
       pl_germTemp:"Optimal germ temp (°C)", pl_pottingUp:"Requires potting up",
@@ -214,7 +225,7 @@
       cr_method:"Method", cr_nursery:"Days in nursery", cr_dtm:"Days to maturity",
       cr_window:"Harvest window days", cr_gap:"Succession interval days",
       cr_rows:"Rows per bed", cr_rowSpacing:"Spacing between rows cm", cr_plantSpacing:"In-row spacing cm",
-      cr_seeder:"Seeder type", cr_harvestUnit:"Harvest unit", cr_plantsPerUnit:"Plants per unit",
+      cr_seeder:"Seeder type", cr_seederRoller:"Seeder roller", cr_frontSprocket:"Front sprocket", cr_rearSprocket:"Rear sprocket", cr_brush:"Brush", cr_felt:"Felt", cr_seederNotes:"Seeder notes", cr_harvestUnit:"Harvest unit", cr_plantsPerUnit:"Plants per unit",
       cr_price:"Price", cr_yield:"Yield per bed metre", cr_yieldTyped:"Yield typed in",
       cr_pickEvery:"Pick every days", cr_perPick:"Per plant per pick",
       cr_trayType:"Tray type", cr_seedsPerCell:"Seeds per cell", cr_daysToGerminate:"Days to germinate",
@@ -222,7 +233,7 @@
       va_name:"Variety", va_crop:"Crop", va_method:"Method", va_nursery:"Days in nursery",
       va_dtm:"Days to maturity", va_window:"Harvest window days", va_gap:"Succession interval days",
       va_rows:"Rows per bed", va_rowSpacing:"Spacing between rows cm", va_plantSpacing:"In-row spacing cm",
-      va_seeder:"Seeder type", va_harvestUnit:"Harvest unit", va_plantsPerUnit:"Plants per unit",
+      va_seeder:"Seeder type", va_seederRoller:"Seeder roller", va_frontSprocket:"Front sprocket", va_rearSprocket:"Rear sprocket", va_brush:"Brush", va_felt:"Felt", va_seederNotes:"Seeder notes", va_harvestUnit:"Harvest unit", va_plantsPerUnit:"Plants per unit",
       va_price:"Price", va_yield:"Yield per bed metre", va_pickEvery:"Pick every days", va_perPick:"Per plant per pick",
       va_trayType:"Tray type", va_seedsPerCell:"Seeds per cell", va_daysToGerminate:"Days to germinate",
       va_germTemp:"Optimal germ temp (°C)", va_pottingUp:"Requires potting up",
@@ -387,6 +398,7 @@
     fertProducts:"fert_products",
     weatherObs:"weather_observations", irrigEvents:"irrigation_events",
     irrigSettings:"irrigation_settings", irrigZones:"irrigation_zones",
+    seeders:"seeders", seederRollers:"seeder_rollers", sowingRecords:"sowing_records",
     mapFeatures:"map_features", farmSettings:"farm_settings",
     boardNotes:"board_notes", boardReplies:"board_replies", boardTallies:"board_tallies",
   };
@@ -398,9 +410,9 @@
 
   // fields shared identically by Crop, Crop Varieties and Plantings — see roseberry-planner.html
   // for the long-form rationale (kept only in one place here, not re-explained per call site).
-  const DEFAULT_KEYS = ["method","nursery","dtm","window","gap","rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
-  const SELECT_DEFAULT_KEYS = new Set(["method","seeder","harvestUnit","trayType","pottingUp"]);
-  const PLANTING_DEFAULT_KEYS = ["rows","rowSpacing","plantSpacing","seeder","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
+  const DEFAULT_KEYS = ["method","nursery","dtm","window","gap","rows","rowSpacing","plantSpacing","seeder","seederRoller","frontSprocket","rearSprocket","brush","felt","seederNotes","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
+  const SELECT_DEFAULT_KEYS = new Set(["method","seeder","seederRoller","brush","felt","seederNotes","harvestUnit","trayType","pottingUp"]);
+  const PLANTING_DEFAULT_KEYS = ["rows","rowSpacing","plantSpacing","seeder","seederRoller","frontSprocket","rearSprocket","brush","felt","seederNotes","harvestUnit","plantsPerUnit","price","yield","pickEvery","perPick","trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"];
 
   // Yield per bed metre from spacing (user's design, 2026-10-17):
   //   plants/m (rows x 100 / in-row spacing) x picks x per plant, per pick
@@ -1192,6 +1204,7 @@
       done:!!r.fields[F.pt_done],
       doneDate:r.fields[F.pt_doneDate] || "",
       fertAppId:r.fields[F.pt_fertApp] || null,
+      sowRecId:r.fields[F.pt_sowRec] || null,
       sprayAppId:r.fields[F.pt_sprayApp] || null,
       start: r.fields[F.pt_start]==null ? null : Number(r.fields[F.pt_start]),
       repeat:num(r.fields[F.pt_repeat]),
@@ -2925,6 +2938,41 @@
   // hardware: total flow over the area it covers (heads × head flow ÷ width × length), or one
   // head's flow over its own riser × lateral rectangle when the area isn't entered. A catch-can
   // reading, when there is one, beats both — it's what actually landed.
+  // ---- Seeders. A seeder's name is what crops/plantings store in "Seeder type", so renaming one
+  // is a rename everywhere it's used (the page does that). Rollers belong to one seeder.
+  function parseSeeders(records){
+    const F=CFG.f;
+    return (records||[]).map(r=>{ const f=r.fields||{}; return {
+      id:r.id, name:f[F.sd_name]||"Seeder", kind:f[F.sd_kind]||"", sprockets:!!f[F.sd_sprockets],
+      wheel:num(f[F.sd_wheel]), notes:f[F.sd_notes]||"", active:f[F.sd_active]!==false, order:num(f[F.sd_order]),
+    }; }).sort((a,b)=>(a.order??999)-(b.order??999) || a.name.localeCompare(b.name));
+  }
+  function parseSeederRollers(records){
+    const F=CFG.f;
+    return (records||[]).map(r=>{ const f=r.fields||{}; return {
+      id:r.id, seederId:f[F.sr_seeder]||"", name:f[F.sr_name]||"", holes:num(f[F.sr_holes]),
+      notes:f[F.sr_notes]||"", order:num(f[F.sr_order]),
+    }; }).sort((a,b)=>(a.order??999)-(b.order??999) || a.name.localeCompare(b.name,undefined,{numeric:true}));
+  }
+  function parseSowingRecords(records){
+    const F=CFG.f;
+    return (records||[]).map(r=>{ const f=r.fields||{}; return {
+      id:r.id, plantingId:f[F.so_planting]||"", date:String(f[F.so_date]||"").slice(0,10),
+      seeder:f[F.so_seeder]||"", roller:f[F.so_roller]||"", front:num(f[F.so_front]), rear:num(f[F.so_rear]),
+      brush:f[F.so_brush]||"", felt:f[F.so_felt]||"", lot:f[F.so_lot]||"", result:f[F.so_result]||"",
+      bedIds:(f[F.so_beds]||[]).slice(), notes:f[F.so_notes]||"", created:f[F.so_created]||"",
+    }; }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  }
+  // Seed spacing in the row, cm, for a geared seeder: one turn of the ground wheel moves the
+  // seeder `wheel` cm and turns the roller front/rear of a turn, dropping `holes` seeds per roller
+  // turn. Needs the wheel circumference entered on the seeder — null until then, never a guess.
+  function seederSpacing(seeder, roller, front, rear){
+    if(!seeder || !(seeder.wheel>0) || !roller || !(roller.holes>0)) return null;
+    const ratio = seeder.sprockets ? ((front>0 && rear>0) ? front/rear : null) : 1;
+    if(ratio==null) return null;
+    return seeder.wheel / (ratio * roller.holes);
+  }
+
   function parseIrrigZones(records){
     const F=CFG.f;
     return (records||[]).map(r=>{ const f=r.fields||{}; return {
@@ -3756,6 +3804,7 @@
     IRRIG_DEFAULTS, SOIL_TYPES, soilAWC,
     parseBlocks, parseWeatherObs, indexWeatherByDate, parseIrrigationEvents, parseIrrigSettings,
     blockForBed, blockMatch, irrigSpecFor, irrigSpecsFor, irrigSystemsFor, irrigRunTime,
+    parseSeeders, parseSeederRollers, parseSowingRecords, seederSpacing,
     parseIrrigZones, zonePrecip, zoneHeads, SPRINKLER_HEADS, sprinklerLookup, triBool,
     CLIMATE, WARM_CROPS, isWarmCrop, baseTempFor, CLIMATE_DAMP, climateAdjustedDTM,
     irIsoToDate, irDateToISO, irAddDays, irDiffDays, irDayOfYear,

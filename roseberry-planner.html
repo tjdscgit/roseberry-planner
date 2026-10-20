@@ -321,6 +321,18 @@
   /* Dripline panel. Set apart from the issue cards above it because it describes the bed's
      plumbing, not a problem with the bed — a dashed edge reads as "reference", not "attention". */
   .bd-irrig{border-style:dashed}
+  .sd-roller{display:flex;gap:.4rem;align-items:center;margin:.25rem 0}
+  .sd-roller input[type=text]{flex:1 1 auto}
+  .sd-roller .cr-num{width:5rem}
+  .sd-rec{flex-direction:column;align-items:flex-start;gap:.1rem}
+  .sow-box{width:min(560px,calc(100vw - 2rem));max-height:calc(100vh - 2rem);overflow:auto}
+  .sow-sub{font-size:.8rem;color:var(--ink-2);margin:-.2rem 0 .7rem}
+  .sow-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+  .sow-grid .sow-wide{grid-column:1/-1}
+  .sow-est{margin:.6rem 0 .2rem;min-height:1em}
+  .cs-sd-est{margin-top:.5rem}
+  .tl-sow-rec{margin-top:.4rem}
+  @media (max-width:760px){ .sow-grid{grid-template-columns:1fr} }
   .bd-irrig-sec{font-family:var(--mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);margin:.2rem 0 -.2rem}
   .bd-irrig-btn{white-space:nowrap}
   .bd-irrig-btn.on{border-color:var(--steel);color:var(--steel)}
@@ -5570,10 +5582,11 @@
       <div class="cr-split">
       <div class="cr-left">
       <div class="vw-title">
-        <span class="vw-name">Tray types &amp; tarps</span>
+        <span class="vw-name">Trays, seeders &amp; tarps</span>
         <span class="sub" id="mcSummary"></span>
         <span class="spacer"></span>
         <button class="btn-ghost" id="ttAddBtn" type="button">＋ Tray type</button>
+        <button class="btn-ghost" id="sdAddBtn" type="button">＋ Seeder</button>
         <button class="btn-primary" id="trpAddBtn" type="button">＋ Tarp a bed</button>
       </div>
       <div class="cr-wrap mc-wrap">
@@ -5590,6 +5603,15 @@
               </tr>
             </thead>
             <tbody id="ttBody"></tbody>
+          </table>
+        </div>
+
+        <div class="mc-sect">Seeders</div>
+        <p class="mc-hint">What you sow with, and the rollers each one has. Crops and plantings pick from here; ticking Sow on a direct-seeded planting records the settings actually used.</p>
+        <div class="mc-card" style="max-width:620px">
+          <table class="lib-table" id="sdTable">
+            <thead><tr><th>Name</th><th>Kind</th><th class="lib-num">Rollers</th><th class="lib-num" title="Crops that default to this seeder">Crops</th></tr></thead>
+            <tbody id="sdBody"></tbody>
           </table>
         </div>
 
@@ -7277,13 +7299,16 @@
             <label class="ap-field"><span>In the row (cm)</span>
               <input type="number" id="apPlantSpacing" min="0" step="0.1"></label>
             <label class="ap-field"><span>Seeder</span>
-              <select id="apSeeder">
-                <option value="">—</option>
-                <option value="Hand">Hand</option>
-                <option value="Push seeder">Push seeder</option>
-                <option value="Precision seeder">Precision seeder</option>
-                <option value="Multi-row seeder">Multi-row seeder</option>
-              </select></label>
+              <select id="apSeeder"><option value="">—</option></select></label>
+          </div>
+          <div class="ap2-grid4 ap-seedgrid">
+            <label class="ap-field"><span>Roller</span><select id="apSeederRoller"><option value="">—</option></select></label>
+            <label class="ap-field ap-sprk"><span>Front sprocket</span><input type="number" id="apFrontSprocket" min="0" step="1"></label>
+            <label class="ap-field ap-sprk"><span>Rear sprocket</span><input type="number" id="apRearSprocket" min="0" step="1"></label>
+            <label class="ap-field"><span>Brush</span><input type="text" id="apBrush"></label>
+            <label class="ap-field"><span>Felt</span><select id="apFelt"><option value="">—</option><option>On</option><option>Off</option></select></label>
+            <label class="ap-field" style="grid-column:span 2"><span>Seeder notes</span><input type="text" id="apSeederNotes"></label>
+            <div class="sub" id="apSeedEst" style="grid-column:1/-1"></div>
           </div>
           <div class="ap2-cards2">
             <div class="ap2-card">
@@ -7764,7 +7789,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, irrigZones:[], mapFeatures:[] };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, irrigZones:[], seeders:[], seederRollers:[], sowingRecords:[], mapFeatures:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -7903,7 +7928,7 @@ async function loadAll(opts){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings, boardNotes, boardReplies, boardTallies, irrigZones] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings, boardNotes, boardReplies, boardTallies, irrigZones, seeders, seederRollers, sowingRecords] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -7945,6 +7970,7 @@ async function loadAll(opts){
       fwFetch(CFG.tables.farmSettings),
       fwFetch(CFG.tables.boardNotes), fwFetch(CFG.tables.boardReplies), fwFetch(CFG.tables.boardTallies),
       fwFetch(CFG.tables.irrigZones),
+      fwFetch(CFG.tables.seeders), fwFetch(CFG.tables.seederRollers), fwFetch(CFG.tables.sowingRecords),
     ]);
     if(lt){ LOAD_TRACK=null; loadMsg("drawing the planner…"); }
     const F = CFG.f;
@@ -8142,6 +8168,9 @@ async function loadAll(opts){
     data.irrigEvents   = PlannerShared.parseIrrigationEvents(irrigEvents);
     data.irrigSettings = PlannerShared.parseIrrigSettings(irrigSettings);
     data.irrigZones = PlannerShared.parseIrrigZones(irrigZones);
+    data.seeders = PlannerShared.parseSeeders(seeders);
+    data.seederRollers = PlannerShared.parseSeederRollers(seederRollers);
+    data.sowingRecords = PlannerShared.parseSowingRecords(sowingRecords);
     fmSyncSatShared(farmSettings);
     data.farmSettings = ((farmSettings||[]).find(r=>r.id==="farm")||{}).fields || {};
     lastLoadAt = Date.now();
@@ -16406,7 +16435,12 @@ function tlRenderPanel(p, panel, closeFn, opts){
   const rowsHtml=tlKv("Number of rows",esc(dash(p.rows)))
     +tlKv("Spacing between rows",esc(p.rowSpacing?p.rowSpacing+" cm":"–"))
     +tlKv("Spacing on the row",esc(p.plantSpacing?p.plantSpacing+" cm":"–"))
-    +tlKv("Seeder type",esc(dash(p.seeder)));
+    +tlKv("Seeder type",esc(dash(p.seeder)))
+    +(p.seeder?tlKv("Seeder settings",esc([p.seederRoller,(p.frontSprocket&&p.rearSprocket)?`${p.frontSprocket}/${p.rearSprocket}`:"",p.brush?`brush ${p.brush}`:"",p.felt?`felt ${String(p.felt).toLowerCase()}`:""].filter(Boolean).join(" · ")||"–")):"")
+    +(()=>{ const r=sowRecordFor(p.id);
+      if(r) return tlKv("Sown with",esc(`${fmt(r.date)} · ${[r.seeder,r.roller,(r.front&&r.rear)?`${r.front}/${r.rear}`:"",r.felt?`felt ${r.felt.toLowerCase()}`:""].filter(Boolean).join(" · ")}${r.result?" — "+r.result:""}`))
+        +`<button type="button" class="btn-ghost tl-sow-rec" data-sowrec="${esc(r.id)}">Edit sowing record</button>`;
+      return !p.tp && p.sowActual ? `<button type="button" class="btn-ghost tl-sow-rec">Record sowing settings</button>` : ""; })();
 
   // trays required: same plants-per-metre math as the edit dialog's summary sidebar
   const plantsPerMetre = (p.rows>0 && p.plantSpacing>0) ? p.rows*100/p.plantSpacing : null;
@@ -16588,6 +16622,10 @@ function tlRenderPanel(p, panel, closeFn, opts){
     panel._tlTab=b.dataset.tltab; tlRenderPanel(p, panel, closeFn, opts);
   });
   panel.querySelector(".tl-remove-crop-btn").onclick=()=>tlOpenRemoveCropModal(p, panel, closeFn, opts);
+  panel.querySelectorAll(".tl-sow-rec").forEach(b=>b.onclick=()=>{
+    const r=b.dataset.sowrec ? (data.sowingRecords||[]).find(x=>x.id===b.dataset.sowrec) : null;
+    sowDialog(p, r);
+  });
   panel.querySelector(".tl-bulk-sel-btn").onclick=()=>{ plSelToggle(p.id); tlRenderPanel(p, panel, closeFn, opts); };
   const createJobs=panel.querySelector(".tl-all-create");
   if(createJobs) createJobs.onclick=async ()=>{
@@ -17117,7 +17155,7 @@ function apApplyDefaults(cropId, varietyId){
   $ap("apRows").value = defs.rows ?? "";
   $ap("apRowSpacing").value = defs.rowSpacing ?? "";
   $ap("apPlantSpacing").value = defs.plantSpacing ?? "";
-  $ap("apSeeder").value = defs.seeder || "";
+  apSeedFill(defs);
   $ap("apHarvestUnit").value = defs.harvestUnit || "";
   $ap("apPlantsPerUnit").value = defs.plantsPerUnit ?? "";
   $ap("apPrice").value = defs.price ?? "";
@@ -17450,7 +17488,29 @@ function apRenderExtras(){
 // ---- Crop-library values. Blank planting fields are filled from the crop/variety defaults when
 // the dialog opens (apFillBlanksFromDefaults), and a small "crop" tag marks any field still holding
 // the library's value; typing a different value makes it this planting's own and the tag goes.
+// Seeder settings in the dialog: [input id, planting key, numeric?]
+const AP_SEED_FIELDS=[["apSeederRoller","seederRoller"],["apFrontSprocket","frontSprocket",true],["apRearSprocket","rearSprocket",true],
+  ["apBrush","brush"],["apFelt","felt"],["apSeederNotes","seederNotes"]];
+// Fill the seeder + roller dropdowns (keeping a stored value that's no longer in the list) and set
+// all seven fields from `v` when given.
+function apSeedFill(v){
+  const cur=v ? (v.seeder||"") : $ap("apSeeder").value;
+  $ap("apSeeder").innerHTML=sdOptions(sdNames(), cur);
+  const roller=v ? (v.seederRoller||"") : $ap("apSeederRoller").value;
+  $ap("apSeederRoller").innerHTML=sdOptions(sdRollerNames(cur), roller);
+  if(v) AP_SEED_FIELDS.forEach(([id,k])=>{ if(id!=="apSeederRoller") $ap(id).value=v[k]??""; });
+  const sd=sdByName(cur);
+  document.querySelectorAll(".ap-sprk").forEach(el=>el.hidden=!!(sd && !sd.sprockets));
+  apSeedEst();
+}
+function apSeedEst(){
+  const el=$ap("apSeedEst"); if(!el) return;
+  el.innerHTML=sdSpacingNote({seeder:$ap("apSeeder").value, seederRoller:$ap("apSeederRoller").value,
+    frontSprocket:$ap("apFrontSprocket").value, rearSprocket:$ap("apRearSprocket").value});
+}
+const apSeedVal=([id,,isNum])=>{ const x=$ap(id).value; return isNum ? (x===""?null:+x) : (x||null); };
 const AP_DEFAULT_FIELDS={apRows:"rows", apRowSpacing:"rowSpacing", apPlantSpacing:"plantSpacing", apSeeder:"seeder",
+  apSeederRoller:"seederRoller", apFrontSprocket:"frontSprocket", apRearSprocket:"rearSprocket", apBrush:"brush", apFelt:"felt", apSeederNotes:"seederNotes",
   apHarvestUnit:"harvestUnit", apPlantsPerUnit:"plantsPerUnit", apPrice:"price", apYield:"yield", apPickEvery:"pickEvery", apPerPick:"perPick",
   apTrayType:"trayType", apSeedsPerCell:"seedsPerCell", apDaysToGerminate:"daysToGerminate", apGermTemp:"germTemp"};
 function apDefaultGaps(){
@@ -18035,7 +18095,7 @@ function apOpenEdit(p){
   $ap("apRows").value = p.rows ?? "";
   $ap("apRowSpacing").value = p.rowSpacing ?? "";
   $ap("apPlantSpacing").value = p.plantSpacing ?? "";
-  $ap("apSeeder").value = p.seeder || "";
+  apSeedFill(p);
   $ap("apHarvestUnit").value = p.harvestUnit || "";
   $ap("apPlantsPerUnit").value = p.plantsPerUnit ?? "";
   $ap("apPrice").value = p.price ?? "";
@@ -18100,7 +18160,7 @@ function tlPrefillApFromPlanting(p){
   $ap("apRows").value = p.rows ?? "";
   $ap("apRowSpacing").value = p.rowSpacing ?? "";
   $ap("apPlantSpacing").value = p.plantSpacing ?? "";
-  $ap("apSeeder").value = p.seeder || "";
+  apSeedFill(p);
   $ap("apHarvestUnit").value = p.harvestUnit || "";
   $ap("apPlantsPerUnit").value = p.plantsPerUnit ?? "";
   $ap("apPrice").value = p.price ?? "";
@@ -18196,6 +18256,7 @@ function apSnapshot(){
     sowActual:$ap("apSowActual").value, tpActual:$ap("apTpActual").value,
     rows:$ap("apRows").value, rowSpacing:$ap("apRowSpacing").value, plantSpacing:$ap("apPlantSpacing").value,
     seeder:$ap("apSeeder").value, harvestUnit:$ap("apHarvestUnit").value, plantsPerUnit:$ap("apPlantsPerUnit").value,
+    ...Object.fromEntries(AP_SEED_FIELDS.map(([id,k])=>[k,$ap(id).value])),
     price:$ap("apPrice").value, yield:$ap("apYield").value, pickEvery:$ap("apPickEvery").value, perPick:$ap("apPerPick").value,
     trayType:$ap("apTrayType").value, seedsPerCell:$ap("apSeedsPerCell").value,
     daysToGerminate:$ap("apDaysToGerminate").value, germTemp:$ap("apGermTemp").value, pottingUp:apPottingUpVal(),
@@ -18399,6 +18460,7 @@ async function apDoCreate(){
     if(rowSpacing!=null) f[F.pl_rowSpacing]=rowSpacing;
     if(plantSpacing!=null) f[F.pl_plantSpacing]=plantSpacing;
     if(seeder) f[F.pl_seeder]=seeder;
+    AP_SEED_FIELDS.forEach(d=>{ const x=apSeedVal(d); if(x!=null) f[F["pl_"+d[1]]]=x; });
     if(harvestUnit) f[F.pl_harvestUnit]=harvestUnit;
     if(plantsPerUnit!=null) f[F.pl_plantsPerUnit]=plantsPerUnit;
     f[F.pl_pickEvery]=$ap("apPickEvery").value===""?null:(+$ap("apPickEvery").value); f[F.pl_perPick]=$ap("apPerPick").value===""?null:(+$ap("apPerPick").value);
@@ -18510,6 +18572,7 @@ async function apDoSave(){
     f[F.pl_rowSpacing]=$ap("apRowSpacing").value===""?null:(+$ap("apRowSpacing").value);
     f[F.pl_plantSpacing]=$ap("apPlantSpacing").value===""?null:(+$ap("apPlantSpacing").value);
     f[F.pl_seeder]=$ap("apSeeder").value||null;
+    AP_SEED_FIELDS.forEach(d=>{ f[F["pl_"+d[1]]]=apSeedVal(d); });
     f[F.pl_harvestUnit]=$ap("apHarvestUnit").value||null;
     f[F.pl_plantsPerUnit]=$ap("apPlantsPerUnit").value===""?null:(+$ap("apPlantsPerUnit").value);
     f[F.pl_pickEvery]=$ap("apPickEvery").value===""?null:(+$ap("apPickEvery").value); f[F.pl_perPick]=$ap("apPerPick").value===""?null:(+$ap("apPerPick").value);
@@ -18556,6 +18619,7 @@ async function apDoSave(){
       if(changedRowSpacing) f[F.pl_rowSpacing]=$ap("apRowSpacing").value===""?null:(+$ap("apRowSpacing").value);
       if(changedPlantSpacing) f[F.pl_plantSpacing]=$ap("apPlantSpacing").value===""?null:(+$ap("apPlantSpacing").value);
       if(changedSeeder) f[F.pl_seeder]=$ap("apSeeder").value||null;
+      AP_SEED_FIELDS.forEach(d=>{ if(chg(d[1])) f[F["pl_"+d[1]]]=apSeedVal(d); });
       if(changedHarvestUnit) f[F.pl_harvestUnit]=$ap("apHarvestUnit").value||null;
       if(changedPlantsPerUnit) f[F.pl_plantsPerUnit]=$ap("apPlantsPerUnit").value===""?null:(+$ap("apPlantsPerUnit").value);
       if(chg("pickEvery")) f[F.pl_pickEvery]=$ap("apPickEvery").value===""?null:(+$ap("apPickEvery").value);
@@ -18615,6 +18679,7 @@ function currentVal(k){
   const map={bedId:"apBed",bm:"apBm",group:"apGroup",
     rows:"apRows",rowSpacing:"apRowSpacing",plantSpacing:"apPlantSpacing",
     seeder:"apSeeder",harvestUnit:"apHarvestUnit",plantsPerUnit:"apPlantsPerUnit",price:"apPrice",yield:"apYield",pickEvery:"apPickEvery",perPick:"apPerPick",
+    ...Object.fromEntries(AP_SEED_FIELDS.map(([id,k])=>[k,id])),
     trayType:"apTrayType",seedsPerCell:"apSeedsPerCell",daysToGerminate:"apDaysToGerminate",germTemp:"apGermTemp",
     notes:"apNotes"};
   return $ap(map[k]).value;
@@ -18688,7 +18753,8 @@ $ap("apSuggestBedsBtn").addEventListener("click",()=>apSetSuggestOpen(!apSuggest
 $ap("apRows").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apRowSpacing").addEventListener("input",apUpdateRowsSummary);
 $ap("apPlantSpacing").addEventListener("input",()=>{ apUpdateRowsSummary(); apSyncYield(); apUpdateHarvestSummary(); });
-$ap("apSeeder").addEventListener("change",apUpdateSummarySidebar);
+$ap("apSeeder").addEventListener("change",()=>{ $ap("apSeederRoller").value=""; apSeedFill(); apUpdateSummarySidebar(); });
+["apSeederRoller","apFrontSprocket","apRearSprocket"].forEach(id=>$ap(id).addEventListener("change",apSeedEst));
 $ap("apPlantsPerUnit").addEventListener("input",()=>{ apSyncYield(); apUpdateHarvestSummary(); });
 $ap("apMultiPick").addEventListener("change",e=>{
   if(e.target.checked){
@@ -19216,7 +19282,13 @@ const CR_ROW_FIELDS=[
   {k:"rows", step:"1", divider:true, label:"Number of rows", group:"Row Spacing"},
   {k:"rowSpacing", step:"0.1", label:"Row spacing (cm)", group:"Row Spacing"},
   {k:"plantSpacing", step:"0.1", label:"Plant spacing (cm)", group:"Row Spacing"},
-  {k:"seeder", type:"select", options:["Hand","Push seeder","Precision seeder","Multi-row seeder"], label:"Seeder", group:"Row Spacing"},
+  {k:"seeder", type:"select", options:()=>sdNames(), label:"Seeder", group:"Row Spacing"},
+  {k:"seederRoller", type:"select", options:()=>sdRollerNames(csDefs(csCrop,csVar).seeder), label:"Roller", group:"Seeder"},
+  {k:"frontSprocket", step:"1", label:"Front sprocket", group:"Seeder"},
+  {k:"rearSprocket", step:"1", label:"Rear sprocket", group:"Seeder"},
+  {k:"brush", type:"text", label:"Brush", group:"Seeder"},
+  {k:"felt", type:"select", options:["On","Off"], label:"Felt", group:"Seeder"},
+  {k:"seederNotes", type:"text", label:"Seeder notes", group:"Seeder"},
   {k:"harvestUnit", type:"select", options:["Each","Bunch","Kilogram","Box","Bag","Punnet","Dozen","Bundle"], divider:true, label:"Unit", group:"Harvest"},
   {k:"plantsPerUnit", step:"1", label:"Number / unit", group:"Harvest"},
   {k:"price", step:"0.01", label:"Price", group:"Harvest"},
@@ -19569,6 +19641,8 @@ function csInputHTML(k){
     const blank=v && !csBlank(inh) ? `${inh} ·` : "—";
     ctl=`<select data-cs-k="${k}"><option value="">${esc(blank)}</option>`
       +opts.map(o=>`<option${String(o)===String(val)?" selected":""}>${esc(o)}</option>`).join("")+`</select>`;
+  }else if(f.type==="text"){
+    ctl=`<input type="text" data-cs-k="${k}" value="${esc(String(val))}" placeholder="${esc(v && !csBlank(inh) ? String(inh) : "")}">`;
   }else{
     const ph=v && !csBlank(inh) ? String(inh) : (k==="yield" && PlannerShared.yieldFromSpacing(csDefs(csCrop,csVar)) ? String(PlannerShared.yieldFromSpacing(csDefs(csCrop,csVar)).v) : "");
     ctl=`<input type="number" min="0" step="${f.step}" data-cs-k="${k}" value="${esc(String(val))}" placeholder="${esc(ph)}">`;
@@ -19646,7 +19720,8 @@ function csSheetHTML(){
       +`${csTileHTML("window","Harvest window")}${csTileHTML("gap","Succession gap")}`
       +`<div class="cs-tile"><span class="cs-tile-l">Maturity across the year</span><span class="cs-tile-v" style="font-size:17px;line-height:29px">${climate||"—"}</span><span class="cs-tile-f">climate-adjusted</span></div></div>`;
   const card=(title,body,id)=>`<section class="cs-card"${id?` id="${id}"`:""}><div class="cs-card-h"><h3>${title}</h3></div>${body}</section>`;
-  const bed=card("In the bed", `<div id="csBedPic">${csBedSVG(d)}</div>`+(csEdit?csFieldsHTML(["rows","rowSpacing","plantSpacing","seeder"]):csDlHTML(["rows","rowSpacing","plantSpacing","seeder"])));
+  const bed=card("In the bed", `<div id="csBedPic">${csBedSVG(d)}</div>`+(csEdit?csFieldsHTML(["rows","rowSpacing","plantSpacing"]):csDlHTML(["rows","rowSpacing","plantSpacing"])))
+    +card("Seeder", (csEdit?csFieldsHTML(sdKeysFor(d.seeder)):csDlHTML(sdKeysFor(d.seeder)))+`<div class="cs-sd-est">${sdSpacingNote(d)}</div>`);
   const harvest=card("Harvest &amp; yield", (csEdit?csFieldsHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick","yield"]):csDlHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick"]))+`<div id="csYield">${csYieldNote(d)}</div>`);
   const nursery=card("Nursery", csEdit?csFieldsHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]):csDlHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]));
   const used=card("Where it's used", csUsedHTML());
@@ -19687,7 +19762,10 @@ async function csSaveField(k, raw){
   const val=SELECT_DEFAULT_KEYS.has(k) ? raw : (raw===""?"":(+raw));
   if(csVar) await saveVarietyField(csVar,k,val);
   else await crSaveWithYield(csCrop,k,val,null);
+  // The seeder decides which rollers and fields the Seeder card offers, so redraw it whole.
+  if(k==="seeder") return csRender();
   csRefreshDerived(k);
+  const est=document.querySelector(".cs-sd-est"); if(est) est.innerHTML=sdSpacingNote(csDefs(csCrop,csVar));
 }
 function csBind(root){
   const s=document.getElementById("csSearch");
@@ -22369,6 +22447,246 @@ function trpState(t){
   return {label:"Down", color:"#9C6D3E", tone:"#9C6D3E"};
 }
 
+/* ---- Seeders (2026-10-21). The farm's seeders and the rollers each owns live on the Trays page.
+   A crop/variety/planting stores the seeder by NAME in "Seeder type" plus its settings (roller,
+   sprockets, brush, felt, notes); ticking Sow on a direct-seeded planting asks what was actually
+   used and keeps it as a sowing record. ---- */
+const SD_SEED_KEYS=["seederRoller","frontSprocket","rearSprocket","brush","felt","seederNotes"];
+function sdNames(){ return (data.seeders||[]).filter(x=>x.active).map(x=>x.name); }
+function sdByName(name){ return (data.seeders||[]).find(x=>x.name===name)||null; }
+function sdRollersOf(name){ const sd=sdByName(name); return sd ? (data.seederRollers||[]).filter(r=>r.seederId===sd.id) : []; }
+function sdRollerNames(name){ return sdRollersOf(name).map(r=>r.name); }
+// Which setting fields a seeder has: sprockets only on a geared one (the Jang); a seeder with no
+// rollers listed still gets the roller box so it can be filled in.
+function sdKeysFor(name){
+  const sd=sdByName(name);
+  const keys=["seeder"];
+  if(!name) return keys;
+  keys.push("seederRoller");
+  if(!sd || sd.sprockets) keys.push("frontSprocket","rearSprocket");
+  keys.push("brush","felt","seederNotes");
+  return keys;
+}
+function sdSpacingFor(v){
+  const sd=sdByName(v.seeder), r=sdRollersOf(v.seeder).find(x=>x.name===v.seederRoller);
+  return PlannerShared.seederSpacing(sd, r, +v.frontSprocket, +v.rearSprocket);
+}
+function sdSpacingNote(v){
+  if(!v || !v.seeder) return "";
+  const est=sdSpacingFor(v);
+  if(est!=null) return `<span class="sub">≈ ${irNum(est,1)} cm between seeds in the row (estimate from roller + sprockets)</span>`;
+  const sd=sdByName(v.seeder);
+  if(sd && !(sd.wheel>0) && v.seederRoller) return `<span class="sub">Add ${esc(sd.name)}'s wheel circumference and the roller's hole count on the Trays, seeders &amp; tarps page to get a spacing estimate.</span>`;
+  return "";
+}
+function sdOptions(list, val){
+  const opts=list.slice(); if(val && !opts.includes(val)) opts.push(val);
+  return `<option value="">—</option>`+opts.map(o=>`<option${o===val?" selected":""}>${esc(o)}</option>`).join("");
+}
+
+// ---- the Seeders list + panel ----
+function sdRenderList(){
+  const body=document.getElementById("sdBody"); if(!body) return;
+  const list=data.seeders||[];
+  if(!list.length){ body.innerHTML=`<tr style="cursor:default"><td colspan="4"><div class="lib-empty">No seeders yet.</div></td></tr>`; return; }
+  body.innerHTML="";
+  list.forEach(sd=>{
+    const tr=document.createElement("tr");
+    if(mcSelected?.kind==="seeder" && mcSelected.id===sd.id) tr.className="cr-row-sel";
+    const rollers=(data.seederRollers||[]).filter(r=>r.seederId===sd.id).length;
+    const crops=Object.values(data.cropDefs||{}).filter(cd=>cd&&cd.seeder===sd.name).length;
+    tr.innerHTML=`<td><div class="lib-name">${esc(sd.name)}${sd.active?"":` <span class="sub">(not in use)</span>`}</div></td>`
+      +`<td>${esc(sd.kind||"—")}</td><td class="lib-num">${rollers||"—"}</td><td class="lib-num">${crops||"—"}</td>`;
+    tr.onclick=()=>{ mcSelected=(mcSelected?.kind==="seeder"&&mcSelected.id===sd.id)?null:{kind:"seeder",id:sd.id}; mcRenderPanel(); sdRenderList(); };
+    body.appendChild(tr);
+  });
+}
+const SD_FIELDS={name:"sd_name",kind:"sd_kind",sprockets:"sd_sprockets",wheel:"sd_wheel",notes:"sd_notes",active:"sd_active",order:"sd_order"};
+const SR_FIELDS={seederId:"sr_seeder",name:"sr_name",holes:"sr_holes",notes:"sr_notes",order:"sr_order"};
+async function sdSave(sd, key, val){
+  const prev=sd[key]; sd[key]=val;
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.seeders, sd.id, {[CFG.f[SD_FIELDS[key]]]:val});
+    // A rename follows through to every crop, variety and planting naming the old seeder.
+    if(key==="name" && prev && prev!==val) await sdRenameEverywhere(prev, val);
+  }catch(e){ sd[key]=prev; console.error(e); alert("Couldn't save seeder:\n"+e.message); }
+  buildMiscTab();
+}
+async function sdRenameEverywhere(from, to){
+  const jobs=[];
+  Object.entries(data.cropDefs||{}).forEach(([id,cd])=>{ if(cd.seeder===from){ cd.seeder=to; jobs.push(atPatch(CFG.farmBase,CFG.tables.crops,id,{[CFG.f.cr_seeder]:to})); } });
+  Object.values(data.varietiesById||{}).forEach(v=>{ if(v.seeder===from){ v.seeder=to; jobs.push(atPatch(CFG.farmBase,CFG.tables.varieties,v.id,{[CFG.f.va_seeder]:to})); } });
+  (data.plantings||[]).forEach(pl=>{ if(pl.seeder===from){ pl.seeder=to; jobs.push(atPatch(CFG.farmBase,CFG.tables.plantings,pl.id,{[CFG.f.pl_seeder]:to})); } });
+  await Promise.all(jobs);
+}
+async function sdAdd(){
+  const name=(prompt("New seeder name (e.g. Jang JP-3, Earthway):")||"").trim(); if(!name) return;
+  if(sdByName(name)){ alert(`"${name}" is already a seeder.`); return; }
+  const fields={[CFG.f.sd_name]:name, [CFG.f.sd_active]:true, [CFG.f.sd_order]:(data.seeders||[]).length+1};
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.seeders, [fields]);
+    data.seeders=(data.seeders||[]).concat(PlannerShared.parseSeeders([{id:rec.id, fields}]));
+    mcSelected={kind:"seeder", id:rec.id};
+  }catch(e){ console.error(e); alert("Couldn't add seeder:\n"+e.message); }
+  buildMiscTab();
+}
+async function sdDelete(sd){
+  const crops=Object.values(data.cropDefs||{}).filter(cd=>cd&&cd.seeder===sd.name).length;
+  if(!confirm(`Delete seeder "${sd.name}" and its rollers?${crops?`\n\n${crops} crop${crops===1?"":"s"} still name it; they keep the name as text.`:""}\n\nTip: untick "In use" instead to keep its sowing history tidy.`)) return;
+  try{
+    const rollers=(data.seederRollers||[]).filter(r=>r.seederId===sd.id).map(r=>r.id);
+    if(rollers.length) await atDelete(CFG.farmBase, CFG.tables.seederRollers, rollers);
+    await atDelete(CFG.farmBase, CFG.tables.seeders, [sd.id]);
+    data.seederRollers=(data.seederRollers||[]).filter(r=>r.seederId!==sd.id);
+    data.seeders=(data.seeders||[]).filter(x=>x.id!==sd.id);
+    mcSelected=null;
+  }catch(e){ console.error(e); alert("Couldn't delete seeder:\n"+e.message); }
+  buildMiscTab();
+}
+async function srAdd(sd){
+  const name=(prompt(`New roller for ${sd.name} (e.g. X-24):`)||"").trim(); if(!name) return;
+  const fields={[CFG.f.sr_seeder]:sd.id, [CFG.f.sr_name]:name, [CFG.f.sr_order]:(data.seederRollers||[]).filter(r=>r.seederId===sd.id).length+1};
+  try{
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.seederRollers, [fields]);
+    data.seederRollers=(data.seederRollers||[]).concat(PlannerShared.parseSeederRollers([{id:rec.id, fields}]));
+  }catch(e){ console.error(e); alert("Couldn't add roller:\n"+e.message); }
+  mcRenderPanel(); sdRenderList();
+}
+async function srSave(r, key, val){
+  const prev=r[key]; r[key]=val;
+  try{ await atPatch(CFG.farmBase, CFG.tables.seederRollers, r.id, {[CFG.f[SR_FIELDS[key]]]:val}); }
+  catch(e){ r[key]=prev; console.error(e); alert("Couldn't save roller:\n"+e.message); }
+  mcRenderPanel();
+}
+async function srDelete(r){
+  if(!confirm(`Delete roller "${r.name}"?`)) return;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.seederRollers, [r.id]);
+    data.seederRollers=(data.seederRollers||[]).filter(x=>x.id!==r.id);
+  }catch(e){ console.error(e); alert("Couldn't delete roller:\n"+e.message); }
+  mcRenderPanel(); sdRenderList();
+}
+function sdRecordLine(rec){
+  const pl=(data.plantings||[]).find(x=>x.id===rec.plantingId);
+  const what=pl?`${pl.crop}${pl.variety?" "+pl.variety:""}`:"(planting removed)";
+  const set=[rec.roller, (rec.front&&rec.rear)?`${rec.front}/${rec.rear}`:"", rec.brush?`brush ${rec.brush}`:"", rec.felt?`felt ${rec.felt.toLowerCase()}`:""].filter(Boolean).join(" · ");
+  return `<div class="pn-rel sd-rec"><span class="navname"><b>${esc(fmt(rec.date))}</b> ${esc(what)}</span>`
+    +`<span class="sub">${esc(set||"—")}${rec.result?` — ${esc(rec.result)}`:""}</span></div>`;
+}
+function sdPanelHTML(sd){
+  const field=(l,html)=>`<label class="cr-mobile-field"><span>${esc(l)}</span>${html}</label>`;
+  const rollers=(data.seederRollers||[]).filter(r=>r.seederId===sd.id);
+  const recs=(data.sowingRecords||[]).filter(r=>r.seeder===sd.name).slice(0,12);
+  return `<div class="cr-panel-head"><span class="cr-panel-name">${esc(sd.name)}</span>`
+     +`<button type="button" class="icon-btn" id="mcPanelClose" aria-label="Close">✕</button></div>`
+   +`<div class="cr-panel-body">`
+     +`<div class="pn-sect">Seeder</div>`
+     +field("Name",`<input type="text" data-sd="name" value="${esc(sd.name)}">`)
+     +field("Kind",`<select data-sd="kind">${sdOptions(["Jang","Push","Hand","Vacuum","Other"], sd.kind)}</select>`)
+     +field("Has sprockets",`<input type="checkbox" data-sd="sprockets"${sd.sprockets?" checked":""}>`)
+     +(sd.sprockets?field("Wheel circumference cm",`<input class="cr-num" type="number" min="0" step="0.1" data-sd="wheel" value="${sd.wheel??""}" placeholder="for spacing estimate">`):"")
+     +field("In use",`<input type="checkbox" data-sd="active"${sd.active?" checked":""}>`)
+     +field("Notes",`<input type="text" data-sd="notes" value="${esc(sd.notes||"")}">`)
+     +`<div class="pn-sect">Rollers</div>`
+     +(rollers.length?rollers.map(r=>`<div class="sd-roller" data-sr="${esc(r.id)}">`
+        +`<input type="text" data-srk="name" value="${esc(r.name)}" aria-label="Roller name">`
+        +`<input class="cr-num" type="number" min="0" step="1" data-srk="holes" value="${r.holes??""}" placeholder="holes" title="Holes (seed cells) per turn of the roller">`
+        +`<button type="button" class="icon-btn sr-del" title="Delete roller">🗑</button></div>`).join("")
+       :`<div class="sub">No rollers listed yet.</div>`)
+     +`<button type="button" class="cr-add-variety" id="srAddBtn">+ Add roller…</button>`
+     +`<div class="pn-sect">Recent sowings</div>`
+     +(recs.length?recs.map(sdRecordLine).join(""):`<div class="sub">Nothing sown with it recorded yet. Ticking Sow on a direct-seeded planting asks for the settings.</div>`)
+   +`</div>`
+   +`<div class="pn-foot"><span class="pn-grow"></span><button type="button" class="btn-danger" id="sdDelBtn">Delete</button></div>`;
+}
+function sdWirePanel(panel, sd){
+  panel.querySelector("#mcPanelClose").onclick=()=>{ mcSelected=null; mcRenderPanel(); sdRenderList(); };
+  panel.querySelectorAll("[data-sd]").forEach(el=>el.onchange=e=>{
+    const k=el.dataset.sd;
+    const v = el.type==="checkbox" ? el.checked : k==="wheel" ? (el.value===""?null:+el.value) : el.value.trim();
+    if(k==="name" && !v){ el.value=sd.name; return; }
+    sdSave(sd,k,v);
+  });
+  panel.querySelectorAll("[data-sr]").forEach(row=>{
+    const r=(data.seederRollers||[]).find(x=>x.id===row.dataset.sr); if(!r) return;
+    row.querySelectorAll("[data-srk]").forEach(el=>el.onchange=()=>srSave(r, el.dataset.srk, el.dataset.srk==="holes"?(el.value===""?null:+el.value):el.value.trim()));
+    row.querySelector(".sr-del").onclick=()=>srDelete(r);
+  });
+  panel.querySelector("#srAddBtn").onclick=()=>srAdd(sd);
+  panel.querySelector("#sdDelBtn").onclick=()=>sdDelete(sd);
+}
+
+// ---- "How was it sown?" — opens after ticking Sow on a direct-seeded planting. The tick has
+// already landed; cancelling just means no record, same rule as the bed-prep log. ----
+function sowDialog(p, existing){
+  let ov=document.getElementById("sowModal");
+  if(!ov){ ov=document.createElement("div"); ov.id="sowModal"; ov.className="dd-ov"; document.body.appendChild(ov); }
+  const v=existing ? {seeder:existing.seeder, seederRoller:existing.roller, frontSprocket:existing.front, rearSprocket:existing.rear,
+                      brush:existing.brush, felt:existing.felt, lot:existing.lot, result:existing.result, notes:existing.notes, date:existing.date}
+                   : {seeder:p.seeder, seederRoller:p.seederRoller, frontSprocket:p.frontSprocket, rearSprocket:p.rearSprocket,
+                      brush:p.brush, felt:p.felt, lot:"", result:"", notes:"", date:p.sowActual||todayISO()};
+  const draw=()=>{
+    const sd=sdByName(v.seeder);
+    const geared=!v.seeder || !sd || sd.sprockets;
+    ov.innerHTML=`<div class="dd-box sow-box" role="dialog" aria-modal="true" aria-labelledby="sowTitle">
+      <div class="dd-title" id="sowTitle">How was it sown? — ${esc(p.crop)}${p.variety?" · "+esc(p.variety):""}</div>
+      <div class="sow-sub">${existing?"Editing the sowing record.":"Planned settings are filled in — change anything that was different on the day."}</div>
+      <div class="sow-grid">
+        <label class="ap-field"><span>Date</span><input type="date" data-sw="date" value="${esc(v.date||"")}"></label>
+        <label class="ap-field"><span>Seeder</span><select data-sw="seeder">${sdOptions(sdNames(), v.seeder||"")}</select></label>
+        <label class="ap-field"><span>Roller</span><select data-sw="seederRoller">${sdOptions(sdRollerNames(v.seeder), v.seederRoller||"")}</select></label>
+        ${geared?`<label class="ap-field"><span>Front sprocket</span><input type="number" min="0" step="1" data-sw="frontSprocket" value="${v.frontSprocket??""}"></label>
+        <label class="ap-field"><span>Rear sprocket</span><input type="number" min="0" step="1" data-sw="rearSprocket" value="${v.rearSprocket??""}"></label>`:""}
+        <label class="ap-field"><span>Brush</span><input type="text" data-sw="brush" value="${esc(v.brush||"")}"></label>
+        <label class="ap-field"><span>Felt</span><select data-sw="felt">${sdOptions(["On","Off"], v.felt||"")}</select></label>
+        <label class="ap-field"><span>Seed lot</span><input type="text" data-sw="lot" value="${esc(v.lot||"")}" placeholder="packet / lot no."></label>
+        <label class="ap-field sow-wide"><span>How it came out</span><input type="text" data-sw="result" value="${esc(v.result||"")}" placeholder="e.g. a bit thick, doubles every ~10 cm"></label>
+        <label class="ap-field sow-wide"><span>Notes</span><input type="text" data-sw="notes" value="${esc(v.notes||"")}"></label>
+      </div>
+      <div class="sow-est">${sdSpacingNote(v)}</div>
+      <div class="dd-btns"><button type="button" class="btn-ghost" id="sowCancel">${existing?"Cancel":"Skip"}</button><button type="button" class="btn-primary" id="sowOk">Save</button></div>
+    </div>`;
+    ov.querySelectorAll("[data-sw]").forEach(el=>el.onchange=()=>{
+      const k=el.dataset.sw;
+      v[k]= el.type==="number" ? (el.value===""?null:+el.value) : el.value;
+      if(k==="seeder"){ v.seederRoller=""; draw(); return; }
+      ov.querySelector(".sow-est").innerHTML=sdSpacingNote(v);
+    });
+    ov.querySelector("#sowCancel").onclick=()=>close();
+    ov.querySelector("#sowOk").onclick=()=>save();
+  };
+  const key=e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); close(); } };
+  const close=()=>{ ov.classList.remove("open"); document.removeEventListener("keydown",key,true); };
+  const save=async()=>{
+    const F=CFG.f;
+    const fields={[F.so_planting]:p.id, [F.so_date]:v.date||todayISO(), [F.so_seeder]:v.seeder||null, [F.so_roller]:v.seederRoller||null,
+      [F.so_front]:v.frontSprocket??null, [F.so_rear]:v.rearSprocket??null, [F.so_brush]:v.brush||null, [F.so_felt]:v.felt||null,
+      [F.so_lot]:v.lot||null, [F.so_result]:v.result||null, [F.so_notes]:v.notes||null, [F.so_beds]:(p.bedIds||[]).slice()};
+    const btn=ov.querySelector("#sowOk"); btn.disabled=true;
+    try{
+      if(existing){
+        await atPatch(CFG.farmBase, CFG.tables.sowingRecords, existing.id, fields);
+        Object.assign(existing, PlannerShared.parseSowingRecords([{id:existing.id, fields}])[0]);
+      }else{
+        const [rec]=await atCreate(CFG.farmBase, CFG.tables.sowingRecords, [fields]);
+        data.sowingRecords=PlannerShared.parseSowingRecords([{id:rec.id, fields}]).concat(data.sowingRecords||[]);
+      }
+      close();
+      if(currentView==="misc") buildMiscTab();
+    }catch(e){ console.error(e); alert("Couldn't save the sowing record:\n"+e.message); btn.disabled=false; }
+  };
+  draw();
+  document.addEventListener("keydown",key,true);
+  ov.classList.add("open");
+}
+function sowRecordFor(plantingId){ return (data.sowingRecords||[]).find(r=>r.plantingId===plantingId)||null; }
+async function sowDeleteRecord(rec){
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.sowingRecords, [rec.id]);
+    data.sowingRecords=(data.sowingRecords||[]).filter(x=>x.id!==rec.id);
+  }catch(e){ console.error(e); alert("Couldn't delete the sowing record:\n"+e.message); }
+}
+
 function buildMiscTab(){
   vwSetSummary("mcSummary",()=>{
     const n=(data.trayTypes||[]).length;
@@ -22376,6 +22694,7 @@ function buildMiscTab(){
     return `${n} tray type${n===1?"":"s"} · ${down} tarp${down===1?"":"s"} down`;
   });
   ttRenderList();
+  sdRenderList();
   trpRenderList();
   mcRenderPanel();
   renderSidebar();
@@ -22489,6 +22808,15 @@ function mcRenderPanel(){
     return;
   }
 
+  if(mcSelected?.kind==="seeder"){
+    const sd=(data.seeders||[]).find(x=>x.id===mcSelected.id);
+    if(!sd){ panel.hidden=true; panel.innerHTML=""; return; }
+    panel.hidden=false;
+    panel.innerHTML=sdPanelHTML(sd);
+    sdWirePanel(panel, sd);
+    return;
+  }
+
   if(mcSelected?.kind==="tarp"){
     const t=(data.tarps||[]).find(x=>x.id===mcSelected.id);
     if(!t){ panel.hidden=true; panel.innerHTML=""; return; }
@@ -22591,6 +22919,7 @@ async function deleteTrayType(id,name){
 }
 // Both add buttons moved to the title row, where the design puts them — there is no in-table add
 // row any more now that a row is a thing you click rather than a thing you type into.
+document.getElementById("sdAddBtn").addEventListener("click",sdAdd);
 document.getElementById("ttAddBtn").addEventListener("click",async()=>{
   const before=new Set((data.trayTypes||[]).map(t=>t.id));
   if(!await addTrayType()) return;
@@ -25667,6 +25996,8 @@ async function wkToggleMilestone(plantingId, df, date){
   // name (status/sowActual/tpActual) — map those to Airtable field names for the PATCH below.
   const probe=PlannerShared.buildMilestonePatch(p, df, todayISO()); if(!probe) return;
   const forward=statusRank(probe.status)>statusRank(p.status);
+  // Only a person ticking it gets asked how it was sown — sync loops pass a date and never prompt.
+  const askSow = df==="sow" && !p.tp && date===undefined;
   if(forward && date===undefined){
     const lbl=({sow:"Sown",tp:"Planted out",h1:"Harvest started",h2:"Finished / pulled"})[df]||"Done";
     date=await askDoneDate(`${lbl} — ${p.crop}${p.variety?" · "+p.variety:""}`, todayISO());
@@ -25684,7 +26015,12 @@ async function wkToggleMilestone(plantingId, df, date){
   refresh();
   const atFields={}; Object.keys(patch).forEach(k=>{ atFields[propToField[k]]=patch[k]; });
   try{ await atPatch(CFG.farmBase, CFG.tables.plantings, p.id, atFields); }
-  catch(e){ Object.assign(p, prev); refresh(); alert("Couldn't update status: "+e.message); }
+  catch(e){ Object.assign(p, prev); refresh(); alert("Couldn't update status: "+e.message); return; }
+  if(askSow){
+    const rec=sowRecordFor(p.id);
+    if(forward && !rec) sowDialog(p, null);
+    else if(!forward && rec && confirm("This sowing has a record of the seeder settings used. Delete that record as well?")) await sowDeleteRecord(rec);
+  }
 }
 // Clicking a planting opens the same read-only detail sidebar the Timeline uses (tlRenderPanel),
 // docked to the right of the week view — not straight into the edit dialog. Its own "Edit Planting"
