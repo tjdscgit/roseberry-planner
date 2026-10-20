@@ -1709,6 +1709,8 @@
      honour an explicit background/color on <option> — without it the list falls back to the OS's
      (light) native background while inheriting our dark --ink-2 text, unreadable either theme. */
   .td-sort-select option{background:var(--paper);color:var(--ink)}
+  /* Every dropdown list: themed, so dark mode never shows pale text on the browser's white list. */
+  select option, select optgroup{background:var(--paper);color:var(--ink)}
   /* The row whose Job panel is open — artboard uses a tinted background + inset left accent
      stripe rather than a ring, unlike Board/Calendar's cards. */
   .td-task-sel{background:var(--sel);box-shadow:inset 2px 0 0 var(--steel)}
