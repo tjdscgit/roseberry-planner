@@ -22459,7 +22459,13 @@ const SD_SEED_KEYS=["seederRoller","frontSprocket","rearSprocket","brush","felt"
 function sdNames(){ return (data.seeders||[]).filter(x=>x.active).map(x=>x.name); }
 function sdByName(name){ return (data.seeders||[]).find(x=>x.name===name)||null; }
 function sdRollersOf(name){ const sd=sdByName(name); return sd ? (data.seederRollers||[]).filter(r=>r.seederId===sd.id) : []; }
-function sdRollerNames(name){ return sdRollersOf(name).map(r=>r.name); }
+// A Jang offers every roller in the Jang chart, plus any extra ones added on its panel.
+function sdRollerNames(name){
+  const own=sdRollersOf(name).map(r=>r.name), sd=sdByName(name);
+  if(!sd || sd.kind!=="Jang") return own;
+  return [...new Set(Object.keys(PlannerShared.JANG_ROLLERS).concat(own))]
+    .sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));
+}
 // Which setting fields a seeder has: sprockets only on a geared one (the Jang); a seeder with no
 // rollers listed still gets the roller box so it can be filled in.
 function sdKeysFor(name){
@@ -22472,7 +22478,9 @@ function sdKeysFor(name){
   return keys;
 }
 function sdSpacingFor(v){
-  const sd=sdByName(v.seeder), r=sdRollersOf(v.seeder).find(x=>x.name===v.seederRoller);
+  const sd=sdByName(v.seeder);
+  const r=sdRollersOf(v.seeder).find(x=>x.name===v.seederRoller)
+    || (v.seederRoller ? {holes:PlannerShared.rollerHoles(v.seederRoller)} : null);
   return PlannerShared.seederSpacing(sd, r, +v.frontSprocket, +v.rearSprocket);
 }
 function sdSpacingNote(v){
@@ -22487,11 +22495,10 @@ function sdSpacingNote(v){
 function sdSuggestHTML(cropName, seederName){
   const sd=sdByName(seederName); if(!sd || sd.kind!=="Jang") return "";
   const hits=PlannerShared.jangRollerSuggest(cropName); if(!hits.length) return "";
-  const owned=new Set(sdRollerNames(seederName).map(n=>n.toUpperCase().replace(/\s+/g,"")));
-  hits.sort((a,b)=>(owned.has(b.code)?1:0)-(owned.has(a.code)?1:0));
+  const owned=new Set();
   return `<div class="cs-sd-sug sub">Jang chart rollers for ${esc(cropName)}: `
     +hits.slice(0,8).map(h=>`<span title="${esc(h.holeMm+" mm hole, "+h.depthMm+" mm deep · "+h.uses)}">${owned.has(h.code)?"<b>":""}${esc(h.code)}${owned.has(h.code)?" ✓</b>":""}</span>`).join(", ")
-    +`<br><span style="font-size:.75rem">✓ = you have it. Hover a roller for hole size and what it's for.</span></div>`;
+    +`<br><span style="font-size:.75rem">Hover a roller for hole size and what it's for.</span></div>`;
 }
 function sdOptions(list, val){
   const opts=list.slice(); if(val && !opts.includes(val)) opts.push(val);
@@ -22603,7 +22610,8 @@ function sdPanelHTML(sd){
      +(sd.sprockets?field("Wheel circumference cm",`<input class="cr-num" type="number" min="0" step="0.1" data-sd="wheel" value="${sd.wheel??""}" placeholder="for spacing estimate">`):"")
      +field("In use",`<input type="checkbox" data-sd="active"${sd.active?" checked":""}>`)
      +field("Notes",`<input type="text" data-sd="notes" value="${esc(sd.notes||"")}">`)
-     +`<div class="pn-sect">Rollers</div>`
+     +`<div class="pn-sect">${sd.kind==="Jang"?"Extra rollers":"Rollers"}</div>`
+     +(sd.kind==="Jang"?`<div class="sub" style="margin-bottom:.3rem">Every roller in the Jang chart is already offered. Add one here only if it isn't in the chart.</div>`:"")
      +(rollers.length?rollers.map(r=>`<div class="sd-roller" data-sr="${esc(r.id)}">`
         +`<input type="text" data-srk="name" value="${esc(r.name)}" aria-label="Roller name">`
         +`<input class="cr-num" type="number" min="0" step="1" data-srk="holes" value="${r.holes??""}" placeholder="holes" title="Holes (seed cells) per turn of the roller">`
