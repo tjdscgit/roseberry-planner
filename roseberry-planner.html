@@ -331,6 +331,7 @@
   .sow-grid .sow-wide{grid-column:1/-1}
   .sow-est{margin:.6rem 0 .2rem;min-height:1em}
   .cs-sd-est{margin-top:.5rem}
+  .sd-use-est{font-size:.78rem;padding:.2rem .55rem;margin-top:.35rem}
   .cs-sd-sug{margin-top:.5rem;line-height:1.5}
   .sd-rnote{font-size:.72rem;margin:-.1rem 0 .3rem}
   .tl-sow-rec{margin-top:.4rem}
@@ -17488,7 +17489,14 @@ function apSeedFill(v){
 function apSeedEst(){
   const el=$ap("apSeedEst"); if(!el) return;
   el.innerHTML=sdSpacingNote({seeder:$ap("apSeeder").value, seederRoller:$ap("apSeederRoller").value,
-    frontSprocket:$ap("apFrontSprocket").value, rearSprocket:$ap("apRearSprocket").value});
+    frontSprocket:$ap("apFrontSprocket").value, rearSprocket:$ap("apRearSprocket").value,
+    plantSpacing:$ap("apPlantSpacing").value}, true);
+  const b=el.querySelector(".sd-use-est");
+  if(b) b.onclick=()=>{
+    const ps=$ap("apPlantSpacing"); ps.value=b.dataset.est;
+    ps.dispatchEvent(new Event("input",{bubbles:true})); ps.dispatchEvent(new Event("change",{bubbles:true}));
+    apSeedEst();
+  };
 }
 const apSeedVal=([id,,isNum])=>{ const x=$ap(id).value; return isNum ? (x===""?null:+x) : (x||null); };
 const AP_DEFAULT_FIELDS={apRows:"rows", apRowSpacing:"rowSpacing", apPlantSpacing:"plantSpacing", apSeeder:"seeder",
@@ -19703,7 +19711,7 @@ function csSheetHTML(){
       +`<div class="cs-tile"><span class="cs-tile-l">Maturity across the year</span><span class="cs-tile-v" style="font-size:17px;line-height:29px">${climate||"—"}</span><span class="cs-tile-f">climate-adjusted</span></div></div>`;
   const card=(title,body,id)=>`<section class="cs-card"${id?` id="${id}"`:""}><div class="cs-card-h"><h3>${title}</h3></div>${body}</section>`;
   const bed=card("In the bed", `<div id="csBedPic">${csBedSVG(d)}</div>`+(csEdit?csFieldsHTML(["rows","rowSpacing","plantSpacing"]):csDlHTML(["rows","rowSpacing","plantSpacing"])))
-    +card("Seeder", (csEdit?csFieldsHTML(sdKeysFor(d.seeder)):csDlHTML(sdKeysFor(d.seeder)))+`<div class="cs-sd-est">${sdSpacingNote(d)}</div>`+sdSuggestHTML(csCropName(), d.seeder));
+    +card("Seeder", (csEdit?csFieldsHTML(sdKeysFor(d.seeder)):csDlHTML(sdKeysFor(d.seeder)))+`<div class="cs-sd-est">${sdSpacingNote(d, csEdit)}</div>`+sdSuggestHTML(csCropName(), d.seeder));
   const harvest=card("Harvest &amp; yield", (csEdit?csFieldsHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick","yield"]):csDlHTML(["harvestUnit","plantsPerUnit","price","pickEvery","perPick"]))+`<div id="csYield">${csYieldNote(d)}</div>`);
   const nursery=card("Nursery", csEdit?csFieldsHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]):csDlHTML(["trayType","seedsPerCell","daysToGerminate","germTemp","pottingUp"]));
   const used=card("Where it's used", csUsedHTML());
@@ -19747,7 +19755,7 @@ async function csSaveField(k, raw){
   // The seeder decides which rollers and fields the Seeder card offers, so redraw it whole.
   if(k==="seeder") return csRender();
   csRefreshDerived(k);
-  const est=document.querySelector(".cs-sd-est"); if(est) est.innerHTML=sdSpacingNote(csDefs(csCrop,csVar));
+  const est=document.querySelector(".cs-sd-est"); if(est) est.innerHTML=sdSpacingNote(csDefs(csCrop,csVar), csEdit);
 }
 function csBind(root){
   const s=document.getElementById("csSearch");
@@ -19762,6 +19770,12 @@ function csBind(root){
     if(el.matches("[data-cs-k]")) await csSaveField(el.dataset.csK, el.value);
   });
   root.addEventListener("click", async e=>{
+    const use=e.target.closest(".sd-use-est");
+    if(use && root.contains(use)){
+      await csSaveField("plantSpacing", use.dataset.est);
+      const inp=root.querySelector('[data-cs-k="plantSpacing"]'); if(inp) inp.value=use.dataset.est;
+      return;
+    }
     const el=e.target.closest("[data-cs-act],[data-cs-crop],[data-cs-tab],[data-cs-filter],[data-cs-reset],[data-cs-scope],[data-cs-task]");
     if(!el || !root.contains(el)) return;
     if(el.tagName==="A") e.preventDefault();
@@ -22461,10 +22475,17 @@ function sdSpacingFor(v){
     || (v.seederRoller ? {holes:PlannerShared.rollerHoles(v.seederRoller)} : null);
   return PlannerShared.seederSpacing(sd, r, +v.frontSprocket, +v.rearSprocket);
 }
-function sdSpacingNote(v){
+// `useBtn` adds a "Use N cm" button that copies the estimate into Plant spacing (never automatic:
+// seed spacing isn't plant spacing once thinning and germination have had their say).
+function sdSpacingNote(v, useBtn){
   if(!v || !v.seeder) return "";
   const est=sdSpacingFor(v);
-  if(est!=null) return `<span class="sub">≈ ${irNum(est,1)} cm between seeds in the row (estimate from roller + sprockets)</span>`;
+  if(est!=null){
+    const r=Math.round(est*10)/10;
+    const same = v.plantSpacing!=null && v.plantSpacing!=="" && Math.abs(+v.plantSpacing-r)<0.05;
+    return `<span class="sub">≈ ${irNum(est,1)} cm between seeds in the row (estimate from roller + sprockets)</span>`
+      +(useBtn && !same ? ` <button type="button" class="btn-ghost sd-use-est" data-est="${r}">Use ${irNum(r,1)} cm as plant spacing</button>` : "");
+  }
   const sd=sdByName(v.seeder);
   if(sd && !(sd.wheel>0) && v.seederRoller) return `<span class="sub">Add ${esc(sd.name)}'s wheel circumference and the roller's hole count on the Trays &amp; seeders page to get a spacing estimate.</span>`;
   return "";
