@@ -5586,12 +5586,11 @@
       <div class="cr-split">
       <div class="cr-left">
       <div class="vw-title">
-        <span class="vw-name">Trays, seeders &amp; tarps</span>
+        <span class="vw-name">Trays &amp; seeders</span>
         <span class="sub" id="mcSummary"></span>
         <span class="spacer"></span>
         <button class="btn-ghost" id="ttAddBtn" type="button">＋ Tray type</button>
         <button class="btn-ghost" id="sdAddBtn" type="button">＋ Seeder</button>
-        <button class="btn-primary" id="trpAddBtn" type="button">＋ Tarp a bed</button>
       </div>
       <div class="cr-wrap mc-wrap">
         <div class="mc-sect">Tray types</div>
@@ -5616,27 +5615,6 @@
           <table class="lib-table" id="sdTable">
             <thead><tr><th>Name</th><th>Kind</th><th class="lib-num">Rollers</th><th class="lib-num" title="Crops that default to this seeder">Crops</th></tr></thead>
             <tbody id="sdBody"></tbody>
-          </table>
-        </div>
-
-        <div class="mc-sect">Tarps</div>
-        <p class="mc-hint">
-          Bed tarping used to terminate a crop. Shows as a hatched band on the crop map, timeline
-          and farm map — it never blocks a bed, so the next planting can still go over it.
-        </p>
-        <div class="mc-card">
-          <table class="lib-table" id="trpTable">
-            <thead>
-              <tr>
-                <th>Bed</th>
-                <th title="The planting this tarp is terminating, if any">After</th>
-                <th class="lib-num" title="Date the tarp goes down">Down</th>
-                <th class="lib-num" title="Date the tarp comes off — the bed's free to plant again from here">Off</th>
-                <th class="lib-num" title="Bed length covered, in metres — defaults to the bed's own length">Metres</th>
-                <th style="text-align:center">Status</th>
-              </tr>
-            </thead>
-            <tbody id="trpBody"></tbody>
           </table>
         </div>
       </div>
@@ -10117,7 +10095,7 @@ const RAIL_GROUPS = {
   crops: { label:"Crops", groups:[
     // Crop tasks now lives on each crop's sheet (Crops); showView redirects the old view id.
     { name:"Planting", views:[["crops","Crops"],["tasklib","Task library"]] },
-    { name:"Stock",    views:[["seedbook","Seed book"],["misc","Tray types"]] },
+    { name:"Stock",    views:[["seedbook","Seed book"],["misc","Trays & seeders"]] },
     { name:"Selling",  views:[["outlets","Sales outlets"],["season","Season"]] },
   ]},
   logs: { label:"Logs", groups:[
@@ -22488,7 +22466,7 @@ function sdSpacingNote(v){
   const est=sdSpacingFor(v);
   if(est!=null) return `<span class="sub">≈ ${irNum(est,1)} cm between seeds in the row (estimate from roller + sprockets)</span>`;
   const sd=sdByName(v.seeder);
-  if(sd && !(sd.wheel>0) && v.seederRoller) return `<span class="sub">Add ${esc(sd.name)}'s wheel circumference and the roller's hole count on the Trays, seeders &amp; tarps page to get a spacing estimate.</span>`;
+  if(sd && !(sd.wheel>0) && v.seederRoller) return `<span class="sub">Add ${esc(sd.name)}'s wheel circumference and the roller's hole count on the Trays &amp; seeders page to get a spacing estimate.</span>`;
   return "";
 }
 // Johnny's chart rollers that list this crop. Owned ones first and marked; shown for a Jang only.
@@ -22715,12 +22693,11 @@ async function sowDeleteRecord(rec){
 function buildMiscTab(){
   vwSetSummary("mcSummary",()=>{
     const n=(data.trayTypes||[]).length;
-    const down=(data.tarps||[]).filter(t=>trpState(t).label==="Down").length;
-    return `${n} tray type${n===1?"":"s"} · ${down} tarp${down===1?"":"s"} down`;
+    const k=(data.seeders||[]).filter(x=>x.active).length;
+    return `${n} tray type${n===1?"":"s"} · ${k} seeder${k===1?"":"s"}`;
   });
   ttRenderList();
   sdRenderList();
-  trpRenderList();
   mcRenderPanel();
   renderSidebar();
 }
@@ -22952,7 +22929,7 @@ document.getElementById("ttAddBtn").addEventListener("click",async()=>{
   if(made) mcSelected={kind:"tray", id:made.id};
   buildMiscTab();
 });
-document.getElementById("trpAddBtn").addEventListener("click",()=>trpOpenEditor(null));
+
 
 /* ---------- Task library: master list of cultural tasks + their default schedule ---------- */
 const TASK_ANCHORS = ["Sow","Transplant","First harvest","Last harvest"];
