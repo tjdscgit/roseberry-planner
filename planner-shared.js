@@ -105,6 +105,8 @@
       boardReplies:     "tblBRreplies",
       boardTallies:     "tblBTtallies",
       farmSettings:     "tblFSsettings",      // "Farm Settings" — one row, id 'farm
+      sprayZones:       "tblSZzones",         // named spray areas (supabase-migration-spray-fert-log.sql)
+      cropPlans:        "tblCPplans",         // regimes pasted from a Claude chat, tied to a planting
     },
     f: { // field names (readable; rename in Airtable => update here)
       blk_name:"Name", blk_x:"Map X", blk_y:"Map Y", blk_orient:"Orientation", blk_prefTypes:"Preferred Crop Types",
@@ -289,6 +291,18 @@
       // Ops app mirror id. A planned spray surfaces in Ops as a read-only row —
       // logging it needs product/amount/WHP, so it can only be completed here.
       sap_opsid:"Ops Task ID",
+      // Redesigned log (2026-11). Beds stay the record of where it went; Zones/Valves say how the
+      // beds were chosen. Tanks × the sprayer's litres = Amount sprayed. Fertigation fills Valves,
+      // Run minutes and Mix volume instead of Tanks. Plan + offset tie a planned step to a planting.
+      sap_sprayer:"Sprayer", sap_tanks:"Tanks", sap_zones:"Zones", sap_valves:"Valves",
+      sap_runMin:"Run minutes", sap_mixVol:"Mix volume L",
+      sap_planting:"Planting", sap_plan:"Plan", sap_planOffset:"Plan offset days",
+      // Spray zones — tap an area instead of ticking beds. Beds may be empty (an orchard edge).
+      sz_name:"Name", sz_beds:"Beds", sz_colour:"Colour", sz_notes:"Notes", sz_order:"Order",
+      sz_archived:"Archived",
+      // Crop plans — a regime pasted from a Claude chat. Its steps are Planned spray/fert rows.
+      cp_name:"Name", cp_planting:"Planting", cp_source:"Source", cp_anchor:"Anchor",
+      cp_created:"Created at",
       sai_name:"Name", sai_app:"Application", sai_product:"Product", sai_rate:"Rate",
       sai_unit:"Unit", sai_amountUsed:"Amount used", sai_order:"Order",
       // Field walk. `ob_note` keeps the prose exactly as typed (@tokens included) while
@@ -319,6 +333,10 @@
       fa_name:"Name", fa_date:"Date", fa_by:"Applied by", fa_program:"Program", fa_round:"Round",
       fa_block:"Block", fa_beds:"Beds", fa_method:"Method", fa_notes:"Notes", fa_photos:"Photos",
       fa_created:"Created at",
+      // Status blank ⇒ logged; "Planned" ⇒ a step from a crop plan. Prep op = the bed-prep
+      // operation this fert closed out ("Fertaliser Spread").
+      fa_status:"Status", fa_planting:"Planting", fa_plan:"Plan", fa_planOffset:"Plan offset days",
+      fa_prepOp:"Prep op",
       fai_app:"Application", fai_product:"Product", fai_rate:"Rate per bed", fai_unit:"Unit",
       fai_total:"Total", fai_order:"Order",
       // Fert Products. `fpd_` (not `fp_`, which is Fert Programs). Cost per unit is derived from
@@ -363,6 +381,8 @@
       fs_name:"Farm name", fs_location:"Location", fs_season:"Season start", fs_market:"Market days",
       fs_certifier:"Certifier", fs_certNo:"Certification number", fs_certSince:"Certified since",
       fs_notes:"Notes", fs_updated:"Updated at",
+      // [{name, litres, default}] — the sprayers the spray log offers. See sprayersFrom().
+      fs_sprayers:"Sprayers",
       // Whiteboard — board_notes / board_replies / board_tallies (supabase-migration-redesign.sql).
       bn_name:"Name", bn_note:"Note", bn_kind:"Kind", bn_where:"Where", bn_by:"Raised by",
       bn_created:"Created at", bn_pinned:"Pinned", bn_done:"Done", bn_seen:"Seen by",
@@ -401,6 +421,7 @@
     seeders:"seeders", seederRollers:"seeder_rollers", sowingRecords:"sowing_records",
     mapFeatures:"map_features", farmSettings:"farm_settings",
     boardNotes:"board_notes", boardReplies:"board_replies", boardTallies:"board_tallies",
+    sprayZones:"spray_zones", cropPlans:"crop_plans",
   };
   const AT_ID_TO_PG = Object.fromEntries(
     Object.keys(CFG.tables).map(k => [CFG.tables[k], PG_TABLES[k]])
@@ -1775,6 +1796,11 @@
       notes:r.fields[F.fa_notes]||"",
       photos:arr(r.fields[F.fa_photos]).slice(),
       created:r.fields[F.fa_created]||"",
+      status:r.fields[F.fa_status]||"Logged",   // blank ⇒ Logged, as for sprays
+      plantingId:arr(r.fields[F.fa_planting])[0]||null,
+      planId:arr(r.fields[F.fa_plan])[0]||null,
+      planOffset:num(r.fields[F.fa_planOffset]),
+      prepOp:r.fields[F.fa_prepOp]||"",
       items:[],
     })).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.id).localeCompare(String(a.id)));
   }
@@ -1801,6 +1827,7 @@
   function fertBedsDone(apps, programId, roundId){
     const out=new Set();
     (apps||[]).forEach(a=>{
+      if(a.status==="Planned") return;          // scheduled, not yet on the ground
       if(a.programId!==programId || a.roundId!==roundId) return;
       a.bedIds.forEach(b=>out.add(b));
     });
@@ -2453,6 +2480,15 @@
       opsId:r.fields[F.sap_opsid]||"",
       status:r.fields[F.sap_status]||"Logged",   // blank ⇒ Logged, so legacy rows need no backfill
       followUpOfId:(r.fields[F.sap_followUp]||[])[0]||null,
+      sprayer:r.fields[F.sap_sprayer]||"",
+      tanks:num(r.fields[F.sap_tanks]),
+      zoneIds:(r.fields[F.sap_zones]||[]).slice(),
+      valveIds:(r.fields[F.sap_valves]||[]).slice(),
+      runMin:num(r.fields[F.sap_runMin]),
+      mixVolL:num(r.fields[F.sap_mixVol]),
+      plantingId:(r.fields[F.sap_planting]||[])[0]||null,
+      planId:(r.fields[F.sap_plan]||[])[0]||null,
+      planOffset:num(r.fields[F.sap_planOffset]),
       durationMin:num(r.fields[F.sap_duration]),
       startMin:num(r.fields[F.sap_start]),
       items:[],
@@ -2511,6 +2547,7 @@
     let best=null;
     (applications||[]).forEach(a=>{
       if(!a.date || !(a.bedIds||[]).includes(bedId)) return;
+      if(a.status==="Planned") return;           // an overdue planned spray hasn't gone on yet
       const whp = a.whp!=null ? a.whp : 0;
       if(!whp) return;
       const safe = safeAfterISO(a.date, whp);
@@ -2519,6 +2556,136 @@
       }
     });
     return best;
+  }
+
+  /* ---------- Spray & fert log (2026-11 redesign) ---------- */
+
+  // The farm's sprayers. Electric backpack is the everyday one; the manual backpacks and the
+  // tractor sprayer get used less. Overridden by farm_settings."Sprayers" once that's set.
+  const SPRAYERS_DEFAULT = [
+    {name:"Electric", litres:18, default:true}, {name:"Manual", litres:15}, {name:"Tractor", litres:60},
+  ];
+
+  // The sprayers the log offers, from the farm settings row ([{name, litres, default}]), falling
+  // back to SPRAYERS_DEFAULT. Exactly one comes back flagged default (the first, if none is).
+  function sprayersFrom(farmSettings){
+    const raw = farmSettings && farmSettings[CFG.f.fs_sprayers];
+    let list = Array.isArray(raw)
+      ? raw.filter(s=>s && s.name && +s.litres>0).map(s=>({name:String(s.name), litres:+s.litres, default:!!s.default}))
+      : [];
+    if(!list.length) list = SPRAYERS_DEFAULT.map(s=>Object.assign({}, s));
+    const d = list.findIndex(s=>s.default);
+    list.forEach((s,i)=>{ s.default = i===(d<0 ? 0 : d); });
+    return list;
+  }
+
+  // Litres put out: tank fills × the sprayer's tank size, to 0.1 L. Tanks may be halves.
+  function tanksToLitres(tanks, litres){
+    const t=+tanks, l=+litres;
+    if(!(t>0) || !(l>0)) return null;
+    return Math.round(t*l*10)/10;
+  }
+
+  // Every irrigation valve and the beds it waters, for logging fertigation by valve. Same split as
+  // irrigPlan: overhead per zone (per block when the block has no zone), drip per block. Ids are
+  // stable: an irrigation_zones id, or "drip:<block id>" / "overhead:<block id>".
+  function valvesList(beds, blocks, settings, zones){
+    const by={};
+    (beds||[]).forEach(bed=>{
+      const sys=irrigSystemsFor(bed, blocks, settings, zones);
+      const bName=(sys.block && sys.block.name) || bed.block || "—";
+      const bId=(sys.block && sys.block.id) || bName;
+      const add=(id, name, method, zoneId)=>{
+        (by[id] || (by[id]={id, name, method, zoneId, block:bName, bedIds:[]})).bedIds.push(bed.id);
+      };
+      if(sys.drip) add("drip:"+bId, bName+" · drip", "drip", null);
+      if(sys.overhead){
+        if(sys.zone) add(sys.zone.id, sys.zone.name, "overhead", sys.zone.id);
+        else add("overhead:"+bId, bName+" · overhead", "overhead", null);
+      }
+    });
+    return Object.values(by).sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
+  }
+
+  // Union of the beds behind a set of valves (valvesList entries) or spray zones, in first-seen order.
+  function bedsForValves(valves, ids){
+    const want=new Set(ids||[]), out=[], seen=new Set();
+    (valves||[]).forEach(v=>{ if(want.has(v.id)) v.bedIds.forEach(b=>{ if(!seen.has(b)){ seen.add(b); out.push(b); } }); });
+    return out;
+  }
+  function bedsForZones(zones, ids){ return bedsForValves(zones, ids); }
+
+  function parseSprayZones(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id,
+      name:r.fields[F.sz_name]||"",
+      bedIds:(r.fields[F.sz_beds]||[]).slice(),
+      colour:r.fields[F.sz_colour]||"",
+      notes:r.fields[F.sz_notes]||"",
+      order:num(r.fields[F.sz_order]),
+      archived:!!r.fields[F.sz_archived],
+    })).sort((a,b)=>((a.order??1e9)-(b.order??1e9)) || a.name.localeCompare(b.name, undefined, {numeric:true}));
+  }
+
+  function parseCropPlans(recs){
+    const F=CFG.f;
+    return (recs||[]).map(r=>({
+      id:r.id,
+      name:r.fields[F.cp_name]||"",
+      plantingId:(r.fields[F.cp_planting]||[])[0]||null,
+      source:r.fields[F.cp_source]||"",
+      anchor:r.fields[F.cp_anchor]==="sow" ? "sow" : "transplant",
+      created:r.fields[F.cp_created]||"",
+    }));
+  }
+
+  // The date a planned step is due. A step from a crop plan counts from its planting (transplant,
+  // or sow when the plan is anchored on sowing or the crop is direct-sown), so moving the planting
+  // moves the step. Anything else — or a planting with no date yet — keeps its stored date.
+  function planStepDate(app, plantingsById, plansById){
+    if(!app) return "";
+    if(app.planId && app.planOffset!=null && app.plantingId){
+      const p=plantingsById && plantingsById[app.plantingId];
+      const plan=plansById && plansById[app.planId];
+      const anchor = !p ? null : (plan && plan.anchor==="sow") ? (p.sow||p.tp) : (p.tp||p.sow);
+      if(anchor) return wkISO(wkAddDays(wkParse(anchor), app.planOffset));
+    }
+    return app.date||"";
+  }
+
+  // Planned sprays, soonest first, each with its effective due date and an overdue flag. Undated
+  // ones sort last. `ctx` = {plantingsById, plansById} for plan steps.
+  function comingUp(apps, todayISO, ctx){
+    ctx=ctx||{};
+    return (apps||[]).filter(a=>a.status==="Planned").map(a=>{
+      const due=planStepDate(a, ctx.plantingsById, ctx.plansById);
+      return {app:a, due, overdue:!!due && due<todayISO};
+    }).sort((x,y)=>String(x.due||"9999").localeCompare(String(y.due||"9999")));
+  }
+
+  // Bed-prep operations a fert log can close out: "Fertaliser Spread" (sic, as in the targets
+  // table), "Fertiliser Spread", "Compost Spread".
+  const isFertPrepOp = op => /^(fert\w*|compost)\s+spread$/i.test(String(op||"").trim());
+
+  // What the fert log offers above the form for the week starting `weekISO`: planned fert steps
+  // due by the week's end (overdue included), then bed-prep spreading passes not yet done. `bp` is
+  // a bpPlanForWeek() result for the same week. Soonest first.
+  function fertDueThisWeek(fertApps, bp, weekISO, ctx){
+    ctx=ctx||{};
+    const end=wkISO(wkAddDays(wkParse(weekISO), 6));
+    const out=[];
+    (fertApps||[]).filter(a=>a.status==="Planned").forEach(a=>{
+      const due=planStepDate(a, ctx.plantingsById, ctx.plansById);
+      if(due && due<=end) out.push({kind:"plan", app:a, due, bedIds:a.bedIds.slice(), overdue:due<weekISO});
+    });
+    ((bp && bp.passes)||[]).forEach(pass=>(pass.ops||[]).forEach(g=>{
+      if(!isFertPrepOp(g.op) || !(g.beds||[]).length) return;
+      const needBy=g.beds.map(b=>b.needBy).filter(Boolean).sort()[0]||null;
+      const plantingIds=[...new Set(g.beds.map(b=>b.plantingId || (b.schedPlanting && b.schedPlanting.id)).filter(Boolean))];
+      out.push({kind:"prep", op:g.op, bedIds:g.beds.map(b=>b.bedId), needBy, plantingIds});
+    }));
+    return out.sort((a,b)=>String(a.due||a.needBy||"9999").localeCompare(String(b.due||b.needBy||"9999")));
   }
 
   /* ---------- Bed placement suggestions ---------- */
@@ -3896,6 +4063,8 @@
     parseMapFeatures, mapFeatureLength,
     parseSprayProducts, parseSprayMixes, parseSprayMixItems, parseSprayApplications,
     parseSprayApplicationItems, attachSprayItems, mixWhp, safeAfterISO, bedWhpActive,
+    SPRAYERS_DEFAULT, sprayersFrom, tanksToLitres, valvesList, bedsForValves, bedsForZones,
+    parseSprayZones, parseCropPlans, planStepDate, comingUp, isFertPrepOp, fertDueThisWeek,
     parseFieldWalks, parseWalkObservations, parseWalkLists, parseWalkListItems, attachWalkItems,
     parseFieldWalkTags,
     FARM_INFO_CATS, parseFarmInfo, farmInfoSort,

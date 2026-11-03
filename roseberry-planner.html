@@ -37,6 +37,10 @@
     --sel:rgba(31,78,95,.10);
     --hover:rgba(20,24,27,.045);
     --clay-tint:rgba(198,74,46,.10);
+    /* Spray & fert log: amber = inside withholding / prep due; ok-tint = done this round. */
+    --amber:#A8741A;
+    --amber-tint:rgba(168,116,26,.12);
+    --ok-tint:rgba(63,125,70,.12);
     --band-a:rgba(31,78,95,.045);
     --band-b:rgba(31,78,95,.012);
     /* Tarp hatch — deliberately achromatic. cropColor() owns the hue space, so a tarp must not
@@ -75,6 +79,9 @@
     --sel:rgba(143,190,206,.14);
     --hover:rgba(234,231,222,.05);
     --clay-tint:rgba(226,117,90,.15);
+    --amber:#E0B050;
+    --amber-tint:rgba(224,176,80,.14);
+    --ok-tint:rgba(107,193,119,.14);
 }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
@@ -3546,6 +3553,99 @@
 
   /* ---------- Spray entry form ---------- */
   .sp-card{width:min(680px,100%)}
+
+  /* ---------- Log card (spray + fert, redesign 2026-11) ----------
+     Header / scrolling body / sticky footer. Rows are label-left, value-right, each one tap; the
+     card fills the phone so nothing important sits below a fold. */
+  .lg-card [hidden],.bpk-card [hidden]{display:none!important}
+  .lg-card{width:min(560px,100%);height:min(92vh,880px);max-height:none;padding:0;display:flex;flex-direction:column;overflow:hidden}
+  @media(max-width:640px){
+    #sprayModal,#fpLogModal{padding:0}
+    .lg-card{width:100%;height:100%;height:100dvh;border-radius:0;border:none}
+  }
+  .lg-head{display:flex;align-items:center;gap:.65rem;padding:1rem 1rem .7rem;flex:0 0 auto}
+  .lg-titles{flex:1;min-width:0}
+  .lg-title{font-size:1.25rem;font-weight:650;letter-spacing:-.01em}
+  .lg-sub{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-top:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg-sub:empty{display:none}
+  .lg-x{position:static}
+  .lg-say{display:inline-flex;align-items:center;gap:.35rem;padding:.5rem .8rem;border-radius:999px;border:1px solid var(--steel-soft);
+    background:none;color:var(--steel-soft);font-weight:620;font-size:.85rem;cursor:pointer;white-space:nowrap}
+  .lg-say svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+  .lg-body{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
+  .lg-foot{flex:0 0 auto;padding:.7rem 1rem calc(.9rem + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--paper)}
+  .lg-foot .sp-err{margin:0 0 .6rem}
+  .lg-foot .sp-actions{margin:0;position:static;padding:0}
+  .lg-foot .sp-actions .btn-primary{flex:1;padding:.85rem 1rem;font-size:1rem}
+  .lg-big{width:100%;padding:1rem;font-size:1.05rem}
+  .lg-lbl{font-family:var(--mono);font-size:.68rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin:.9rem 1rem .5rem}
+  .lg-more .lg-lbl{margin:.9rem 0 .4rem}
+  .lg-hint{font-family:var(--mono);font-size:.68rem;color:var(--ink-2);letter-spacing:0;text-transform:none}
+  .lg-link{display:inline-flex;align-items:center;gap:.3rem;background:none;border:none;color:var(--steel-soft);font-weight:620;
+    font-size:.88rem;cursor:pointer;padding:.6rem 1rem;font-family:var(--sans)}
+  .lg-row .lg-link,.lg-more .lg-link{padding:.5rem 0}
+  .lg-row{display:flex;align-items:center;gap:.7rem;padding:.8rem 1rem;border-bottom:1px solid var(--line);width:100%;
+    background:none;border-left:none;border-right:none;border-top:none;text-align:left;font:inherit;color:inherit}
+  .lg-row.lg-col{flex-direction:column;align-items:stretch;gap:.5rem}
+  .lg-tap{cursor:pointer}
+  .lg-tap:hover{background:var(--hover)}
+  .lg-rowhead{display:flex;align-items:center;gap:.7rem}
+  .lg-rowhead .grow{flex:1}
+  .lg-k{width:4.6rem;flex:0 0 auto;font-family:var(--mono);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+  .lg-v{flex:1;min-width:0}
+  .lg-v .lg-main{font-size:1rem;font-weight:620;display:block}
+  .lg-v .lg-dim{font-size:1rem;color:var(--ink-2);display:block}
+  .lg-v .lg-small{font-family:var(--mono);font-size:.68rem;color:var(--ink-2);display:block;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg-go{color:var(--steel-soft);font-weight:620;font-size:.86rem;white-space:nowrap}
+  .lg-mini{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.64rem;color:var(--ink-2);text-transform:uppercase;letter-spacing:.06em}
+  .lg-mini select{width:auto;max-width:11rem;padding:.35rem .5rem;font-size:.82rem;text-transform:none;letter-spacing:0}
+  .lg-chips{display:flex;flex-wrap:wrap;gap:.35rem;flex:1;min-width:0}
+  .lg-chip{font-family:var(--mono);font-size:.72rem;padding:.42rem .7rem;border-radius:999px;border:1px solid var(--line-2);background:none;
+    color:var(--ink-2);cursor:pointer;white-space:nowrap}
+  .lg-chip[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:600}
+  .lg-sprayers{display:flex;gap:.35rem;flex:1;min-width:0}
+  .lg-sprayers button{flex:1 1 0;min-width:0;min-height:46px;border-radius:11px;border:1px solid var(--line-2);background:none;color:var(--ink);
+    font-weight:620;font-size:.74rem;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1;padding:0 2px}
+  .lg-sprayers button small{font-family:var(--mono);font-size:.62rem;font-weight:500;opacity:.8}
+  .lg-sprayers button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:#fff}
+  .lg-tanksum{font-size:1rem;font-weight:620;line-height:1.25}
+  .lg-litres{display:flex;align-items:center;gap:.4rem;font-family:var(--mono);font-size:.68rem;color:var(--ink-2);padding-left:5.3rem}
+  .lg-card .lg-litres input{width:5.2rem;padding:.3rem .45rem;font-size:.85rem}
+  .lg-step{display:flex;align-items:center;gap:.35rem;flex:0 0 auto}
+  .lg-step button{width:40px;height:38px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--ink);font-size:1.2rem;cursor:pointer}
+  .lg-step b{min-width:2rem;text-align:center;font-size:1.2rem}
+  .lg-pair{display:flex;gap:.5rem;flex-wrap:wrap}
+  .lg-pair>*{flex:1 1 9rem;min-width:0}
+  .lg-pair label{display:flex;align-items:center;gap:.35rem;font-family:var(--mono);font-size:.7rem;color:var(--ink-2)}
+  .lg-pair label input{flex:1;min-width:0}
+  .lg-card .lg-select{width:auto;max-width:9.5rem;padding:.38rem .5rem;font-size:.78rem;border-radius:999px;font-family:var(--mono)}
+  .lg-safe{margin:.8rem 1rem 0;padding:.65rem .8rem;border-radius:11px;font-size:.86rem;color:var(--ink-2);background:var(--paper-2)}
+  .lg-safe:empty{display:none}
+  .lg-safe.warn{background:var(--amber-tint);color:var(--amber);font-weight:600;border:1px solid var(--amber)}
+  .lg-safe.warn b{color:inherit}
+  .lg-more{margin:.8rem 1rem 1.2rem}
+  .lg-more>summary{cursor:pointer;color:var(--ink-2);font-size:.9rem;padding:.4rem 0;list-style:none}
+  .lg-more>summary::before{content:"▸ ";}
+  .lg-more[open]>summary::before{content:"▾ ";}
+  .lg-more .ap-field{margin-top:.7rem}
+  .lg-card .sp-items{display:flex;flex-direction:column;gap:.45rem}
+  /* Coming up (start screen) */
+  .lg-up{display:flex;align-items:center;gap:.7rem;margin:0 1rem .5rem;padding:.75rem .85rem;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+  .lg-up.over{border-color:var(--clay)}
+  .lg-up .tx{flex:1;min-width:0}
+  .lg-up .t{font-weight:620;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg-up .s{font-family:var(--mono);font-size:.66rem;color:var(--ink-2);margin-top:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lg-up.over .s b{color:var(--clay)}
+  .lg-up .btn-primary,.lg-up .btn-ghost{padding:.5rem .9rem;flex:0 0 auto}
+  .lg-empty{margin:.4rem 1rem;color:var(--ink-2);font-size:.9rem}
+  /* Say it — a sheet over the form */
+  .lg-say-sheet{position:absolute;inset:auto 0 0 0;background:var(--paper);border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
+    box-shadow:0 -10px 30px -12px rgba(0,0,0,.35);padding:.2rem 1rem 1rem;z-index:3}
+  .lg-say-sheet textarea{width:100%;font-size:1.05rem;line-height:1.45;padding:.8rem}
+  .lg-say-sheet .lg-lbl{margin:.9rem 0 .5rem}
+  .lg-say-sheet .lg-hint{margin:.5rem 0 .8rem;line-height:1.4}
+  .lg-say-acts{display:flex;gap:.6rem}
+  .lg-say-acts .btn-primary{flex:1;padding:.8rem}
   .sp-bed-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
   .sp-bed-actions .btn-ghost{white-space:nowrap}
   .sp-inline-search{position:relative;flex:1;min-width:150px}
@@ -3603,35 +3703,65 @@
     .sp-actions .btn-primary{flex:1}
   }
 
-  /* ---------- Spray bed picker (map multi-select) ---------- */
-  #sprayPickModal{position:fixed;inset:0;z-index:75;display:none;background:rgba(0,0,0,.5);padding:0}
-  #sprayPickModal.open{display:flex;align-items:center;justify-content:center}
-  .sp-pick-card{position:relative;width:min(1000px,100%);height:min(88vh,100%);
-    display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--line-2);
-    border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
-  @media(max-width:640px){ .sp-pick-card{width:100%;height:100%;border-radius:0} #sprayPickModal{padding:0} }
-  .sp-pick-head{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-bottom:1px solid var(--line-2)}
-  .sp-pick-title{font-weight:650;font-size:.95rem;white-space:nowrap}
-  .sp-pick-head .sp-inline-search{flex:1}
-  .sp-pick-suggest{position:absolute;top:3rem;left:.8rem;right:3rem;z-index:2;max-height:230px;overflow:auto;
-    background:var(--paper-2);border:1px solid var(--line-2);border-radius:9px;box-shadow:var(--shadow)}
-  .sp-pick-suggest button{display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
-    padding:.55rem .7rem;font-size:.9rem;color:var(--ink);border-bottom:1px solid var(--line)}
-  .sp-pick-suggest button:last-child{border-bottom:none}
-  .sp-pick-suggest button:hover{background:var(--paper)}
-  .sp-pick-suggest .muted{color:var(--ink-2);font-size:.8rem}
-  .sp-pick-suggest .on{color:var(--ok);font-weight:600}
-  #sprayPickWrap{flex:1;min-height:0;position:relative;overflow:hidden;background:var(--paper);
-    touch-action:none;cursor:grab}
-  #sprayPickWrap.dragging{cursor:grabbing}
-  #sprayPickSvg{width:100%;height:100%;display:block}
-  #sprayPickG .bed{cursor:pointer}
-  #sprayPickG .bed.pick-sel{stroke:var(--steel);stroke-width:.9;paint-order:stroke}
-  #sprayPickG .bed-check{fill:var(--steel);font-weight:700}
-  .sp-pick-foot{display:flex;align-items:center;gap:.7rem;padding:.6rem .8rem;border-top:1px solid var(--line-2);flex-wrap:wrap}
-  .sp-pick-count{font-weight:650}
-  .sp-pick-crops{color:var(--ink-2);font-size:.86rem;flex:1;min-width:0}
-  .sp-pick-foot .spacer{flex:0}
+  /* ---------- Field bed picker (spray + fert logs) ----------
+     Full screen on a phone, a tall card on a desk. Above #sprayModal / #fpLogModal so it can be
+     opened from either. Strips are big tap targets; the tick column is the drag-to-select handle. */
+  #bedPick{position:fixed;inset:0;z-index:78;display:none;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+  #bedPick.open{display:flex}
+  .bpk-card{width:min(480px,100%);height:min(90vh,100%);display:flex;flex-direction:column;background:var(--paper);
+    border:1px solid var(--line-2);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  @media(max-width:640px){ .bpk-card{width:100%;height:100%;border-radius:0;border:none} }
+  .bpk-head{display:flex;align-items:center;gap:.7rem;padding:.9rem 1rem .6rem}
+  .bpk-title{font-size:1.15rem;font-weight:650}
+  .bpk-sub{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);margin-top:.15rem}
+  .bpk-tabs{margin:0 1rem .7rem}
+  .bpk-tabs button{flex:1 1 0;padding:.65rem 0;font-size:.7rem}
+  .bpk-body{flex:1;min-height:0;overflow:auto;padding-bottom:.8rem;-webkit-overflow-scrolling:touch}
+  .bpk-search.tl-search{width:auto;margin:0 1rem .6rem}
+  .bpk-map{display:block;width:calc(100% - 2rem);height:140px;margin:0 1rem .5rem;border:1px solid var(--line);
+    border-radius:12px;background:var(--paper-2)}
+  .bpk-map .bf{fill:var(--paper);stroke:var(--line-2);stroke-width:.5;cursor:pointer}
+  .bpk-map .bf.on{stroke:var(--steel);stroke-width:1.4}
+  .bpk-map .bb{pointer-events:none}
+  .bpk-map text{font-family:var(--mono);font-weight:700;fill:var(--ink);pointer-events:none;
+    paint-order:stroke;stroke:var(--paper);stroke-width:.9}
+  .bpk-map .dot{fill:var(--steel);pointer-events:none}
+  .bpk-far{display:flex;gap:.4rem;flex-wrap:wrap;margin:0 1rem .6rem}
+  .bpk-pill{font-family:var(--mono);font-size:.72rem;padding:.45rem .75rem;border-radius:999px;border:1px solid var(--line-2);
+    background:none;color:var(--ink-2);cursor:pointer}
+  .bpk-pill.on{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:600}
+  .bpk-blockrow{display:flex;align-items:center;gap:.5rem;margin:.3rem 1rem .4rem;font-family:var(--mono);font-size:.66rem;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+  .bpk-blockrow .grow{flex:1;min-width:0}
+  .bpk-link{background:none;border:none;color:var(--steel-soft);font-weight:600;font-size:.86rem;cursor:pointer;padding:.45rem 0;
+    font-family:var(--sans);letter-spacing:0;text-transform:none}
+  .bpk-strip{display:flex;align-items:stretch;margin:0 1rem 5px;min-height:46px;border:1px solid var(--line-2);border-radius:10px;
+    overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .bpk-strip.empty{border-style:dashed}
+  .bpk-strip.on{border-color:var(--steel);background:var(--sel)}
+  .bpk-strip .bpk-sw{width:8px;flex:0 0 auto;align-self:stretch}
+  .bpk-strip .nm{width:3.6rem;flex:0 0 auto;padding-left:.55rem;display:flex;align-items:center;font-family:var(--mono);
+    font-weight:700;font-size:.8rem}
+  .bpk-strip .tx{flex:1;min-width:0;padding:.35rem 0;display:flex;flex-direction:column;justify-content:center}
+  .bpk-strip .cr{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bpk-strip.empty .cr{color:var(--ink-2);font-weight:500}
+  .bpk-strip .nt{font-family:var(--mono);font-size:.64rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bpk-tag{align-self:center;flex:0 0 auto;font-family:var(--mono);font-size:.58rem;letter-spacing:.05em;text-transform:uppercase;
+    border:1px solid currentColor;border-radius:999px;padding:.15rem .45rem;margin-left:.3rem;white-space:nowrap}
+  .bpk-tag.amber{color:var(--amber)} .bpk-tag.ok{color:var(--ok)} .bpk-tag.clay{color:var(--clay)}
+  .bpk-tick{width:2.8rem;flex:0 0 auto;display:flex;align-items:center;justify-content:center;touch-action:none}
+  .bpk-tick i{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-2);display:flex;align-items:center;
+    justify-content:center;font-style:normal;color:#fff;font-size:.8rem;font-weight:700}
+  .bpk-strip.on .bpk-tick i{background:var(--steel);border-color:var(--steel)}
+  .bpk-more{background:none;border:none;color:var(--ink-2);font-size:1.1rem;padding:0 .4rem;cursor:pointer}
+  .bpk-zact{display:flex;gap:.5rem;flex-wrap:wrap;margin:.2rem 1rem .6rem}
+  .bpk-empty{margin:.6rem 1rem;color:var(--ink-2);font-size:.88rem;line-height:1.45}
+  .bpk-foot{display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem calc(.8rem + env(safe-area-inset-bottom,0px));
+    border-top:1px solid var(--line)}
+  .bpk-count{flex:1;min-width:0}
+  .bpk-count b{display:block;font-size:.95rem}
+  .bpk-count span{display:block;font-family:var(--mono);font-size:.66rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bpk-foot .btn-primary{padding:.8rem 1.7rem}
 
   /* ---------- Farm info ---------- */
   /* Two panes side by side on a desk, one pane that pushes on a phone: below 860px the detail pane
@@ -6969,103 +7099,119 @@
   </div>
 
   <!-- SPRAY ENTRY DIALOG -->
+  <!-- SPRAY LOG (redesign 2026-11, canvas page 6). Two screens in one card: #sprayStart (what's
+       coming up + one big Log button) and #sprayForm (one screen: Where · What · Sprayer · Tanks ·
+       Why · When; everything else folded under More). Fertigation is a sprayer choice that swaps
+       Where for irrigation valves and Tanks for mix volume + run time. -->
   <div id="sprayModal">
-    <div class="ap-card sp-card">
-      <button class="ap-x" id="sprayClose" title="Close">✕</button>
-      <div class="ap-head" id="sprayHead">Log a spray</div>
-      <div class="ap-sub" id="spraySub">Record what went on, where — for the organic record.</div>
+    <div class="ap-card sp-card lg-card">
+      <div class="lg-head">
+        <button type="button" class="icon-btn lg-back" id="sprayBackStart" title="Back to coming up" hidden>←</button>
+        <div class="lg-titles"><div class="lg-title" id="sprayHead">Log a spray</div><div class="lg-sub" id="spraySub"></div></div>
+        <button type="button" class="lg-say" id="spraySayBtn" title="Say it or type it in one line"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7.2" y="2.6" width="5.6" height="9.4" rx="2.8"/><path d="M4.6 9.6a5.4 5.4 0 0010.8 0M10 15v2.6"/></svg>Say it</button>
+        <button type="button" class="ap-x lg-x" id="sprayClose" title="Close">✕</button>
+      </div>
 
-      <div class="ap-sect">Where</div>
-      <div class="sp-bed-actions">
-        <button type="button" class="btn-ghost" id="sprayPickMapBtn">🗺 Pick beds on map</button>
-        <div class="tl-search sp-inline-search">
-          <input type="text" id="sprayBedSearch" placeholder="…or add a bed by name" autocomplete="off" spellcheck="false">
-          <button type="button" id="sprayBedSearchClear" title="Clear">✕</button>
+      <div class="lg-body">
+        <div id="sprayStart" hidden>
+          <div class="lg-lbl">Coming up</div>
+          <div id="sprayComing"></div>
+          <button type="button" class="lg-link" id="sprayStartSchedule">＋ Schedule a spray</button>
         </div>
-      </div>
-      <div class="sp-suggest" id="sprayBedSuggest" hidden></div>
-      <div class="sp-chips" id="sprayBedChips"></div>
-      <label class="ap-field" style="margin-top:.7rem"><span>Location note (optional)</span>
-        <input type="text" id="sprayLocNote" placeholder="e.g. middle of I kale and Sb — for when the map isn't exact"></label>
 
-      <div class="ap-sect">Crops</div>
-      <div class="ap-sub" id="sprayCropsAuto" style="margin:0 0 .5rem">Auto-filled from the beds you pick — edit if needed.</div>
-      <div class="sp-chips" id="sprayCropChips"></div>
-      <div class="tl-search sp-inline-search" style="margin-top:.5rem">
-        <input type="text" id="sprayCropSearch" placeholder="Add a crop manually" autocomplete="off" spellcheck="false">
-        <button type="button" id="sprayCropSearchClear" title="Clear">✕</button>
-      </div>
-      <div class="sp-suggest" id="sprayCropSuggest" hidden></div>
-
-      <div class="ap-sect">Products &amp; rates</div>
-      <label class="ap-field"><span>Start from a saved mix</span>
-        <select id="sprayFromMix"></select></label>
-      <div class="sp-items" id="sprayItems"></div>
-      <button type="button" class="btn-ghost sp-additem" id="sprayAddItem">＋ Add product</button>
-
-      <div class="ap-sect">Application</div>
-      <div class="ap-grid">
-        <div class="ap-field"><span>Method</span>
-          <div class="seg" id="sprayMethod">
-            <button type="button" data-method="Backpack" aria-pressed="true">Backpack</button>
-            <button type="button" data-method="Boom" aria-pressed="false">Boom</button>
-            <button type="button" data-method="Fertigation" aria-pressed="false">Fertigation</button>
-            <button type="button" data-method="Granular" aria-pressed="false">Granular</button>
+        <div id="sprayForm">
+          <div class="lg-row"><span class="lg-k">Sprayer</span><div class="lg-sprayers" id="spraySprayers"></div></div>
+          <button type="button" class="lg-row lg-tap" id="sprayWhereRow">
+            <span class="lg-k">Where</span><span class="lg-v" id="sprayBedChips"></span><span class="lg-go">Pick ›</span></button>
+          <div class="lg-row lg-col" id="sprayValveRow" hidden>
+            <span class="lg-k">Valves</span><div class="lg-chips" id="sprayValves"></div></div>
+          <div class="lg-row lg-col">
+            <div class="lg-rowhead"><span class="lg-k">What</span><span class="grow"></span>
+              <label class="lg-mini"><span id="sprayFromLbl">From a saved mix</span> <select id="sprayFromMix"></select></label></div>
+            <div class="sp-items" id="sprayItems"></div>
+            <button type="button" class="lg-link" id="sprayAddItem">＋ Add product</button>
           </div>
-        </div>
-        <label class="ap-field"><span>Amount made up</span>
-          <div class="sp-amount">
-            <input type="number" id="sprayAmount" min="0" step="0.1" placeholder="e.g. 18">
-            <select id="sprayAmountUnit">
-              <option>L</option><option>mL</option><option>backpacks</option><option>kg</option>
-            </select>
-          </div></label>
-        <label class="ap-field"><span>Reason / target</span>
-          <select id="sprayReason"></select></label>
-        <label class="ap-field"><span>Date</span>
-          <input type="date" id="sprayDate"></label>
-        <label class="ap-field"><span>Sprayed by</span>
-          <select id="sprayBy"></select></label>
-        <label class="ap-field" title="Days before it's safe to harvest — auto-filled as the longest withholding period of any product in the mix; override if a product's label says otherwise"><span>Withholding (days)</span>
-          <input type="number" id="sprayWhp" min="0" step="1" placeholder="auto"></label>
-      </div>
-      <div class="sp-safe" id="spraySafe"></div>
-
-      <div id="sprayPhotoSection">
-        <div class="ap-sect">Photos</div>
-        <div class="sp-photos">
-          <label class="sp-photo-add" id="sprayPhotoAdd">＋ Add photo
-            <input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden>
-          </label>
-          <div class="sp-photo-thumbs" id="sprayPhotoThumbs"></div>
-        </div>
-      </div>
-
-      <div class="ap-sect">Notes</div>
-      <label class="ap-field"><span>Notes</span>
-        <textarea id="sprayNotes" rows="3" placeholder="Anything else worth recording…"></textarea></label>
-
-      <div id="sprayFollowupSection">
-        <div class="ap-sect">Follow-up sprays</div>
-        <label class="sp-fav-toggle"><input type="checkbox" id="sprayFollowupOn"> <span>Schedule follow-up sprays (same beds &amp; mix)</span></label>
-        <div id="sprayFollowupControls" hidden>
-          <div class="sp-fu-row">
-            <span class="sp-fu-lbl">every</span>
-            <input type="number" id="sprayFollowupEvery" min="1" step="1" value="7">
-            <span class="sp-fu-lbl">days ×</span>
-            <input type="number" id="sprayFollowupCount" min="1" max="12" step="1" value="1">
-            <span class="sp-fu-lbl">time(s)</span>
+          <div class="lg-row lg-col" id="sprayTanksRow">
+            <div class="lg-rowhead"><span class="lg-k">Tanks</span><div class="lg-v lg-tanksum" id="sprayTankSum"></div>
+              <span class="lg-step"><button type="button" data-tank-step="-0.5" aria-label="Half a tank less">−</button><b id="sprayTankN">0</b><button type="button" data-tank-step="0.5" aria-label="Half a tank more">+</button></span></div>
+            <label class="lg-litres">or type the litres <input type="number" id="sprayAmount" min="0" step="0.1" inputmode="decimal" placeholder="—"> L</label>
+            <select id="sprayAmountUnit" hidden><option>L</option><option>mL</option><option>backpacks</option><option>kg</option></select>
           </div>
-          <div class="sp-fu-list" id="sprayFollowupList"></div>
+          <div class="lg-row" id="sprayFertRow" hidden>
+            <span class="lg-k">Mixed in</span>
+            <div class="lg-v lg-pair">
+              <label><input type="number" id="sprayMixVol" min="0" step="1" inputmode="decimal" placeholder="200"> L tank</label>
+              <label><input type="number" id="sprayRunMin" min="0" step="1" inputmode="numeric" placeholder="40"> min run</label>
+            </div>
+          </div>
+          <div class="lg-row lg-col">
+            <div class="lg-rowhead" style="align-items:flex-start"><span class="lg-k" style="padding-top:.5rem">Why</span>
+              <div class="lg-chips"><span id="sprayWhyChips" style="display:contents"></span><select id="sprayReason" class="lg-select" title="Other reason"></select></div></div>
+          </div>
+          <div class="lg-row">
+            <span class="lg-k">When</span>
+            <div class="lg-v lg-pair"><input type="date" id="sprayDate"><select id="sprayBy"></select></div>
+          </div>
+          <div class="sp-safe lg-safe" id="spraySafe"></div>
+
+          <details class="lg-more" id="sprayMore">
+            <summary>Photos, notes, crops, follow-ups</summary>
+            <div id="sprayPhotoSection">
+              <div class="lg-lbl">Photos</div>
+              <div class="sp-photos">
+                <label class="sp-photo-add" id="sprayPhotoAdd">＋ Add photo
+                  <input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden>
+                </label>
+                <div class="sp-photo-thumbs" id="sprayPhotoThumbs"></div>
+              </div>
+            </div>
+            <label class="ap-field"><span>Notes</span>
+              <textarea id="sprayNotes" rows="3" placeholder="Anything else worth recording…"></textarea></label>
+            <label class="ap-field"><span>Location note</span>
+              <input type="text" id="sprayLocNote" placeholder="When the beds don't say it all — “middle of I kale”"></label>
+            <div class="lg-lbl">Crops <span class="lg-hint">filled from the beds</span></div>
+            <div class="sp-chips" id="sprayCropChips"></div>
+            <div class="tl-search sp-inline-search" style="margin-top:.5rem">
+              <input type="text" id="sprayCropSearch" placeholder="Add a crop" autocomplete="off" spellcheck="false">
+              <button type="button" id="sprayCropSearchClear" title="Clear">✕</button>
+            </div>
+            <div class="sp-suggest" id="sprayCropSuggest" hidden></div>
+            <label class="ap-field" title="Auto-filled as the longest withholding period of any product; override if a label says otherwise"><span>Withholding (days)</span>
+              <input type="number" id="sprayWhp" min="0" step="1" placeholder="auto"></label>
+            <div id="sprayFollowupSection">
+              <label class="sp-fav-toggle"><input type="checkbox" id="sprayFollowupOn"> <span>Schedule follow-up sprays (same beds &amp; mix)</span></label>
+              <div id="sprayFollowupControls" hidden>
+                <div class="sp-fu-row">
+                  <span class="sp-fu-lbl">every</span>
+                  <input type="number" id="sprayFollowupEvery" min="1" step="1" value="7">
+                  <span class="sp-fu-lbl">days ×</span>
+                  <input type="number" id="sprayFollowupCount" min="1" max="12" step="1" value="1">
+                  <span class="sp-fu-lbl">time(s)</span>
+                </div>
+                <div class="sp-fu-list" id="sprayFollowupList"></div>
+              </div>
+            </div>
+            <button type="button" class="lg-link" id="spraySaveAsMix">Save these products as a mix</button>
+          </details>
+        </div>
+
+        <div class="lg-say-sheet" id="spraySaySheet" hidden>
+          <div class="lg-lbl">Say it or type it</div>
+          <textarea id="spraySayText" rows="4" placeholder="copper 40 g a tank, E5 to E8, two and a half tanks in the electric, for downy"></textarea>
+          <div class="lg-hint" id="spraySayHint">Tap the keyboard’s microphone to talk. It fills the form in — you still check it and save.</div>
+          <div class="lg-say-acts"><button type="button" class="btn-ghost" id="spraySayCancel">Cancel</button>
+            <button type="button" class="btn-primary" id="spraySayGo">Fill the form</button></div>
         </div>
       </div>
 
-      <div class="sp-err" id="sprayErr" hidden></div>
-      <div class="sp-actions">
-        <button class="btn-ghost" id="sprayCancel">Cancel</button>
-        <button class="btn-ghost" id="spraySaveAsMix">Save as mix</button>
-        <button class="btn-ghost" id="sprayLogAsPlannedBtn" style="display:none">Log as planned</button>
-        <button class="btn-primary" id="spraySave">Save record</button>
+      <div class="lg-foot">
+        <div class="sp-err" id="sprayErr" hidden></div>
+        <div id="sprayStartFoot" hidden><button type="button" class="btn-primary lg-big" id="sprayStartNew">＋ Log a spray</button></div>
+        <div class="sp-actions" id="sprayFormFoot">
+          <button class="btn-ghost" id="sprayCancel">Cancel</button>
+          <button class="btn-ghost" id="sprayLogAsPlannedBtn" style="display:none">Log as planned</button>
+          <button class="btn-primary" id="spraySave">Save spray</button>
+        </div>
       </div>
     </div>
   </div>
@@ -7108,26 +7254,23 @@
     </div>
   </div>
 
-  <!-- SPRAY BED PICKER (map multi-select) -->
-  <div id="sprayPickModal">
-    <div class="sp-pick-card">
-      <div class="sp-pick-head">
-        <span class="sp-pick-title">Tap beds to select</span>
-        <div class="tl-search sp-inline-search">
-          <input type="text" id="sprayPickSearch" placeholder="Find a bed by name" autocomplete="off" spellcheck="false">
-          <button type="button" id="sprayPickSearchClear" title="Clear">✕</button>
-        </div>
-        <button class="icon-btn" id="sprayPickClose" title="Done">✕</button>
+  <!-- FIELD BED PICKER — shared by the spray and fert logs (bedPickOpen) -->
+  <div id="bedPick">
+    <div class="bpk-card" role="dialog" aria-labelledby="bpkTitle">
+      <div class="bpk-head">
+        <button type="button" class="icon-btn" id="bedPickClose" title="Back">←</button>
+        <div class="bpk-titles"><div class="bpk-title" id="bpkTitle">Where</div>
+          <div class="bpk-sub">Beds, a saved zone, or a whole block</div></div>
       </div>
-      <div class="sp-pick-suggest" id="sprayPickSuggest" hidden></div>
-      <div id="sprayPickWrap">
-        <svg id="sprayPickSvg" xmlns="http://www.w3.org/2000/svg"><g id="sprayPickG"></g></svg>
+      <div class="seg bpk-tabs" id="bpkTabs">
+        <button type="button" data-bpk-tab="beds" aria-pressed="true">Beds</button>
+        <button type="button" data-bpk-tab="zones" aria-pressed="false">Zones</button>
+        <button type="button" data-bpk-tab="block" aria-pressed="false">Whole block</button>
       </div>
-      <div class="sp-pick-foot">
-        <span class="sp-pick-count" id="sprayPickCount">0 beds</span>
-        <span class="sp-pick-crops" id="sprayPickCrops"></span>
-        <span class="spacer"></span>
-        <button class="btn-primary" id="sprayPickDone">Done</button>
+      <div class="bpk-body" id="bpkBody"></div>
+      <div class="bpk-foot">
+        <div class="bpk-count"><b id="bpkCount">0 beds</b><span id="bpkCrops"></span></div>
+        <button type="button" class="btn-primary" id="bpkDone">Done</button>
       </div>
     </div>
   </div>
@@ -7772,7 +7915,7 @@ function sbLogout(){
   }
   saveSbSession(null);
 }
-let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, irrigZones:[], seeders:[], seederRollers:[], sowingRecords:[], mapFeatures:[] };
+let data = { blocks:[], beds:[], plantings:[], plantingsActive:[], bedZones:[], crops:{}, cropDefs:{}, varietiesByCrop:{}, varietiesById:{}, trayTypes:[], tasks:[], cropTasks:[], plantingTasks:[], tarps:[], bedIssues:[], bedPrepEvents:[], bedPrepTargets:[], bedPrepPlan:[], sprayProducts:[], sprayProductsById:{}, sprayMixes:[], sprayApplications:[], fieldWalks:[], walkObservations:[], walkLists:[], walkListItems:[], weatherObs:[], weatherByDate:{}, irrigEvents:[], irrigSettings:null, irrigZones:[], seeders:[], seederRollers:[], sowingRecords:[], mapFeatures:[], sprayZones:[], cropPlans:[] };
 let usedDefaults = { size:false, coords:false };
 let selectedBed = null;
 let activeBlock = null; // filter
@@ -7911,7 +8054,7 @@ async function loadAll(opts){
     // whole app down with it. Every other fetch below is deliberately left unguarded — those
     // tables are load-bearing and failing loudly is the right answer for them.
     const fwFetch = t => atFetch(CFG.farmBase, t).catch(e=>{ console.warn("field walk:", e.message); return []; });
-    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings, boardNotes, boardReplies, boardTallies, irrigZones, seeders, seederRollers, sowingRecords] = await Promise.all([
+    const [blk, beds, pl, crops, varieties, trayTypes, tasks, cropTasks, plantingTasks, salesOutlets, harvestRecords, tarpings, bedIssues, sprayProducts, sprayMixes, sprayMixItems, sprayApplications, sprayApplicationItems, fieldWalks, walkObservations, walkLists, walkListItems, fieldWalkTags, farmInfo, fertPrograms, fertRounds, fertItems, fertApps, fertAppItems, bedPrepEvents, bedPrepTargets, bedPrepPlan, bedZones, fertProducts, weatherObs, irrigEvents, irrigSettings, mapFeatures, farmSettings, boardNotes, boardReplies, boardTallies, irrigZones, seeders, seederRollers, sowingRecords, sprayZones, cropPlans] = await Promise.all([
       atFetch(CFG.farmBase, CFG.tables.blocks),
       atFetch(CFG.farmBase, CFG.tables.beds),
       atFetch(CFG.farmBase, CFG.tables.plantings),
@@ -7954,6 +8097,7 @@ async function loadAll(opts){
       fwFetch(CFG.tables.boardNotes), fwFetch(CFG.tables.boardReplies), fwFetch(CFG.tables.boardTallies),
       fwFetch(CFG.tables.irrigZones),
       fwFetch(CFG.tables.seeders), fwFetch(CFG.tables.seederRollers), fwFetch(CFG.tables.sowingRecords),
+      fwFetch(CFG.tables.sprayZones), fwFetch(CFG.tables.cropPlans),
     ]);
     if(lt){ LOAD_TRACK=null; loadMsg("drawing the planner…"); }
     const F = CFG.f;
@@ -8154,6 +8298,8 @@ async function loadAll(opts){
     data.seeders = PlannerShared.parseSeeders(seeders);
     data.seederRollers = PlannerShared.parseSeederRollers(seederRollers);
     data.sowingRecords = PlannerShared.parseSowingRecords(sowingRecords);
+    data.sprayZones = PlannerShared.parseSprayZones(sprayZones);
+    data.cropPlans = PlannerShared.parseCropPlans(cropPlans);
     fmSyncSatShared(farmSettings);
     data.farmSettings = ((farmSettings||[]).find(r=>r.id==="farm")||{}).fields || {};
     lastLoadAt = Date.now();
@@ -9037,6 +9183,8 @@ function backCandidates(){
   if(tsh && !tsh.hidden && backVisible(tsh)) out.push([tsh,fwCloseTagSheet]);
   const fsh=document.getElementById("fwSheet");
   if(fsh && !fsh.hidden && backVisible(fsh)) out.push([fsh,fwCloseWhoSheet]);
+  const say=document.getElementById("spraySaySheet");
+  if(say && !say.hidden && backVisible(say)) out.push([say,()=>{ say.hidden=true; }]);
   const wbp=document.getElementById("wbPanel");
   if(wbp && cmIsMobile() && wbSel && backVisible(wbp)) out.push([wbp,()=>{ wbSel=null; buildWhiteboard(); }]);
   const csr=document.getElementById("csRoot");
@@ -27903,6 +28051,7 @@ function sprayWhpOnBedAt(bedId, onISO){
   let best=null;
   (data.sprayApplications||[]).forEach(a=>{
     if(!a.date || !(a.bedIds||[]).includes(bedId)) return;
+    if(a.status==="Planned") return;             // an overdue planned spray hasn't gone on yet
     const whp=sprayAppWhp(a); if(!whp) return;
     const safe=PlannerShared.safeAfterISO(a.date, whp);
     if(a.date<=onISO && onISO<safe && (!best || safe>best.safeAfter)) best={application:a, safeAfter:safe, whp};
@@ -27942,8 +28091,11 @@ function srBedsShort(bedIds){
   return `${sorted[0]}–${sorted[sorted.length-1]} · ${names.length} beds`;
 }
 // The mix, as one line: a saved mix keeps its own name, otherwise the products run together.
+// The parser sets fromMixId (not a name), so the mix is looked up here — reading a.mixName, which
+// nothing ever set, is why saved-mix names never showed on records before 2026-11.
+const srMixOf = a => a.fromMixId ? (data.sprayMixes||[]).find(m=>m.id===a.fromMixId)||null : null;
 function srMixLabel(a){
-  if(a.mixName) return a.mixName;
+  const mix=srMixOf(a); if(mix && mix.name) return mix.name;
   const names=(a.items||[]).map(it=>sprayProductName(it.productId)).filter(Boolean);
   if(!names.length) return a.locationNote || "Spray";
   return names.join(" + ");
@@ -28059,7 +28211,7 @@ function srRenderPanel(){
      +`<button type="button" class="icon-btn" id="srPanelClose" aria-label="Close">✕</button></div>`
    +`<div class="cr-panel-body">`
      +`<div class="pn-meta">${esc(a.method||"Spray")}`
-       +`${a.mixName?" · saved mix":""}${planned?" · scheduled":""}</div>`
+       +`${srMixOf(a)?" · saved mix":""}${planned?" · scheduled":""}</div>`
      +row("When", esc(fmt(a.date)))
      +row("Beds", beds.length?esc(srBedsShort(a.bedIds)):"—")
      +row("Tank", a.amount!=null?esc(a.amount+" "+(a.amountUnit||"L")):"—")
@@ -28203,7 +28355,7 @@ function smxRenderPanel(){
   const row=(k,v)=>`<div class="pn-diff"><span>${esc(k)}</span><span class="pn-diff-val">${v}</span></div>`;
   // How many times this mix has actually been sprayed — the difference between a recipe you use and
   // one you wrote down once.
-  const used=(data.sprayApplications||[]).filter(a=>a.mixId===m.id || a.mixName===m.name).length;
+  const used=(data.sprayApplications||[]).filter(a=>a.fromMixId===m.id).length;
   panel.innerHTML=
     `<div class="cr-panel-head">`
      +`<span class="lib-dot" style="background:${m.favourite?"var(--clay)":"var(--line-2)"}"></span>`
@@ -28274,10 +28426,13 @@ let spray = null;   // active entry-form state, or null when closed
 //  "logFromPlan"  — a scheduled spray came due; log what actually happened, flipping it to Logged.
 // sprayResetState + sprayApplyMode + the three sprayOpen* wrappers share one form.
 function sprayResetState(mode){
+  const sprayers=PlannerShared.sprayersFrom(data.farmSettings);
   spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null,
-            method:"Backpack", whpManual:false, mode:mode||"log", editId:null, followups:[] };
+            method:"Backpack", whpManual:false, mode:mode||"log", editId:null, followups:[],
+            zoneIds:new Set(), valveIds:new Set(), sprayer:(sprayers.find(s=>s.default)||sprayers[0]).name,
+            tanks:null, fromStart:false };
   populateSprayMixSelect();
-  ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayBedSearch","sprayCropSearch"].forEach(id=>$s(id).value="");
+  ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayCropSearch","sprayMixVol","sprayRunMin","spraySayText"].forEach(id=>$s(id).value="");
   $s("sprayAmountUnit").value="L";
   $s("sprayDate").value = sprayToday();
   sprayFillReason($s("sprayReason"), "");
@@ -28285,34 +28440,54 @@ function sprayResetState(mode){
   $s("sprayFromMix").value = "";
   $s("sprayPhotoThumbs").innerHTML = "";
   $s("sprayFollowupOn").checked = false; $s("sprayFollowupControls").hidden = true; $s("sprayFollowupList").innerHTML = "";
-  $s("sprayBedSuggest").hidden = true; $s("sprayCropSuggest").hidden = true;
+  $s("sprayCropSuggest").hidden = true;
   $s("sprayErr").hidden = true;
+  $s("sprayMore").open = false;
+  $s("spraySaySheet").hidden = true;
+  sprayShowPanel("form");
   setSprayMethod("Backpack");
 }
 function sprayApplyMode(){
   const m = spray.mode, isPlan = m==="plan", editing = !!spray.editId;
   $s("sprayHead").textContent = isPlan ? (editing?"Edit scheduled spray":"Schedule a spray")
-    : m==="logFromPlan" ? "Log this spray" : "Log a spray";
-  $s("spraySub").textContent = isPlan
-    ? "Plan an upcoming spray — it shows as a task in This Week."
-    : "Record what went on, where — for the organic record.";
-  $s("spraySave").textContent = isPlan ? "Schedule spray" : "Save record";
+    : m==="logFromPlan" ? "Log this spray" : spray.sprayer==="Fertigation" ? "Log fertigation" : "Log a spray";
+  $s("spraySub").textContent = isPlan ? "Shows under Coming up and in This week"
+    : m==="logFromPlan" ? "Filled in as planned — change what was different" : "";
+  $s("spraySave").textContent = isPlan ? "Schedule spray" : spray.sprayer==="Fertigation" ? "Save fertigation" : "Save spray";
   $s("sprayPhotoSection").style.display = isPlan ? "none" : "";          // no photos of a future spray
   $s("sprayLogAsPlannedBtn").style.display = m==="logFromPlan" ? "" : "none";
   $s("sprayFollowupSection").style.display = editing ? "none" : "";       // follow-ups only for a fresh record
+  $s("sprayBackStart").hidden = !spray.fromStart;
+}
+// Two screens share the card: "start" (coming up + one big Log button) and "form".
+function sprayShowPanel(which){
+  const start = which==="start";
+  $s("sprayStart").hidden = !start; $s("sprayStartFoot").hidden = !start;
+  $s("sprayForm").hidden = start;   $s("sprayFormFoot").hidden = start;
+  $s("spraySayBtn").hidden = start;
 }
 // Load an existing application's data into the open form (edit-plan / log-from-plan).
 function sprayPrefillFromApp(a){
-  (a.bedIds||[]).forEach(id=>spray.beds.add(id));
+  spray.zoneIds = new Set(a.zoneIds||[]);
+  spray.valveIds = new Set(a.valveIds||[]);
+  // Beds that came in through a zone or valve stay with it, so the form shows "Fruit fly 1"
+  // rather than 30 bed names; anything else was ticked by hand.
+  const covered = new Set([...PlannerShared.bedsForZones(data.sprayZones||[], [...spray.zoneIds]),
+                           ...PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds])]);
+  (a.bedIds||[]).forEach(id=>{ if(!covered.has(id)) spray.beds.add(id); });
   (a.cropIds||[]).forEach(id=>spray.cropIds.add(id));
   spray.items = (a.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||""}));
   if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
   spray.fromMixId = a.fromMixId||null;
   spray.method = a.method || "Backpack";
+  spray.sprayer = a.sprayer || (a.method==="Fertigation" ? "Fertigation" : a.method==="Boom" ? "Tractor" : spray.sprayer);
+  spray.tanks = a.tanks!=null ? a.tanks : null;
   $s("sprayLocNote").value = a.locationNote||"";
   $s("sprayNotes").value = a.notes||"";
   $s("sprayAmount").value = a.amount!=null?a.amount:"";
   $s("sprayAmountUnit").value = a.amountUnit||"L";
+  $s("sprayMixVol").value = a.mixVolL!=null?a.mixVolL:"";
+  $s("sprayRunMin").value = a.runMin!=null?a.runMin:"";
   sprayFillReason($s("sprayReason"), a.reason||"");
   sprayFillAssignee($s("sprayBy"), a.sprayedBy||localStorage.getItem(SPRAY_BY_KEY)||"");
   if(a.whp!=null){ $s("sprayWhp").value=a.whp; spray.whpManual=true; }
@@ -28321,14 +28496,137 @@ function sprayPrefillFromApp(a){
 function sprayFinishOpen(focusBeds){
   sprayApplyMode();
   renderSprayBedChips(); renderSprayCropChips(); renderSprayItems(); updateSprayWhp(); renderSprayFollowups();
+  renderSpraySprayers(); renderSprayTanks(); renderSprayValves(); renderSprayWhy();
   $s("sprayModal").classList.add("open");
-  if(focusBeds) setTimeout(()=>$s("sprayBedSearch").focus(), 40);
+  $s("sprayModal").querySelector(".lg-body").scrollTop=0;
 }
 function sprayOpen(prefill){
   sprayResetState("log");
   if(prefill && prefill.mixId){ $s("sprayFromMix").value = prefill.mixId; applyMixToForm(prefill.mixId); }
   else spray.items = [{ productId:"", rate:null, unit:"" }];
+  if(prefill && prefill.fromStart) spray.fromStart = true;
   sprayFinishOpen(true);
+}
+// "+ Log a spray" on the Spray records page. Opens on what's coming up when anything is; with
+// nothing scheduled there's nothing to choose between, so it goes straight to a fresh log.
+function sprayStartOpen(){
+  const up=sprayComingUp();
+  if(!up.length){ sprayOpen(); return; }
+  sprayResetState("log");
+  $s("sprayHead").textContent="Log a spray";
+  $s("spraySub").textContent=fmtLong(sprayToday());
+  $s("sprayBackStart").hidden=true;
+  renderSprayComing(up);
+  sprayShowPanel("start");
+  $s("sprayModal").classList.add("open");
+}
+function sprayComingUp(){
+  const plantingsById=Object.fromEntries((data.plantings||[]).map(p=>[p.id,p]));
+  const plansById=Object.fromEntries((data.cropPlans||[]).map(p=>[p.id,p]));
+  return PlannerShared.comingUp(data.sprayApplications, sprayToday(), {plantingsById, plansById});
+}
+// Where a record went, short: zone names first, then valves, then beds. "Fruit fly 1, E5–E8".
+function sprayWhereLabel(a){
+  const zones=(a.zoneIds||[]).map(id=>((data.sprayZones||[]).find(z=>z.id===id)||{}).name).filter(Boolean);
+  const valves=(a.valveIds||[]).map(id=>(sprayValves().find(v=>v.id===id)||{}).name).filter(Boolean);
+  const covered=new Set([...PlannerShared.bedsForZones(data.sprayZones||[], a.zoneIds||[]),
+                         ...PlannerShared.bedsForValves(sprayValves(), a.valveIds||[])]);
+  const beds=(a.bedIds||[]).filter(id=>!covered.has(id));
+  return [...zones, ...valves, beds.length ? srBedsShort(beds) : ""].filter(Boolean).join(", ") || a.locationNote || "—";
+}
+function renderSprayComing(up){
+  const today=sprayToday();
+  const rows=up.slice(0,12).map(({app:a, due, overdue})=>{
+    const what=(a.items||[]).map(it=>sprayProductName(it.productId)).filter(n=>n!=="?").join(" + ") || srMixLabel(a) || "Spray";
+    const when = !due ? "no date" : overdue ? `<b>was due ${fmtShortDay(due)}</b>` : due===today ? "today" : fmtShortDay(due);
+    const crops=sprayCropsLabel(a.cropIds);
+    const extra=[a.followUpOfId?"follow-up":"", a.planId?"from a plan":"", crops, a.reason].filter(Boolean).join(" · ");
+    return `<div class="lg-up${overdue?" over":""}" data-up-edit="${a.id}">
+      <div class="tx"><div class="t">${esc(what)} · ${esc(sprayWhereLabel(a))}</div><div class="s">${when}${extra?" · "+esc(extra):""}</div></div>
+      <button type="button" class="${overdue||due===today?"btn-primary":"btn-ghost"}" data-up-done="${a.id}">Done</button></div>`;
+  }).join("");
+  $s("sprayComing").innerHTML = rows || `<div class="lg-empty">Nothing scheduled.</div>`;
+}
+// "Fri 31 Jul" / "Wednesday 4 November" — no commas, the way the farm writes dates.
+const LG_DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"], LG_MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtShortDay(iso){ const d=PlannerShared.wkParse(iso); return `${LG_DAYS[d.getDay()]} ${d.getDate()} ${LG_MON[d.getMonth()]}`; }
+function fmtLong(iso){ const d=PlannerShared.wkParse(iso); return d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"}).replace(/,/g,""); }
+
+/* sprayers, tanks, valves, why — the redesigned rows */
+function sprayValves(){
+  return PlannerShared.valvesList(data.beds, data.blocks, data.irrigSettings, data.irrigZones);
+}
+function sprayIsFert(){ return spray && spray.sprayer==="Fertigation"; }
+function spraySprayerLitres(){
+  const s=PlannerShared.sprayersFrom(data.farmSettings).find(x=>x.name===spray.sprayer);
+  return s ? s.litres : null;
+}
+function renderSpraySprayers(){
+  const list=[...PlannerShared.sprayersFrom(data.farmSettings).map(s=>({name:s.name, sub:`${s.litres} L`})), {name:"Fertigation", sub:"valves"}];
+  $s("spraySprayers").innerHTML=list.map(s=>`<button type="button" data-sprayer="${esc(s.name)}" aria-pressed="${s.name===spray.sprayer}">${esc(s.name)}<small>${esc(s.sub)}</small></button>`).join("");
+  const fert=sprayIsFert();
+  $s("sprayWhereRow").hidden=fert; $s("sprayValveRow").hidden=!fert;
+  $s("sprayTanksRow").hidden=fert; $s("sprayFertRow").hidden=!fert;
+  $s("sprayFromLbl").textContent = fert ? "From a program" : "From a saved mix";
+  populateSprayMixSelect();
+}
+function setSpraySprayer(name){
+  const wasFert=sprayIsFert();
+  spray.sprayer=name;
+  const s=PlannerShared.sprayersFrom(data.farmSettings).find(x=>x.name===name);
+  setSprayMethod(name==="Fertigation" ? "Fertigation" : (s && s.litres>=40) ? "Boom" : "Backpack");
+  if(wasFert!==sprayIsFert()){ spray.fromMixId=null; $s("sprayFromMix").value=""; }
+  if(!spray.amountManual) sprayApplyTanks();
+  renderSpraySprayers(); renderSprayTanks(); renderSprayValves(); renderSprayBedChips(); sprayApplyMode();
+}
+function sprayApplyTanks(){
+  const l=PlannerShared.tanksToLitres(spray.tanks, spraySprayerLitres());
+  $s("sprayAmount").value = l!=null ? l : "";
+  $s("sprayAmountUnit").value = "L";
+}
+function renderSprayTanks(){
+  const t=spray.tanks, l=spraySprayerLitres();
+  const half=n=>(n%1 ? (Math.floor(n)||"")+"½" : String(n));
+  $s("sprayTankN").textContent = t ? half(t) : "0";
+  const amt=$s("sprayAmount").value;
+  $s("sprayTankSum").innerHTML = t && l
+    ? `${half(t)} × ${l} L = ${PlannerShared.tanksToLitres(t,l)} L`
+    : amt ? `${esc(amt)} L` : `<span class="lg-dim" style="font-weight:500;font-size:.95rem">${l?`${l} L tank`:"—"}</span>`;
+}
+function renderSprayValves(){
+  if(!sprayIsFert()){ $s("sprayValves").innerHTML=""; return; }
+  $s("sprayValves").innerHTML = sprayValves().map(v=>
+    `<button type="button" class="lg-chip" data-valve="${esc(v.id)}" aria-pressed="${spray.valveIds.has(v.id)}" title="${v.bedIds.length} beds">${esc(v.name)}</button>`).join("");
+}
+const SPRAY_WHY_QUICK=["Fungal","Pest","Disease","Deficiency","Routine feed"];
+function renderSprayWhy(){
+  const cur=$s("sprayReason").value;
+  $s("sprayWhyChips").innerHTML = SPRAY_WHY_QUICK.map(r=>`<button type="button" class="lg-chip" data-why="${esc(r)}" aria-pressed="${r===cur}">${esc(r)}</button>`).join("");
+}
+// Every bed the record will carry: ticked beds + the beds of chosen zones + (fertigation) valve beds.
+function sprayAllBedIds(){
+  const out=new Set(spray.beds);
+  PlannerShared.bedsForZones(data.sprayZones||[], [...spray.zoneIds]).forEach(b=>out.add(b));
+  if(sprayIsFert()) PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds]).forEach(b=>out.add(b));
+  return [...out];
+}
+// Crops follow the beds: add the headline crop of every bed now included (hand-removed crops stay off).
+function sprayAutoCrops(){
+  sprayAllBedIds().forEach(id=>{ const pl=(sprayBed(id)||{}).planting; if(pl && pl.cropId && !(spray.cropOff||new Set()).has(pl.cropId)) spray.cropIds.add(pl.cropId); });
+  renderSprayCropChips();
+}
+function sprayMarks(b){
+  const w=sprayWhpOnBedAt(b.id);
+  if(w) return { tag:`WHP to ${fmtShortDay(w.safeAfter).replace(/^\w+ /,"")}`, cls:"amber", note:`${sprayProductName(((w.application.items||[])[0]||{}).productId)} ${fmtShortDay(w.application.date).replace(/^\w+ /,"")}` };
+  const last=(data.sprayApplications||[]).find(a=>a.status!=="Planned" && (a.bedIds||[]).includes(b.id));
+  return last ? { note:`last: ${sprayProductName(((last.items||[])[0]||{}).productId)} ${fmtShortDay(last.date).replace(/^\w+ /,"")}` } : null;
+}
+function sprayPickWhere(){
+  bedPickOpen({ bedIds:[...spray.beds], zoneIds:[...spray.zoneIds], marks:sprayMarks, title:"Where",
+    onDone:({bedIds, zoneIds})=>{
+      spray.beds=new Set(bedIds); spray.zoneIds=new Set(zoneIds);
+      sprayAutoCrops(); renderSprayBedChips();
+    }});
 }
 // Schedule a new spray (id=null) or edit an existing scheduled one. aiPrefill (Quick add only,
 // id must be null) is a synthetic application-shaped object run through the same
@@ -28371,10 +28669,40 @@ async function sprayDeleteRecord(id){
 }
 
 function populateSprayMixSelect(){
-  const mixes=(data.sprayMixes||[]).filter(m=>m.active)
-    .sort((a,b)=>(b.favourite-a.favourite)||a.name.localeCompare(b.name));
-  $s("sprayFromMix").innerHTML = `<option value="">— build from scratch —</option>`+
-    mixes.map(m=>`<option value="${m.id}">${esc(m.name)}${m.favourite?" ★":""}</option>`).join("");
+  const sel=$s("sprayFromMix"), cur=sel.value;
+  if(spray && spray.sprayer==="Fertigation"){
+    // Fertigation programs live with the fert programs; each round is one batch through the injector.
+    const progs=(data.fertPrograms||[]).filter(p=>p.kind==="Fertigation" && !p.archived);
+    sel.innerHTML = `<option value="">— none —</option>` + progs.map(p=>{
+      const rounds=(data.fertRounds||[]).filter(r=>r.programId===p.id);
+      return rounds.map(r=>`<option value="prog:${r.id}">${esc(p.name)}${rounds.length>1?" · "+esc(r.name):""}</option>`).join("");
+    }).join("");
+  }else{
+    const mixes=(data.sprayMixes||[]).filter(m=>m.active)
+      .sort((a,b)=>(b.favourite-a.favourite)||a.name.localeCompare(b.name));
+    sel.innerHTML = `<option value="">— none —</option>`+
+      mixes.map(m=>`<option value="${m.id}">${esc(m.name)}${m.favourite?" ★":""}</option>`).join("");
+  }
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+// A fertigation round's products are fert_items (named by text), so they're matched to the spray
+// products catalogue by name; anything not there yet is listed in the notes rather than dropped.
+function applyFertigationRound(roundId){
+  const items=(data.fertItems||[]).filter(i=>i.roundId===roundId && !i.blockId && !i.blockLabel);
+  const missing=[];
+  spray.items=items.map(i=>{
+    const p=sprayProduct(qaMatchProduct(i.product));
+    if(!p){ missing.push(`${i.product} ${i.rate??""}${i.unit||""}`.trim()); return null; }
+    return {productId:p.id, rate:i.rate, unit:i.unit||p.unit||""};
+  }).filter(Boolean);
+  if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
+  if(missing.length){
+    const n=$s("sprayNotes"), add=`Not in spray products: ${missing.join(", ")}`;
+    if(!n.value.includes(add)) n.value = n.value ? n.value+"\n"+add : add;
+    $s("sprayMore").open=true;
+  }
+  spray.fromMixId=null; spray.whpManual=false;
+  renderSprayItems(); updateSprayWhp();
 }
 // A curated starter set (so the dropdown isn't empty before any history exists) unioned with every
 // reason actually used so far. Kept as a select+"Add new…" rather than a fixed enum — same reasoning
@@ -28428,33 +28756,31 @@ function sprayAddBed(id){
   renderSprayBedChips(); renderSprayCropChips();
 }
 function sprayRemoveBed(id){ spray.beds.delete(id); renderSprayBedChips(); }
-function sprayAddCrop(id){ if(id){ spray.cropIds.add(id); renderSprayCropChips(); } }
-function sprayRemoveCrop(id){ spray.cropIds.delete(id); renderSprayCropChips(); }
+function sprayAddCrop(id){ if(id){ spray.cropIds.add(id); (spray.cropOff||new Set()).delete(id); renderSprayCropChips(); } }
+function sprayRemoveCrop(id){ spray.cropIds.delete(id); (spray.cropOff ||= new Set()).add(id); renderSprayCropChips(); }
 
+// The Where row: zone names, then ticked beds; the crops underneath. One tap opens the picker.
 function renderSprayBedChips(){
   const el=$s("sprayBedChips");
-  if(!spray.beds.size){ el.innerHTML=`<div class="sp-chips-empty">No beds yet — pick on the map or add by name.</div>`; return; }
-  el.innerHTML=[...spray.beds].map(id=>{
-    const b=sprayBed(id)||{name:"?"};
-    const crop=b.planting&&b.planting.crop&&b.planting.crop!=="—"?b.planting.crop:"";
-    return `<span class="sp-chip">${esc(b.name)}${crop?` <span class="sub">${esc(crop)}</span>`:""}<button class="x" data-rm-bed="${id}" title="Remove">✕</button></span>`;
-  }).join("");
+  const zones=[...spray.zoneIds].map(id=>((data.sprayZones||[]).find(z=>z.id===id)||{}).name).filter(Boolean);
+  const all=sprayAllBedIds();
+  if(!all.length && !zones.length){
+    const loc=$s("sprayLocNote").value.trim();
+    el.innerHTML = loc ? `<span class="lg-main">${esc(loc)}</span><span class="lg-small">location note</span>`
+                       : `<span class="lg-dim">Pick beds or a zone</span>`;
+    return;
+  }
+  const beds=[...spray.beds];
+  const main=[...zones, beds.length ? srBedsShort(beds) : ""].filter(Boolean).join(", ");
+  const crops=[...new Set(all.map(id=>(sprayBed(id)||{}).planting).filter(Boolean).map(pl=>pl.crop).filter(c=>c&&c!=="—"))];
+  const sub=[zones.length ? `${all.length} bed${all.length===1?"":"s"}` : "", crops.slice(0,4).join(", ")+(crops.length>4?"…":"")].filter(Boolean).join(" · ");
+  el.innerHTML = `<span class="lg-main">${esc(main)}</span>${sub?`<span class="lg-small">${esc(sub)}</span>`:""}`;
 }
 function renderSprayCropChips(){
   const el=$s("sprayCropChips");
   if(!spray.cropIds.size){ el.innerHTML=`<div class="sp-chips-empty">No crops yet.</div>`; return; }
   el.innerHTML=[...spray.cropIds].map(id=>
     `<span class="sp-chip">${esc(data.crops[id]||"?")}<button class="x" data-rm-crop="${id}" title="Remove">✕</button></span>`).join("");
-}
-function sprayBedSuggest(q){
-  const el=$s("sprayBedSuggest"); q=(q||"").trim().toLowerCase();
-  if(!q){ el.hidden=true; el.innerHTML=""; return; }
-  const matches=data.beds.filter(b=>!spray.beds.has(b.id) && `${b.block||""} ${b.name}`.toLowerCase().includes(q)).slice(0,12);
-  el.hidden=!matches.length;
-  el.innerHTML=matches.map(b=>{
-    const crop=b.planting&&b.planting.crop&&b.planting.crop!=="—"?b.planting.crop:"empty";
-    return `<button type="button" data-add-bed="${b.id}">${esc(b.name)} <span class="muted">${b.block?"· "+esc(b.block)+" ":""}· ${esc(crop)}</span></button>`;
-  }).join("");
 }
 function sprayCropSuggest(q){
   const el=$s("sprayCropSuggest"); q=(q||"").trim().toLowerCase();
@@ -28510,12 +28836,20 @@ function updateSprayWhp(){
 function currentSprayWhp(){ const v=$s("sprayWhp").value; return v===""?null:Number(v); }
 function renderSpraySafe(){
   const el=$s("spraySafe"), whp=currentSprayWhp(), date=$s("sprayDate").value;
+  el.classList.remove("warn");
+  // A product with no withholding period on file isn't the same as "0 days" — say so, rather than
+  // implying it's safe to pick straight away.
+  const unknown=spray && !spray.whpManual ? spray.items.filter(it=>it.productId && (sprayProduct(it.productId)||{}).whp==null).map(it=>sprayProductName(it.productId)) : [];
+  if(spray && !spray.items.some(it=>it.productId)){ el.innerHTML=""; return; }
+  if(unknown.length){ el.classList.add("warn"); el.innerHTML=`${esc(unknown.join(", "))} ${unknown.length===1?"has":"have"} no withholding period set. Check the label.`; return; }
   if(whp==null){ el.innerHTML=""; return; }
-  if(!whp){ el.innerHTML=`No withholding period — safe to harvest immediately.`; return; }
+  if(!whp){ el.innerHTML=`No withholding period — safe to harvest straight away.`; return; }
+  el.classList.add("warn");
   if(!date){ el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"}.`; return; }
-  el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"} → <b>do not harvest until ${fmt(PlannerShared.safeAfterISO(date,whp))}</b>.`;
+  el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"} · <b>pick from ${fmtShortDay(PlannerShared.safeAfterISO(date,whp))}</b>`;
 }
 function applyMixToForm(mixId){
+  if(mixId && String(mixId).startsWith("prog:")){ applyFertigationRound(mixId.slice(5)); return; }
   spray.fromMixId=mixId||null;
   const m=(data.sprayMixes||[]).find(x=>x.id===mixId);
   if(!m){ return; }
@@ -28530,7 +28864,7 @@ function sprayShowErr(msg){ const el=$s("sprayErr"); el.textContent=msg; el.hidd
 // Build the Spray Applications field object from the current form (shared by create/patch/follow-ups).
 function sprayBuildFields({date, status, followUpOf}){
   const F=CFG.f;
-  const bedIds=[...spray.beds], cropIds=[...spray.cropIds];
+  const bedIds=sprayAllBedIds(), cropIds=[...spray.cropIds];
   const locNote=$s("sprayLocNote").value.trim();
   const by=$s("sprayBy").value.trim();
   const amount=$s("sprayAmount").value===""?null:Number($s("sprayAmount").value);
@@ -28552,6 +28886,16 @@ function sprayBuildFields({date, status, followUpOf}){
   if(whp!=null) f[F.sap_whp]=whp;
   if(notes) f[F.sap_notes]=notes;
   if(followUpOf) f[F.sap_followUp]=[followUpOf];
+  // Redesigned rows. Always written (null clears), so editing a record can take a zone off.
+  const fert=sprayIsFert();
+  f[F.sap_sprayer]=spray.sprayer||null;
+  f[F.sap_tanks]=!fert && spray.tanks ? spray.tanks : null;
+  f[F.sap_zones]=spray.zoneIds.size ? [...spray.zoneIds] : null;
+  f[F.sap_valves]=fert && spray.valveIds.size ? [...spray.valveIds] : null;
+  const num=id=>{ const v=$s(id).value; return v===""?null:Number(v); };
+  f[F.sap_mixVol]=fert ? num("sprayMixVol") : null;
+  f[F.sap_runMin]=fert ? num("sprayRunMin") : null;
+  if(fert && f[F.sap_mixVol]!=null && amount==null) f[F.sap_amount]=f[F.sap_mixVol];
   return f;
 }
 function sprayItemFieldsFor(appId, dateLabel){
@@ -28586,9 +28930,10 @@ function sprayAfterSaveView(fromWalk){
 
 async function spraySaveRecord(){
   const items=spray.items.filter(it=>it.productId);
-  const bedIds=[...spray.beds];
+  const bedIds=sprayAllBedIds();
   const locNote=$s("sprayLocNote").value.trim();
-  if(!bedIds.length && !locNote) return sprayShowErr("Add at least one bed, or a location note.");
+  if(sprayIsFert() && !spray.valveIds.size && !bedIds.length && !locNote) return sprayShowErr("Pick the valve it went through.");
+  if(!bedIds.length && !locNote && !spray.zoneIds.size) return sprayShowErr("Pick the beds or a zone — or add a location note under More.");
   if(!items.length) return sprayShowErr("Add at least one product.");
   const date=$s("sprayDate").value || sprayToday();
   const by=$s("sprayBy").value.trim();
@@ -28731,25 +29076,134 @@ async function sprayUploadPhotos(recordId){
   if(errs.length) alert("Record saved, but some photos didn't upload:\n"+errs.join("\n"));
 }
 
+/* ---------- Say it: one line → the spray form ----------
+   The same structured-output call as Quick add, but it only ever fills this form in — the grower
+   still sees every row and saves. Names come back as said and are matched against the farm's own
+   beds, zones, valves and products; anything unmatched goes into the notes, never guessed. */
+const SAY_SCHEMA = {
+  type:"object",
+  properties:{
+    beds:{type:"array", items:{type:"string"}, description:"Every bed meant, ranges expanded ('E5 to E8' → E5, E6, E7, E8), using only names from the bed list. Empty if none."},
+    zones:{type:"array", items:{type:"string"}, description:"Zone names from the zone list that were mentioned. Empty if none."},
+    valves:{type:"array", items:{type:"string"}, description:"Valve names from the valve list — fertigation only. Empty otherwise."},
+    products:{type:"array", items:{
+      type:"object",
+      properties:{ name:{type:"string"}, rate:QA_NUM, unit:{...SB_STR, description:"Unit of the rate as said: 'g', 'mL', 'L', 'kg'. Rates are per tank unless said otherwise."} },
+      required:["name","rate","unit"], additionalProperties:false,
+    }},
+    sprayer:{...SB_STR, description:"One of the sprayer names, or 'Fertigation', if said or clearly implied. Null otherwise."},
+    tanks:{...QA_NUM, description:"Tanks / backpacks made up, halves allowed. Null if not said."},
+    litres:{...QA_NUM, description:"Total litres, only if said instead of tanks. Null otherwise."},
+    reason:{...SB_STR, description:"Why — pest, disease, deficiency, feed — as said, or null."},
+    date:{...SB_STR, description:"ISO YYYY-MM-DD resolved against today, or null for today."},
+    note:{...SB_STR, description:"Anything said that doesn't fit the fields above, or null."},
+  },
+  required:["beds","zones","valves","products","sprayer","tanks","litres","reason","date","note"],
+  additionalProperties:false,
+};
+function spraySayPrompt(text){
+  const sprayers=PlannerShared.sprayersFrom(data.farmSettings).map(s=>`${s.name} (${s.litres} L)`);
+  return `A grower on a vegetable farm said or typed one line describing a spray they've done — or fertigation through the irrigation. Turn it into the fields of their spray record.
+
+Today is ${sprayToday()}.
+Sprayers: ${sprayers.join(", ")}; or Fertigation.
+Products they use: ${(data.sprayProducts||[]).filter(p=>p.active).map(p=>p.name).join(", ")}.
+Zones: ${(data.sprayZones||[]).filter(z=>!z.archived).map(z=>z.name).join(", ")||"none yet"}.
+Valves: ${sprayValves().map(v=>v.name).join(", ")}.
+Bed names: ${data.beds.map(b=>b.name).join(", ")}.
+
+Rules:
+- Expand bed ranges into individual names from the bed list. "All of F" means every bed in block F.
+- Products: use the exact name from the products list when it's clearly that product ("tsunami" → the listed Tsunami product); otherwise give the name as said. Rates as said, per tank unless stated otherwise.
+- Never invent a bed, product, rate or withholding period that wasn't said. Use null when it wasn't said.
+
+Line:
+"""
+${String(text).slice(0,1000)}
+"""`;
+}
+async function spraySayFill(){
+  const text=$s("spraySayText").value.trim(); if(!text) return;
+  if(!AKEY){ sprayShowErr("Say it needs the Anthropic key on this device — add it under settings ⚙."); return; }
+  const btn=$s("spraySayGo"); btn.disabled=true; const o=btn.textContent; btn.textContent="Reading…";
+  try{
+    const r=await aiReadText({ prompt:spraySayPrompt(text), schema:SAY_SCHEMA, maxTokens:1500,
+      tooLong:"That's more than one spray — say one at a time." });
+    if(!spray) return;
+    spraySayApply(r);
+    $s("spraySaySheet").hidden=true;
+  }catch(e){ sprayShowErr(e.message); }
+  finally{ btn.disabled=false; btn.textContent=o; }
+}
+function spraySayApply(r){
+  const missed=[], sq=sbSquash;
+  if(r.sprayer){
+    const names=[...PlannerShared.sprayersFrom(data.farmSettings).map(x=>x.name), "Fertigation"];
+    const s=names.find(x=>sq(r.sprayer).includes(sq(x)) || sq(x).includes(sq(r.sprayer)));
+    if(s) setSpraySprayer(s);
+  }
+  const bedByName=new Map(data.beds.map(b=>[sq(b.name), b.id]));
+  (r.beds||[]).forEach(n=>{ const id=bedByName.get(sq(n))||qaMatchBed(n); if(id) spray.beds.add(id); else missed.push(n); });
+  (r.zones||[]).forEach(n=>{ const z=(data.sprayZones||[]).find(z=>!z.archived && sq(z.name)===sq(n)); if(z) spray.zoneIds.add(z.id); else missed.push(n); });
+  (r.valves||[]).forEach(n=>{ const v=sprayValves().find(v=>sq(v.name)===sq(n)); if(v) spray.valveIds.add(v.id); else missed.push(n); });
+  const items=(r.products||[]).map(p=>{
+    const id=qaMatchProduct(p.name);
+    if(!id){ missed.push(p.name); return null; }
+    return {productId:id, rate:p.rate, unit:String(p.unit||(sprayProduct(id)||{}).unit||"").replace(/\s*\/.*$/,"")};
+  }).filter(Boolean);
+  if(items.length){ spray.items=items; spray.fromMixId=null; spray.whpManual=false; }
+  if(r.tanks){ spray.tanks=r.tanks; spray.amountManual=false; sprayApplyTanks(); }
+  else if(r.litres){ $s("sprayAmount").value=r.litres; spray.tanks=null; spray.amountManual=true; }
+  if(r.reason) sprayFillReason($s("sprayReason"), r.reason);
+  if(r.date && /^\d{4}-\d\d-\d\d$/.test(r.date)) $s("sprayDate").value=r.date;
+  const extra=[r.note, missed.length ? `Not matched: ${missed.join(", ")}` : ""].filter(Boolean).join("\n");
+  if(extra){ const n=$s("sprayNotes"); n.value = n.value ? n.value+"\n"+extra : extra; $s("sprayMore").open=true; }
+  sprayAutoCrops(); renderSprayBedChips(); renderSprayItems(); updateSprayWhp();
+  renderSprayTanks(); renderSprayValves(); renderSprayWhy();
+}
+
 /* ---------- Entry-form wiring ---------- */
 (function wireSprayForm(){
+  $s("spraySayBtn").onclick=()=>{ $s("spraySaySheet").hidden=false; setTimeout(()=>$s("spraySayText").focus(), 30); };
+  $s("spraySayCancel").onclick=()=>{ $s("spraySaySheet").hidden=true; };
+  $s("spraySayGo").onclick=spraySayFill;
   const modal=$s("sprayModal"); if(!modal) return;
   $s("sprayClose").onclick=sprayClose;
   $s("sprayCancel").onclick=sprayClose;
   modal.addEventListener("mousedown",(e)=>{ if(e.target===modal) sprayClose(); });
-  document.querySelectorAll("#sprayMethod button").forEach(b=>b.onclick=()=>setSprayMethod(b.dataset.method));
-  $s("sprayReason").addEventListener("change",(e)=>sprayOnReasonChange(e.target));
+  $s("sprayReason").addEventListener("change",(e)=>{ sprayOnReasonChange(e.target); renderSprayWhy(); });
   $s("sprayBy").addEventListener("change",(e)=>sprayOnAssigneeChange(e.target));
 
-  const bedSearch=$s("sprayBedSearch");
-  bedSearch.addEventListener("input",()=>sprayBedSuggest(bedSearch.value));
-  $s("sprayBedSearchClear").onclick=()=>{ bedSearch.value=""; sprayBedSuggest(""); };
-  $s("sprayBedSuggest").addEventListener("click",(e)=>{
-    const b=e.target.closest("[data-add-bed]"); if(!b) return;
-    sprayAddBed(b.dataset.addBed); bedSearch.value=""; sprayBedSuggest("");
+  // Redesigned rows
+  $s("sprayWhereRow").onclick=sprayPickWhere;
+  $s("spraySprayers").addEventListener("click",(e)=>{ const b=e.target.closest("[data-sprayer]"); if(b) setSpraySprayer(b.dataset.sprayer); });
+  $s("sprayTanksRow").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-tank-step]"); if(!b) return;
+    spray.tanks=Math.max(0, Math.round(((spray.tanks||0)+Number(b.dataset.tankStep))*2)/2) || null;
+    spray.amountManual=false; sprayApplyTanks(); renderSprayTanks();
   });
-  $s("sprayBedChips").addEventListener("click",(e)=>{
-    const x=e.target.closest("[data-rm-bed]"); if(x) sprayRemoveBed(x.dataset.rmBed);
+  $s("sprayAmount").addEventListener("input",()=>{ spray.amountManual=true; spray.tanks=null; renderSprayTanks(); });
+  $s("sprayValves").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-valve]"); if(!b) return;
+    const id=b.dataset.valve; spray.valveIds.has(id)?spray.valveIds.delete(id):spray.valveIds.add(id);
+    b.setAttribute("aria-pressed", spray.valveIds.has(id)); sprayAutoCrops();
+  });
+  $s("sprayWhyChips").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-why]"); if(!b) return;
+    const cur=$s("sprayReason").value, v=b.dataset.why===cur?"":b.dataset.why;
+    sprayFillReason($s("sprayReason"), v); renderSprayWhy();
+  });
+  $s("sprayLocNote").addEventListener("input",()=>{ if(!sprayAllBedIds().length) renderSprayBedChips(); });
+
+  // Start screen: coming up + Log a spray
+  $s("sprayStartNew").onclick=()=>{ sprayResetState("log"); spray.fromStart=true; spray.items=[{productId:"",rate:null,unit:""}]; sprayFinishOpen(); };
+  $s("sprayStartSchedule").onclick=()=>{ sprayOpenPlan(null); spray.fromStart=true; sprayApplyMode(); };
+  $s("sprayBackStart").onclick=sprayStartOpen;
+  $s("sprayComing").addEventListener("click",(e)=>{
+    const d=e.target.closest("[data-up-done]");
+    if(d){ sprayOpenLogFromPlan(d.dataset.upDone); if(spray){ spray.fromStart=true; sprayApplyMode(); } return; }
+    const r=e.target.closest("[data-up-edit]");
+    if(r){ sprayOpenPlan(r.dataset.upEdit); if(spray){ spray.fromStart=true; sprayApplyMode(); } }
   });
 
   const cropSearch=$s("sprayCropSearch");
@@ -28811,7 +29265,6 @@ async function sprayUploadPhotos(recordId){
     const i=+d.dataset.fu; if(spray.followups[i]){ spray.followups[i].date=d.value; spray.followups[i].edited=true; }
   });
   $s("spraySaveAsMix").onclick=()=>{ if(typeof sprayMixSaveFrom==="function") sprayMixSaveFrom(); };
-  $s("sprayPickMapBtn").onclick=()=>{ if(typeof sprayBedPickerOpen==="function") sprayBedPickerOpen(); };
   $s("sprayPhotoInput").addEventListener("change",(e)=>{ if(typeof sprayAddPhotos==="function") sprayAddPhotos(e.target.files); e.target.value=""; });
   $s("sprayPhotoThumbs").addEventListener("click",(e)=>{ const d=e.target.closest("[data-photo-del]"); if(!d||!spray) return; spray.photos.splice(+d.dataset.photoDel,1); renderSprayPhotos(); });
 })();
@@ -28981,125 +29434,259 @@ async function sprayMixAction(action, mixId){
   $s("sprayMixSave").onclick=sprayMixSave;
 })();
 
-/* ---------- Map bed picker ---------- */
-// Reuses the farm map's already-computed geometry (placedCache) in a lightweight multi-select SVG,
-// toggling straight into the entry form's spray.beds set. Its own pan/zoom so it never disturbs the
-// Farm map tab's view state.
-let sprayPickView = {k:4, tx:40, ty:40};
-let sprayPickBounds = {minX:0,minY:0,maxX:100,maxY:100};
-
-function sprayBedPickerOpen(){
-  if(!spray) return;
-  if(!placedCache || !placedCache.length){ sprayShowErr("Farm map isn't loaded yet — add beds by name instead."); return; }
-  let a=1e9,b=1e9,c=-1e9,d=-1e9;
-  placedCache.forEach(p=>{ a=Math.min(a,p.frame.x); b=Math.min(b,p.frame.y); c=Math.max(c,p.frame.x+p.frame.w); d=Math.max(d,p.frame.y+p.frame.h); });
-  sprayPickBounds={minX:a,minY:b,maxX:c,maxY:d};
-  $s("sprayPickSearch").value=""; $s("sprayPickSuggest").hidden=true;
-  $s("sprayPickModal").classList.add("open");
-  drawSprayPicker();
-  requestAnimationFrame(sprayPickFit);
+/* ---------- Field bed picker (spray + fert logs) ----------
+   One picker for both logs. Loosely laid out like the farm: a mini map of the blocks where they sit
+   on the farm map (placedCache — rotation ignored, far-off blocks become pills), then the chosen
+   block's beds in field order, each showing its crop now. Zones and Whole block are the two ways to
+   not tick beds at all. bedPickOpen({bedIds, zoneIds, marks, onDone, title, allowZones}) — marks(bed)
+   returns {tag, cls, note} or null; onDone gets {bedIds, zoneIds}. Back (or the ← button) cancels. */
+const BPK_BLOCK_KEY = "roseberry_bpk_block";
+let bpk = null;
+function bpkBlocks(){
+  if(placedCache && placedCache.length) return placedCache.map(p=>({key:p.key, beds:p.beds.map(r=>r.bed), frame:p.frame}));
+  const by={}; data.beds.forEach(b=>{ (by[b.block||"—"] ||= []).push(b); });
+  return Object.keys(by).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(k=>({key:k, beds:by[k], frame:null}));
 }
-function sprayBedPickerClose(){ $s("sprayPickModal").classList.remove("open"); }
-function applySprayPickView(){
-  $s("sprayPickG").setAttribute("transform", `translate(${sprayPickView.tx},${sprayPickView.ty}) scale(${sprayPickView.k})`);
+function bpkZoneBeds(){
+  if(!bpk || !bpk.zones.size) return new Set();
+  return new Set(PlannerShared.bedsForZones(data.sprayZones||[], [...bpk.zones]));
 }
-function sprayPickFit(){
-  const wrap=$s("sprayPickWrap"), W=wrap.clientWidth, H=wrap.clientHeight;
-  const bw=(sprayPickBounds.maxX-sprayPickBounds.minX)||100, bh=(sprayPickBounds.maxY-sprayPickBounds.minY)||100, pad=24;
-  const k=Math.min((W-pad*2)/bw,(H-pad*2)/bh);
-  sprayPickView.k=Math.max(0.5,Math.min(k,40));
-  sprayPickView.tx=pad - sprayPickBounds.minX*sprayPickView.k + (W-pad*2-bw*sprayPickView.k)/2;
-  sprayPickView.ty=pad - sprayPickBounds.minY*sprayPickView.k + (H-pad*2-bh*sprayPickView.k)/2;
-  applySprayPickView();
-}
-function drawSprayPicker(){
-  const g=$s("sprayPickG"); g.innerHTML="";
-  placedCache.forEach(p=>{
-    const fr=p.frame;
-    const rect=document.createElementNS(SVG,"rect");
-    rect.setAttribute("class","block-frame");
-    rect.setAttribute("x",fr.x-1.2);rect.setAttribute("y",fr.y-1.2);
-    rect.setAttribute("width",fr.w+2.4);rect.setAttribute("height",fr.h+2.4);rect.setAttribute("rx","1");
-    g.appendChild(rect);
-    const lab=document.createElementNS(SVG,"text");
-    lab.setAttribute("class","block-label");lab.setAttribute("x",fr.x-1.2);lab.setAttribute("y",fr.y-2.4);
-    lab.setAttribute("font-size","3.4");lab.textContent=p.key;g.appendChild(lab);
-    p.beds.forEach(r=>{
-      const b=r.bed, pl=b.planting, sel=spray.beds.has(b.id);
-      const cell=document.createElementNS(SVG,"rect");
-      cell.setAttribute("class","bed"+(sel?" pick-sel":""));cell.dataset.bed=b.id;
-      cell.setAttribute("x",r.x);cell.setAttribute("y",r.y);
-      cell.setAttribute("width",r.w);cell.setAttribute("height",r.h);cell.setAttribute("rx",".4");
-      if(pl && OCCUPIED.has(pl.status)) cell.setAttribute("fill", cropColor(pl.cropId||pl.crop));
-      else if(pl) cell.setAttribute("fill", tint(cropColor(pl.cropId||pl.crop)));
-      else cell.style.fill="var(--empty-bed)";
-      g.appendChild(cell);
-      const cx=r.x+r.w/2, cy=r.y+r.h/2, tall=r.h>r.w;
-      const cropTxt=(pl&&pl.crop&&pl.crop!=="—")?pl.crop:"";
-      const t=document.createElementNS(SVG,"text");
-      t.setAttribute("class","bed-label"+(sel?" bed-check":""));t.setAttribute("x",cx);t.setAttribute("y",cy);
-      t.setAttribute("text-anchor","middle");t.setAttribute("dominant-baseline","central");
-      t.setAttribute("font-size", Math.min((tall?r.w:r.h)*0.5, 2.4).toFixed(2));
-      if(tall) t.setAttribute("transform",`rotate(-90 ${cx} ${cy})`);
-      t.textContent = sel ? `✓ ${b.name}` : (cropTxt?`${b.name} · ${cropTxt}`:b.name);
-      t.style.pointerEvents="none";
-      g.appendChild(t);
-    });
+function bpkAllSelected(){ const s=bpkZoneBeds(); bpk.beds.forEach(b=>s.add(b)); return s; }
+function bedPickOpen(o){
+  o=o||{};
+  bpk={ beds:new Set(o.bedIds||[]), zones:new Set(o.zoneIds||[]), tab:"beds", q:"", zoneMenu:null,
+        allowZones:o.allowZones!==false, marks:o.marks||null, onDone:o.onDone||null };
+  const blocks=bpkBlocks();
+  const first=[...bpk.beds].map(sprayBed).find(Boolean);
+  const saved=localStorage.getItem(BPK_BLOCK_KEY);
+  bpk.block = (first && first.block) || (blocks.some(x=>x.key===saved) ? saved : (blocks[0]||{}).key);
+  if(bpk.zones.size && !bpk.beds.size) bpk.tab="zones";
+  $s("bpkTitle").textContent = o.title || "Where";
+  document.querySelectorAll("#bpkTabs [data-bpk-tab]").forEach(b=>{
+    b.hidden = b.dataset.bpkTab==="zones" && !bpk.allowZones;
   });
-  updateSprayPickFoot();
+  bpkRender();
+  $s("bedPick").classList.add("open");
 }
-function updateSprayPickFoot(){
-  const n=spray.beds.size;
-  $s("sprayPickCount").textContent = `${n} bed${n===1?"":"s"}`;
-  const crops=[...new Set([...spray.beds].map(id=>(sprayBed(id)||{}).planting).filter(Boolean).map(pl=>pl.crop).filter(c=>c&&c!=="—"))];
-  $s("sprayPickCrops").textContent = crops.length ? ("· "+crops.join(", ")) : "";
+function bedPickClose(){ $s("bedPick").classList.remove("open"); bpk=null; }
+function bpkDone(){
+  if(!bpk) return;
+  const r={ bedIds:[...bpk.beds], zoneIds:[...bpk.zones] }, cb=bpk.onDone;
+  bedPickClose();
+  if(cb) cb(r);
 }
-function sprayPickToggle(id){
-  if(spray.beds.has(id)) sprayRemoveBed(id); else sprayAddBed(id);
-  drawSprayPicker(); applySprayPickView();
-}
-function sprayPickSearchSuggest(q){
-  const el=$s("sprayPickSuggest"); q=(q||"").trim().toLowerCase();
-  if(!q){ el.hidden=true; el.innerHTML=""; return; }
-  const matches=data.beds.filter(b=>`${b.block||""} ${b.name}`.toLowerCase().includes(q)).slice(0,14);
-  el.hidden=!matches.length;
-  el.innerHTML=matches.map(b=>{
-    const on=spray.beds.has(b.id);
-    const crop=b.planting&&b.planting.crop&&b.planting.crop!=="—"?b.planting.crop:"empty";
-    return `<button type="button" data-pick-bed="${b.id}">${on?'<span class="on">✓ </span>':""}${esc(b.name)} <span class="muted">${b.block?"· "+esc(b.block)+" ":""}· ${esc(crop)}</span></button>`;
-  }).join("");
-}
-(function wireSprayPicker(){
-  const wrap=$s("sprayPickWrap"); if(!wrap) return;
-  $s("sprayPickClose").onclick=sprayBedPickerClose;
-  $s("sprayPickDone").onclick=sprayBedPickerClose;
-  const search=$s("sprayPickSearch");
-  search.addEventListener("input",()=>sprayPickSearchSuggest(search.value));
-  $s("sprayPickSearchClear").onclick=()=>{ search.value=""; sprayPickSearchSuggest(""); };
-  $s("sprayPickSuggest").addEventListener("click",(e)=>{
-    const b=e.target.closest("[data-pick-bed]"); if(!b) return;
-    sprayPickToggle(b.dataset.pickBed); sprayPickSearchSuggest(search.value);
-  });
-  // pan / zoom + tap-to-toggle (mirrors the farm map's handler, on this SVG only)
-  let dragging=false,lastX,lastY,moved=false,downTarget=null; const pts=new Map(); let pinchD=0;
-  const bedFrom=el=>{ while(el&&el!==wrap){ if(el.dataset&&el.dataset.bed) return el.dataset.bed; el=el.parentNode; } return null; };
-  function zoomAt(cx,cy,f){
-    const r=wrap.getBoundingClientRect(), mx=cx-r.left, my=cy-r.top;
-    const nk=Math.max(0.5,Math.min(sprayPickView.k*f,60)), rf=nk/sprayPickView.k;
-    sprayPickView.tx=mx-(mx-sprayPickView.tx)*rf; sprayPickView.ty=my-(my-sprayPickView.ty)*rf; sprayPickView.k=nk; applySprayPickView();
+// "wk 5" for a crop in the ground, "Planned · 12 Nov" for one coming, "" for an empty bed.
+function bpkPlantingNote(pl){
+  if(!pl) return "";
+  const start=pl.tp||pl.sow;
+  if(OCCUPIED.has(pl.status) && start){
+    const wk=Math.floor((PlannerShared.wkParse(sprayToday())-PlannerShared.wkParse(start))/(7*864e5))+1;
+    return wk>0 ? `wk ${wk}` : "";
   }
-  wrap.addEventListener("pointerdown",e=>{ wrap.setPointerCapture(e.pointerId); pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===1){ dragging=true;moved=false;downTarget=e.target;lastX=e.clientX;lastY=e.clientY;wrap.classList.add("dragging"); } });
-  wrap.addEventListener("pointermove",e=>{ if(!pts.has(e.pointerId))return; pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pts.size===2){ const [a,b]=[...pts.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(pinchD){ zoomAt((a.x+b.x)/2,(a.y+b.y)/2,d/pinchD); } pinchD=d; return; }
-    if(dragging){ const dx=e.clientX-lastX,dy=e.clientY-lastY; if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-      sprayPickView.tx+=dx;sprayPickView.ty+=dy;lastX=e.clientX;lastY=e.clientY;applySprayPickView(); } });
-  function up(e){ const wasCancel=e.type==="pointercancel"; pts.delete(e.pointerId); if(pts.size<2)pinchD=0;
-    if(pts.size===0){ dragging=false;wrap.classList.remove("dragging");
-      if(!moved && !wasCancel){ const id=bedFrom(downTarget); if(id) sprayPickToggle(id); } downTarget=null; } }
-  wrap.addEventListener("pointerup",up); wrap.addEventListener("pointercancel",up);
-  wrap.addEventListener("wheel",e=>{ e.preventDefault(); zoomAt(e.clientX,e.clientY, e.deltaY<0?1.12:1/1.12); },{passive:false});
+  return start ? `${String(pl.status||"Planned").toLowerCase()} · ${fmtShortDay(start)}` : (pl.status||"");
+}
+function bpkStripHtml(b, zoneBeds){
+  // A finished or failed planting has left the bed: show it empty, with what was last in it.
+  const done = b.planting && (b.planting.status==="Finished" || b.planting.failed);
+  const pl = done ? null : b.planting, last = done ? b.planting.crop : "";
+  const mine=bpk.beds.has(b.id), viaZone=!mine && zoneBeds.has(b.id), on=mine||viaZone;
+  const occ=!!pl && OCCUPIED.has(pl.status);
+  const crop=pl && pl.crop && pl.crop!=="—" ? pl.crop : "";
+  const col=crop ? (occ ? cropColor(pl.cropId||pl.crop) : tint(cropColor(pl.cropId||pl.crop))) : "transparent";
+  const m=bpk.marks ? bpk.marks(b) : null;
+  const note=[bpkPlantingNote(pl), last && `last: ${last}`, m && m.note, viaZone && "in a zone"].filter(Boolean).join(" · ");
+  return `<div class="bpk-strip${crop?"":" empty"}${on?" on":""}" data-bpk-bed="${b.id}">
+    <span class="bpk-sw" style="background:${col}"></span><span class="nm">${esc(b.name)}</span>
+    <span class="tx"><span class="cr">${esc(crop||"empty")}</span>${note?`<span class="nt">${esc(note)}</span>`:""}</span>
+    ${m && m.tag ? `<span class="bpk-tag ${m.cls||"amber"}">${esc(m.tag)}</span>` : ""}
+    <span class="bpk-tick"><i>${on?"✓":""}</i></span></div>`;
+}
+// The mini map: the main cluster of blocks as an SVG in farm-map metres. A block far from the rest
+// (the back paddocks) would shrink everything else to specks, so those become pills underneath.
+function bpkMapHtml(){
+  const blocks=bpkBlocks().filter(x=>x.frame);
+  if(!blocks.length) return bpkPillsHtml(bpkBlocks());
+  const c=blocks.map(x=>({x, cx:x.frame.x+x.frame.w/2, cy:x.frame.y+x.frame.h/2}));
+  const med=a=>{ const s=[...a].sort((p,q)=>p-q); return s[Math.floor(s.length/2)]; };
+  const mx=med(c.map(v=>v.cx)), my=med(c.map(v=>v.cy));
+  const d=c.map(v=>Math.hypot(v.cx-mx, v.cy-my)), md=Math.max(med(d)||1, 1);
+  const near=c.filter((v,i)=>d[i]<=md*3).map(v=>v.x), far=c.filter((v,i)=>d[i]>md*3).map(v=>v.x);
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  near.forEach(b=>{ x0=Math.min(x0,b.frame.x); y0=Math.min(y0,b.frame.y); x1=Math.max(x1,b.frame.x+b.frame.w); y1=Math.max(y1,b.frame.y+b.frame.h); });
+  const pad=3, sel=bpkAllSelected();
+  const placed=new Map((placedCache||[]).map(p=>[p.key,p]));
+  const g=near.map(b=>{
+    const fr=b.frame, on=b.key===bpk.block, p=placed.get(b.key);
+    const beds=(p?p.beds:[]).map(r=>{
+      const pl=r.bed.planting, crop=pl && pl.crop && pl.crop!=="—";
+      const fill=crop ? (OCCUPIED.has(pl.status) ? cropColor(pl.cropId||pl.crop) : tint(cropColor(pl.cropId||pl.crop))) : "none";
+      return fill==="none" ? "" : `<rect class="bb" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fill}" opacity=".8"/>`;
+    }).join("");
+    const has=b.beds.some(x=>sel.has(x.id));
+    const fs=Math.max(2.6, Math.min(4.2, Math.min(fr.w, fr.h)*0.32));
+    return `<g data-bpk-block="${esc(b.key)}"><rect class="bf${on?" on":""}" x="${fr.x}" y="${fr.y}" width="${fr.w}" height="${fr.h}" rx="1"/>${beds}
+      <text x="${fr.x+1}" y="${fr.y+fs+0.6}" font-size="${fs.toFixed(2)}">${esc(b.key)}</text>
+      ${has?`<circle class="dot" cx="${fr.x+fr.w-2.2}" cy="${fr.y+fr.h-2.2}" r="1.6"/>`:""}</g>`;
+  }).join("");
+  return `<svg class="bpk-map" viewBox="${x0-pad} ${y0-pad} ${x1-x0+pad*2} ${y1-y0+pad*2}" preserveAspectRatio="xMidYMid meet">${g}</svg>`
+    + bpkPillsHtml(far);
+}
+function bpkPillsHtml(list){
+  if(!list.length) return "";
+  return `<div class="bpk-far">${list.map(b=>`<button type="button" class="bpk-pill${b.key===bpk.block?" on":""}" data-bpk-block="${esc(b.key)}">${esc(b.key)}</button>`).join("")}</div>`;
+}
+function bpkRender(){
+  if(!bpk) return;
+  document.querySelectorAll("#bpkTabs [data-bpk-tab]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.bpkTab===bpk.tab?"true":"false"));
+  const body=$s("bpkBody");
+  if(bpk.tab==="beds") body.innerHTML=`<div class="tl-search bpk-search"><input type="text" id="bpkSearch" placeholder="Find a bed by name" autocomplete="off" spellcheck="false"><button type="button" id="bpkSearchClear" title="Clear">✕</button></div><div id="bpkTop"></div><div id="bpkList"></div>`;
+  else body.innerHTML=`<div id="bpkList"></div>`;
+  if(bpk.tab==="beds"){ const s=$s("bpkSearch"); s.value=bpk.q||""; }
+  bpkRenderList();
+}
+function bpkRenderList(){
+  const zoneBeds=bpkZoneBeds(), list=$s("bpkList"), top=$s("bpkTop");
+  if(bpk.tab==="beds"){
+    const q=(bpk.q||"").trim().toLowerCase();
+    if(q){
+      top.innerHTML="";
+      const hits=data.beds.filter(b=>`${b.name} ${b.block||""} ${(b.planting&&b.planting.crop)||""}`.toLowerCase().includes(q)).slice(0,40);
+      list.innerHTML = hits.length ? hits.map(b=>bpkStripHtml(b, zoneBeds)).join("") : `<div class="bpk-empty">No bed matches “${esc(bpk.q)}”.</div>`;
+    }else{
+      top.innerHTML=bpkMapHtml();
+      const blk=bpkBlocks().find(x=>x.key===bpk.block) || bpkBlocks()[0];
+      if(!blk){ list.innerHTML=`<div class="bpk-empty">No beds yet.</div>`; return; }
+      const allOn=blk.beds.length && blk.beds.every(b=>bpk.beds.has(b.id));
+      list.innerHTML=`<div class="bpk-blockrow"><span class="grow">Block ${esc(blk.key)} · ${blk.beds.length} beds in field order</span>
+        <button type="button" class="bpk-link" data-bpk-blockall="${esc(blk.key)}">${allOn?"Clear":"All"}</button></div>`
+        + blk.beds.map(b=>bpkStripHtml(b, zoneBeds)).join("");
+    }
+  }else if(bpk.tab==="zones"){
+    const zones=(data.sprayZones||[]).filter(z=>!z.archived);
+    const rows=zones.map(z=>{
+      const on=bpk.zones.has(z.id), n=z.bedIds.length;
+      const sub = n ? `${sprayBedsLabel(z.bedIds.slice(0,8))}${n>8?` +${n-8}`:""} · ${n} bed${n===1?"":"s"}` : "no beds · a named place";
+      return `<div class="bpk-strip bpk-zone${on?" on":""}" data-bpk-zone="${z.id}">
+        <span class="bpk-sw" style="background:${z.colour||"var(--steel-soft)"}"></span>
+        <span class="tx" style="padding-left:.7rem"><span class="cr">${esc(z.name||"Zone")}</span><span class="nt">${esc(sub)}</span></span>
+        <button type="button" class="bpk-more" data-bpk-zmenu="${z.id}" title="Zone options">⋯</button>
+        <span class="bpk-tick"><i>${on?"✓":""}</i></span></div>
+        ${bpk.zoneMenu===z.id?`<div class="bpk-zact">
+          <button type="button" class="btn-ghost" data-bpk-zren="${z.id}">Rename</button>
+          ${bpk.beds.size?`<button type="button" class="btn-ghost" data-bpk-zset="${z.id}">Use the ${bpk.beds.size} ticked bed${bpk.beds.size===1?"":"s"}</button>`:""}
+          <button type="button" class="btn-ghost" data-bpk-zdel="${z.id}">Delete</button></div>`:""}`;
+    }).join("");
+    list.innerHTML = `<div class="bpk-blockrow"><span class="grow">Saved zones</span></div>`
+      + (rows || `<div class="bpk-empty">No zones yet. Tick beds on the Beds tab, then save them here as a zone — “Fruit fly 1”, “Onion rows”. A zone can also have no beds, like an orchard edge.</div>`)
+      + `<div class="bpk-zact">${bpk.beds.size?`<button type="button" class="bpk-link" data-bpk-znew="beds">＋ Save the ${bpk.beds.size} ticked bed${bpk.beds.size===1?"":"s"} as a zone</button>`:""}
+         <button type="button" class="bpk-link" data-bpk-znew="none">＋ New zone with no beds</button></div>`;
+  }else{
+    list.innerHTML = `<div class="bpk-blockrow"><span class="grow">Tap a block to take every bed in it</span></div>`
+      + bpkBlocks().map(blk=>{
+        const n=blk.beds.length, allOn=n && blk.beds.every(b=>bpk.beds.has(b.id));
+        const crops=[...new Set(blk.beds.map(b=>b.planting&&b.planting.crop).filter(c=>c&&c!=="—"))];
+        return `<div class="bpk-strip${allOn?" on":""}" data-bpk-blockall="${esc(blk.key)}">
+          <span class="nm" style="width:auto;min-width:3.4rem;padding:0 .7rem">${esc(blk.key)}</span>
+          <span class="tx"><span class="cr">${n} bed${n===1?"":"s"}</span><span class="nt">${esc(crops.slice(0,4).join(", ")||"nothing in")}${crops.length>4?"…":""}</span></span>
+          <span class="bpk-tick"><i>${allOn?"✓":""}</i></span></div>`;
+      }).join("");
+  }
+  bpkFoot();
+}
+function bpkFoot(){
+  const all=bpkAllSelected(), nz=bpk.zones.size;
+  $s("bpkCount").textContent = nz
+    ? `${nz} zone${nz===1?"":"s"}${bpk.beds.size?` + ${bpk.beds.size} bed${bpk.beds.size===1?"":"s"}`:""}`
+    : `${all.size} bed${all.size===1?"":"s"}`;
+  const crops=[...new Set([...all].map(id=>(sprayBed(id)||{}).planting).filter(Boolean).map(pl=>pl.crop).filter(c=>c&&c!=="—"))];
+  $s("bpkCrops").textContent = nz ? `${all.size} beds${crops.length?" · "+crops.slice(0,4).join(", "):""}` : crops.slice(0,5).join(", ");
+}
+function bpkToggleBed(id, force){
+  const on = force!=null ? force : !bpk.beds.has(id);
+  if(on) bpk.beds.add(id); else bpk.beds.delete(id);
+  const el=document.querySelector(`#bpkList [data-bpk-bed="${CSS.escape(id)}"]`);
+  if(el){ const v=on||bpkZoneBeds().has(id); el.classList.toggle("on", v); el.querySelector(".bpk-tick i").textContent=v?"✓":""; }
+  bpkFoot();
+}
+async function bpkZoneCreate(withBeds){
+  const name=(prompt(withBeds?"Name this zone (e.g. Fruit fly 1 · glasshouses):":"Name this place (e.g. Orchard edge):")||"").trim();
+  if(!name) return;
+  const F=CFG.f, beds=withBeds?[...bpk.beds]:[];
+  try{
+    const order=(data.sprayZones||[]).reduce((m,z)=>Math.max(m, z.order||0), 0)+1;
+    const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayZones, [{ [F.sz_name]:name, [F.sz_beds]:beds, [F.sz_order]:order }]);
+    (data.sprayZones ||= []).push(PlannerShared.parseSprayZones([rec])[0]);
+    if(bpk){ bpk.zones.add(rec.id); if(withBeds) bpk.beds.clear(); bpkRenderList(); }
+  }catch(e){ alert("Couldn't save the zone: "+e.message); }
+}
+async function bpkZonePatch(id, fields, local){
+  try{
+    await atPatch(CFG.farmBase, CFG.tables.sprayZones, id, fields);
+    const z=(data.sprayZones||[]).find(x=>x.id===id); if(z) Object.assign(z, local);
+    if(bpk){ bpk.zoneMenu=null; bpkRenderList(); }
+  }catch(e){ alert("Couldn't update the zone: "+e.message); }
+}
+(function wireBedPick(){
+  const root=$s("bedPick"); if(!root) return;
+  $s("bedPickClose").onclick=bedPickClose;
+  $s("bpkDone").onclick=bpkDone;
+  root.addEventListener("mousedown",e=>{ if(e.target===root) bedPickClose(); });
+  $s("bpkTabs").addEventListener("click",e=>{
+    const t=e.target.closest("[data-bpk-tab]"); if(!t||!bpk) return;
+    bpk.tab=t.dataset.bpkTab; bpk.zoneMenu=null; bpkRender();
+  });
+  const body=$s("bpkBody");
+  body.addEventListener("input",e=>{ if(e.target.id==="bpkSearch" && bpk){ bpk.q=e.target.value; bpkRenderList(); } });
+  // Drag down the tick column to select (or clear) a run of beds — touch-action:none on the ticks
+  // only, so dragging anywhere else still scrolls the list.
+  let drag=null;
+  body.addEventListener("pointerdown",e=>{
+    const tick=e.target.closest(".bpk-tick"), strip=tick && tick.closest("[data-bpk-bed]");
+    if(!strip || !bpk) return;
+    const id=strip.dataset.bpkBed;
+    drag={on:!bpk.beds.has(id), seen:new Set([id]), moved:false};
+    bpkToggleBed(id, drag.on);
+    try{ tick.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  body.addEventListener("pointermove",e=>{
+    if(!drag) return;
+    const el=document.elementFromPoint(e.clientX, e.clientY), strip=el && el.closest && el.closest("[data-bpk-bed]");
+    if(strip && !drag.seen.has(strip.dataset.bpkBed)){ drag.seen.add(strip.dataset.bpkBed); drag.moved=true; bpkToggleBed(strip.dataset.bpkBed, drag.on); }
+  });
+  const endDrag=()=>{ if(drag) setTimeout(()=>{ drag=null; }, 0); };
+  body.addEventListener("pointerup",endDrag); body.addEventListener("pointercancel",endDrag);
+  body.addEventListener("click",async e=>{
+    if(!bpk) return;
+    if(e.target.id==="bpkSearchClear"){ bpk.q=""; $s("bpkSearch").value=""; bpkRenderList(); return; }
+    if(e.target.closest(".bpk-tick") && e.target.closest("[data-bpk-bed]")) return;   // handled on pointerdown
+    const bed=e.target.closest("[data-bpk-bed]");
+    if(bed){ bpkToggleBed(bed.dataset.bpkBed); return; }
+    const all=e.target.closest("[data-bpk-blockall]");
+    if(all){
+      const blk=bpkBlocks().find(x=>x.key===all.dataset.bpkBlockall); if(!blk) return;
+      const allOn=blk.beds.every(b=>bpk.beds.has(b.id));
+      blk.beds.forEach(b=>allOn?bpk.beds.delete(b.id):bpk.beds.add(b.id));
+      bpkRenderList(); return;
+    }
+    const blk=e.target.closest("[data-bpk-block]");
+    if(blk){ bpk.block=blk.dataset.bpkBlock; localStorage.setItem(BPK_BLOCK_KEY, bpk.block); bpkRenderList(); return; }
+    const zm=e.target.closest("[data-bpk-zmenu]");
+    if(zm){ bpk.zoneMenu = bpk.zoneMenu===zm.dataset.bpkZmenu ? null : zm.dataset.bpkZmenu; bpkRenderList(); return; }
+    const zr=e.target.closest("[data-bpk-zren]");
+    if(zr){ const z=(data.sprayZones||[]).find(x=>x.id===zr.dataset.bpkZren); if(!z) return;
+      const name=(prompt("Zone name:", z.name)||"").trim(); if(name && name!==z.name) bpkZonePatch(z.id, {[CFG.f.sz_name]:name}, {name}); return; }
+    const zs=e.target.closest("[data-bpk-zset]");
+    if(zs){ const beds=[...bpk.beds]; bpkZonePatch(zs.dataset.bpkZset, {[CFG.f.sz_beds]:beds}, {bedIds:beds}); return; }
+    const zd=e.target.closest("[data-bpk-zdel]");
+    if(zd){ const z=(data.sprayZones||[]).find(x=>x.id===zd.dataset.bpkZdel); if(!z) return;
+      if(!confirm(`Delete the zone “${z.name}”? Records already logged keep their beds.`)) return;
+      bpkZonePatch(z.id, {[CFG.f.sz_archived]:true}, {archived:true}); bpk.zones.delete(z.id); return; }
+    const zn=e.target.closest("[data-bpk-znew]");
+    if(zn){ bpkZoneCreate(zn.dataset.bpkZnew==="beds"); return; }
+    const zone=e.target.closest("[data-bpk-zone]");
+    if(zone){ const id=zone.dataset.bpkZone; bpk.zones.has(id)?bpk.zones.delete(id):bpk.zones.add(id); bpkRenderList(); return; }
+  });
 })();
 
 /* ---------- Wiring ---------- */
@@ -29111,7 +29698,7 @@ function sprayPickSearchSuggest(q){
   mixSearch?.addEventListener("input", buildSprayMixes);
   document.getElementById("sprayMixSearchClear")?.addEventListener("click", ()=>{ mixSearch.value=""; buildSprayMixes(); });
   // Entry / editor overlays are added in later phases — guard so the buttons are inert until then.
-  document.getElementById("sprayLogBtn")?.addEventListener("click", ()=>{ if(typeof sprayOpen==="function") sprayOpen(); });
+  document.getElementById("sprayLogBtn")?.addEventListener("click", ()=>{ if(typeof sprayStartOpen==="function") sprayStartOpen(); });
   document.getElementById("sprayScheduleBtn")?.addEventListener("click", ()=>{ if(typeof sprayOpenPlan==="function") sprayOpenPlan(null); });
   document.getElementById("sprayMixNewBtn")?.addEventListener("click", ()=>{ if(typeof sprayMixOpen==="function") sprayMixOpen(null); });
   // Records "Scheduled" section actions (delegated): Log the scheduled spray, or edit the plan.
