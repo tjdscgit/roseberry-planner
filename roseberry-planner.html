@@ -3703,10 +3703,62 @@
     .sp-actions .btn-primary{flex:1}
   }
 
+  /* ---------- Records lists (spray + fert, redesign 2026-11) ----------
+     By day on a phone, By bed and By product everywhere. A row is one tap to its panel; the ↻ on a
+     logged row logs it again. The banner is the one line that can stop a harvest (or, on fert,
+     what's left of the round). */
+  .rl-banner{display:flex;align-items:center;gap:.7rem;margin:.2rem 1.2rem .6rem;padding:.65rem .85rem;border-radius:11px;
+    background:var(--amber-tint);border:1px solid var(--amber);color:var(--amber);font-size:.86rem}
+  .rl-banner.prog{background:var(--paper-2);border-color:var(--line);color:var(--ink)}
+  .rl-banner .grow{flex:1;min-width:0}
+  .rl-ban-ico{font-size:1.1rem}
+  .rl-ban-sub{display:block;font-family:var(--mono);font-size:.68rem;margin-top:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rl-bar{height:8px;border-radius:99px;background:var(--paper-3);overflow:hidden;margin-top:.4rem}
+  .rl-bar i{display:block;height:100%;background:var(--ok)}
+  .rl-wrap{padding:0 0 3rem}
+  .rl-day{font-family:var(--mono);font-size:.66rem;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin:.9rem 1.2rem .45rem}
+  .rl-item{display:flex;align-items:center;gap:.7rem;margin:0 1.2rem .45rem;padding:.7rem .85rem;border:1px solid var(--line);
+    border-radius:12px;cursor:pointer;background:var(--paper)}
+  .rl-item:hover{background:var(--hover)}
+  .rl-item.whp{border-color:var(--amber)}
+  .rl-item .tx{flex:1;min-width:0}
+  .rl-item .t{font-weight:620;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rl-item .s{font-family:var(--mono);font-size:.66rem;color:var(--ink-2);margin-top:.2rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rl-rep{flex:0 0 auto;width:38px;height:38px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--steel-soft);
+    font-size:1.1rem;cursor:pointer}
+  .rl-btn{flex:0 0 auto;padding:.45rem .85rem}
+  .rl-go{color:var(--ink-2);font-size:1.2rem}
+  .rl-pills{display:flex;gap:.4rem;overflow-x:auto;padding:.3rem 1.2rem .7rem;scrollbar-width:none}
+  .rl-pills .bpk-pill{flex:0 0 auto}
+  .rl-bed.open{border-color:var(--steel);background:var(--sel)}
+  .rl-hist{margin:-.2rem 1.2rem .6rem;padding:.3rem .8rem;border:1px solid var(--line);border-top:none;border-radius:0 0 12px 12px}
+  .rl-hrow{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;font-size:.85rem;border-bottom:1px solid var(--line);cursor:pointer}
+  .rl-hrow:last-child{border-bottom:none}
+  .rl-hrow>span:first-child{font-family:var(--mono);font-size:.7rem;color:var(--ink-2);width:5.6rem;flex:0 0 auto}
+  .rl-hrow .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rl-hrow .rl-rep{width:32px;height:32px;font-size:.95rem}
+  .rl-empty{margin:1rem 1.2rem;color:var(--ink-2);font-size:.9rem}
+  .rl-wrap[hidden],.rl-banner[hidden]{display:none!important}
+  @media(max-width:760px){
+    /* the records panel becomes a full-screen sheet on a phone */
+    #view-sprayrec .cr-panel,#view-fertrec .cr-panel{position:fixed;inset:0 0 56px 0;width:auto;z-index:44;border-left:none;overflow:auto}
+    #view-sprayrec .vw-title,#view-fertrec .vw-title{flex-wrap:wrap;height:auto;min-height:var(--vw-title-h);row-gap:.5rem;padding-bottom:.6rem}
+    #view-sprayrec .vw-title .vw-search{order:6;flex:1 1 100%;width:100%}
+    #view-sprayrec .vw-title .sub,#view-fertrec .vw-title .sub{display:none}
+    #sprayScheduleBtn{display:none}
+    #view-sprayrec .vw-tools,#view-fertrec .vw-tools{display:none}
+    #srMode,#frMode{order:5;width:100%}
+    #srMode button,#frMode button{flex:1 1 0}
+    .rl-banner{margin:.2rem .8rem .6rem}
+    .rl-item,.rl-hist{margin-left:.8rem;margin-right:.8rem}
+    .rl-day{margin-left:.8rem}
+    .rl-pills{padding-left:.8rem;padding-right:.8rem}
+  }
+
   /* ---------- Field bed picker (spray + fert logs) ----------
      Full screen on a phone, a tall card on a desk. Above #sprayModal / #fpLogModal so it can be
      opened from either. Strips are big tap targets; the tick column is the drag-to-select handle. */
-  #bedPick{position:fixed;inset:0;z-index:78;display:none;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
+  #bedPick{position:fixed;inset:0;z-index:80;display:none;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
   #bedPick.open{display:flex}
   .bpk-card{width:min(480px,100%);height:min(90vh,100%);display:flex;flex-direction:column;background:var(--paper);
     border:1px solid var(--line-2);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
@@ -4222,6 +4274,10 @@
     border-bottom:1px solid var(--line-2);flex:0 0 auto}
   .fpl-title{font-weight:650;font-size:1rem;flex:1;min-width:0}
   .fpl-body{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:.85rem}
+  .lg-card .fpl-body{padding:0 0 1rem}
+  .lg-card .fpl-prods{margin-top:.2rem}
+  .lg-safe.ok{background:var(--ok-tint);color:var(--ok);border:1px solid var(--ok)}
+  .fpl-progs{margin:.2rem 0 .6rem}
   .fpl-foot{flex:0 0 auto;display:flex;gap:.6rem;align-items:center;padding:.7rem .85rem;
     border-top:1px solid var(--line-2);flex-wrap:wrap}
   .fpl-foot .spacer{flex:1}
@@ -5850,6 +5906,11 @@
           <input type="text" id="sprayRecSearch" placeholder="Search crop, bed, product…" autocomplete="off" spellcheck="false">
           <button type="button" id="sprayRecSearchClear" title="Clear search">✕</button>
         </div>
+        <div class="fr-mode seg" id="srMode">
+          <button type="button" data-sr-mode="day" aria-pressed="true">By day</button>
+          <button type="button" data-sr-mode="bed" aria-pressed="false">By bed</button>
+          <button type="button" data-sr-mode="product" aria-pressed="false">By product</button>
+        </div>
         <button class="btn-ghost" id="sprayScheduleBtn" type="button">＋ Schedule</button>
         <button class="btn-primary" id="sprayLogBtn" type="button">＋ Log a spray</button>
       </div>
@@ -5858,7 +5919,9 @@
         <span class="spacer"></span>
         <span class="sub">Every entry carries the rate, water volume and withholding period the audit asks for</span>
       </div>
-      <div class="cr-wrap">
+      <div class="rl-banner" id="srBanner" hidden></div>
+      <div class="cr-wrap rl-wrap" id="srList" hidden></div>
+      <div class="cr-wrap" id="srTableWrap">
         <table class="lib-table" id="sprayRecTable">
           <thead>
             <tr>
@@ -6512,6 +6575,7 @@
         <span class="sub">Every entry carries the rate, the method and who applied it —
           that is what the audit asks for</span>
       </div>
+      <div class="rl-banner prog" id="frBanner" hidden></div>
       <div class="cr-wrap" id="frBody"></div>
       <div class="cr-wrap" id="frBedBody" hidden></div>
       <div class="cr-wrap mc-wrap" id="frProdBody" hidden></div>
@@ -6723,17 +6787,18 @@
        known) or from Fert records (pick them here). Products come pre-ticked from the round's own
        rates, so the common case is: tick the beds, check the totals, save. -->
   <div id="fpLogModal">
-    <div class="fpl-card">
-      <div class="fpl-head">
-        <span class="fpl-title" id="fplTitle">Log fertiliser</span>
-        <button class="icon-btn" id="fplClose" type="button" aria-label="Close">✕</button>
+    <div class="fpl-card lg-card">
+      <div class="lg-head">
+        <div class="lg-titles"><div class="lg-title" id="fplTitle">Log a fert</div><div class="lg-sub" id="fplSub"></div></div>
+        <button class="ap-x lg-x" id="fplClose" type="button" aria-label="Close">✕</button>
       </div>
-      <div class="fpl-body" id="fplBody"></div>
-      <div class="fpl-foot">
-        <button class="btn-primary" id="fplSave" type="button">Save</button>
-        <button class="btn-ghost" id="fplCancel" type="button">Cancel</button>
-        <span class="spacer"></span>
-        <span class="fp-prog-txt" id="fplSummary"></span>
+      <div class="lg-body fpl-body" id="fplBody"></div>
+      <div class="lg-foot">
+        <div class="sp-actions">
+          <button class="btn-ghost" id="fplCancel" type="button">Cancel</button>
+          <button class="btn-primary" id="fplSave" type="button">Save fert</button>
+        </div>
+        <span class="fp-prog-txt" id="fplSummary" hidden></span>
       </div>
     </div>
   </div>
@@ -9183,6 +9248,12 @@ function backCandidates(){
   if(tsh && !tsh.hidden && backVisible(tsh)) out.push([tsh,fwCloseTagSheet]);
   const fsh=document.getElementById("fwSheet");
   if(fsh && !fsh.hidden && backVisible(fsh)) out.push([fsh,fwCloseWhoSheet]);
+  ["sprayRecPanel","frPanel"].forEach(id=>{
+    const pn=document.getElementById(id);
+    if(pn && !pn.hidden && cmIsMobile() && backVisible(pn)){
+      const x=pn.querySelector("[aria-label='Close'],.icon-btn"); if(x) out.push([pn,()=>x.click()]);
+    }
+  });
   const say=document.getElementById("spraySaySheet");
   if(say && !say.hidden && backVisible(say)) out.push([say,()=>{ say.hidden=true; }]);
   const wbp=document.getElementById("wbPanel");
@@ -28149,9 +28220,126 @@ function buildSprayRecords(){
       : "No sprays logged yet. ＋ Log a spray records one, ＋ Schedule plans one."}</div></td>`;
     body.appendChild(r);
   } else list.forEach(a=>body.appendChild(srRow(a)));
+
+  // By day on a desk is the audit table above; everything else is the list.
+  document.querySelectorAll("#srMode [data-sr-mode]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.srMode===srMode?"true":"false"));
+  const phone=cmIsMobile(), useTable = srMode==="day" && !phone;
+  document.getElementById("srTableWrap").hidden = !useTable;
+  const listEl=document.getElementById("srList");
+  listEl.hidden = useTable;
+  if(!useTable) listEl.innerHTML = srMode==="bed" ? srByBedHtml() : srMode==="product" ? srByProductHtml(list) : srByDayHtml(list);
+  srRenderBanner();
   srRenderPanel();
   renderSidebar();
 }
+
+/* ---------- Records views (redesign 2026-11): By day / By bed / By product ----------
+   One list idiom shared with Fert records (rl-*). By day on a phone replaces the wide table; By
+   bed is the question asked standing at a bed; By product is the audit's other question. */
+let srMode = sessionStorage.getItem("roseberry_sr_mode") || "day";
+let srBedBlock = sessionStorage.getItem("roseberry_sr_block") || null, srBedOpen = null;
+// The beds that can't be picked yet, grouped by the day they come clear.
+function srRenderBanner(){
+  const el=document.getElementById("srBanner"); if(!el) return;
+  const byDay=new Map();
+  (data.beds||[]).forEach(b=>{ const w=sprayWhpOnBedAt(b.id); if(w) (byDay.get(w.safeAfter)||byDay.set(w.safeAfter,[]).get(w.safeAfter)).push(b.id); });
+  if(!byDay.size){ el.hidden=true; el.innerHTML=""; return; }
+  const n=[...byDay.values()].reduce((s,v)=>s+v.length,0);
+  const parts=[...byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([d,ids])=>`${esc(srBedsShort(ids).replace(/ · \d+ beds$/,""))} to ${esc(fmtShortDay(d))}`);
+  el.hidden=false;
+  el.innerHTML=`<span class="rl-ban-ico">◷</span><span class="grow"><b>${n} bed${n===1?"":"s"} inside withholding</b><span class="rl-ban-sub">${parts.join(" · ")}</span></span>`;
+}
+function srItemHtml(a){
+  const planned=a.status==="Planned";
+  const whp=sprayAppWhp(a), safe=sprayAppSafe(a);
+  const amt = a.amount!=null ? `${a.amount} ${a.amountUnit||"L"}` : "";
+  const today=sprayToday();
+  const due = planned ? (!a.date ? "no date" : a.date<today ? `was due ${fmtShortDay(a.date)}` : a.date===today ? "today" : fmtShortDay(a.date)) : "";
+  const sub=[due, amt, a.sprayer && a.sprayer!=="Fertigation" ? a.sprayer : (a.method==="Fertigation"?"fertigation":""),
+             a.sprayedBy, whp ? `WHP ${whp} d` : "", a.reason].filter(Boolean).join(" · ");
+  const btn = planned
+    ? `<button type="button" class="btn-ghost rl-btn" data-sr-done="${a.id}">Done</button>`
+    : `<button type="button" class="rl-rep" data-sr-repeat="${a.id}" title="Log this again" aria-label="Log this again">↻</button>`;
+  return `<div class="rl-item${safe&&safe.active&&!planned?" whp":""}" data-sr-open="${a.id}">
+    <div class="tx"><div class="t">${esc(srMixLabel(a))} · ${esc(sprayWhereLabel(a))}</div>${sub?`<div class="s">${esc(sub)}</div>`:""}</div>${btn}</div>`;
+}
+function srByDayHtml(list){
+  if(!list.length) return `<div class="rl-empty">${(data.sprayApplications||[]).length?"No records match this filter.":"No sprays logged yet — ＋ Log a spray records one."}</div>`;
+  const planned=list.filter(a=>a.status==="Planned"), logged=list.filter(a=>a.status!=="Planned");
+  let html = planned.length ? `<div class="rl-day">Coming up</div>` + planned.map(srItemHtml).join("") : "";
+  let cur=null;
+  logged.forEach(a=>{
+    if(a.date!==cur){ cur=a.date; html+=`<div class="rl-day">${a.date===sprayToday()?"Today · ":""}${esc(a.date?fmtShortDay(a.date):"No date")}</div>`; }
+    html+=srItemHtml(a);
+  });
+  return html;
+}
+function srByBedHtml(){
+  const blocks=bpkBlocks();
+  if(!srBedBlock || !blocks.some(b=>b.key===srBedBlock)) srBedBlock=(blocks[0]||{}).key;
+  const blk=blocks.find(b=>b.key===srBedBlock);
+  const logged=(data.sprayApplications||[]).filter(a=>a.status!=="Planned");
+  const pills=`<div class="rl-pills">${blocks.map(b=>`<button type="button" class="bpk-pill${b.key===srBedBlock?" on":""}" data-sr-block="${esc(b.key)}">${esc(b.key)}</button>`).join("")}</div>`;
+  const rows=(blk?blk.beds:[]).map(b=>{
+    const hist=logged.filter(a=>(a.bedIds||[]).includes(b.id));
+    const last=hist[0], w=sprayWhpOnBedAt(b.id);
+    const crop=b.planting && b.planting.status!=="Finished" && b.planting.crop!=="—" ? b.planting.crop : "";
+    const tag = w ? `<span class="bpk-tag amber">WHP to ${esc(fmtShortDay(w.safeAfter).replace(/^\w+ /,""))}</span>`
+              : hist.length ? `<span class="bpk-tag ok">Clear</span>` : "";
+    const open=srBedOpen===b.id;
+    return `<div class="rl-item rl-bed${open?" open":""}" data-sr-bed="${b.id}">
+        <div class="tx"><div class="t">${esc(b.name)}${crop?` · ${esc(crop)}`:""}</div>
+        <div class="s">${last?`last: ${esc(srMixLabel(last))} · ${esc(fmtShortDay(last.date))}`:"nothing this season"}${hist.length>1?` · ${hist.length} sprays`:""}</div></div>${tag}</div>`
+      + (open ? `<div class="rl-hist">${hist.length ? hist.slice(0,12).map(a=>`<div class="rl-hrow" data-sr-open="${a.id}"><span>${esc(fmtShortDay(a.date))}</span><span class="grow">${esc(srMixLabel(a))}</span><span>${esc(srRateLabel(a))}</span><button type="button" class="rl-rep" data-sr-repeat="${a.id}" title="Log this again">↻</button></div>`).join("") : `<div class="rl-empty">No sprays on this bed.</div>`}</div>` : "");
+  }).join("");
+  return pills + (rows || `<div class="rl-empty">No beds in this block.</div>`);
+}
+function srByProductHtml(list){
+  const by=new Map();
+  list.filter(a=>a.status!=="Planned").forEach(a=>{
+    (a.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      const g=by.get(it.productId) || {n:0, litres:0, beds:new Set(), last:"", id:it.productId};
+      g.n++; if(a.amount!=null && (a.amountUnit||"L")==="L") g.litres+=a.amount;
+      (a.bedIds||[]).forEach(b=>g.beds.add(b)); if(!g.last || a.date>g.last) g.last=a.date;
+      by.set(it.productId, g);
+    });
+  });
+  const rows=[...by.values()].sort((x,y)=>String(y.last).localeCompare(String(x.last)));
+  if(!rows.length) return `<div class="rl-empty">Nothing logged in this view yet.</div>`;
+  return rows.map(g=>{
+    const p=sprayProduct(g.id)||{};
+    const sub=[`${g.n} spray${g.n===1?"":"s"}`, g.litres?`${Math.round(g.litres)} L`:"", `${g.beds.size} bed${g.beds.size===1?"":"s"}`, g.last?`last ${fmtShortDay(g.last)}`:"", p.whp!=null?`WHP ${p.whp} d`:"no WHP set"].filter(Boolean).join(" · ");
+    return `<div class="rl-item" data-sr-product="${esc(p.name||"")}"><div class="tx"><div class="t">${esc(p.name||"?")}</div><div class="s">${esc(sub)}</div></div><span class="rl-go">›</span></div>`;
+  }).join("");
+}
+// Log a past spray again: same where, what, sprayer and tanks; today, by you, fresh notes.
+function sprayRepeat(id){
+  const a=(data.sprayApplications||[]).find(x=>x.id===id); if(!a) return;
+  sprayResetState("log");
+  sprayPrefillFromApp(a);
+  $s("sprayNotes").value=""; $s("sprayDate").value=sprayToday();
+  sprayFillAssignee($s("sprayBy"), localStorage.getItem(SPRAY_BY_KEY)||a.sprayedBy||"");
+  sprayFinishOpen();
+}
+(function wireSprayRecViews(){
+  const mode=document.getElementById("srMode");
+  mode?.addEventListener("click",e=>{
+    const b=e.target.closest("[data-sr-mode]"); if(!b) return;
+    srMode=b.dataset.srMode; sessionStorage.setItem("roseberry_sr_mode", srMode); buildSprayRecords();
+  });
+  document.getElementById("srList")?.addEventListener("click",e=>{
+    const rep=e.target.closest("[data-sr-repeat]"); if(rep){ sprayRepeat(rep.dataset.srRepeat); return; }
+    const done=e.target.closest("[data-sr-done]"); if(done){ sprayOpenLogFromPlan(done.dataset.srDone); return; }
+    const blk=e.target.closest("[data-sr-block]");
+    if(blk){ srBedBlock=blk.dataset.srBlock; srBedOpen=null; sessionStorage.setItem("roseberry_sr_block", srBedBlock); buildSprayRecords(); return; }
+    const op=e.target.closest("[data-sr-open]"); if(op){ srSelected=op.dataset.srOpen; srRenderPanel(); return; }
+    const bed=e.target.closest("[data-sr-bed]"); if(bed){ srBedOpen = srBedOpen===bed.dataset.srBed ? null : bed.dataset.srBed; buildSprayRecords(); return; }
+    const pr=e.target.closest("[data-sr-product]");
+    if(pr){ const s=document.getElementById("sprayRecSearch"); if(s) s.value=pr.dataset.srProduct; srMode="day"; sessionStorage.setItem("roseberry_sr_mode", srMode); buildSprayRecords(); }
+  });
+})();
 
 function srRow(a){
   const tr=document.createElement("tr");
@@ -28553,8 +28741,14 @@ function fmtShortDay(iso){ const d=PlannerShared.wkParse(iso); return `${LG_DAYS
 function fmtLong(iso){ const d=PlannerShared.wkParse(iso); return d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"}).replace(/,/g,""); }
 
 /* sprayers, tanks, valves, why — the redesigned rows */
+// Recomputed only when loadAll replaces data.beds — the records list asks once per row.
+let sprayValvesCache=null, sprayValvesFor=null;
 function sprayValves(){
-  return PlannerShared.valvesList(data.beds, data.blocks, data.irrigSettings, data.irrigZones);
+  if(sprayValvesFor!==data.beds){
+    sprayValvesCache=PlannerShared.valvesList(data.beds, data.blocks, data.irrigSettings, data.irrigZones);
+    sprayValvesFor=data.beds;
+  }
+  return sprayValvesCache;
 }
 function sprayIsFert(){ return spray && spray.sprayer==="Fertigation"; }
 function spraySprayerLitres(){
@@ -31699,48 +31893,80 @@ function fpAllBlocksSorted(){
 }
 
 function fplOpen(opts){
-  const mode = opts.mode || "program";
+  opts=opts||{};
+  // Programs are now one way in, not the way in: "+ Log a fert" opens a fresh manual form with
+  // what's due this week above it. Callers that pass a program (the rates page, ticked jobs) keep
+  // their program mode — and a bare fplOpen({blockId}) is still the rates page's "Log beds done".
+  const mode = opts.mode || (opts.fresh ? "manual" : "program");
+  fplState={ mode, progId:null, roundId:null, blockId:opts.blockId||null, beds:new Set(opts.bedIds||[]),
+             lines:[], knownProducts:fpKnownProducts(), fresh:!!opts.fresh, prepOp:opts.prepOp||"",
+             plantingId:opts.plantingId||null, planId:null, planOffset:null, editId:null, showProgs:false,
+             method:opts.method||"Spread", date:opts.date||null, by:opts.by||null, notes:opts.notes||"",
+             onSaved:opts.onSaved||null, due:[] };
   if(mode==="program"){
     const progId = opts.progId || fpProgId;
     const prog = fpProgram(progId);
-    if(!prog){ alert("Pick a program first, or switch to Manual entry once the log is open."); return; }
-    // fpRoundId is only a valid fallback if it actually belongs to this program — it's a global
-    // left over from whatever the rates page was last showing, which may be a different program
-    // entirely when this is opened from Fert records rather than the rates page itself.
-    const progRoundIds = new Set(fpRoundsOf(progId).map(r=>r.id));
-    const roundId = opts.roundId || (progRoundIds.has(fpRoundId) ? fpRoundId : null)
-      || (fpRoundsOf(progId)[0]||{}).id || null;
-    fplState={ mode, progId, roundId, blockId:opts.blockId||null, beds:new Set(), lines:[],
-               knownProducts:fpKnownProducts() };
-    fplBuildLines();
-  }else{
-    fplState={ mode:"manual", progId:null, roundId:null, blockId:opts.blockId||null, beds:new Set(),
-               lines:[], knownProducts:fpKnownProducts() };
+    if(!prog){ fplState.mode="manual"; }
+    else{
+      // fpRoundId is only a valid fallback if it actually belongs to this program — it's a global
+      // left over from whatever the rates page was last showing.
+      const progRoundIds = new Set(fpRoundsOf(progId).map(r=>r.id));
+      fplState.progId=progId;
+      fplState.roundId = opts.roundId || (progRoundIds.has(fpRoundId) ? fpRoundId : null)
+        || (fpRoundsOf(progId)[0]||{}).id || null;
+      fplBuildLines();
+    }
   }
   fplRender();
   $fp("fpLogModal").classList.add("open");
+  $fp("fplBody").scrollTop=0;
 }
 function fplClose(){ $fp("fpLogModal").classList.remove("open"); fplState=null; }
+// Log a past fert again: same beds, products and method (and round, if it came from one); today.
+function fertRepeat(id){
+  const a=(data.fertApps||[]).find(x=>x.id===id); if(!a) return;
+  if(a.programId && fpProgram(a.programId)){
+    fplOpen({ mode:"program", progId:a.programId, roundId:a.roundId, blockId:a.blockId, bedIds:a.bedIds, method:a.method });
+  }else{
+    fplOpen({ mode:"manual", bedIds:a.bedIds, method:a.method });
+    fplState.lines=(a.items||[]).map(i=>({product:i.product, rate:i.rate, unit:i.unit||"kg", on:true, manual:true}));
+    fplRender();
+  }
+}
+// Done on a planned fert (a step from a crop plan): the form, filled in as planned.
+function fertDonePlanned(id){
+  const a=(data.fertApps||[]).find(x=>x.id===id); if(!a) return;
+  fplOpen({ mode:"manual" });
+  fplLoadPlanned(a);
+  fplRender();
+}
 
-// Switching modes clears the block/beds selection along with the lines — the two modes draw their
-// block list from different sources (a program's own blocks vs every block on the farm), and
-// carrying a selection across would risk carrying beds that aren't even valid in the new mode.
+// Switching to manual drops the round's lines (they only make sense with the round); switching to
+// a program rebuilds them for the block the picked beds are in.
 function fplSetMode(mode){
   const s=fplState; if(!s || s.mode===mode) return;
-  s.mode=mode; s.blockId=null; s.beds.clear();
+  fplSync();
+  s.mode=mode;
   if(mode==="program"){
-    if(!s.progId) s.progId=(data.fertPrograms||[])[0] && data.fertPrograms[0].id;
+    if(!s.progId) s.progId=((data.fertPrograms||[]).find(p=>p.kind!=="Fertigation")||{}).id||null;
     if(s.progId && !s.roundId) s.roundId=(fpRoundsOf(s.progId)[0]||{}).id||null;
-    fplBuildLines();
+    fplBlockFromBeds(); fplBuildLines();
   }else{
-    s.lines=[];
+    s.lines=s.lines.filter(l=>l.manual); s.progId=null; s.roundId=null;
   }
   fplRender();
+}
+// A round's rates are set per block, so the block comes from the beds you picked.
+function fplBlockFromBeds(){
+  const s=fplState; if(!s) return;
+  const b=sprayBed([...s.beds][0]);
+  const blk=b && (data.blocks||[]).find(x=>x.name===b.block);
+  if(blk) s.blockId=blk.id;
 }
 
 // Products come from the round's own rates. Rate per bed prefers the measured litres figure and
 // falls back to the derived kg — the same precedence the rates page shows, so what you log matches
-// what you just read.
+// what you just read. Lines typed by hand survive a rebuild.
 function fplBuildLines(){
   const s=fplState;
   const items=(data.fertItems||[]).filter(i=>{
@@ -31748,12 +31974,90 @@ function fplBuildLines(){
     if(!s.blockId) return !i.blockId && !i.blockLabel;   // fertigation-style: unblocked rows
     return i.blockId===s.blockId;
   });
+  const manual=(s.lines||[]).filter(l=>l.manual);
   s.lines=items.map(i=>{
     const kg=i.unit==="kg" ? PlannerShared.fertKgPerBed(i.rate) : null;
     return i.lPerBed!=null
       ? { product:i.product, rate:i.lPerBed, unit:"L", on:true }
       : { product:i.product, rate:kg!=null?Math.round(kg*1000)/1000:null, unit:kg!=null?"kg":i.unit, on:true };
+  }).concat(manual);
+}
+
+// "Due this week": planned fert steps (from a crop plan) and bed prep that needs a fertiliser or
+// compost spread before a planting. Use fills the form; saving closes the prep job out.
+function fplDueItems(){
+  const week=PlannerShared.wkISO(PlannerShared.wkMonday(new Date()));
+  let bp=null; try{ bp=bppPlanFor(week); }catch(_){}
+  const plantingsById=Object.fromEntries((data.plantings||[]).map(p=>[p.id,p]));
+  const plansById=Object.fromEntries((data.cropPlans||[]).map(p=>[p.id,p]));
+  return PlannerShared.fertDueThisWeek(data.fertApps, bp, week, {plantingsById, plansById}).map(d=>{
+    if(d.kind==="prep"){
+      const crops=[...new Set(d.plantingIds.map(id=>(plantingsById[id]||{}).crop).filter(c=>c&&c!=="—"))];
+      return Object.assign(d, { title:`Bed prep · ${d.op}`,
+        sub:[frBedsShort(d.bedIds), crops.join(", "), d.needBy?`needed by ${fmtShortDay(d.needBy)}`:""].filter(Boolean).join(" · ") });
+    }
+    const plan=plansById[d.app.planId];
+    return Object.assign(d, { title:`${plan?plan.name:"Planned"} · ${(d.app.items||[]).map(i=>i.product).join(", ")||"fert"}`,
+      sub:[frBedsShort(d.bedIds), d.overdue?`was due ${fmtShortDay(d.due)}`:`due ${fmtShortDay(d.due)}`].join(" · ") });
   });
+}
+function fplLoadPlanned(a){
+  const s=fplState; if(!s || !a) return;
+  s.editId=a.id; s.fresh=false;
+  s.beds=new Set(a.bedIds||[]);
+  s.mode=a.programId?"program":"manual"; s.progId=a.programId; s.roundId=a.roundId; s.blockId=a.blockId;
+  s.lines=(a.items||[]).map(i=>({product:i.product, rate:i.rate, unit:i.unit||"kg", on:true, manual:true}));
+  s.method=a.method||"Spread"; s.notes=a.notes||"";
+  s.planId=a.planId; s.plantingId=a.plantingId; s.planOffset=a.planOffset; s.prepOp=a.prepOp||"";
+}
+function fplUseDue(i){
+  const s=fplState, d=s && s.due[i]; if(!d) return;
+  fplSync();
+  if(d.kind==="prep"){
+    s.beds=new Set(d.bedIds); s.prepOp=d.op; s.plantingId=d.plantingIds[0]||null; s.fresh=false;
+    if(!s.lines.length) s.lines=[{product:"", rate:null, unit:"L", on:true, manual:true}];
+  }else fplLoadPlanned(d.app);
+  fplRender();
+}
+// Your fert products, most recently used first, each with the rate it last went on at.
+function fplQuickProducts(){
+  const s=fplState, have=new Set(s.lines.map(l=>l.product)), out=[], seen=new Set();
+  (data.fertApps||[]).filter(a=>a.status!=="Planned").forEach(a=>(a.items||[]).forEach(i=>{
+    if(!i.product || seen.has(i.product)) return; seen.add(i.product);
+    if(!have.has(i.product)) out.push({product:i.product, rate:i.rate, unit:i.unit||"kg"});
+  }));
+  s.knownProducts.forEach(p=>{ if(!seen.has(p) && !have.has(p)){ seen.add(p); out.push({product:p, rate:null, unit:"kg"}); } });
+  return out.slice(0,6);
+}
+function fertMarks(b){
+  const s=fplState; if(!s) return null;
+  if(s.mode==="program" && s.progId){
+    const done=PlannerShared.fertBedsDone(data.fertApps||[], s.progId, s.roundId);
+    if(done.has(b.id)) return {tag:"had this round", cls:"ok"};
+  }
+  if((s.due||[]).some(d=>d.kind==="prep" && d.bedIds.includes(b.id))) return {tag:"prep due", cls:"amber"};
+  const last=(data.fertApps||[]).find(a=>a.status!=="Planned" && (a.bedIds||[]).includes(b.id));
+  return last ? {note:`last fert: ${frMixLabel(last)} ${fmtShortDay(last.date)}`} : null;
+}
+function fplPickBeds(){
+  const s=fplState; if(!s) return;
+  fplSync();
+  bedPickOpen({ bedIds:[...s.beds], allowZones:false, title:"Beds", marks:fertMarks,
+    onDone:({bedIds})=>{
+      if(!fplState) return;
+      s.beds=new Set(bedIds);
+      if(s.mode==="program"){ const was=s.blockId; fplBlockFromBeds(); if(s.blockId!==was) fplBuildLines(); }
+      fplRender();
+    }});
+}
+function fplProgPickerHtml(){
+  const progs=(data.fertPrograms||[]).filter(p=>p.kind!=="Fertigation" && !p.archived);
+  const apps=(data.fertApps||[]).filter(a=>a.status!=="Planned");
+  return `<div class="fpl-progs">${progs.map(p=>fpRoundsOf(p.id).map(r=>{
+      const n=PlannerShared.fertBedsDone(apps, p.id, r.id).size;
+      return `<div class="lg-up" data-fpl-prog="${p.id}" data-fpl-round="${r.id}"><div class="tx"><div class="t">${esc(p.name)} · ${esc(r.name)}</div><div class="s">${n?`${n} beds done`:"not started"}</div></div><span class="rl-go">›</span></div>`;
+    }).join("")).join("") || `<div class="lg-empty">No programs yet.</div>`}
+    <div class="lg-hint" style="margin:.2rem 1rem 0">Fertigation programs are logged under Sprays → Fertigation.</div></div>`;
 }
 
 function fplRender(){
@@ -31761,64 +32065,36 @@ function fplRender(){
   const isProgram = s.mode==="program";
   const prog=isProgram ? fpProgram(s.progId) : null;
   const round=isProgram ? fpRoundsOf(s.progId).find(r=>r.id===s.roundId) : null;
-  const progs=(data.fertPrograms||[]);
-  // Block/beds is shown whenever there's somewhere for it to draw from: a program's own blocks in
-  // Program mode (skipped for Fertigation, which isn't applied bed by bed), or every farm block in
-  // Manual mode.
-  const showBlocks = isProgram ? (prog && prog.kind!=="Fertigation") : true;
-  const blocks = isProgram ? fpBlocksOf(s.progId).filter(b=>!b.orphan)
-    : fpAllBlocksSorted().map(b=>({blockId:b.id, name:b.name}));
-  const beds=s.blockId?fpBedsInBlock(s.blockId):[];
-  const done = isProgram ? PlannerShared.fertBedsDone(data.fertApps||[], s.progId, s.roundId) : new Set();
   const n=s.beds.size;
-
-  $fp("fplTitle").textContent = isProgram
-    ? `Log ${prog?prog.name:"fertiliser"}${round?" · "+round.name:""}`
-    : "Log fertiliser · manual entry";
+  s.due = (s.fresh && !n && !s.editId) ? fplDueItems() : [];
+  $fp("fplTitle").textContent = s.editId ? "Log this fert" : "Log a fert";
+  $fp("fplSub").textContent = s.editId ? "Filled in as planned — change what was different" : fmtLong(s.date||sprayToday());
+  const crops=[...new Set([...s.beds].map(id=>(sprayBed(id)||{}).planting).filter(p=>p&&p.status!=="Finished").map(p=>p.crop).filter(c=>c&&c!=="—"))];
+  const quick=!isProgram ? fplQuickProducts() : [];
+  const methods=PlannerShared.FERT_METHODS.filter(m=>m!=="Fertigated");
   $fp("fplBody").innerHTML = `
-    <div class="fpl-mode" role="tablist">
-      <button type="button" data-fpl-mode="program" aria-pressed="${isProgram?"true":"false"}">Program &amp; round</button>
-      <button type="button" data-fpl-mode="manual" aria-pressed="${isProgram?"false":"true"}">Manual entry</button>
-    </div>
-    <div class="fpl-row">
-      <div><label for="fplDate">Date</label><input id="fplDate" type="date" value="${esc(s.date||new Date().toISOString().slice(0,10))}"></div>
-      <div><label for="fplBy">Applied by</label><input id="fplBy" type="text" value="${esc(s.by||localStorage.getItem(SPRAY_BY_KEY)||"")}" placeholder="Name"></div>
-    </div>
-    ${isProgram ? `
-    <div class="fpl-row">
-      <div><label for="fplProg">Program</label>
-        <select id="fplProg">${progs.map(p=>`<option value="${p.id}"${p.id===s.progId?" selected":""}>${esc(p.name)}</option>`).join("")}</select></div>
-      <div><label for="fplRound">Round</label>
-        <select id="fplRound">${fpRoundsOf(s.progId).map(r=>`<option value="${r.id}"${r.id===s.roundId?" selected":""}>${esc(r.name)}</option>`).join("")}</select></div>
-    </div>` : ""}
-    ${showBlocks ? `
-      <label for="fplBlock">Block</label>
-      <select id="fplBlock"><option value="">— pick a block —</option>${blocks.map(b=>
-        `<option value="${b.blockId}"${b.blockId===s.blockId?" selected":""}>${esc(b.name)}</option>`).join("")}</select>
-      <label>Beds done ${beds.length?`<button type="button" id="fplAll" style="width:auto;padding:.1rem .5rem;font-size:.7rem;text-transform:none;letter-spacing:0">${n===beds.length?"none":"all"}</button>`:""}</label>
-      ${beds.length ? `<div class="fpl-beds">${beds.map(b=>
-        `<button class="fpl-bed${done.has(b.id)?" fpl-bed-already":""}" type="button" data-fpl-bed="${b.id}"
-           aria-pressed="${s.beds.has(b.id)?"true":"false"}">${esc(b.name)}
-           ${done.has(b.id)?`<span class="fpl-bed-done">done</span>`:""}</button>`).join("")}</div>`
-        : `<div class="empty-note">${s.blockId?"No beds in this block.":"Pick a block to choose beds."}</div>`}
-    ` : ""}
-    ${isProgram ? `
-      <label>Products <span style="text-transform:none;letter-spacing:0">(from this round's rates — untick anything you skipped)</span></label>
+    ${s.due.length ? `<div class="lg-lbl">Due this week · tap to fill in</div>`
+      + s.due.map((d,i)=>`<div class="lg-up" data-fpl-due="${i}"><div class="tx"><div class="t">${esc(d.title)}</div><div class="s">${esc(d.sub)}</div></div><button type="button" class="btn-ghost">Use</button></div>`).join("") : ""}
+    ${isProgram ? `<div class="lg-row"><span class="lg-k">From</span><div class="lg-v"><span class="lg-main">${esc(prog?prog.name:"Program")}${round?` · ${esc(round.name)}`:""}</span>
+        <span class="lg-small">rates per bed for the block — untick anything you skipped</span></div>
+        <button type="button" class="lg-link" data-fpl-mode="manual" title="Not from a program">✕</button></div>` : ""}
+    <button type="button" class="lg-row lg-tap" id="fplBedsRow"><span class="lg-k">Beds</span>
+      <span class="lg-v">${n ? `<span class="lg-main">${esc(frBedsShort([...s.beds]))}</span>${crops.length?`<span class="lg-small">${esc(crops.slice(0,4).join(", "))}</span>`:""}` : `<span class="lg-dim">Pick beds</span>`}</span>
+      <span class="lg-go">Pick ›</span></button>
+    <div class="lg-row lg-col"><div class="lg-rowhead"><span class="lg-k">What</span><span class="grow"></span><span class="lg-hint">per bed · total</span></div>
       ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n,s.knownProducts)).join("")}</div>`
-        : `<div class="empty-note">Nothing from this round for that block.</div>`}
-    ` : `
-      <label>Products</label>
-      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n,s.knownProducts)).join("")}</div>` : ""}
-      <div class="fp-addbar" style="padding:.4rem 0 0"><button type="button" id="fplAddLine">＋ Add product</button></div>
-    `}
-    <label for="fplMethod">Method</label>
-    <select id="fplMethod">${PlannerShared.FERT_METHODS.map(m=>
-      `<option value="${m}"${m===(s.method||"Spread")?" selected":""}>${m}</option>`).join("")}</select>
-    <label for="fplNotes">Notes</label>
-    <textarea id="fplNotes" rows="2">${esc(s.notes||"")}</textarea>
-    ${isProgram ? `<div class="fpl-warn" id="fplWarn" hidden>Some selected beds are already logged for this round.
-      Saving adds a second application rather than replacing the first.</div>` : ""}`;
-
+        : isProgram ? `<div class="lg-hint">${n ? "Nothing in this round for that block." : "Pick beds to see this round’s rates for their block."}</div>` : ""}
+      ${quick.length ? `<div class="lg-chips">${quick.map((q,i)=>`<button type="button" class="lg-chip" data-fpl-quick="${i}">＋ ${esc(q.product)}</button>`).join("")}</div>` : ""}
+      <button type="button" class="lg-link" id="fplAddLine">＋ Add product</button>
+    </div>
+    <div class="lg-row"><span class="lg-k">How</span><div class="lg-chips">${methods.map(m=>`<button type="button" class="lg-chip" data-fpl-method="${m}" aria-pressed="${m===s.method}">${m}</button>`).join("")}</div></div>
+    <div class="lg-row"><span class="lg-k">When</span><div class="lg-v lg-pair">
+      <input id="fplDate" type="date" value="${esc(s.date||sprayToday())}">
+      <input id="fplBy" type="text" value="${esc(s.by||localStorage.getItem(SPRAY_BY_KEY)||"")}" placeholder="Who"></div></div>
+    ${s.prepOp ? `<div class="lg-safe ok">✓ Also ticks <b>${esc(s.prepOp)}</b> off bed prep for these beds</div>` : ""}
+    ${isProgram ? `<div class="lg-safe warn" id="fplWarn" hidden>Some of these beds already had this round — saving adds a second application.</div>` : ""}
+    ${!isProgram && !s.editId ? `<button type="button" class="lg-link" data-fpl-showprogs>From a program ${s.showProgs?"▴":"▾"}</button>${s.showProgs?fplProgPickerHtml():""}` : ""}
+    <details class="lg-more"${s.notes?" open":""}><summary>Notes</summary><textarea id="fplNotes" rows="3" placeholder="Anything else worth recording…">${esc(s.notes||"")}</textarea></details>`;
   fplRefreshTotals();
 }
 
@@ -31879,6 +32155,7 @@ function fplRefreshTotals(){
   });
   const on=s.lines.filter(l=>l.on).length;
   $fp("fplSummary").textContent = n ? `${n} bed${n===1?"":"s"} · ${on} product${on===1?"":"s"}` : "no beds picked";
+  $fp("fplSave").textContent = s.editId ? (n ? `Save · ${n} bed${n===1?"":"s"}` : "Save") : (n ? `Save fert · ${n} bed${n===1?"":"s"}` : "Save fert");
   // Re-applying a round to a bed is legitimate, so this warns rather than blocks. It lives here
   // rather than in fplRender so it appears the moment you tap an already-done bed.
   const warn=$fp("fplWarn");
@@ -31892,7 +32169,7 @@ function fplRefreshTotals(){
 function fplSync(){
   const s=fplState; if(!s) return;
   const g=id=>($fp(id)||{}).value;
-  s.date=g("fplDate"); s.by=g("fplBy"); s.method=g("fplMethod"); s.notes=g("fplNotes");
+  s.date=g("fplDate"); s.by=g("fplBy"); s.notes=g("fplNotes");
 }
 
 async function fplSave(){
@@ -31928,8 +32205,18 @@ async function fplSave(){
       [F.fa_round]:(isProgram && s.roundId)?[s.roundId]:[],
       [F.fa_block]:s.blockId?[s.blockId]:[], [F.fa_beds]:bedIds,
       [F.fa_method]:s.method||"Spread", [F.fa_notes]:(s.notes||"").trim(), [F.fa_created]:now,
+      [F.fa_status]:"Logged", [F.fa_prepOp]:s.prepOp||null,
+      [F.fa_planting]:s.plantingId?[s.plantingId]:null, [F.fa_plan]:s.planId?[s.planId]:null,
+      [F.fa_planOffset]:s.planOffset!=null?s.planOffset:null,
     };
-    const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertApplications, [appFields]);
+    let rec;
+    if(s.editId){
+      // Logging a planned step: the same row flips to Logged, its products rewritten.
+      await atPatch(CFG.farmBase, CFG.tables.fertApplications, s.editId, appFields);
+      const old=((data.fertApps||[]).find(a=>a.id===s.editId)||{}).items||[];
+      if(old.length) await atDelete(CFG.farmBase, CFG.tables.fertApplicationItems, old.map(i=>i.id));
+      rec={id:s.editId};
+    }else [rec]=await atCreate(CFG.farmBase, CFG.tables.fertApplications, [appFields]);
     const itemFields=lines.map((l,i)=>({
       [F.fai_app]:[rec.id], [F.fai_product]:l.product, [F.fai_rate]:l.rate, [F.fai_unit]:l.unit,
       [F.fai_total]: l.rate!=null ? Math.round(l.rate*n*1000)/1000 : null, [F.fai_order]:i+1 }));
@@ -31939,7 +32226,17 @@ async function fplSave(){
     const app=PlannerShared.parseFertApplications([{id:rec.id, fields:appFields}])[0];
     app.items=PlannerShared.parseFertApplicationItems(
       created.map((c,i)=>({id:c.id, fields:itemFields[i]})));
-    data.fertApps=[app].concat(data.fertApps||[]);
+    data.fertApps=[app].concat((data.fertApps||[]).filter(x=>x.id!==rec.id));
+    // Came from a bed-prep card: the spread is done, so the prep plan closes itself out.
+    if(s.prepOp && bedIds.length){
+      try{
+        const date=appFields[F.fa_date];
+        const pf={ [F.bpe_name]:`${date} — ${s.prepOp}`, [F.bpe_date]:date, [F.bpe_bed]:bedIds,
+                   [F.bpe_ops]:[s.prepOp], [F.bpe_notes]:"From the fert log", [F.bpe_created]:now };
+        const [pe]=await atCreate(CFG.farmBase, CFG.tables.bedPrepEvents, [pf]);
+        (data.bedPrepEvents ||= []).push({id:pe.id, date, bedIds, ops:[s.prepOp], by:"", notes:"From the fert log", taskId:null});
+      }catch(e){ alert("Fert saved, but bed prep wasn't ticked off:\n"+e.message); }
+    }
     const onSaved=s.onSaved;
     fplClose();
     if(onSaved) await onSaved(rec.id);
@@ -32381,8 +32678,50 @@ function buildFertRecords(){
   if(frMode==="bed"){ buildFertByBed(); }
   else if(frMode==="product"){ buildFertByProduct(); }
   else { if(dateBox) dateBox.hidden=false; buildFertByDate(); }
+  frRenderBanner();
   frRenderPanel();
   renderSidebar();
+}
+// The amendment round in progress: the latest round of the first amendment program with anything
+// logged against it, and how many of the program's beds have had it.
+function frRenderBanner(){
+  const el=document.getElementById("frBanner"); if(!el) return;
+  const prog=(data.fertPrograms||[]).find(p=>p.kind!=="Fertigation" && !p.archived);
+  if(!prog){ el.hidden=true; return; }
+  const apps=(data.fertApps||[]).filter(a=>a.status!=="Planned");
+  const rounds=fpRoundsOf(prog.id);
+  const started=rounds.filter(r=>PlannerShared.fertBedsDone(apps, prog.id, r.id).size);
+  const round=started[started.length-1] || rounds[0];
+  if(!round){ el.hidden=true; return; }
+  const beds=new Set();
+  fpBlocksOf(prog.id).filter(b=>b.blockId).forEach(b=>fpBedsInBlock(b.blockId).forEach(x=>beds.add(x.id)));
+  const done=[...PlannerShared.fertBedsDone(apps, prog.id, round.id)].filter(id=>beds.has(id)).length;
+  const total=beds.size;
+  if(!total){ el.hidden=true; return; }
+  const pct=Math.round(done/total*100);
+  el.hidden=false;
+  el.innerHTML=`<span class="grow"><b>${esc(round.name)} · ${esc(prog.name)}</b>
+    <span class="rl-ban-sub">${done} of ${total} beds · ${total-done} left</span>
+    <span class="rl-bar" style="display:block"><i style="width:${pct}%"></i></span></span>`;
+}
+function frItemHtml(a){
+  const planned=a.status==="Planned";
+  const sub=[planned && a.date ? `due ${fmtShortDay(a.date)}` : "", frTotalLabel(a)!=="—"?frTotalLabel(a):"", a.method, a.by, a.prepOp?`closed ${a.prepOp.toLowerCase()}`:""].filter(Boolean).join(" · ");
+  const btn = planned
+    ? `<button type="button" class="btn-ghost rl-btn" data-fr-done="${a.id}">Done</button>`
+    : `<button type="button" class="rl-rep" data-fr-repeat="${a.id}" title="Log this again" aria-label="Log this again">↻</button>`;
+  return `<div class="rl-item" data-fr-open="${a.id}"><div class="tx"><div class="t">${esc(frMixLabel(a))} · ${esc(frBedsShort(a.bedIds))}</div>${sub?`<div class="s">${esc(sub)}</div>`:""}</div>${btn}</div>`;
+}
+function frByDayHtml(apps){
+  const planned=apps.filter(a=>a.status==="Planned").sort((x,y)=>String(x.date).localeCompare(String(y.date)));
+  const logged=apps.filter(a=>a.status!=="Planned");
+  let html = planned.length ? `<div class="rl-day">Coming up</div>`+planned.map(frItemHtml).join("") : "";
+  let cur=null;
+  logged.forEach(a=>{
+    if(a.date!==cur){ cur=a.date; html+=`<div class="rl-day">${a.date===sprayToday()?"Today · ":""}${esc(a.date?fmtShortDay(a.date):"No date")}</div>`; }
+    html+=frItemHtml(a);
+  });
+  return html;
 }
 
 /* The chronological log — the "what have we been doing" view, as a table you can scan rather than
@@ -32396,6 +32735,9 @@ function buildFertByDate(){
       : "No fertiliser applications logged yet. Log one from a program's rates page, or with ＋ Log a fert."}</div>`;
     return;
   }
+  // On a phone the table becomes the same day-grouped list as Spray records.
+  if(cmIsMobile()){ box.classList.add("rl-wrap"); box.innerHTML=frByDayHtml(apps); return; }
+  box.classList.remove("rl-wrap");
   box.innerHTML=
     `<table class="lib-table"><thead><tr>`
      +`<th class="lib-num">Date</th><th>Beds</th><th>Product / mix</th><th>Rate</th>`
@@ -32675,6 +33017,24 @@ async function frDelete(id){
     const s=fplState; if(!s) return;
     const modeBtn=ev.target.closest("[data-fpl-mode]");
     if(modeBtn){ fplSetMode(modeBtn.dataset.fplMode); return; }
+    // Redesigned rows (2026-11)
+    if(ev.target.closest("#fplBedsRow")){ fplPickBeds(); return; }
+    const due=ev.target.closest("[data-fpl-due]");
+    if(due){ fplUseDue(+due.dataset.fplDue); return; }
+    const quick=ev.target.closest("[data-fpl-quick]");
+    if(quick){ const q=fplQuickProducts()[+quick.dataset.fplQuick]; if(!q) return;
+      fplSync(); s.lines=s.lines.filter(l=>!(l.manual && !l.product && l.rate==null));
+      s.lines.push({product:q.product, rate:q.rate, unit:q.unit||"kg", on:true, manual:true});
+      if(!s.knownProducts.includes(q.product)) s.knownProducts.push(q.product);
+      fplRender(); return; }
+    const meth=ev.target.closest("[data-fpl-method]");
+    if(meth){ s.method=meth.dataset.fplMethod;
+      $fp("fplBody").querySelectorAll("[data-fpl-method]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.fplMethod===s.method?"true":"false"));
+      return; }
+    if(ev.target.closest("[data-fpl-showprogs]")){ fplSync(); s.showProgs=!s.showProgs; fplRender(); return; }
+    const pg=ev.target.closest("[data-fpl-prog]");
+    if(pg){ fplSync(); s.mode="program"; s.progId=pg.dataset.fplProg; s.roundId=pg.dataset.fplRound; s.showProgs=false;
+      s.lines=s.lines.filter(l=>l.manual && l.product); fplBlockFromBeds(); fplBuildLines(); fplRender(); return; }
     // Bed and product taps update in place rather than re-rendering the body. You tick six beds in
     // a row with one thumb; a full re-render on each tap loses scroll position and drops whatever
     // you'd half-typed into Notes.
@@ -32762,11 +33122,14 @@ async function frDelete(id){
   if(logBtn) logBtn.onclick=()=>fplOpen({ blockId: (fpBlockKey && !fpBlockKey.startsWith("label:")) ? fpBlockKey : null });
 
   const newBtn=document.getElementById("frNewBtn");
-  if(newBtn) newBtn.onclick=()=>fplOpen({ progId:(data.fertPrograms||[])[0] && data.fertPrograms[0].id });
+  if(newBtn) newBtn.onclick=()=>fplOpen({ fresh:true });
 
   const frBody=document.getElementById("frBody");
   if(frBody) frBody.addEventListener("click",(ev)=>{
-    const d=ev.target.closest("[data-fr-del]"); if(d) frDelete(d.dataset.frDel);
+    const d=ev.target.closest("[data-fr-del]"); if(d){ frDelete(d.dataset.frDel); return; }
+    const rep=ev.target.closest("[data-fr-repeat]"); if(rep){ fertRepeat(rep.dataset.frRepeat); return; }
+    const done=ev.target.closest("[data-fr-done]"); if(done){ fertDonePlanned(done.dataset.frDone); return; }
+    const op=ev.target.closest("[data-fr-open]"); if(op){ frSelected=op.dataset.frOpen; frRenderPanel(); }
   });
 
   const modeBar=document.getElementById("frMode");
