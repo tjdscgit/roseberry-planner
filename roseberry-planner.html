@@ -3558,6 +3558,14 @@
      Header / scrolling body / sticky footer. Rows are label-left, value-right, each one tap; the
      card fills the phone so nothing important sits below a fold. */
   .lg-card [hidden],.bpk-card [hidden]{display:none!important}
+  #cpModal{position:fixed;inset:0;z-index:72;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);padding:1rem}
+  #cpModal.open{display:flex}
+  @media(max-width:640px){ #cpModal{padding:0} }
+  #cpBody textarea{width:100%;font-size:.95rem;line-height:1.45}
+  #cpBody select{width:100%}
+  .lg-up.off{opacity:.65;cursor:default}
+  .cp-tick{width:24px;height:24px;flex:0 0 auto;border-radius:6px;border:1.5px solid var(--line-2);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem}
+  .cp-tick.on{background:var(--steel);border-color:var(--steel)}
   .lg-card{width:min(560px,100%);height:min(92vh,880px);max-height:none;padding:0;display:flex;flex-direction:column;overflow:hidden}
   @media(max-width:640px){
     #sprayModal,#fpLogModal{padding:0}
@@ -7182,6 +7190,7 @@
           <div class="lg-lbl">Coming up</div>
           <div id="sprayComing"></div>
           <button type="button" class="lg-link" id="sprayStartSchedule">＋ Schedule a spray</button>
+          <button type="button" class="lg-link" id="sprayStartPlan">✦ Plan from a Claude chat</button>
         </div>
 
         <div id="sprayForm">
@@ -7316,6 +7325,20 @@
         <button class="btn-ghost" id="sprayMixCancel">Cancel</button>
         <button class="btn-primary" id="sprayMixSave">Save mix</button>
       </div>
+    </div>
+  </div>
+
+  <!-- PLAN FROM A CLAUDE CHAT (cpOpen) -->
+  <div id="cpModal">
+    <div class="ap-card lg-card">
+      <div class="lg-head">
+        <div class="lg-titles"><div class="lg-title" id="cpHead">Plan from a Claude chat</div><div class="lg-sub" id="cpSub"></div></div>
+        <button type="button" class="ap-x lg-x" id="cpClose" title="Close">✕</button>
+      </div>
+      <div class="lg-body" id="cpBody"></div>
+      <div class="lg-foot"><div class="sp-actions">
+        <button type="button" class="btn-ghost" id="cpCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="cpGo">Read the plan</button></div></div>
     </div>
   </div>
 
@@ -29270,6 +29293,203 @@ async function sprayUploadPhotos(recordId){
   if(errs.length) alert("Record saved, but some photos didn't upload:\n"+errs.join("\n"));
 }
 
+/* ---------- Plan from a Claude chat (redesign 2026-11, canvas P1–P2) ----------
+   Paste a regime Claude gave you in a chat, pick the planting, check the steps, and they become
+   Planned sprays and ferts on that planting. Each step stores its offset from the planting's
+   transplant (or sow) date, so moving the planting moves the steps (PlannerShared.planStepDate).
+   Products are matched to yours; a spray step with a product that isn't in your spray products,
+   or a step that only applies "if needed", is shown but never scheduled. */
+const CP_SCHEMA = {
+  type:"object",
+  properties:{
+    plan_name:{type:"string", description:"Short name, e.g. 'Tomato plan'."},
+    anchor:{type:"string", enum:["transplant","sow"], description:"What the timings count from. 'sow' only for a direct-sown crop or when the text counts from sowing."},
+    steps:{type:"array", items:{
+      type:"object",
+      properties:{
+        kind:{type:"string", enum:["spray","fert"], description:"'spray' for foliar sprays and fertigation; 'fert' for dry fertiliser / amendments spread or banded on the bed."},
+        offset_days:{type:"integer", description:"Days after the anchor date for the first application. Negative = before (e.g. a base dressing at bed forming, -1)."},
+        repeat_every_days:{...SB_INT, description:"Interval if it repeats, else null."},
+        repeat_count:{...SB_INT, description:"How many applications in total if it repeats, else null."},
+        products:{type:"array", items:{
+          type:"object",
+          properties:{ name:{type:"string"}, rate:QA_NUM, unit:{...SB_STR, description:"Unit of the rate: 'g', 'mL', 'L', 'kg'. For fert, the rate per bed if given."} },
+          required:["name","rate","unit"], additionalProperties:false,
+        }},
+        method:{...SB_STR, description:"Spread, Banded, Incorporated, side-dress, foliar, fertigation — as said, or null."},
+        conditional:{type:"boolean", description:"True when it only applies if something happens ('if blight shows')."},
+        note:{...SB_STR, description:"One short line of context for this step, or null."},
+      },
+      required:["kind","offset_days","repeat_every_days","repeat_count","products","method","conditional","note"],
+      additionalProperties:false,
+    }},
+  },
+  required:["plan_name","anchor","steps"],
+  additionalProperties:false,
+};
+let cp=null;   // {plantingId, text, result, on:Set of step index}
+const cpPlanting = id => (data.plantings||[]).find(p=>p.id===id)||null;
+function cpPlantingLabel(p){
+  if(!p) return "Pick the planting";
+  return `${p.crop||"?"} · ${frBedsShort(p.bedIds)} · ${p.tp?`transplant ${fmtShortDay(p.tp)}`:p.sow?`sow ${fmtShortDay(p.sow)}`:"no date"}`;
+}
+// Plantings a plan could be for: not finished, not failed, soonest first.
+function cpPlantings(){
+  return (data.plantings||[]).filter(p=>p.status!=="Finished" && !p.failed && (p.bedIds||[]).length)
+    .sort((a,b)=>String(a.tp||a.sow||"9").localeCompare(String(b.tp||b.sow||"9")));
+}
+// Guess the planting from bed names and crop in the text.
+function cpGuess(text){
+  const crop=qaMatchCrop(text);
+  const beds=new Set((String(text).match(/\b[A-Z]{1,2}\d{1,2}(?:-\d)?\b/gi)||[]).map(t=>qaMatchBed(t)).filter(Boolean));
+  const list=cpPlantings();
+  return (list.find(p=>p.bedIds.some(b=>beds.has(b)) && (!crop || p.cropId===crop))
+       || list.find(p=>p.bedIds.some(b=>beds.has(b)))
+       || (crop && list.find(p=>p.cropId===crop)) || {}).id || null;
+}
+function cpOpen(){
+  cp={ plantingId:null, text:"", result:null, on:new Set(), busy:false };
+  cpRender();
+  $s("cpModal").classList.add("open");
+}
+function cpClose(){ $s("cpModal").classList.remove("open"); cp=null; }
+// Each step's dates (offsets) and whether it can be scheduled.
+function cpExpand(step){
+  const n=Math.max(1, step.repeat_count||1), every=step.repeat_every_days||0;
+  return Array.from({length: every ? n : 1}, (_,k)=>step.offset_days + k*every);
+}
+function cpStepCheck(step){
+  if(step.conditional) return "Only if needed — not scheduled. Kept in the plan's notes.";
+  if(!step.products.length) return "No product named — not scheduled.";
+  if(step.kind==="spray"){
+    const miss=step.products.filter(p=>!qaMatchProduct(p.name)).map(p=>p.name);
+    if(miss.length) return `Not in your spray products: ${miss.join(", ")} — not scheduled.`;
+  }
+  return "";
+}
+function cpAnchorDate(){
+  const p=cpPlanting(cp.plantingId); if(!p) return null;
+  const a=cp.result && cp.result.anchor==="sow" ? (p.sow||p.tp) : (p.tp||p.sow);
+  return a||null;
+}
+const cpDateAt = off => { const a=cpAnchorDate(); return a ? PlannerShared.wkISO(PlannerShared.wkAddDays(PlannerShared.wkParse(a), off)) : null; };
+function cpRender(){
+  const body=$s("cpBody"), r=cp.result, p=cpPlanting(cp.plantingId);
+  if(!r){
+    $s("cpHead").textContent="Plan from a Claude chat";
+    $s("cpSub").textContent="Paste the reply, pick the planting";
+    body.innerHTML=`<div class="lg-row lg-col"><textarea id="cpText" rows="9" placeholder="Paste what Claude suggested — base dressing, side-dressings, foliar sprays and when…">${esc(cp.text)}</textarea></div>
+      <div class="lg-lbl">For which planting</div>
+      <div class="lg-row"><select id="cpPlanting" class="lg-v"><option value="">— pick the planting —</option>${cpPlantings().map(x=>`<option value="${x.id}"${x.id===cp.plantingId?" selected":""}>${esc(cpPlantingLabel(x))}</option>`).join("")}</select></div>
+      <div class="lg-hint" style="margin:.4rem 1rem">Guessed from bed names in the text — change it if it's wrong.</div>`;
+    $s("cpGo").textContent=cp.busy?"Reading…":"Read the plan"; $s("cpGo").disabled=cp.busy;
+    return;
+  }
+  $s("cpHead").textContent=r.plan_name||"Plan";
+  $s("cpSub").textContent=p ? `${cpPlantingLabel(p)} · dates count from ${r.anchor==="sow"?"sowing":"transplant"}` : "";
+  const rows=r.steps.map((st,i)=>{
+    const why=cpStepCheck(st), on=!why && cp.on.has(i), offs=cpExpand(st);
+    const first=cpDateAt(offs[0]);
+    const when = first ? fmtShortDay(first) : `day ${st.offset_days}`;
+    const rep = offs.length>1 ? ` · every ${st.repeat_every_days} d × ${offs.length}` : "";
+    const what=st.products.map(x=>`${x.name}${x.rate!=null?` ${x.rate} ${x.unit||""}`:""}`.trim()).join(" + ");
+    return `<div class="lg-up${why?" off":""}" data-cp-step="${i}">
+      <span class="cp-tick${on?" on":""}">${on?"✓":""}</span>
+      <div class="tx"><div class="t">${esc(what||"—")}</div>
+        <div class="s">${esc(when+rep)} · ${st.kind==="spray"?"spray":"fert"}${st.method?` · ${esc(st.method)}`:""}${st.note?` · ${esc(st.note)}`:""}</div>
+        ${why?`<div class="s" style="color:var(--amber)">${esc(why)}</div>`:""}</div></div>`;
+  }).join("");
+  const n=[...cp.on].reduce((s,i)=>s+cpExpand(r.steps[i]).length,0);
+  body.innerHTML=`<div class="lg-lbl">Steps · untick any you don't want</div>${rows||`<div class="lg-empty">No steps found in that text.</div>`}
+    <div class="lg-hint" style="margin:.6rem 1rem">Rates come from the chat — check them against the label before you spray.</div>`;
+  $s("cpGo").textContent = n ? `Add ${n} to the schedule` : "Nothing to add";
+  $s("cpGo").disabled = !n || cp.busy;
+}
+async function cpRead(){
+  cp.text=$s("cpText").value.trim(); cp.plantingId=$s("cpPlanting").value||cpGuess(cp.text);
+  if(!cp.text) return;
+  if(!cp.plantingId){ cpRender(); alert("Pick the planting this plan is for."); return; }
+  if(!AKEY){ alert("This needs the Anthropic key on this device — add it under settings ⚙."); return; }
+  const p=cpPlanting(cp.plantingId);
+  cp.busy=true; cpRender();
+  try{
+    const prompt=`A grower pasted a fertiliser and spray regime that Claude suggested in a separate chat, for one planting on their organic market garden. Turn it into a list of scheduled steps.
+
+Planting: ${p.crop}, beds ${frBedsShort(p.bedIds)}, sown ${p.sow||"?"}, transplant ${p.tp||"none (direct sown)"}.
+Spray products they have: ${(data.sprayProducts||[]).filter(x=>x.active).map(x=>x.name).join(", ")}.
+Fert products they use: ${fpKnownProducts().join(", ")}.
+
+Rules:
+- One step per distinct application; a repeating spray is ONE step with repeat_every_days and repeat_count.
+- offset_days counts from the transplant date (or sowing if direct sown / the text counts from sowing). Weeks → days. "At bed forming / before planting" = -1.
+- Use the exact product name from the lists when it is clearly that product; otherwise the name as written.
+- Rates exactly as written. Never invent a rate, product or interval.
+- Anything that only applies if something happens is conditional:true.
+
+Text:
+"""
+${cp.text.slice(0,6000)}
+"""`;
+    cp.result=await aiReadText({prompt, schema:CP_SCHEMA, maxTokens:4000, tooLong:"That's a long plan — try pasting just the regime part."});
+    cp.on=new Set(cp.result.steps.map((s,i)=>i).filter(i=>!cpStepCheck(cp.result.steps[i])));
+  }catch(e){ alert(e.message); }
+  cp.busy=false; cpRender();
+}
+async function cpSave(){
+  const r=cp.result, p=cpPlanting(cp.plantingId); if(!r||!p) return;
+  const F=CFG.f, now=new Date().toISOString();
+  cp.busy=true; cpRender();
+  try{
+    const [plan]=await atCreate(CFG.farmBase, CFG.tables.cropPlans, [{
+      [F.cp_name]:r.plan_name||`${p.crop} plan`, [F.cp_planting]:[p.id], [F.cp_source]:cp.text,
+      [F.cp_anchor]:r.anchor==="sow"?"sow":"transplant", [F.cp_created]:now }]);
+    for(const i of [...cp.on].sort((a,b)=>a-b)){
+      const st=r.steps[i];
+      for(const off of cpExpand(st)){
+        const date=cpDateAt(off)||sprayToday();
+        if(st.kind==="spray"){
+          const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayApplications, [{
+            [F.sap_name]:`${date} · ${p.crop} · ${r.plan_name||"plan"}`, [F.sap_date]:date, [F.sap_status]:"Planned",
+            [F.sap_method]:/fertig/i.test(st.method||"")?"Fertigation":"Backpack", [F.sap_amountUnit]:"L",
+            [F.sap_beds]:p.bedIds, [F.sap_crops]:p.cropId?[p.cropId]:[], [F.sap_planting]:[p.id], [F.sap_plan]:[plan.id],
+            [F.sap_planOffset]:off, [F.sap_notes]:st.note||null }]);
+          await atCreate(CFG.farmBase, CFG.tables.sprayApplicationItems, st.products.map((x,k)=>({
+            [F.sai_app]:[rec.id], [F.sai_product]:[qaMatchProduct(x.name)], [F.sai_order]:k,
+            [F.sai_name]:`${date} — ${x.name}`, [F.sai_rate]:x.rate, [F.sai_unit]:x.unit||null })));
+        }else{
+          const [rec]=await atCreate(CFG.farmBase, CFG.tables.fertApplications, [{
+            [F.fa_name]:`${date} · ${p.crop} · ${r.plan_name||"plan"}`, [F.fa_date]:date, [F.fa_status]:"Planned",
+            [F.fa_beds]:p.bedIds, [F.fa_method]:(PlannerShared.FERT_METHODS.find(m=>new RegExp(m,"i").test(st.method||""))||"Spread"),
+            [F.fa_planting]:[p.id], [F.fa_plan]:[plan.id], [F.fa_planOffset]:off, [F.fa_notes]:st.note||"", [F.fa_created]:now }]);
+          const n=p.bedIds.length||1;
+          await atCreate(CFG.farmBase, CFG.tables.fertApplicationItems, st.products.map((x,k)=>({
+            [F.fai_app]:[rec.id], [F.fai_product]:x.name, [F.fai_rate]:x.rate, [F.fai_unit]:x.unit||"kg",
+            [F.fai_total]:x.rate!=null?Math.round(x.rate*n*1000)/1000:null, [F.fai_order]:k+1 })));
+        }
+      }
+    }
+    // Conditional steps live on as notes on the plan row, not as schedule entries.
+    const cond=r.steps.filter(st=>st.conditional).map(st=>`If needed: ${st.products.map(x=>x.name).join(" + ")}${st.note?` — ${st.note}`:""}`);
+    if(cond.length) await atPatch(CFG.farmBase, CFG.tables.cropPlans, plan.id, {[F.cp_source]:cp.text+"\n\n---\n"+cond.join("\n")});
+    cpClose();
+    await loadAll();
+    renderViewContent(currentView);
+  }catch(e){ alert("Couldn't add the plan: "+e.message); cp.busy=false; cpRender(); }
+}
+(function wireCp(){
+  if(!$s("cpModal")) return;
+  $s("cpClose").onclick=cpClose; $s("cpCancel").onclick=cpClose;
+  $s("cpGo").onclick=()=>{ if(!cp||cp.busy) return; cp.result ? cpSave() : cpRead(); };
+  $s("cpBody").addEventListener("input",e=>{ if(e.target.id==="cpText" && cp){ cp.text=e.target.value;
+    if(!$s("cpPlanting").value){ const g=cpGuess(cp.text); if(g){ $s("cpPlanting").value=g; cp.plantingId=g; } } } });
+  $s("cpBody").addEventListener("change",e=>{ if(e.target.id==="cpPlanting" && cp) cp.plantingId=e.target.value||null; });
+  $s("cpBody").addEventListener("click",e=>{
+    const st=e.target.closest("[data-cp-step]"); if(!st||!cp||!cp.result) return;
+    const i=+st.dataset.cpStep; if(cpStepCheck(cp.result.steps[i])) return;
+    cp.on.has(i)?cp.on.delete(i):cp.on.add(i); cpRender();
+  });
+})();
+
 /* ---------- Say it: one line → the spray form ----------
    The same structured-output call as Quick add, but it only ever fills this form in — the grower
    still sees every row and saves. Names come back as said and are matched against the farm's own
@@ -29393,6 +29613,7 @@ function spraySayApply(r){
   $s("sprayStartNew").onclick=()=>{ sprayResetState("log"); spray.fromStart=true; spray.items=[{productId:"",rate:null,unit:""}]; sprayFinishOpen(); };
   $s("sprayStartSchedule").onclick=()=>{ sprayOpenPlan(null); spray.fromStart=true; sprayApplyMode(); };
   $s("sprayBackStart").onclick=sprayStartOpen;
+  $s("sprayStartPlan").onclick=()=>{ sprayClose(); cpOpen(); };
   $s("sprayComing").addEventListener("click",(e)=>{
     const d=e.target.closest("[data-up-done]");
     if(d){ sprayOpenLogFromPlan(d.dataset.upDone); if(spray){ spray.fromStart=true; sprayApplyMode(); } return; }
@@ -32093,6 +32314,7 @@ function fplRender(){
       <input id="fplBy" type="text" value="${esc(s.by||localStorage.getItem(SPRAY_BY_KEY)||"")}" placeholder="Who"></div></div>
     ${s.prepOp ? `<div class="lg-safe ok">✓ Also ticks <b>${esc(s.prepOp)}</b> off bed prep for these beds</div>` : ""}
     ${isProgram ? `<div class="lg-safe warn" id="fplWarn" hidden>Some of these beds already had this round — saving adds a second application.</div>` : ""}
+    ${s.fresh && !n ? `<button type="button" class="lg-link" data-fpl-claude>✦ Plan from a Claude chat</button>` : ""}
     ${!isProgram && !s.editId ? `<button type="button" class="lg-link" data-fpl-showprogs>From a program ${s.showProgs?"▴":"▾"}</button>${s.showProgs?fplProgPickerHtml():""}` : ""}
     <details class="lg-more"${s.notes?" open":""}><summary>Notes</summary><textarea id="fplNotes" rows="3" placeholder="Anything else worth recording…">${esc(s.notes||"")}</textarea></details>`;
   fplRefreshTotals();
@@ -33019,6 +33241,7 @@ async function frDelete(id){
     if(modeBtn){ fplSetMode(modeBtn.dataset.fplMode); return; }
     // Redesigned rows (2026-11)
     if(ev.target.closest("#fplBedsRow")){ fplPickBeds(); return; }
+    if(ev.target.closest("[data-fpl-claude]")){ fplClose(); cpOpen(); return; }
     const due=ev.target.closest("[data-fpl-due]");
     if(due){ fplUseDue(+due.dataset.fplDue); return; }
     const quick=ev.target.closest("[data-fpl-quick]");
