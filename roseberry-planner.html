@@ -34785,6 +34785,9 @@ function fwxWalkOpts(need){
     .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
 }
 function fwxLabel(t){ return t ? (t.walkLabel||t.name||"") : ""; }
+// Prep with no kind picked, or the full prep run, puts the bed on this week's Prep run plan instead of
+// making a task. Other prep kinds (tarping) stay ordinary library tasks.
+function fwxToPrepRun(need, lib){ return need==="Prep" && (!lib || /prep/i.test(lib.name||"")); }
 // Open tasks raised from walk notes on this bed — what makes a bed flagged.
 function fwxFlags(bed){
   const out=[];
@@ -34901,7 +34904,8 @@ function fwxRenderSheet(){
       +(opts.length
         ? `<div class="fwx-opts">${opts.map(t=>`<button class="fwx-opt" type="button" data-fwxneedopt="${esc(n)}" data-fwxlib="${esc(t.id)}" aria-pressed="${t===p}">${esc(fwxLabel(t))}</button>`).join("")}</div>`
         : `<div class="fwx-noopt">Note only</div><button class="fwx-addlink" type="button" data-fwxadd="${esc(n)}">+ Add a task for this need</button>`)
-      +`<div class="fwx-task">Task: ${esc(bed.name)} · ${esc(n)}${p?" — "+esc(fwxLabel(p)):""}</div></div>`;
+      +(fwxToPrepRun(n,p) ? `<div class="fwx-task">Prep run: ${esc(bed.name)} · this week</div></div>`
+        : `<div class="fwx-task">Task: ${esc(bed.name)} · ${esc(n)}${p?" — "+esc(fwxLabel(p)):""}</div></div>`);
   }).join("");
   const save=document.getElementById("fwxSave");
   save.disabled=!fwxSel.length;
@@ -34919,6 +34923,15 @@ function fwxSave(){
   const pl=bed.planting && OCCUPIED.has(bed.planting.status) ? bed.planting : null;
   fwxSel.forEach(need=>{
     const lib=(data.tasks||[]).find(t=>t.id===fwxPicks[need]) || null;
+    if(fwxToPrepRun(need, lib)){
+      const week=bppThisWeek(), P=bppPlanFor(week);
+      if(!P.beds.some(b=>b.bedId===bed.id)){
+        const sg=P.suggestions.find(x=>x.bedId===bed.id);
+        bppAddBed(bed.id, P.defaultOps, Object.assign(sg?{taskId:sg.taskId, plantingId:sg.plantingId}:{}, text?{notes:"From walk: "+text.slice(0,100)}:{}), week);
+      }
+      fwmCommitObs(bed, text, ["Prep"]);
+      return;
+    }
     const obs=fwmCommitObs(bed, text, lib ? [need, fwxLabel(lib)] : [need]);
     const label=lib ? [pl&&pl.crop, lib.name].filter(Boolean).join(" — ") : `${need}${text?" — "+text:""} · ${bed.name}`;
     const fields={[F.pt_label]:label, [F.pt_due]:due};
