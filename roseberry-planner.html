@@ -4743,6 +4743,7 @@
   .fwx-opts::-webkit-scrollbar{display:none}
   .fwx-opt{flex:none;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 13px var(--sans);cursor:pointer}
   .fwx-opt[aria-pressed="true"]{border-color:var(--ink);background:var(--paper-3)}
+  .fwx-passes{flex-wrap:wrap}
   .fwx-noopt{font-size:13px;color:var(--ink-2)}
   .fwx-addlink{justify-self:start;border:0;background:none;padding:0;color:var(--steel);font:500 12px var(--sans);cursor:pointer}
   .fwx-task{font-size:12px;color:var(--ink-3)}
@@ -34788,6 +34789,14 @@ function fwxLabel(t){ return t ? (t.walkLabel||t.name||"") : ""; }
 // Prep with no kind picked, or the full prep run, puts the bed on this week's Prep run plan instead of
 // making a task. Other prep kinds (tarping) stay ordinary library tasks.
 function fwxToPrepRun(need, lib){ return need==="Prep" && (!lib || /prep/i.test(lib.name||"")); }
+let fwxOps=new Set();     // passes ticked under Prep — starts as this week's plan for the bed, else the defaults
+function fwxPassesHTML(bed){
+  const i=fwmPrepByBed().get(bed.id);
+  const done=new Set(i && i.planned ? i.ops.filter(o=>o.done).map(o=>o.op) : []);
+  return `<div class="lab">Passes${i&&i.planned?" · planned this week":""}</div><div class="fwx-opts fwx-passes">`
+    +bpActiveOps().map(o=>{ const d=done.has(o.op);
+      return `<button class="fwx-opt" type="button" data-fwxop="${esc(o.op)}" aria-pressed="${d||fwxOps.has(o.op)}"${d?" disabled":""}>${d?"✓ ":""}${esc(o.op)}</button>`; }).join("")+`</div>`;
+}
 // Open tasks raised from walk notes on this bed — what makes a bed flagged.
 function fwxFlags(bed){
   const out=[];
@@ -34877,7 +34886,7 @@ function fwxRenderHome(){
   if(on && tabs) tabs.scrollLeft=Math.max(0, on.offsetLeft-tabs.clientWidth/2+on.offsetWidth/2);
 }
 function fwxOpen(bedId){
-  fwmBedId=bedId; fwxSel=[]; fwxPicks={};
+  fwmBedId=bedId; fwxSel=[]; fwxPicks={}; fwxOps=new Set();
   const n=document.getElementById("fwxNote"); if(n) n.value="";
   fwxRenderSheet();
   document.getElementById("fwxSheet").scrollTop=0;
@@ -34904,7 +34913,7 @@ function fwxRenderSheet(){
       +(opts.length
         ? `<div class="fwx-opts">${opts.map(t=>`<button class="fwx-opt" type="button" data-fwxneedopt="${esc(n)}" data-fwxlib="${esc(t.id)}" aria-pressed="${t===p}">${esc(fwxLabel(t))}</button>`).join("")}</div>`
         : `<div class="fwx-noopt">Note only</div><button class="fwx-addlink" type="button" data-fwxadd="${esc(n)}">+ Add a task for this need</button>`)
-      +(fwxToPrepRun(n,p) ? `<div class="fwx-task">Prep run: ${esc(bed.name)} · this week</div></div>`
+      +(fwxToPrepRun(n,p) ? fwxPassesHTML(bed)+`<div class="fwx-task">Prep run: ${esc(bed.name)} · ${fwxOps.size} pass${fwxOps.size===1?"":"es"} this week</div></div>`
         : `<div class="fwx-task">Task: ${esc(bed.name)} · ${esc(n)}${p?" — "+esc(fwxLabel(p)):""}</div></div>`);
   }).join("");
   const save=document.getElementById("fwxSave");
@@ -34924,10 +34933,21 @@ function fwxSave(){
   fwxSel.forEach(need=>{
     const lib=(data.tasks||[]).find(t=>t.id===fwxPicks[need]) || null;
     if(fwxToPrepRun(need, lib)){
-      const week=bppThisWeek(), P=bppPlanFor(week);
-      if(!P.beds.some(b=>b.bedId===bed.id)){
+      // Same as the old sheet: the ticked passes become this week's plan for the bed; passes already
+      // logged done stay on it; unticking everything takes the bed off the plan.
+      const week=bppThisWeek(), P=bppPlanFor(week), row=P.beds.find(b=>b.bedId===bed.id);
+      const want=bpActiveOps().map(o=>o.op).filter(op=>fwxOps.has(op));
+      if(row){
+        const rec=(data.bedPrepPlan||[]).find(r=>r.id===row.planId);
+        const next=[...new Set([...row.ops.filter(o=>o.done).map(o=>o.op), ...want])];
+        if(rec){
+          if(!next.length) bppRemoveBed(row.planId);
+          else{ rec.ops=next; if(text) rec.notes=text;
+            fwEnqueue("patch","bedPrepPlan",Object.assign({[CFG.f.bpp_ops]:next}, text?{[CFG.f.bpp_notes]:text}:{}),{recId:rec.id}); bppBuild(); }
+        }
+      }else if(want.length){
         const sg=P.suggestions.find(x=>x.bedId===bed.id);
-        bppAddBed(bed.id, P.defaultOps, Object.assign(sg?{taskId:sg.taskId, plantingId:sg.plantingId}:{}, text?{notes:"From walk: "+text.slice(0,100)}:{}), week);
+        bppAddBed(bed.id, want, Object.assign(sg?{taskId:sg.taskId, plantingId:sg.plantingId}:{}, text?{notes:"From walk: "+text.slice(0,100)}:{}), week);
       }
       fwmCommitObs(bed, text, ["Prep"]);
       return;
@@ -35364,10 +35384,12 @@ function fwDeleteItem(id){
   }, true);
   document.addEventListener("click", e=>{ if(fwxMenuOpen && !e.target.closest(".fwx-hdr")){ fwxMenuOpen=false; fwxRenderHome(); } });
   document.getElementById("fwxSheet")?.addEventListener("click", e=>{
+    const op=e.target.closest("[data-fwxop]");
+    if(op){ const k=op.dataset.fwxop; fwxOps.has(k)?fwxOps.delete(k):fwxOps.add(k); fwxRenderSheet(); return; }
     const n=e.target.closest("[data-fwxneed]");
     if(n){ const v=n.dataset.fwxneed;
       fwxSel = fwxSel.includes(v) ? fwxSel.filter(x=>x!==v) : FWX_NEEDS.filter(x=>x===v||fwxSel.includes(x));
-      if(!fwxSel.includes(v)) delete fwxPicks[v];
+      if(!fwxSel.includes(v)) delete fwxPicks[v]; else if(v==="Prep") fwxOps=fwmStartOps(fwmPrepByBed().get(fwmBedId));
       fwxRenderSheet(); return; }
     const o=e.target.closest("[data-fwxneedopt]");
     if(o){ const k=o.dataset.fwxneedopt; fwxPicks[k] = fwxPicks[k]===o.dataset.fwxlib ? undefined : o.dataset.fwxlib; fwxRenderSheet(); return; }
