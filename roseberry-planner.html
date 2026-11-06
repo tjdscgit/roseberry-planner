@@ -8237,14 +8237,14 @@ async function loadAll(opts){
     data.tasks = tasks.map(t => ({
       id:t.id,
       name:t.fields[F.tk_name] || "",
-      category:t.fields[F.tk_cat] || "",
+      category:t.fields[F.tk_need] || "",   // Need replaced Category 2026-11-07
       desc:t.fields[F.tk_desc] || "",
       anchor:t.fields[F.tk_anchor] || "",
       offset:num(t.fields[F.tk_offset]),
       repeat:num(t.fields[F.tk_repeat]),
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
-      fwTag:t.fields[F.tk_fwtag] || "",
+      fwTag:"",
       need:t.fields[F.tk_need] || "",
       walk:!!t.fields[F.tk_walk],
       walkLabel:t.fields[F.tk_walkLabel] || "",
@@ -23225,9 +23225,9 @@ document.getElementById("ttAddBtn").addEventListener("click",async()=>{
 const TASK_ANCHORS = ["Sow","Transplant","First harvest","Last harvest"];
 const TASK_CATEGORIES = ["Cultivation","Fertility","Pest & Disease","Irrigation","Bed prep","Harvest","Other"];
 const TASK_SELECT_KEYS = new Set(["category","anchor","until"]);
-const TASK_FIELD = { name:"tk_name", category:"tk_cat", anchor:"tk_anchor",
+const TASK_FIELD = { name:"tk_name", anchor:"tk_anchor",
   offset:"tk_offset", repeat:"tk_repeat", until:"tk_until", duration:"tk_duration", desc:"tk_desc",
-  fwTag:"tk_fwtag", fertProgramId:"tk_fertProgram",
+  fertProgramId:"tk_fertProgram",
   need:"tk_need", walk:"tk_walk", walkLabel:"tk_walkLabel" };
 // Programs are a link column (text[]), so this one value is written as an array — see saveTask.
 function tkFertProgOptionsHTML(val){
@@ -23248,6 +23248,7 @@ let tkCatFilter = null;             // sidebar category filter; null = every cat
 const TASK_CAT_COLORS = {
   "Cultivation":"#527A9E", "Fertility":"#9C6D3E", "Pest & Disease":"#5B8A72",
   "Irrigation":"#3C7286", "Bed prep":"#8E6F3E", "Harvest":"#7A4FA0", "Other":"#6A8EAE",
+  "Nutrition":"#9C6D3E", "Pest":"#5B8A72", "Disease":"#5B8A72", "Prep":"#8E6F3E", "Weeds":"#527A9E", "Milestone":"#6A8EAE",
 };
 const tkCatColor = c => TASK_CAT_COLORS[c] || "var(--ink-2)";
 
@@ -24313,6 +24314,7 @@ const TASK_TYPE_COLOR={
   Planting:"#4C7A34", Cultivation:"#8F9C3C", Fertility:"#C29B0C", Irrigation:"#2F8FA6",
   "Bed prep":"#3C7286", Harvest:"#7A4FA0", "Pest & Disease":"#A44A3F", Spray:"#C64A2E",
   Manual:"#9C6D3E", Tarp:"#7D8489", Other:"#9AA39B",
+  Nutrition:"#C29B0C", Pest:"#A44A3F", Disease:"#A44A3F", Prep:"#3C7286", Weeds:"#8F9C3C", Milestone:"#4C7A34",
 };
 function taskTypeKey(r){
   return r.kind==="milestone" ? "Planting"
@@ -33497,7 +33499,6 @@ async function fwDeleteCustomTagFlow(){
     data.fieldWalkTags=data.fieldWalkTags.filter(x=>x.id!==tag.id);
     const affected=(data.tasks||[]).filter(x=>x.fwTag===tag.name);
     for(const x of affected){
-      await atPatch(CFG.farmBase, CFG.tables.tasks, x.id, {[CFG.f.tk_fwtag]:null});
       x.fwTag="";
     }
     fwApplyCustomTags();

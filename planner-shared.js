@@ -161,9 +161,9 @@
       bpp_planting:"Planting", bpp_task:"Task", bpp_created:"Created at", bpp_startMin:"Start minute",
       bpp_day:"Day", bpp_minutesOverride:"Minutes override",
       tt_name:"Name", tt_cells:"Cell count",
-      tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
+      tk_name:"Name", tk_desc:"Description",
       tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
-      tk_duration:"Minutes per 15m bed", tk_fwtag:"Field walk tag",
+      tk_duration:"Minutes per 15m bed",
       tk_need:"Need", tk_walk:"Show on walk", tk_walkLabel:"Walk label",
       // Which fertiliser program this task carries out ("Bed Prep" -> the amendment program,
       // "Side-dress"/"Foliar feed" -> a fertigation program). Set on the LIBRARY task only; the
@@ -2231,14 +2231,14 @@
     return taskRecords.map(t => ({
       id:t.id,
       name:t.fields[F.tk_name] || "",
-      category:t.fields[F.tk_cat] || "",
+      category:t.fields[F.tk_need] || "",   // Need replaced Category 2026-11-07
       desc:t.fields[F.tk_desc] || "",
       anchor:t.fields[F.tk_anchor] || "",
       offset:num(t.fields[F.tk_offset]),
       repeat:num(t.fields[F.tk_repeat]),
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
-      fwTag:t.fields[F.tk_fwtag] || "",
+      fwTag:"",
       need:t.fields[F.tk_need] || "",
       walk:!!t.fields[F.tk_walk],
       walkLabel:t.fields[F.tk_walkLabel] || "",
