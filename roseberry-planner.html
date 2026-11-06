@@ -4685,6 +4685,64 @@
   /* Walk by bed — pieces shared by phone and desktop (rows, badges, bed panel parts, notes rows, lists, Prep run cards). */
   /* Phone Field walk (2026-11-07) — a straight port of the phone mockup in design/field-walk-redesign.html.
      Class names are the mockup's with an fwx- prefix; values copied as-is. */
+
+  /* Phone Prep run (2026-11-07) — a straight port of the Prep run phone mockup in
+     design/Field Walk Redesign.html. Class names are the mockup's with an fwr- prefix; values as-is.
+     Mockup buttons with no font of their own keep the browser default (13.333px Arial, 1px 6px). */
+  @media(max-width:760px){
+    #view-fieldwalk.fwm-run{padding:0}
+    #view-fieldwalk.fwm-run .fw-top,#view-fieldwalk.fwm-run .vw-title{display:none!important}
+    #view-fieldwalk.fwm-run #fwCols{padding:0;margin:0}
+    #view-fieldwalk.fwm-run #fwPrepPane{padding:0 0 68px}
+    #view-fieldwalk.fwm-run #bppSearch{margin:8px 14px}
+    #view-fieldwalk.fwm-run #bppBody{padding:0}
+  }
+  .fwr{color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;background:var(--paper)}
+  .fwr button{cursor:pointer;font-family:Arial;font-size:13.3333px;line-height:normal;padding:1px 6px}
+  .fwr .fwr-hdr{padding:18px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;position:relative}
+  .fwr .fwr-hdr .t{font-family:var(--serif);font-weight:650;font-size:26px;line-height:1.1}
+  .fwr .fwr-iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);display:grid;place-items:center;font-size:18px}
+  .fwr .fwr-wk{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-size:13px}
+  .fwr .fwr-wk button{width:32px;height:32px;border-radius:8px;border:1px solid var(--line-2);background:none;color:var(--ink)}
+  .fwr .fwr-menu{position:absolute;right:18px;top:calc(100% - 4px);z-index:5;display:grid;min-width:160px;padding:4px;border-radius:12px;background:var(--paper-3)}
+  .fwr .fwr-menu[hidden]{display:none}
+  .fwr .fwr-menu button{height:44px;padding:0 12px;border:0;border-radius:8px;background:none;color:var(--ink);font:500 15px var(--sans);text-align:left}
+  .fwr .fwr-progress{margin:0 18px 12px;display:grid;gap:6px}
+  .fwr .fwr-progress .row{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-2)}
+  .fwr .fwr-progress .row b{color:var(--ink);font-weight:650}
+  .fwr .fwr-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+  .fwr .fwr-bar>i{display:block;height:100%;background:var(--ok);border-radius:3px;transition:width .25s}
+  .fwr .fwr-seg{margin:4px 14px 8px;display:grid;grid-template-columns:1fr 1fr;background:var(--paper-2);border-radius:10px;padding:3px}
+  .fwr .fwr-seg button{height:34px;border:0;border-radius:8px;background:none;color:var(--ink-2);font:500 14px var(--sans)}
+  .fwr .fwr-seg button[aria-pressed="true"]{background:var(--paper-3);color:var(--ink)}
+  .fwr .fwr-impl{border-top:1px solid var(--line)}
+  .fwr .fwr-impl-h{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;padding:14px 18px 10px}
+  .fwr .fwr-step{width:32px;height:32px;border-radius:50%;background:var(--steel-tint);color:var(--steel);display:grid;place-items:center;font-weight:650;font-size:14px}
+  .fwr .fwr-impl.done .fwr-step{background:var(--ok);color:var(--ok-ink)}
+  .fwr .fwr-impl-h .n{font-weight:650;font-size:17px}.fwr .fwr-impl-h .m{font-size:13px;color:var(--ink-2)}
+  .fwr .fwr-impl-h .c{font-size:14px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .fwr .fwr-pbar{margin:0 18px 8px 64px}
+  .fwr .fwr-todo{display:flex;flex-wrap:wrap;gap:8px;padding:4px 18px 8px 64px}
+  .fwr .fwr-chip{min-width:64px;height:48px;padding:0 14px;border-radius:12px;border:1.5px solid var(--line-2);background:var(--paper);color:var(--ink);font:650 18px var(--serif);display:flex;align-items:center;justify-content:center;gap:6px}
+  .fwr .fwr-chip.late{border-color:var(--clay)}
+  .fwr .fwr-chip.late::after{content:"late";font:500 11px var(--sans);color:var(--clay)}
+  .fwr .fwr-chip.ticked{background:var(--ok-tint);border-color:var(--ok);color:var(--ok)}
+  .fwr .fwr-donepill{margin:0 18px 14px 64px;font-size:13px;color:var(--ink-2);background:none;border:0;padding:4px 0;font-family:inherit;text-align:left}
+  .fwr .fwr-donelist{padding:0 18px 12px 64px;display:flex;flex-wrap:wrap;gap:6px}
+  .fwr .fwr-donelist[hidden]{display:none}
+  .fwr .fwr-donelist span{font-family:var(--serif);font-size:14px;color:var(--ok);padding:2px 8px;border-radius:6px;background:var(--ok-tint)}
+  .fwr .fwr-impl.done .fwr-todo{display:none}
+  .fwr .fwr-bybed .row{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+  .fwr .fwr-bybed .id{font-family:var(--serif);font-weight:650;font-size:22px}
+  .fwr .fwr-passes{display:flex;gap:6px;flex-wrap:wrap}
+  .fwr .fwr-pass{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line-2);color:var(--ink-2);background:none;font-family:inherit;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .fwr .fwr-pass.d{background:var(--ok-tint);border-color:transparent;color:var(--ok);text-decoration:none}
+  .fwr .fwr-pass.off{border-style:dashed;opacity:.5}
+  .fwr .fwr-empty{padding:16px 18px;color:var(--ink-2);font-size:14px;border-top:1px solid var(--line)}
+  .fwr-foot{color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;position:fixed;left:0;right:0;bottom:56px;z-index:20;padding:10px 14px;border-top:1px solid var(--line);display:flex;gap:8px;background:var(--paper)}
+  .fwr-foot button{cursor:pointer}
+  .fwr-foot .sec{flex:none;height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 14px var(--sans)}
+  .fwr-foot .pri{flex:1;height:48px;border-radius:12px;border:0;background:var(--ink);color:var(--paper);font:650 15px var(--sans)}
   #view-fieldwalk.fwm-home{padding:0}
   #view-fieldwalk.fwm-home .fw-top,#view-fieldwalk.fwm-home #fwmQuick,#view-fieldwalk.fwm-home #fwmPrepCard,
     #view-fieldwalk.fwm-home #fwmBlocks,#view-fieldwalk.fwm-home #fwmList{display:none!important}
@@ -22286,7 +22344,7 @@ function bppBuild(){
       : "Nothing due for prep")
     + (outstanding ? ` · ${outstanding} pass${outstanding===1?"":"es"} left`+(mins?` (~${wkFmtMins(mins)})`:"") : "");
 
-  body.innerHTML = bppShowing() ? fwmRenderRun(P)
+  body.innerHTML = bppShowing() ? (cmIsMobile() ? fwrRenderRun(P) : fwmRenderRun(P))
     : bppMode==="pass" ? bppRenderByPass(P) : bppRenderByBed(P, items);
   bppWireBody(P);
   fwRenderBadge();       // the queue may have drained (or stalled) since this page was last drawn
@@ -22327,6 +22385,130 @@ function fwmRenderRun(P){
       +`</div>`;
   }).join("")+`</div>`+todo+`<div class="fwm-run-foot"><button type="button" data-fwmrun="add">+ Add bed</button><button type="button" data-fwmrun="ops">Operations…</button><button type="button" data-fwmrun="log">Log…</button></div>`;
 }
+
+
+/* ---- Phone Prep run (2026-11-07): straight port of the Prep run mockup in design/Field Walk
+   Redesign.html. By implement = P.passes in tractor order, beds as chips (tap = tick every
+   outstanding operation of that implement on the bed); By bed = each planned bed with the week's
+   operations as toggles (tap = done/undone, long-press = needed/not needed on this bed). Same
+   writes as By pass: bppTickOn / bppTickOff / bppToggleOp. */
+let fwrMode="impl", fwrMenuOpen=false;
+const fwrShowDone=new Set();
+function fwrWeekLabel(iso){
+  const a=wkParse(iso), b=wkAddDays(a,6);
+  return a.getMonth()===b.getMonth() ? `${a.getDate()}–${b.getDate()} ${WK_MON[b.getMonth()]}`
+    : `${a.getDate()} ${WK_MON[a.getMonth()]} – ${b.getDate()} ${WK_MON[b.getMonth()]}`;
+}
+// One implement's beds: a bed is left while any of its operations under this implement is outstanding.
+function fwrImplBeds(a){
+  const m=new Map();
+  a.ops.forEach(g=>{
+    g.beds.forEach(b=>{ const x=m.get(b.bedId)||{b, left:[], done:0}; x.left.push(g.op); m.set(b.bedId,x); });
+    g.done.forEach(b=>{ const x=m.get(b.bedId)||{b, left:[], done:0}; x.done++; m.set(b.bedId,x); });
+  });
+  const all=[...m.values()];
+  return { todo:all.filter(x=>x.left.length), done:all.filter(x=>!x.left.length) };
+}
+function fwrRenderRun(P){
+  const prep=fwmPrepByBed();
+  const late=id=>{ const i=prep.get(id); return !!i && i.when==="late" && !i.preppedDate; };
+  const name=b=>(b.bed||(data.beds||[]).find(x=>x.id===b.bedId)||{name:"?"}).name;
+  const left=P.passes.reduce((n,a)=>n+a.bedCount,0), mins=P.passes.reduce((n,a)=>n+(a.minutes||0),0);
+  const doneN=P.passes.reduce((n,a)=>n+a.doneCount,0), tot=left+doneN;
+  const nBeds=P.beds.length;
+  let h=`<div class="fwr-hdr">`
+    +`<div><div class="t">Prep run</div><div class="fwr-wk"><button type="button" data-fwmweek="-1" aria-label="Previous week">‹</button>${esc(fwrWeekLabel(P.weekISO))}<button type="button" data-fwmweek="1" aria-label="Next week">›</button></div></div>`
+    +`<button class="fwr-iconbtn" type="button" data-fwr="menu" aria-label="Operations" aria-expanded="${fwrMenuOpen}">⋯</button>`
+    +`<div class="fwr-menu" role="menu"${fwrMenuOpen?"":" hidden"}><button type="button" role="menuitem" data-fwr="ops">Operations</button></div></div>`
+    +`<div class="fwr-progress"><div class="row"><span><b>${left} pass${left===1?"":"es"}</b>${mins?` · ~${esc(wkFmtMins(mins))}`:""} left</span><span>${nBeds} bed${nBeds===1?"":"s"}</span></div>`
+    +`<div class="fwr-bar"><i style="width:${tot?Math.round(doneN/tot*100):0}%"></i></div></div>`
+    +`<div class="fwr-seg"><button type="button" data-fwrmode="impl" aria-pressed="${fwrMode==="impl"}">By implement</button><button type="button" data-fwrmode="bed" aria-pressed="${fwrMode==="bed"}">By bed</button></div>`;
+  if(fwrMode==="impl"){
+    // Tractor order (seq): a finished implement keeps its place and number instead of sinking.
+    h+=`<div>`+(P.passes.length ? P.passes.slice().sort((x,y)=>x.seq-y.seq).map((a,k)=>{
+      const {todo,done}=fwrImplBeds(a), t=todo.length+done.length, fin=!todo.length;
+      return `<div class="fwr-impl${fin?" done":""}"><div class="fwr-impl-h"><span class="fwr-step">${fin?"✓":k+1}</span>`
+        +`<span><div class="n">${esc(a.name)}</div><div class="m">${todo.length} bed${todo.length===1?"":"s"} left${a.minutes?` · ~${esc(wkFmtMins(a.minutes))}`:""}</div></span>`
+        +`<span class="c">${done.length}/${t}</span></div>`
+        +`<div class="fwr-bar fwr-pbar"><i style="width:${t?done.length/t*100:0}%"></i></div>`
+        +`<div class="fwr-todo">${todo.map(x=>`<button class="fwr-chip${late(x.b.bedId)?" late":""}" type="button" data-fwrchip="${esc(a.name)}" data-bed="${esc(x.b.bedId)}" data-name="${esc(name(x.b))}">${esc(name(x.b))}</button>`).join("")}</div>`
+        +`<button class="fwr-donepill" type="button" data-fwrshow="${esc(a.name)}">${done.length} done · show ›</button>`
+        +`<div class="fwr-donelist"${fwrShowDone.has(a.name)?"":" hidden"}>${done.map(x=>`<span>${esc(name(x.b))}</span>`).join("")}</div></div>`;
+    }).join("") : `<div class="fwr-empty">No passes planned for this week. Tap a bed on the Field walk and pick Prep to plan its passes.</div>`)+`</div>`;
+  }else{
+    // A pass = an implement (as in the mockup and the By implement sections), in tractor order.
+    // On a bed it is done when all of that implement's operations planned there are done, and
+    // "not needed" (dashed) when none of them are planned there. Beds in driving order.
+    const PS=P.passes.slice().sort((x,y)=>x.seq-y.seq);
+    const order=new Map(); PS.forEach(a=>a.ops.forEach(g=>g.beds.concat(g.done).forEach(b=>{ if(!order.has(b.bedId)) order.set(b.bedId, order.size); })));
+    const beds=P.beds.slice().sort((x,y)=>(order.get(x.bedId)??1e9)-(order.get(y.bedId)??1e9));
+    h+=`<div class="fwr-bybed">`+(beds.length ? beds.map(b=>{
+      return `<div class="row"><span class="id">${esc(b.bed.name)}</span><div class="fwr-passes">`+PS.map(a=>{
+        const mine=b.ops.filter(o=>a.ops.some(g=>g.op===o.op));
+        const st=!mine.length?"off":mine.every(o=>o.done)?"d":"";
+        return `<button class="fwr-pass ${st}" type="button" data-fwrpass="${esc(a.name)}" data-bed="${esc(b.bedId)}">${st==="d"?"✓ ":""}${esc(a.name)}</button>`;
+      }).join("")+`</div></div>`;
+    }).join("") : `<div class="fwr-empty">No beds planned for this week.</div>`)+`</div>`;
+  }
+  return `<div class="fwr">${h}</div><div class="fwr-foot"><button class="sec" type="button" data-fwr="add">+ Bed</button><button class="pri" type="button" data-fwr="log">Log run</button></div>`;
+}
+// By bed: tap = tick (or untick) every operation of one implement planned on one bed.
+function fwrTickPass(bedId, attach, on){
+  const P=bppPlan(), a=P.passes.find(x=>x.name===attach), row=P.beds.find(b=>b.bedId===bedId);
+  if(!a||!row) return;
+  row.ops.filter(o=>a.ops.some(g=>g.op===o.op) && !!o.done!==on).forEach(o=>bppTick(o.op, bedId, on));
+}
+// By bed: long-press = this implement isn't needed on this bed (drop its operations), or is again.
+function fwrTogglePlan(bedId, attach, add){
+  const P=bppPlan(), a=P.passes.find(x=>x.name===attach), row=P.beds.find(b=>b.bedId===bedId);
+  if(!a||!row) return;
+  const ops=a.ops.map(g=>g.op);
+  if(add){ ops.forEach(op=>{ if(!row.ops.some(o=>o.op===op)) bppToggleOp(bedId, op); }); return; }
+  if(row.ops.some(o=>ops.includes(o.op) && o.done)){ alert(`${attach} is already logged on ${row.bed.name}. Tap it to untick first.`); return; }
+  row.ops.filter(o=>ops.includes(o.op)).forEach(o=>bppToggleOp(bedId, o.op));
+}
+function fwrWire(){
+  const body=document.getElementById("bppBody"); if(!body) return;
+  let lp=null, lpFired=false;
+  const clearLp=()=>{ if(lp){ clearTimeout(lp); lp=null; } };
+  body.addEventListener("pointerdown", e=>{
+    const p=e.target.closest("[data-fwrpass]"); lpFired=false; clearLp(); if(!p) return;
+    lp=setTimeout(()=>{ lp=null; lpFired=true; fwrTogglePlan(p.dataset.bed, p.dataset.fwrpass, p.classList.contains("off")); }, 550);
+  });
+  ["pointerup","pointercancel","pointerleave"].forEach(t=>body.addEventListener(t, clearLp));
+  body.addEventListener("contextmenu", e=>{ if(e.target.closest("[data-fwrpass]")) e.preventDefault(); });
+  body.addEventListener("click", e=>{
+    if(e.target.closest('[data-fwr="menu"]')){ fwrMenuOpen=!fwrMenuOpen; bppBuild(); return; }
+    if(fwrMenuOpen && !e.target.closest(".fwr-menu")){ fwrMenuOpen=false; bppBuild(); return; }
+    const a=e.target.closest("[data-fwr]");
+    if(a){ const k=a.dataset.fwr; fwrMenuOpen=false;
+      if(k==="ops"){ bppBuild(); document.getElementById("bppOpsBtn")?.click(); }
+      else if(k==="log") bpOpenLog({date:todayISO(), title:"Log bed prep"});
+      else if(k==="add"){ document.getElementById("bppAddBedsBtn")?.click(); window.scrollTo({top:0}); document.getElementById("view-fieldwalk")?.scrollTo({top:0}); }
+      return; }
+    const md=e.target.closest("[data-fwrmode]");
+    if(md){ fwrMode=md.dataset.fwrmode; bppBuild(); return; }
+    const sh=e.target.closest("[data-fwrshow]");
+    if(sh){ const k=sh.dataset.fwrshow; fwrShowDone.has(k)?fwrShowDone.delete(k):fwrShowDone.add(k);
+      sh.nextElementSibling.hidden=!fwrShowDone.has(k); return; }
+    const c=e.target.closest("[data-fwrchip]");
+    if(c && !c.classList.contains("ticked")){
+      c.classList.add("ticked"); c.textContent="✓ "+c.dataset.name;
+      const an=c.dataset.fwrchip, bed=c.dataset.bed;
+      setTimeout(()=>{
+        const im=bppPlan().passes.find(p=>p.name===an); if(!im) return bppBuild();
+        im.ops.forEach(g=>{ if(g.beds.some(b=>b.bedId===bed)) bppTickOn(g.op, bed); });
+      }, 450);
+      return; }
+    const p=e.target.closest("[data-fwrpass]");
+    if(p){ if(lpFired){ lpFired=false; return; }
+      if(p.classList.contains("off")) return;
+      fwrTickPass(p.dataset.bed, p.dataset.fwrpass, !p.classList.contains("d")); }
+  });
+  // A tap inside the page re-renders it, detaching e.target — only a live target outside counts.
+  document.addEventListener("click", e=>{ if(fwrMenuOpen && e.target.isConnected && !e.target.closest("#bppBody")){ fwrMenuOpen=false; bppBuild(); } });
+}
+fwrWire();
 
 /* ---- By bed: the planning surface ----
    Led by the planting schedule: every bed that has to be ready soon, grouped by when — Late (the
@@ -34864,10 +35046,11 @@ function fwxRenderHome(){
   const late=beds.filter(isLate);
   home.innerHTML=`<div class="fwx-hdr">`
     +`<div><div class="t">Field walk</div><div class="s">${esc(date)}</div></div>`
-    +`<div style="display:flex;gap:8px"><button class="fwx-who" type="button" data-fwx="who"><i>${esc(ini)}</i>${esc(name||"Who?")}</button>`
+    +`<div style="display:flex;gap:8px;align-items:center"><button class="fwx-who" type="button" data-fwmgo="prep" style="font-weight:500">Prep run ›</button>`
+    +`<button class="fwx-who" type="button" data-fwx="who" aria-label="Who: ${esc(name||"not set")}" style="padding:6px"><i>${esc(ini)}</i></button>`
     +`<button class="fwx-iconbtn" type="button" data-fwx="menu" aria-label="More" aria-expanded="${fwxMenuOpen}">⋯</button></div>`
     +`<div class="fwx-menu" role="menu"${fwxMenuOpen?"":" hidden"}><button type="button" role="menuitem" data-fwmgo="walk">Notes</button>`
-    +`<button type="button" role="menuitem" data-fwmgo="lists">Lists</button><button type="button" role="menuitem" data-fwmgo="prep">Prep run</button></div></div>`
+    +`<button type="button" role="menuitem" data-fwmgo="lists">Lists</button></div></div>`
     +`<div class="fwx-tabs" role="tablist">`+keys.map(k=>{
       const dot=g[k].some(b=>isLate(b) || fwxFlags(b).length);
       return `<button class="fwx-tab" type="button" role="tab" data-fwmblock="${esc(k)}" aria-selected="${k===fwmBlock}">${esc(k)}${dot?`<span class="dot"></span>`:""}</button>`;
