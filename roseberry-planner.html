@@ -4683,6 +4683,74 @@
   .fwm-run-todo button{border:0;background:none;padding:0;color:var(--ink-2);font:inherit;cursor:pointer}
   .fwm-run-todo button b{color:var(--steel);font:600 15px var(--serif)}
   /* Walk by bed — pieces shared by phone and desktop (rows, badges, bed panel parts, notes rows, lists, Prep run cards). */
+  /* Phone Field walk (2026-11-07) — a straight port of the phone mockup in design/field-walk-redesign.html.
+     Class names are the mockup's with an fwx- prefix; values copied as-is. */
+  #view-fieldwalk.fwm-home{padding:0}
+  #view-fieldwalk.fwm-home .fw-top,#view-fieldwalk.fwm-home #fwmQuick,#view-fieldwalk.fwm-home #fwmPrepCard,
+    #view-fieldwalk.fwm-home #fwmBlocks,#view-fieldwalk.fwm-home #fwmList{display:none!important}
+  #view-fieldwalk.fwm-home #fwBedsPane{padding:0}
+  #view-fieldwalk.fwm-home #fwCols{padding:0;margin:0}
+  #fwxHome{color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;background:var(--paper)}
+  .fwx-hdr{padding:18px 18px 10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;position:relative}
+  .fwx-hdr .t{font-family:var(--serif);font-weight:650;font-size:26px;line-height:1.1}
+  .fwx-hdr .s{color:var(--ink-2);font-size:13px}
+  .fwx-iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);display:grid;place-items:center;font-size:18px;padding:1px 6px;cursor:pointer}
+  .fwx-who{display:flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:999px;padding:6px 12px 6px 6px;font-size:13px;color:var(--ink);background:none;cursor:pointer}
+  .fwx-who i{width:24px;height:24px;border-radius:50%;background:var(--steel-tint);color:var(--steel);display:grid;place-items:center;font-style:normal;font-weight:650;font-size:12px}
+  .fwx-menu{position:absolute;right:18px;top:calc(100% - 4px);z-index:5;display:grid;min-width:160px;padding:4px;border-radius:12px;background:var(--paper-3)}
+  .fwx-menu[hidden]{display:none}
+  .fwx-menu button{height:44px;padding:0 12px;border:0;border-radius:8px;background:none;color:var(--ink);font:500 15px var(--sans);text-align:left;cursor:pointer}
+  .fwx-tabs{position:sticky;top:0;z-index:2;background:var(--paper);display:flex;gap:4px;padding:8px 14px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:none}
+  .fwx-tabs::-webkit-scrollbar{display:none}
+  .fwx-tab{flex:none;min-width:48px;height:40px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--ink-2);font:650 15px var(--sans);position:relative;cursor:pointer}
+  .fwx-tab[aria-selected="true"]{background:var(--paper-3);color:var(--ink)}
+  .fwx-tab .dot{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--clay)}
+  .fwx-alert{margin:12px 14px 4px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--clay-tint);color:var(--ink);font-size:14px;border:0;width:calc(100% - 28px);text-align:left;font-family:inherit;cursor:pointer}
+  .fwx-alert b{color:var(--clay)}.fwx-alert span:last-child{margin-left:auto;color:var(--ink-2)}
+  .fwx-beds{margin-top:8px}
+  .fwx-bed{display:grid;grid-template-columns:52px minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px 18px;border:0;background:none;width:100%;text-align:left;color:var(--ink);font-family:inherit;font-size:13.3333px;line-height:normal;border-top:1px solid var(--line);min-height:64px;cursor:pointer}
+  .fwx-bed .id{font-family:var(--serif);font-weight:650;font-size:22px}
+  .fwx-bed .crop{font-weight:500;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fwx-bed .meta{font-size:13px;color:var(--ink-2);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .fwx-bed.empty .id{color:var(--ink-3)}.fwx-bed.empty .crop{color:var(--ink-3);font-weight:400}
+  .fwx-stage{display:inline-flex;align-items:center;gap:5px}
+  .fwx-stage::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--ok)}
+  .fwx-stage.h::before{background:var(--amber)}
+  .fwx-tag{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--steel-tint);color:var(--steel);font-weight:500}
+  .fwx-needtxt{color:var(--clay);font-weight:500}
+  .fwx-flagdot{width:8px;height:8px;border-radius:50%;background:var(--clay)}
+  .fwx-chev{color:var(--ink-3)}
+  .fwx-scrim{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s}
+  .fwx-sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;max-height:100%;overflow-y:auto;background:var(--paper-2);border-radius:20px 20px 0 0;padding:10px 18px 18px;
+    transform:translateY(105%);transition:transform .25s ease;display:grid;gap:14px;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+  .fwx-open .fwx-scrim{opacity:1;pointer-events:auto}.fwx-open .fwx-sheet{transform:none}
+  @media(min-width:761px){.fwx-scrim,.fwx-sheet,#fwxHome{display:none}}
+  .fwx-grab{width:40px;height:4px;border-radius:2px;background:var(--line-2);justify-self:center}
+  .fwx-sh-head{display:flex;gap:12px;align-items:center}
+  .fwx-sh-id{font-family:var(--serif);font-weight:650;font-size:34px;line-height:1}
+  .fwx-sh-crop{font-weight:650;font-size:17px}.fwx-sh-meta{color:var(--ink-2);font-size:13px}
+  .fwx-x{margin-left:auto;flex:none}
+  .fwx-last{font-size:13px;color:var(--ink-2);background:var(--paper-3);padding:8px 10px;border-radius:10px}
+  .fwx-last[hidden]{display:none}
+  .fwx-or{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+  .fwx-needs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .fwx-need{height:48px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font:500 14px var(--sans);display:grid;place-items:center;align-content:center;gap:2px;padding:1px 6px;cursor:pointer}
+  .fwx-need[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .fwx-dets{display:grid;gap:10px}.fwx-dets:empty{display:none}
+  .fwx-det{display:grid;gap:6px}
+  .fwx-det .lab{font-size:13px;color:var(--ink-2)}.fwx-det .lab b{color:var(--ink);font-weight:650}
+  .fwx-opts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .fwx-opts::-webkit-scrollbar{display:none}
+  .fwx-opt{flex:none;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 13px var(--sans);cursor:pointer}
+  .fwx-opt[aria-pressed="true"]{border-color:var(--ink);background:var(--paper-3)}
+  .fwx-noopt{font-size:13px;color:var(--ink-2)}
+  .fwx-addlink{justify-self:start;border:0;background:none;padding:0;color:var(--steel);font:500 12px var(--sans);cursor:pointer}
+  .fwx-task{font-size:12px;color:var(--ink-3)}
+  .fwx-note{height:44px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);padding:0 12px;font:15px var(--sans);width:100%;box-sizing:border-box}
+  .fwx-foot{display:grid;grid-template-columns:auto 1fr;gap:8px}
+  .fwx-sec2{height:52px;padding:0 18px;border-radius:14px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 15px var(--sans);cursor:pointer}
+  .fwx-flagbtn{height:52px;border-radius:14px;border:0;background:var(--clay);color:var(--ok-ink);font:650 16px var(--sans);cursor:pointer}
+  .fwx-flagbtn:disabled{background:var(--line);color:var(--ink-3);cursor:default}
   #fwBedsPane,#fwPrepPane,#fwWalkPane,#fwListsPane{min-width:0}
   .fwm-day{display:flex;align-items:center;gap:8px;padding:12px 0 8px}
   .fwm-day[hidden],.fwm-filters[hidden],.fwm-newlist[hidden]{display:none}
@@ -6444,6 +6512,8 @@
       <div id="fwCols">
         <!-- Phone home: beds in walking order, one block at a time. Tap a bed for its sheet. -->
         <div id="fwBedsPane" hidden>
+          <!-- Phone (2026-11-07): ported from design/field-walk-redesign.html — drawn by fwxRenderHome. -->
+          <div id="fwxHome"></div>
           <div class="fwm-quick" id="fwmQuick"></div>
           <button type="button" class="fwm-card" id="fwmPrepCard" hidden></button>
           <div class="fwm-blocks" id="fwmBlocks" role="group" aria-label="Block"></div>
@@ -6530,6 +6600,20 @@
           <button class="btn-ghost" type="button" id="fwBedNext" hidden></button>
           <span class="spacer"></span>
           <button class="btn-primary" type="button" id="fwBedSave">Save note</button>
+        </div>
+      </div>
+      <div class="fwx-scrim" id="fwxScrim"></div>
+      <div class="fwx-sheet" id="fwxSheet" role="dialog" aria-label="Bed check">
+        <div class="fwx-grab"></div>
+        <div class="fwx-sh-head"><div class="fwx-sh-id" id="fwxId"></div><div><div class="fwx-sh-crop" id="fwxCrop"></div><div class="fwx-sh-meta" id="fwxMeta"></div></div><button class="fwx-iconbtn fwx-x" type="button" id="fwxX" aria-label="Close">✕</button></div>
+        <div class="fwx-last" id="fwxLast"></div>
+        <div class="fwx-or">What does it need?</div>
+        <div class="fwx-needs" id="fwxNeeds"></div>
+        <div class="fwx-dets" id="fwxDets"></div>
+        <input class="fwx-note" id="fwxNote" placeholder="Note (optional)">
+        <div class="fwx-foot">
+          <button class="fwx-sec2" type="button" id="fwxNext">Next bed ›</button>
+          <button class="fwx-flagbtn" type="button" id="fwxSave" disabled>Save</button>
         </div>
       </div>
       <div class="cm-sheet-scrim" id="fwTagScrim" hidden></div>
@@ -9290,6 +9374,8 @@ function backCandidates(){
   if(sh && !sh.hidden && backVisible(sh)) out.push([sh,fmCloseSheet]);
   const bsh=document.getElementById("fwBedSheet");
   if(bsh && cmIsMobile() && !bsh.hidden && backVisible(bsh)) out.push([bsh,fwmCloseBed]);
+  const xsh=document.getElementById("fwxSheet");
+  if(xsh && cmIsMobile() && fwxIsOpen()) out.push([xsh,fwmCloseBed]);
   const fcol=document.getElementById("fwCols");
   if(currentView==="fieldwalk" && cmIsMobile() && fwPane!=="beds" && fcol && backVisible(fcol)) out.push([fcol,()=>fwmGo("beds")]);
   const psh=document.getElementById("fwPrepSheet");
@@ -12553,7 +12639,7 @@ function fwPlaceChrome(){
   const quick=document.getElementById("fwQuickBar");
   const bsh=document.getElementById("fwBedSheet"), cols=document.getElementById("fwCols");
   if(bsh && cols){
-    if(cmIsMobile()){ if(bsh.parentElement===cols){ document.getElementById("fwBedScrim").after(bsh); bsh.hidden=!fwmBedId; } }
+    if(cmIsMobile()){ if(bsh.parentElement===cols){ document.getElementById("fwBedScrim").after(bsh); bsh.hidden=true; } }
     else if(bsh.parentElement!==cols) cols.appendChild(bsh);
   }
   if(cmIsMobile()){
@@ -34482,6 +34568,7 @@ function fwmOrder(){
 }
 function fwmRenderBeds(){
   const pane=document.getElementById("fwBedsPane"); if(!pane || pane.hidden) return;
+  if(cmIsMobile()){ fwxRenderHome(); return; }
   const prep=fwmPrepByBed();
   const items=[...prep.values()];
   const due=bppDue(items), late=due.filter(i=>i.when==="late").length;
@@ -34532,6 +34619,7 @@ function fwmRenderBeds(){
 function fwmOpenBed(bedId){
   if(!(data.beds||[]).some(b=>b.id===bedId)) return;
   if(fwDateISO!==fwTodayISO()){ fwDateISO=fwTodayISO(); fwActiveWalk=fwWalkFor(fwDateISO, fwCurrentWalkerKey()); }
+  if(cmIsMobile()){ fwxOpen(bedId); return; }
   fwmBedId=bedId; fwmJob=""; fwmSubs=new Set(); fwmOps=null; fwmWhen="week";
   const t=document.getElementById("fwmNote"); if(t) t.value="";
   fwmRenderBedSheet();
@@ -34542,6 +34630,7 @@ function fwmOpenBed(bedId){
 }
 function fwmCloseBed(){
   if(!cmIsMobile() && currentView==="fieldwalk" && fwPane!=="prep") return;   // desktop: the bed panel is a column, not a sheet
+  fwxClose();
   fwmBedId=null;
   const sh=document.getElementById("fwBedSheet"), sc=document.getElementById("fwBedScrim");
   if(sh) sh.hidden=true;
@@ -34553,6 +34642,7 @@ function fwmStartOps(i){
   try{ return new Set(bppPlanFor(bppThisWeek()).defaultOps); }catch(e){ return new Set(); }
 }
 function fwmRenderBedSheet(){
+  if(cmIsMobile()){ if(fwxIsOpen()) fwxRenderSheet(); return; }
   const body=document.getElementById("fwBedBody"); if(!body) return;
   const bed=(data.beds||[]).find(b=>b.id===fwmBedId);
   if(!bed){ fwmCloseBed(); return; }
@@ -34677,6 +34767,172 @@ function fwmSave(){
   fwRenderFeed();
   fwmRenderBeds();
   if(fwmBedId){ fwmJob=""; fwmSubs=new Set(); fwmOps=null; if(cmIsMobile()) fwmCloseBed(); else fwmRenderBedSheet(); }
+}
+
+/* ---- Phone Field walk (2026-11-07): ported from design/field-walk-redesign.html ----
+   Home: header (title, date, Who pill, ⋯ menu with Notes / Lists / Prep run), sticky block tabs with a
+   clay dot for blocks with flags or late prep, a late-prep line, then every bed of the block in order.
+   A bed is "flagged" while a task raised for it on a walk is still open; its row reads "Needs …".
+   The sheet's need buttons are the library Needs; each picked need's "what kind?" pills are the
+   library tasks with that Need and Show on walk, labelled by Walk label. Save makes one task per need
+   (from the picked library entry, else a plain task for the need), each tied to a walk note. */
+const FWX_NEEDS=["Pest","Nutrition","Disease","Prep","Weeds","Irrigation","Harvest","Other"];
+let fwxSel=[];            // needs picked on the open sheet, in button order
+let fwxPicks={};          // need -> library task id picked under it
+let fwxMenuOpen=false;
+function fwxWalkOpts(need){
+  return (data.tasks||[]).filter(t=>t.need===need && t.walk)
+    .sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+}
+function fwxLabel(t){ return t ? (t.walkLabel||t.name||"") : ""; }
+// Open tasks raised from walk notes on this bed — what makes a bed flagged.
+function fwxFlags(bed){
+  const out=[];
+  (data.walkObservations||[]).forEach(o=>{
+    if(!o.taskId || !(o.bedIds||[]).includes(bed.id)) return;
+    const t=(data.plantingTasks||[]).find(x=>x.id===o.taskId);
+    if(!t || t.done) return;
+    const lib=t.taskId ? (data.tasks||[]).find(x=>x.id===t.taskId) : null;
+    const lab=(lib ? fwxLabel(lib) : (o.tags||[])[0] || t.label || "").toLowerCase();
+    if(lab && !out.includes(lab)) out.push(lab);
+  });
+  return out;
+}
+function fwxStage(bed){
+  const p=bed.planting;
+  if(p && OCCUPIED.has(p.status)){
+    const crop=[p.crop,p.variety].filter(Boolean).join(" ");
+    if(p.status==="Harvesting") return {crop, cls:"h", stage:"Harvesting"};
+    let stage="In ground";
+    if(p.h1){ const wks=Math.round((wkParse(p.h1)-wkParse(fwTodayISO()))/(7*864e5));
+      if(wks>0) stage+=` · ${wks} wk${wks===1?"":"s"} to harvest`; }
+    return {crop, cls:"g", stage};
+  }
+  const was=(data.plantings||[]).filter(x=>(x.bedIds||[]).includes(bed.id) && x.status==="Finished")
+    .sort((a,b)=>String(b.h2||b.h1||"").localeCompare(String(a.h2||a.h1||"")))[0];
+  return {crop:"Empty", cls:"e", stage: was ? `was ${was.crop}` : ""};
+}
+function fwxTags(i){
+  if(!i || i.preppedDate) return [];
+  if(i.planned) return ["Prep planned"];
+  if(i.when==="late"||i.when==="this"||i.when==="next") return ["Prep due"];
+  return [];
+}
+function fwxAgo(iso){
+  const d=Math.round((wkParse(fwTodayISO())-wkParse(iso))/864e5);
+  return d<=0 ? "today" : d===1 ? "yesterday" : d<14 ? `${d} days ago` : `${Math.round(d/7)} wks ago`;
+}
+// The last thing done on the bed: a ticked task on it (or its crop), or a logged prep pass.
+function fwxLast(bed){
+  const today=fwTodayISO(), c=[];
+  (data.plantingTasks||[]).forEach(t=>{
+    if(!t.done || !t.due || String(t.due).slice(0,10)>today) return;
+    let on=t.bedId===bed.id;
+    if(!on && t.plantingId){ const p=(data.plantings||[]).find(x=>x.id===t.plantingId); on=!!p && (p.bedIds||[]).includes(bed.id); }
+    if(on) c.push({d:String(t.due).slice(0,10), n:fwTaskName(t)});
+  });
+  (data.bedPrepEvents||[]).forEach(e=>{ if(e.date && e.date<=today && (e.bedIds||[]).includes(bed.id)) c.push({d:e.date, n:(e.ops||[]).join(", ")||"Prep"}); });
+  c.sort((a,b)=>b.d.localeCompare(a.d));
+  return c[0] ? `Last: ${c[0].n} · ${fwxAgo(c[0].d)}` : "";
+}
+function fwxBlockBeds(){
+  const g=bedGroups(), keys=Object.keys(g).sort((a,b)=>blockCmp(a,b));
+  if(!keys.includes(fwmBlock)) fwmBlock=keys[0]||"";
+  return {g, keys, beds:g[fwmBlock]||[]};
+}
+function fwxRenderHome(){
+  const home=document.getElementById("fwxHome"); if(!home) return;
+  const prep=fwmPrepByBed();
+  const {g, keys, beds}=fwxBlockBeds();
+  const isLate=b=>{ const i=prep.get(b.id); return !!i && i.when==="late" && !i.preppedDate; };
+  const who=(fwActiveWalk&&fwActiveWalk.walkers)||fwCurrentWalkerKey()||"";
+  const name=who.split(",")[0].trim();
+  const ini=name ? name.split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase() : "?";
+  const date=new Date().toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"}).replace(",","");
+  const late=beds.filter(isLate);
+  home.innerHTML=`<div class="fwx-hdr">`
+    +`<div><div class="t">Field walk</div><div class="s">${esc(date)}</div></div>`
+    +`<div style="display:flex;gap:8px"><button class="fwx-who" type="button" data-fwx="who"><i>${esc(ini)}</i>${esc(name||"Who?")}</button>`
+    +`<button class="fwx-iconbtn" type="button" data-fwx="menu" aria-label="More" aria-expanded="${fwxMenuOpen}">⋯</button></div>`
+    +`<div class="fwx-menu" role="menu"${fwxMenuOpen?"":" hidden"}><button type="button" role="menuitem" data-fwmgo="walk">Notes</button>`
+    +`<button type="button" role="menuitem" data-fwmgo="lists">Lists</button><button type="button" role="menuitem" data-fwmgo="prep">Prep run</button></div></div>`
+    +`<div class="fwx-tabs" role="tablist">`+keys.map(k=>{
+      const dot=g[k].some(b=>isLate(b) || fwxFlags(b).length);
+      return `<button class="fwx-tab" type="button" role="tab" data-fwmblock="${esc(k)}" aria-selected="${k===fwmBlock}">${esc(k)}${dot?`<span class="dot"></span>`:""}</button>`;
+    }).join("")+`</div>`
+    +(late.length?`<button class="fwx-alert" type="button" data-fwmgo="prep"><b>${late.length} bed${late.length===1?"":"s"} late for prep</b><span>${esc(late.map(b=>b.name).join(", "))} ›</span></button>`:"")
+    +`<div class="fwx-beds">`+(beds.length ? beds.map(b=>{
+      const st=fwxStage(b), f=fwxFlags(b), empty=st.cls==="e", tags=fwxTags(prep.get(b.id));
+      const meta=[empty ? (st.stage?`<span>${esc(st.stage)}</span>`:"") : `<span class="fwx-stage ${st.cls}">${esc(st.stage)}</span>`,
+        ...tags.map(t=>`<span class="fwx-tag">${esc(t)}</span>`),
+        f.length?`<span class="fwx-needtxt">Needs ${esc(f.join(", "))}</span>`:""].join("");
+      return `<button class="fwx-bed${empty?" empty":""}" type="button" data-fwmbed="${esc(b.id)}"><span class="id">${esc(b.name)}</span>`
+        +`<span style="min-width:0"><div class="crop">${esc(st.crop)}</div>${meta?`<div class="meta">${meta}</div>`:""}</span>`
+        +(f.length?`<span class="fwx-flagdot"></span>`:`<span class="fwx-chev">›</span>`)+`</button>`;
+    }).join("") : `<div class="fw-obs-empty">No beds yet.</div>`)+`</div>`;
+  const on=home.querySelector('.fwx-tab[aria-selected="true"]'), tabs=home.querySelector(".fwx-tabs");
+  if(on && tabs) tabs.scrollLeft=Math.max(0, on.offsetLeft-tabs.clientWidth/2+on.offsetWidth/2);
+}
+function fwxOpen(bedId){
+  fwmBedId=bedId; fwxSel=[]; fwxPicks={};
+  const n=document.getElementById("fwxNote"); if(n) n.value="";
+  fwxRenderSheet();
+  document.getElementById("fwxSheet").scrollTop=0;
+  document.getElementById("view-fieldwalk")?.classList.add("fwx-open");
+}
+function fwxClose(){
+  document.getElementById("view-fieldwalk")?.classList.remove("fwx-open");
+  const n=document.getElementById("fwxNote"); if(n && document.activeElement===n) n.blur();
+}
+function fwxIsOpen(){ return !!document.getElementById("view-fieldwalk")?.classList.contains("fwx-open"); }
+function fwxRenderSheet(){
+  const bed=(data.beds||[]).find(b=>b.id===fwmBedId); if(!bed){ fwxClose(); return; }
+  const st=fwxStage(bed), tags=fwxTags(fwmPrepByBed().get(bed.id));
+  document.getElementById("fwxId").textContent=bed.name;
+  document.getElementById("fwxCrop").textContent=st.crop;
+  document.getElementById("fwxMeta").textContent=[st.stage, ...tags.map(t=>t.toLowerCase())].filter(Boolean).join(" · ");
+  const last=fwxLast(bed), le=document.getElementById("fwxLast");
+  le.textContent=last; le.hidden=!last;
+  document.getElementById("fwxNeeds").innerHTML=FWX_NEEDS.map(n=>
+    `<button class="fwx-need" type="button" data-fwxneed="${esc(n)}" aria-pressed="${fwxSel.includes(n)}">${esc(n)}</button>`).join("");
+  document.getElementById("fwxDets").innerHTML=fwxSel.map(n=>{
+    const opts=fwxWalkOpts(n), p=opts.find(t=>t.id===fwxPicks[n]);
+    return `<div class="fwx-det"><div class="lab"><b>${esc(n)}</b> · what kind?</div>`
+      +(opts.length
+        ? `<div class="fwx-opts">${opts.map(t=>`<button class="fwx-opt" type="button" data-fwxneedopt="${esc(n)}" data-fwxlib="${esc(t.id)}" aria-pressed="${t===p}">${esc(fwxLabel(t))}</button>`).join("")}</div>`
+        : `<div class="fwx-noopt">Note only</div><button class="fwx-addlink" type="button" data-fwxadd="${esc(n)}">+ Add a task for this need</button>`)
+      +`<div class="fwx-task">Task: ${esc(bed.name)} · ${esc(n)}${p?" — "+esc(fwxLabel(p)):""}</div></div>`;
+  }).join("");
+  const save=document.getElementById("fwxSave");
+  save.disabled=!fwxSel.length;
+  save.textContent=fwxSel.length>1 ? `Save ${fwxSel.length} tasks` : "Save";
+}
+function fwxNext(){
+  const {beds}=fwxBlockBeds(), k=beds.findIndex(b=>b.id===fwmBedId), nb=beds[k+1];
+  nb ? fwxOpen(nb.id) : fwxClose();
+}
+function fwxSave(){
+  const bed=(data.beds||[]).find(b=>b.id===fwmBedId); if(!bed || !fwxSel.length) return;
+  const text=(document.getElementById("fwxNote")?.value||"").trim(), F=CFG.f;
+  const friday=wkISO(wkAddDays(wkMonday(new Date()),4)), today=wkISO(new Date());
+  const due=friday<today ? today : friday;
+  const pl=bed.planting && OCCUPIED.has(bed.planting.status) ? bed.planting : null;
+  fwxSel.forEach(need=>{
+    const lib=(data.tasks||[]).find(t=>t.id===fwxPicks[need]) || null;
+    const obs=fwmCommitObs(bed, text, lib ? [need, fwxLabel(lib)] : [need]);
+    const label=lib ? [pl&&pl.crop, lib.name].filter(Boolean).join(" — ") : `${need}${text?" — "+text:""} · ${bed.name}`;
+    const fields={[F.pt_label]:label, [F.pt_due]:due};
+    if(lib) fields[F.pt_task]=[lib.id];
+    if(pl) fields[F.pt_planting]=[pl.id]; else fields[F.pt_bed]=[bed.id];
+    const id=fwEnqueue("create","plantingTasks",fields);
+    data.plantingTasks.push({id, plantingId:pl?pl.id:null, taskId:lib?lib.id:null, label, anchor:"", offset:null,
+      due, done:false, start:null, repeat:null, until:"", duration:null, assignee:"", ttId:"", gcalId:"", bedId:pl?null:bed.id, blockId:null});
+    fwLinkTaskToObs(obs.id, id);
+  });
+  fwxSel=[]; fwxPicks={};
+  fwxClose();
+  fwRenderBadge();
+  fwxRenderHome();
 }
 
 function fwRenderTagRow(){
@@ -35084,6 +35340,28 @@ function fwDeleteItem(id){
     const r=e.target.closest("[data-fwmbed]"); if(r) fwmOpenBed(r.dataset.fwmbed);
   });
   ["fwBedScrim","fwBedClose"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwmCloseBed));
+  ["fwxScrim","fwxX"].forEach(id=>document.getElementById(id)?.addEventListener("click", fwmCloseBed));
+  document.getElementById("fwxNext")?.addEventListener("click", fwxNext);
+  document.getElementById("fwxSave")?.addEventListener("click", fwxSave);
+  document.getElementById("fwxHome")?.addEventListener("click", e=>{
+    if(e.target.closest('[data-fwx="menu"]')){ e.stopPropagation(); fwxMenuOpen=!fwxMenuOpen; fwxRenderHome(); return; }
+    if(e.target.closest('[data-fwx="who"]')){ e.stopPropagation(); fwxMenuOpen=false; fwxRenderHome(); fwOpenWhoSheet(); return; }
+    if(fwxMenuOpen && !e.target.closest("[data-fwmgo]")){ fwxMenuOpen=false; fwxRenderHome(); e.stopPropagation(); return; }
+    fwxMenuOpen=false;
+  }, true);
+  document.addEventListener("click", e=>{ if(fwxMenuOpen && !e.target.closest(".fwx-hdr")){ fwxMenuOpen=false; fwxRenderHome(); } });
+  document.getElementById("fwxSheet")?.addEventListener("click", e=>{
+    const n=e.target.closest("[data-fwxneed]");
+    if(n){ const v=n.dataset.fwxneed;
+      fwxSel = fwxSel.includes(v) ? fwxSel.filter(x=>x!==v) : FWX_NEEDS.filter(x=>x===v||fwxSel.includes(x));
+      if(!fwxSel.includes(v)) delete fwxPicks[v];
+      fwxRenderSheet(); return; }
+    const o=e.target.closest("[data-fwxneedopt]");
+    if(o){ const k=o.dataset.fwxneedopt; fwxPicks[k] = fwxPicks[k]===o.dataset.fwxlib ? undefined : o.dataset.fwxlib; fwxRenderSheet(); return; }
+    const a=e.target.closest("[data-fwxadd]");
+    if(a){ const need=a.dataset.fwxadd; fwmCloseBed(); showView("tasklib"); tkCatFilter=need; buildTaskLibrary();
+      document.getElementById("tkAddBtn")?.click(); }
+  });
   document.getElementById("fwBedSave")?.addEventListener("click", fwmSave);
   document.getElementById("fwBedNext")?.addEventListener("click", e=>{ const id=e.currentTarget.dataset.bed; if(id) fwmOpenBed(id); });
   document.getElementById("fwmNote")?.addEventListener("input", ()=>{
