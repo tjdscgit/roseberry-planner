@@ -34,6 +34,9 @@
        hover the pre-selection one. Kept separate from --paper-2 so the rail, the list panel and
        a selected row can each sit on their own step without hand-mixing rgba at call sites. */
     --paper-3:#E7E2D4;
+    --ink-3:#858D86;
+    --steel-tint:rgba(31,78,95,.10);
+    --ok-ink:#FFFFFF;
     --sel:rgba(31,78,95,.10);
     --hover:rgba(20,24,27,.045);
     --clay-tint:rgba(198,74,46,.10);
@@ -76,6 +79,9 @@
     color-scheme:dark;
   
     --paper-3:#242A2F;
+    --ink-3:#6B746E;
+    --steel-tint:rgba(143,190,206,.14);
+    --ok-ink:#0E1A10;
     --sel:rgba(143,190,206,.14);
     --hover:rgba(234,231,222,.05);
     --clay-tint:rgba(226,117,90,.15);
@@ -5112,6 +5118,49 @@
   /* Font switch 2026-11-07: mono retired; digits that line up in columns use tabular figures */
   td,th,input[type=number],.cs-axis,.cm-year,.iz-rate,.bd-c,.pn-stat b,.wb-qty,.hv-qty,.hv-qty input,.hv-gtick,
   .hvp-num,.hvp-of,.hvp-val,.hvp-card-top .val,.hvp-step .ctl input,.hvp-week b,.st-kv span:last-child,.bd-chip{font-variant-numeric:tabular-nums}
+  /* ===== Task library — copied verbatim from design/field-walk-redesign.html (2026-11-07) ===== */
+  #view-tasklib .lib{display:grid;grid-template-columns:minmax(0,1fr) 340px;background:var(--paper);border-radius:16px;overflow:hidden;border:1px solid var(--line)}
+  @media (max-width:900px){#view-tasklib .lib{grid-template-columns:minmax(0,1fr)}}
+  #view-tasklib .lib-main{min-width:0;padding:20px 0 12px}
+  #view-tasklib .lib-top{display:flex;justify-content:space-between;align-items:center;padding:0 20px 14px}
+  #view-tasklib .lib-top .t{font-family:var(--serif);font-weight:650;font-size:22px}
+  #view-tasklib .add{height:38px;padding:0 14px;border-radius:10px;border:0;background:var(--ok);color:var(--ok-ink);font:650 14px var(--sans)}
+  #view-tasklib .filt{display:flex;gap:6px;padding:0 20px 12px;overflow-x:auto;scrollbar-width:none}
+  #view-tasklib .f{flex:none;height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink-2);font:500 13px var(--sans);display:flex;gap:6px;align-items:center}
+  #view-tasklib .f[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  #view-tasklib .f small{font-size:12px;opacity:.7}#view-tasklib .f small.zero{color:var(--clay);opacity:1}
+  #view-tasklib .tbl-wrap{overflow-x:auto}
+  #view-tasklib .tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
+  #view-tasklib .tbl th{text-align:left;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650;padding:8px 12px;border-bottom:1px solid var(--line)}
+  #view-tasklib .tbl th:first-child,#view-tasklib .tbl td:first-child{padding-left:20px}
+  #view-tasklib .tbl td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  #view-tasklib .tbl .r{text-align:right;font-variant-numeric:tabular-nums}
+  #view-tasklib .tbl tr{cursor:pointer}#view-tasklib .tbl tbody tr:hover{background:var(--paper-2)}#view-tasklib .tbl tr.sel{background:var(--steel-tint)}
+  #view-tasklib .tn{font-weight:500}#view-tasklib .td{font-size:12px;color:var(--ink-2);max-width:34ch;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #view-tasklib .nd{font-size:12px;font-weight:500;color:var(--ink)}#view-tasklib .nd.ms{color:var(--ink-3)}
+  #view-tasklib .walk{font-size:12px;color:var(--ink-2)}#view-tasklib .walk b{font-weight:500;color:var(--ink);border:1px solid var(--line-2);border-radius:999px;padding:2px 8px}
+  #view-tasklib .ed{background:var(--paper-2);padding:20px;display:grid;gap:14px;align-content:start;border-left:1px solid var(--line)}
+  #view-tasklib .ed h3{margin:0;font-family:var(--serif);font-size:20px}
+  #view-tasklib .ed .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-top:6px}
+  #view-tasklib .fld{display:grid;grid-template-columns:110px minmax(0,1fr);align-items:center;gap:10px;font-size:14px;color:var(--ink-2)}
+  #view-tasklib .fld select,#view-tasklib .fld input{height:38px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);padding:0 10px;font:14px var(--sans);width:100%}
+  #view-tasklib .tog{width:46px;height:28px;border-radius:14px;border:0;background:var(--line-2);position:relative}
+  #view-tasklib .tog::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--paper);transition:left .15s}
+  #view-tasklib .tog[aria-checked="true"]{background:var(--ok)}#view-tasklib .tog[aria-checked="true"]::after{left:21px}
+  #view-tasklib .prev{background:var(--paper);border-radius:12px;padding:12px;display:grid;gap:8px;font-size:13px;color:var(--ink-2)}
+  #view-tasklib .opts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+  #view-tasklib .opt{flex:none;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 13px var(--sans)}
+  #view-tasklib .opt[aria-pressed="true"]{border-color:var(--ink);background:var(--paper-3)}
+  #view-tasklib .sec2{height:52px;padding:0 18px;border-radius:14px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 15px var(--sans)}
+  #view-tasklib button:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  /* App fit: the mockup's .lib is a card on a scrolling page, so the view scrolls and the card fills it.
+     font-size/line-height are the mockup's body values; the app's global td/th tabular-nums is undone
+     so only .r cells get it, as in the mockup. */
+  #view-tasklib{overflow-y:auto}
+  #view-tasklib .lib{min-height:100%;font-size:15px;line-height:1.45}
+  #view-tasklib .tbl td,#view-tasklib .tbl th,#view-tasklib .fld input[type="number"]{font-variant-numeric:normal}
+  #view-tasklib .tbl .r{font-variant-numeric:tabular-nums}
+  #view-tasklib .tbl{line-height:normal}
 </style>
 </head>
 <body>
@@ -5826,44 +5875,15 @@
 
     <!-- TASK LIBRARY -->
     <section class="view" id="view-tasklib">
-      <div class="cr-split">
-      <div class="cr-left">
-      <div class="vw-title">
-        <span class="vw-name">Task library</span>
-        <span class="sub" id="tkSummary"></span>
-        <span class="spacer"></span>
-        <div class="tl-search vw-search">
-          <input type="text" id="tkSearch" placeholder="Search tasks…" autocomplete="off" spellcheck="false">
-          <button type="button" id="tkSearchClear" title="Clear search">✕</button>
+      <!-- Layout and CSS copied from design/field-walk-redesign.html "Task library" (2026-11-07). -->
+      <div class="lib" id="lib">
+        <div class="lib-main">
+          <div class="lib-top"><div class="t">Task library</div><button class="add" id="tkAddBtn" type="button">+ Add task</button></div>
+          <div class="filt" id="tkFilt"></div>
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Task</th><th>Need</th><th>On walk</th><th>Anchor</th><th class="r">Offset</th><th class="r">Min / 15 m</th></tr></thead><tbody id="tkBody"></tbody></table></div>
         </div>
-        <button class="btn-primary" id="tkAddBtn" type="button">＋ Add task</button>
+        <aside class="ed" id="tkPanel"></aside>
       </div>
-      <div class="vw-tools">
-        <span class="sub">Offset counts from the anchor — negative is before it.
-          Min&nbsp;/&nbsp;15&nbsp;m scales the job by the bed's real length.</span>
-      </div>
-      <div class="cr-wrap">
-        <table class="lib-table" id="tkTable">
-          <thead>
-            <tr>
-              <th>Task</th>
-              <th title="Grouping used for filtering/coloring — not tied to anything functional">Category</th>
-              <th title="Which planting-lifecycle date this task's due date is counted from (Sow, Transplant, First harvest, Last harvest)">Anchor</th>
-              <th class="lib-num" title="Days from the Anchor date this task falls due — negative is before the anchor, positive is after">Offset</th>
-              <th class="lib-num" title="If set, the task recurs every N days after its first due date">Repeat</th>
-              <th title="Which lifecycle stage stops the repeat (e.g. keeps recurring until First harvest)">Until</th>
-              <th class="lib-num" title="Minutes of work this task takes per 15m of bed — scales with a planting's actual bed length to estimate workload in This week">Min&nbsp;/&nbsp;15m</th>
-              <th title="Which fertiliser program this task carries out. Set it and the task shows the program, round and cost on This week — the round comes from where the planting sits in its bed (1st planting = round 1).">Fert&nbsp;program</th>
-            </tr>
-          </thead>
-          <tbody id="tkBody"></tbody>
-        </table>
-      </div>
-      </div>
-      <!-- /.cr-left -->
-      <aside class="cr-panel" id="tkPanel" hidden></aside>
-      </div>
-      <!-- /.cr-split -->
     </section>
 
     <!-- CROP TASKS -->
@@ -8225,6 +8245,9 @@ async function loadAll(opts){
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
       fwTag:t.fields[F.tk_fwtag] || "",
+      need:t.fields[F.tk_need] || "",
+      walk:!!t.fields[F.tk_walk],
+      walkLabel:t.fields[F.tk_walkLabel] || "",
       fertProgramId:(t.fields[F.tk_fertProgram]||[])[0] || null,
     })).sort((a,b)=>a.name.localeCompare(b.name));
 
@@ -23204,7 +23227,8 @@ const TASK_CATEGORIES = ["Cultivation","Fertility","Pest & Disease","Irrigation"
 const TASK_SELECT_KEYS = new Set(["category","anchor","until"]);
 const TASK_FIELD = { name:"tk_name", category:"tk_cat", anchor:"tk_anchor",
   offset:"tk_offset", repeat:"tk_repeat", until:"tk_until", duration:"tk_duration", desc:"tk_desc",
-  fwTag:"tk_fwtag", fertProgramId:"tk_fertProgram" };
+  fwTag:"tk_fwtag", fertProgramId:"tk_fertProgram",
+  need:"tk_need", walk:"tk_walk", walkLabel:"tk_walkLabel" };
 // Programs are a link column (text[]), so this one value is written as an array — see saveTask.
 function tkFertProgOptionsHTML(val){
   return `<option value="">—</option>`+(data.fertPrograms||[]).map(p=>
@@ -23244,140 +23268,118 @@ function tkAvgBedLen(){
   return ls.length ? Math.round(ls.reduce((a,b)=>a+b,0)/ls.length) : DEFAULT_LEN;
 }
 
+/* Need replaces Category (2026-11-07, design/field-walk-redesign.html "Task library"). A task's Need
+   decides which field-walk button it shows under; Milestone tasks (Direct sow, Sow trays, Transplant)
+   are lifecycle markers and never show on the walk. */
+const TASK_NEEDS = ["Pest","Nutrition","Disease","Prep","Weeds","Irrigation","Harvest","Other"];
+const TASK_NEEDS_ALL = [...TASK_NEEDS,"Milestone"];
+
 function tkFilteredTasks(){
-  const q=tkSearchQuery.trim().toLowerCase();
-  let list=data.tasks||[];
-  if(tkCatFilter) list=list.filter(t=>(t.category||"Other")===tkCatFilter);
-  if(q) list=list.filter(t=>((t.name||"")+" "+(t.category||"")+" "+(t.desc||"")).toLowerCase().includes(q));
-  return list;
+  const list=data.tasks||[];
+  return tkCatFilter ? list.filter(t=>(t.need||"Other")===tkCatFilter) : list;
 }
 
-function buildTaskLibrary(query){
-  vwSetSummary("tkSummary",()=>{
-    const n=(data.tasks||[]).length;
-    return n ? `${n} reusable task${n===1?"":"s"}` : "No tasks yet";
-  });
-  if(typeof query==="string") tkSearchQuery=query;
+function buildTaskLibrary(){
   const body=document.getElementById("tkBody"); if(!body) return;
+  const all=data.tasks||[];
+  const cnt=n=>all.filter(t=>(t.need||"Other")===n).length;
+  const wc=n=>all.filter(t=>(t.need||"Other")===n&&t.walk).length;
+  const filt=document.getElementById("tkFilt");
+  if(filt) filt.innerHTML=["All",...TASK_NEEDS_ALL].map(n=>{
+    const c=n==="All"?all.length:cnt(n);
+    const z=TASK_NEEDS.includes(n)&&n!=="Other"&&!wc(n);
+    const on=n==="All"?!tkCatFilter:tkCatFilter===n;
+    return `<button class="f" type="button" data-f="${esc(n)}" aria-pressed="${on}">${esc(n)}<small class="${z?"zero":""}">${c}</small></button>`;
+  }).join("");
   const list=tkFilteredTasks();
+  // The editor always shows a task, as in the design: keep the selection while it's in the list.
+  if(!list.some(t=>t.id===tkSelected)) tkSelected=list[0]?list[0].id:null;
   body.innerHTML="";
-  if(!list.length){
-    const r=document.createElement("tr"); r.style.cursor="default";
-    r.innerHTML=`<td colspan="8"><div class="lib-empty">${
-      (tkSearchQuery.trim()||tkCatFilter) ? "No tasks match this filter."
-                                          : "No tasks yet — add one to get started."}</div></td>`;
-    body.appendChild(r);
-  } else list.forEach(t=>body.appendChild(tkRow(t)));
+  list.forEach(t=>body.appendChild(tkRow(t)));
   tkRenderPanel();
-  renderSidebar();                 // the category counts follow whatever the table now holds
 }
 
-/* A row READS. Everything editable lives on the panel, so each field has one editing path instead
-   of a cell and a panel field that can drift apart. */
+/* A row READS. Everything editable lives on the panel. */
 function tkRow(t){
   const tr=document.createElement("tr");
   tr.dataset.taskId=t.id;
-  if(t.id===tkSelected) tr.className="cr-row-sel";
-  const cat=t.category||"";
+  if(t.id===tkSelected) tr.className="sel";
+  const need=t.need||"Other";
   const dash=v=>(v===null||v===undefined||v==="")?"—":String(v);
-  const signed=v=>(v===null||v===undefined||v==="")?"—":((+v>0?"+":"")+v);
-  const prog=(data.fertPrograms||[]).find(p=>p.id===t.fertProgramId);
+  const signed=v=>(v===null||v===undefined||v==="")?"—":((+v>0?"+":+v<0?"−":"")+Math.abs(+v));
   tr.innerHTML=
-     `<td><div class="lib-name">${esc(t.name||"Untitled task")}</div>`
-       +(t.desc?`<div class="lib-sub">${esc(t.desc)}</div>`:"")+`</td>`
-    +`<td>${cat?`<span class="lib-pill" style="color:${tkCatColor(cat)}">${esc(cat)}</span>`:"—"}</td>`
+     `<td><div class="tn">${esc(t.name||"Untitled task")}</div><div class="td">${esc(t.desc||"")}</div></td>`
+    +`<td><span class="nd ${need==="Milestone"?"ms":""}">${esc(need)}</span></td>`
+    +`<td class="walk">${t.walk?`<b>${esc(t.walkLabel||t.name)}</b>`:"—"}</td>`
     +`<td>${esc(dash(t.anchor))}</td>`
-    +`<td class="lib-num">${esc(signed(t.offset))}</td>`
-    +`<td class="lib-num">${t.repeat?esc(t.repeat)+" d":"—"}</td>`
-    +`<td>${esc(dash(t.until))}</td>`
-    +`<td class="lib-num">${esc(dash(t.duration))}</td>`
-    +`<td>${prog?esc(prog.name):"—"}</td>`;
-  tr.onclick=()=>{ tkSelected=(tkSelected===t.id)?null:t.id; tkRenderPanel(); tkMarkRow(); };
+    +`<td class="r">${esc(signed(t.offset))}</td>`
+    +`<td class="r">${esc(dash(t.duration))}</td>`;
+  tr.onclick=()=>{ tkSelected=t.id; tkMarkRow(); tkRenderPanel(); };
   return tr;
 }
 function tkMarkRow(){
   document.querySelectorAll("#tkBody tr").forEach(tr=>
-    tr.classList.toggle("cr-row-sel", !!tkSelected && tr.dataset.taskId===tkSelected));
+    tr.classList.toggle("sel", !!tkSelected && tr.dataset.taskId===tkSelected));
 }
 
-/* The panel is the editor. Every field binds to saveTask — the same call the old inline cells
-   made — so how a task is stored didn't change, only where you type it. */
+/* The panel is the editor. Every field binds to saveTask. */
 function tkRenderPanel(){
   const panel=document.getElementById("tkPanel"); if(!panel) return;
   const t=(data.tasks||[]).find(x=>x.id===tkSelected);
-  if(!t){ panel.hidden=true; panel.innerHTML=""; return; }
-  panel.hidden=false;
-  const cat=t.category||"", ovr=tkOverrides(t.id), bedLen=tkAvgBedLen();
-  const mins=(t.duration!==null && t.duration!==undefined && t.duration!=="")
-    ? Math.round(+t.duration*bedLen/15) : null;
-  const field=(label,html)=>`<label class="cr-mobile-field"><span>${esc(label)}</span>${html}</label>`;
-  panel.innerHTML=
-    `<div class="cr-panel-head">`
-     +`<span class="lib-dot" style="background:${cat?tkCatColor(cat):"var(--line-2)"}"></span>`
-     +`<span class="cr-panel-name">${esc(t.name||"Untitled task")}</span>`
-     +`<button type="button" class="icon-btn" id="tkPanelClose" aria-label="Close">✕</button></div>`
-   +`<div class="cr-panel-body">`
-     +`<div class="pn-meta">${esc(cat||"No category")} · used by ${ovr.length} crop${ovr.length===1?"":"s"}</div>`
-     +`<div class="pn-sect">Task</div>`
-     +field("Name",`<input type="text" data-tk="name" value="${esc(t.name||"")}">`)
-     +field("Category",`<select data-tk="category">${tkOptions(TASK_CATEGORIES,t.category)}</select>`)
-     +`<div class="pn-sect">Schedule</div>`
-     +field("Anchor",`<select data-tk="anchor">${tkOptions(TASK_ANCHORS,t.anchor)}</select>`)
-     +field("Offset days",`<input class="cr-num" type="number" step="1" data-tk="offset" value="${t.offset??""}">`)
-     +field("Repeat every",`<input class="cr-num" type="number" min="0" step="1" data-tk="repeat" value="${t.repeat??""}">`)
-     +field("Repeat until",`<select data-tk="until">${tkOptions(TASK_ANCHORS,t.until)}</select>`)
-     +`<div class="pn-sect">Work</div>`
-     +field("Min / 15 m",`<input class="cr-num" type="number" min="0" step="0.01" data-tk="duration" value="${t.duration??""}">`)
-     +field("Fert program",`<select data-tk="fertProgramId">${tkFertProgOptionsHTML(t.fertProgramId)}</select>`)
-     +field("Field walk tag",`<select data-tk="fwTag">${fwTagOptionsHTML(t.fwTag)}</select>`)
-     +`<div class="pn-sect">Description</div>`
-     +`<textarea data-tk="desc" rows="3" style="width:100%">${esc(t.desc||"")}</textarea>`
-     +(mins===null ? "" :
-        `<div class="pn-sect">On an average ${bedLen} m bed</div>`
-       +`<div class="pn-stats">`
-       +`<div class="pn-stat"><b>${mins}</b><span> min</span><span class="pn-stat-lbl">Est. work</span></div>`
-       +`<div class="pn-stat"><b>${ovr.length}</b><span class="pn-stat-lbl">Crop overrides</span></div></div>`)
-     +(!ovr.length ? "" :
-        `<div class="pn-sect">Overridden for</div>`
-       + ovr.map(o=>`<div class="pn-rel">`
-           +`<span class="lib-dot" style="background:${cropColor(o.cropId)}"></span>`
-           +`<span class="navname">${esc(o.name)}</span>`
-           +`<span class="navn">${(o.ct.offset===null||o.ct.offset===undefined||o.ct.offset==="")
-               ? "inherits" : ((+o.ct.offset>0?"+":"")+o.ct.offset+" d")}</span></div>`).join(""))
-   +`</div>`
-   +`<div class="pn-foot"><span class="pn-grow"></span>`
-     +`<button type="button" class="btn-ghost" id="tkDupBtn">Duplicate</button>`
-     +`<button type="button" class="btn-danger" id="tkDelBtn">Delete</button></div>`;
+  if(!t){ panel.innerHTML=""; return; }
+  const need=t.need||"Other", ovr=tkOverrides(t.id), bedLen=tkAvgBedLen();
+  const mins=Math.round((+t.duration||0)*bedLen/15)||0;
+  const sibs=(data.tasks||[]).filter(x=>(x.need||"Other")===need&&x.walk);
+  panel.innerHTML=`<h3>${esc(t.name||"Untitled task")}</h3>
+ <div class="fld"><span>Name</span><input data-tk="name" value="${esc(t.name||"")}"></div>
+ <div class="fld"><label for="edNeed">Need</label><select id="edNeed" data-tk="need">${TASK_NEEDS_ALL.map(n=>`<option ${n===need?"selected":""}>${n}</option>`).join("")}</select></div>
+ <div class="k">Field walk</div>
+ <div class="fld"><span>Show on walk</span><button class="tog" id="edWalk" type="button" role="switch" aria-checked="${!!t.walk}" ${need==="Milestone"?"disabled":""}></button></div>
+ <div class="fld" ${t.walk?"":"hidden"}><label for="edLab">Walk label</label><input id="edLab" data-tk="walkLabel" value="${esc(t.walkLabel||"")}" placeholder="${esc(t.name||"")}"></div>
+ ${t.walk?`<div class="prev"><span><b style="color:var(--ink)">${esc(need)}</b> · what kind? (preview)</span><div class="opts">${sibs.map(x=>`<span class="opt" style="display:inline-flex;align-items:center" aria-pressed="${x===t}">${esc(x.walkLabel||x.name)}</span>`).join("")}</div></div>`:""}
+ <div class="k">Schedule</div>
+ <div class="fld"><span>Anchor</span><select data-tk="anchor"><option value="">—</option>${TASK_ANCHORS.map(o=>`<option${o===t.anchor?" selected":""}>${esc(o)}</option>`).join("")}</select></div>
+ <div class="fld"><span>Offset days</span><input inputmode="numeric" data-tk="offset" value="${(t.offset===null||t.offset===undefined||t.offset==="")?"":((+t.offset>0?"+":"")+t.offset)}" placeholder="—"></div>
+ <div class="fld"><span>Repeat every</span><input type="number" min="0" step="1" data-tk="repeat" value="${t.repeat??""}" placeholder="—"></div>
+ <div class="fld"><span>Repeat until</span><select data-tk="until"><option value="">—</option>${TASK_ANCHORS.map(o=>`<option${o===t.until?" selected":""}>${esc(o)}</option>`).join("")}</select></div>
+ <div class="k">Work</div>
+ <div class="fld"><span>Min / 15 m</span><input type="number" min="0" step="0.01" data-tk="duration" value="${t.duration??""}"></div>
+ <div class="fld"><span>Fert program</span><select data-tk="fertProgramId">${tkFertProgOptionsHTML(t.fertProgramId)}</select></div>
+ <div class="k">Description</div>
+ <textarea data-tk="desc" style="min-height:64px;border-radius:10px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);padding:8px 10px;font:14px var(--sans);resize:vertical">${esc(t.desc||"")}</textarea>
+ <div class="k">On an average ${bedLen} m bed</div>
+ <div style="font-size:14px"><b style="font-size:18px">${mins}</b> min · used by ${ovr.length} crop${ovr.length===1?"":"s"}</div>
+ <div style="display:flex;gap:8px;justify-content:flex-end"><button class="sec2" type="button" id="tkDupBtn" style="height:40px">Duplicate</button><button class="sec2" type="button" id="tkDelBtn" style="height:40px;color:var(--clay);border-color:var(--clay)">Delete</button></div>`;
 
-  panel.querySelector("#tkPanelClose").onclick=()=>{ tkSelected=null; tkRenderPanel(); tkMarkRow(); };
   const bind=(k,parse)=>{ const el=panel.querySelector(`[data-tk="${k}"]`); if(!el) return;
     el.onchange=e=>saveTask(t.id,k,parse?parse(e.target.value):e.target.value); };
   bind("name",v=>v.trim());
-  bind("category",v=>v||null);
   bind("anchor",v=>v||null);
-  bind("offset",v=>v===""?null:(+v));
+  // Offset shows signed ("+21", as in the design); a stray "−" or unparseable text saves as blank.
+  bind("offset",v=>{ v=v.trim().replace(/[−–]/g,"-"); const n=parseInt(v,10); return v===""||isNaN(n)?null:n; });
   bind("repeat",v=>v===""?null:(+v));
   bind("until",v=>v||null);
   bind("duration",v=>v===""?null:(+v));
   bind("fertProgramId",v=>v||null);
   bind("desc");
-  // The "+ Add new tag…" / "− Delete a tag…" options are commands, not values, so they never go
-  // through bind() — otherwise picking one would write a sentinel string onto the task.
-  panel.querySelector('[data-tk="fwTag"]').onchange=async(e)=>{
+  // Walk label, Need and the walk toggle change the table pill / preview, so they rebuild after saving.
+  panel.querySelector('[data-tk="walkLabel"]').onchange=async e=>{
+    await saveTask(t.id,"walkLabel",e.target.value.trim()||null); buildTaskLibrary(); };
+  panel.querySelector('[data-tk="need"]').onchange=async e=>{
     const v=e.target.value;
-    if(v==="__add_fwtag__"){
-      const added=await fwAddCustomTagFlow();
-      e.target.innerHTML=fwTagOptionsHTML(added||t.fwTag);
-      e.target.value=added||t.fwTag||"";
-      if(added) saveTask(t.id,"fwTag",added);
-      return;
-    }
-    if(v==="__del_fwtag__"){ await fwDeleteCustomTagFlow(); buildTaskLibrary(); return; }
-    saveTask(t.id,"fwTag",v||null);
-  };
+    if(v==="Milestone" && t.walk) await saveTask(t.id,"walk",false);   // DB check forbids both
+    await saveTask(t.id,"need",v); buildTaskLibrary(); };
+  panel.querySelector("#edWalk").onclick=async()=>{
+    if(need==="Milestone") return;
+    await saveTask(t.id,"walk",!t.walk); buildTaskLibrary(); };
   panel.querySelector("#tkDelBtn").onclick=()=>deleteTask(t.id,t.name);
   panel.querySelector("#tkDupBtn").onclick=()=>tkDuplicate(t);
 }
+document.getElementById("tkFilt")?.addEventListener("click",e=>{
+  const b=e.target.closest(".f"); if(!b) return;
+  tkCatFilter = b.dataset.f==="All" ? null : b.dataset.f;
+  buildTaskLibrary();
+});
 
 /* Duplicate copies the schedule but asks for a new name — two library tasks with the same name is
    a trap when crop tasks point at them by id and you have to pick one in a dropdown. */
@@ -23389,13 +23391,13 @@ async function tkDuplicate(src){
     const rec=created[0];
     const copy={id:rec.id, name, category:src.category||"", desc:src.desc||"",
       anchor:src.anchor||"", offset:src.offset??null, repeat:src.repeat??null,
-      until:src.until||"", duration:src.duration??null, fwTag:src.fwTag||"",
-      fertProgramId:src.fertProgramId||null};
+      until:src.until||"", duration:src.duration??null, fwTag:"",
+      fertProgramId:src.fertProgramId||null, need:src.need||"Other", walk:!!src.walk, walkLabel:src.walkLabel||""};
     data.tasks.push(copy);
     data.tasks.sort((a,b)=>a.name.localeCompare(b.name));
     // The copied fields go through the one save path rather than a second write shape.
-    for(const k of ["category","anchor","offset","repeat","until","duration","fwTag","fertProgramId","desc"]){
-      const v=copy[k]; if(v===null||v==="") continue;
+    for(const k of ["need","walk","walkLabel","anchor","offset","repeat","until","duration","fertProgramId","desc"]){
+      const v=copy[k]; if(v===null||v===""||v===false) continue;
       await saveTask(rec.id,k,v);
     }
     tkSelected=rec.id;
@@ -23404,24 +23406,9 @@ async function tkDuplicate(src){
 }
 
 /* Sidebar: the category filter and the one-line explanation the artboard puts under the nav. */
-SIDEBAR_EXTRAS.tasklib = ()=>{
-  const all=data.tasks||[];
-  const counts=new Map();
-  all.forEach(t=>{ const c=t.category||"Other"; counts.set(c,(counts.get(c)||0)+1); });
-  return sbGroup("Category")
-    + sbFilter({label:"All tasks", count:all.length||null, act:"cat:", on:!tkCatFilter})
-    + TASK_CATEGORIES.filter(c=>counts.get(c)).map(c=>
-        sbFilter({label:c, count:counts.get(c), swatch:tkCatColor(c), act:"cat:"+c,
-                  on:tkCatFilter===c})).join("")
-    + sbGroup("How this works")
-    + sbNote("A task here becomes a real job on a planting, dated from its anchor. "
-            +"Crop tasks override these per crop.");
-};
-SIDEBAR_ACTIONS.tasklib = act=>{
-  if(!act.startsWith("cat:")) return;
-  tkCatFilter = act.slice(4) || null;
-  buildTaskLibrary();
-};
+SIDEBAR_EXTRAS.tasklib = ()=>sbGroup("How this works")
+  + sbNote("A task here becomes a real job on a planting, dated from its anchor. "
+          +"Crop tasks override these per crop.");
 async function saveTask(id,key,val){
   const t=data.tasks.find(x=>x.id===id); if(!t) return;
   const prop = key==="desc" ? "desc" : key;   // data prop names match the keys 1:1
@@ -23445,9 +23432,10 @@ async function addTask(){
   const name=(prompt("New task name (e.g. \"Foliar feed\"):")||"").trim();
   if(!name) return false;
   try{
-    const created=await atCreate(CFG.farmBase, CFG.tables.tasks, [{[CFG.f.tk_name]:name}]);
+    const need=tkCatFilter||"Other";
+    const created=await atCreate(CFG.farmBase, CFG.tables.tasks, [{[CFG.f.tk_name]:name, [CFG.f.tk_need]:need}]);
     const rec=created[0];
-    data.tasks.push({id:rec.id, name, category:"", desc:"", anchor:"", offset:null, repeat:null, until:"", duration:null, fwTag:"", fertProgramId:null});
+    data.tasks.push({id:rec.id, name, category:"", desc:"", anchor:"", offset:null, repeat:null, until:"", duration:null, fwTag:"", fertProgramId:null, need, walk:false, walkLabel:""});
     data.tasks.sort((a,b)=>a.name.localeCompare(b.name));
     return true;
   }catch(e){
@@ -23467,15 +23455,6 @@ async function deleteTask(id,name){
     alert("Couldn't delete task:\n"+e.message);
   }
 }
-document.getElementById("tkSearch").addEventListener("input",e=>{
-  e.target.closest(".tl-search").classList.toggle("has-val", !!e.target.value);
-  buildTaskLibrary(e.target.value);
-});
-document.getElementById("tkSearchClear").addEventListener("click",()=>{
-  const inp=document.getElementById("tkSearch");
-  inp.value=""; inp.closest(".tl-search").classList.remove("has-val");
-  buildTaskLibrary(""); inp.focus();
-});
 // Adding opens the new task's panel straight away — a blank row in the table would be a dead end
 // now that every field lives on the panel.
 document.getElementById("tkAddBtn").addEventListener("click",async()=>{
@@ -33541,7 +33520,8 @@ function fwAllSubTags(){
 // treating the sub name as a plain quick-task label.
 function fwSubTask(sub){
   const key=String(sub||"").toLowerCase();
-  return (data.tasks||[]).find(t=>String(t.fwTag||"").toLowerCase()===key) || null;
+  return (data.tasks||[]).find(t=>t.walk&&String(t.walkLabel||t.name||"").toLowerCase()===key)
+      || (data.tasks||[]).find(t=>String(t.fwTag||"").toLowerCase()===key) || null;
 }
 // Sub-pills that mean "a product went on/in" — for these, ＋ Task should open the spray/feed log
 // instead of a This-week task, since that's the record that actually matters (WHP, rate, product)

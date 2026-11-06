@@ -164,6 +164,7 @@
       tk_name:"Name", tk_cat:"Category", tk_desc:"Description",
       tk_anchor:"Anchor", tk_offset:"Offset days", tk_repeat:"Repeat every (days)", tk_until:"Repeat until",
       tk_duration:"Minutes per 15m bed", tk_fwtag:"Field walk tag",
+      tk_need:"Need", tk_walk:"Show on walk", tk_walkLabel:"Walk label",
       // Which fertiliser program this task carries out ("Bed Prep" -> the amendment program,
       // "Side-dress"/"Foliar feed" -> a fertigation program). Set on the LIBRARY task only; the
       // round is never stored, it's resolved per instance from the planting's position in its bed.
@@ -2238,6 +2239,9 @@
       until:t.fields[F.tk_until] || "",
       duration:num(t.fields[F.tk_duration]),
       fwTag:t.fields[F.tk_fwtag] || "",
+      need:t.fields[F.tk_need] || "",
+      walk:!!t.fields[F.tk_walk],
+      walkLabel:t.fields[F.tk_walkLabel] || "",
       fertProgramId:(t.fields[F.tk_fertProgram]||[])[0] || null,
     })).sort((a,b)=>a.name.localeCompare(b.name));
   }
