@@ -2918,6 +2918,7 @@
   .kn-kv2 span:nth-child(odd){color:var(--ink-3)}
   .kn-tags{display:flex;gap:6px;flex-wrap:wrap}.kn-tags span{font-size:13px;padding:3px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--ink-2)}
   .kn-ask{font-size:13px;color:var(--ink-3)}
+  .kn .chatlink,.kn-fix .chatlink{color:var(--steel);text-decoration:none;font-weight:500}.kn .chatlink:hover,.kn-fix .chatlink:hover{text-decoration:underline}
   /* desktop (#dk) */
   .kn.desk{overflow-x:auto}
   .kn-desk{display:grid;grid-template-columns:220px 380px minmax(0,1fr);height:100%;min-width:1000px;background:var(--paper)}
@@ -33823,7 +33824,7 @@ function knDetail(n){ if(!n) return ""; const c=KN_CATS[knCatKey(n.category)], d
  <div class="kn-facts">${n.crop?`<span class="kn-fact">${esc(n.crop)}</span>`:""}${n.block?`<span class="kn-fact"><b>${esc(n.block)}</b></span>`:""}${d?`<span class="kn-fact">${knFmt(d)} ${String(d).slice(0,4)}</span>`:""}</div>
  <div class="kn-prose">${knProse(n.note)}</div>
  <div class="kn-rule"></div>
- <div class="kn-kv2">${n.source_chat?`<span>From chat</span><span>${esc(n.source_chat)}</span>`:""}${(n.tags||[]).length?`<span>Tags</span><span class="kn-tags">${n.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</span>`:""}</div>
+ <div class="kn-kv2">${n.source_chat?`<span>From chat</span><span>${n.source_chat_url?`<a class="chatlink" href="${esc(n.source_chat_url)}" target="_blank" rel="noopener">${esc(n.source_chat)} ↗</a>`:`${esc(n.source_chat)} <span style="color:var(--ink-3)">· no link</span>`}</span>`:""}${(n.tags||[]).length?`<span>Tags</span><span class="kn-tags">${n.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</span>`:""}</div>
  <div class="kn-ask">Ask Claude "what have we noted on the tomato tunnel?" to search from a chat.</div>
  </div></div>`; }
 const knVis=()=>(knNotes||[]).filter(knMatch);
