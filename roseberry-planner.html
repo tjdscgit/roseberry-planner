@@ -2859,6 +2859,87 @@
   .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
+  /* ---------- Log a spray / Log a fert: port of design/spray-fert-redesign.html #sp / #fe (2026-11-07).
+     Class names are the mockup ones with an lf- prefix (the app already has global .chip/.sub/.seg).
+     Full screen on a phone; a tall card on a desk. Values are the mockup values, checked by measurement
+     (scripts/compare-log-forms.mjs). */
+  .lf{--sans:"Roboto Flex",system-ui,-apple-system,Roboto,sans-serif;--serif:"Fraunces",Georgia,serif;position:relative;width:min(480px,100%);height:min(92vh,880px);display:flex;flex-direction:column;
+    background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;border:1px solid var(--line-2);border-radius:16px;overflow:hidden}
+  @media(max-width:640px){ .lf{width:100%;height:100%;height:100dvh;border-radius:0;border:0} }
+  .lf [hidden]{display:none!important}
+  .lf button{cursor:pointer;font-family:inherit}
+  .lf button:focus-visible,.lf input:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  .lf .lf-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .lf .lf-iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);display:grid;place-items:center;font-size:18px;flex:none}
+  .lf .lf-fhdr{padding:16px 18px 8px;display:flex;align-items:center;gap:10px}
+  .lf .lf-fhdr .lf-t{font-family:var(--serif);font-weight:650;font-size:24px;line-height:1.1;flex:1}
+  .lf .lf-say{height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--steel);background:none;color:var(--steel);font:500 14px var(--sans)}
+  .lf .lf-blk{padding:14px 18px;border-top:1px solid var(--line);display:grid;gap:10px}
+  .lf .lf-lab{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .lf .lf-lab span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+  .lf .lf-lab button,.lf .lf-link{background:none;border:0;padding:0;color:var(--steel);font:500 14px var(--sans)}
+  .lf .lf-chips{display:flex;gap:6px;flex-wrap:wrap}
+  .lf .lf-chip{height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 14px var(--sans)}
+  .lf .lf-chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .lf .lf-sprayers{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .lf .lf-sprayer{height:52px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 14px var(--sans);display:grid;place-content:center;line-height:1.2}
+  .lf .lf-sprayer small{color:var(--ink-2);font-size:12px}
+  .lf .lf-sprayer[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}.lf .lf-sprayer[aria-pressed="true"] small{color:var(--paper);opacity:.7}
+  .lf .lf-wherebtn{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);text-align:left;width:100%}
+  .lf .lf-wherebtn .b{font-family:var(--serif);font-weight:650;font-size:20px}
+  .lf .lf-wherebtn .c{font-size:13px;color:var(--ink-2);grid-column:1}
+  .lf .lf-wherebtn .go{grid-row:span 2;grid-column:2;color:var(--steel);font-weight:500;font-size:14px}
+  .lf .lf-prod{display:grid;grid-template-columns:minmax(0,1fr) 128px 36px;gap:8px;align-items:center}
+  .lf .lf-prod .lf-nm{height:48px;border-radius:12px;border:1px solid var(--line-2);display:flex;align-items:center;padding:0 12px;justify-content:space-between;min-width:0;background:none;color:var(--ink);font:500 15px var(--sans);text-align:left;width:100%}
+  .lf .lf-prod .lf-nm span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lf .lf-prod .lf-nm i{font-style:normal;color:var(--ink-3)}
+  .lf .lf-rate{height:48px;border-radius:12px;border:1px solid var(--line-2);display:flex;align-items:center;justify-content:space-between;padding:0 4px 0 12px;gap:4px}
+  .lf .lf-rate input{width:100%;min-width:0;border:0;border-radius:0;background:none;color:var(--ink);font:500 17px var(--sans);font-variant-numeric:tabular-nums;padding:0}
+  .lf .lf-rate input:focus{outline:none}.lf .lf-rate:focus-within{border-color:var(--steel)}
+  .lf .lf-rate span{color:var(--ink-2);font-size:13px;flex:none}
+  .lf .lf-unit{flex:none;height:36px;min-width:44px;padding:0 8px;border-radius:8px;border:0;background:var(--paper-3);color:var(--ink-2);font:500 13px var(--sans)}
+  .lf .lf-rm{width:36px;height:36px;border-radius:10px;border:0;background:none;color:var(--ink-3);font-size:16px}
+  .lf .lf-sub{font-size:12px;color:var(--ink-3)}
+  .lf .lf-tankrow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px}
+  .lf .lf-tankrow .lf-big{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums}
+  .lf .lf-tankrow .lf-big small{display:block;font-size:13px;font-weight:400;color:var(--ink-2)}
+  .lf .lf-step{display:flex;align-items:center;gap:6px}
+  .lf .lf-step button{width:48px;height:48px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);font-size:22px}
+  .lf .lf-step b{min-width:40px;text-align:center;font-size:20px;font-variant-numeric:tabular-nums}
+  .lf .lf-whenrow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:15px}
+  .lf .lf-whenrow b{font-weight:500}
+  .lf .lf-fold{font-size:14px;color:var(--ink-2);background:none;border:0;padding:0;text-align:left}
+  .lf .lf-foot{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--paper-2);display:grid;gap:8px;flex:none}
+  .lf .lf-sum{font-size:13px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:4px 10px}
+  .lf .lf-sum b{color:var(--ink);font-weight:500}
+  .lf .lf-sum .safe{color:var(--ok)}.lf .lf-sum .hold{color:var(--amber)}
+  .lf .lf-save{height:52px;border-radius:14px;border:0;background:var(--ok);color:var(--ok-ink);font:650 16px var(--sans)}
+  .lf .lf-save:disabled{opacity:.6;cursor:default}
+  @keyframes lfFlash{0%{background:var(--steel-tint)}100%{background:transparent}}
+  .lf .lf-flash{animation:lfFlash 1.6s ease-out}
+  .lf .lf-sayhint{font-size:13px;color:var(--ink-2)}
+  .lf .lf-colhd{display:grid;grid-template-columns:minmax(0,1fr) 128px 36px;gap:8px;font-size:12px;color:var(--ink-3)}
+  .lf .lf-src{display:grid;grid-template-columns:1fr 1fr;background:var(--paper-2);border-radius:10px;padding:3px}
+  .lf .lf-src button{height:38px;border:0;border-radius:8px;background:none;color:var(--ink-2);font:500 14px var(--sans)}
+  .lf .lf-src button[aria-pressed="true"]{background:var(--paper-3);color:var(--ink)}
+  .lf .lf-pick{display:grid}
+  .lf .lf-pick button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:12px 2px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);text-align:left;width:100%}
+  .lf .lf-pick button:first-child{border-top:0}
+  .lf .lf-pick .n{font-weight:500;grid-column:1}.lf .lf-pick .m{font-size:13px;color:var(--ink-2);grid-column:1}
+  .lf .lf-pick .go{grid-column:2;grid-row:1/span 2;color:var(--steel);font-size:14px;font-weight:500}
+  .lf .lf-using{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--steel-tint);font-size:14px}
+  .lf .lf-using b{font-weight:500}.lf .lf-using span{flex:1;min-width:0}.lf .lf-using small{display:block;color:var(--ink-2);font-size:13px}
+  .lf .lf-more{display:grid;gap:10px}
+  .lf .lf-inp{height:44px;border-radius:12px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);padding:0 12px;font:15px var(--sans);width:100%}
+  .lf textarea.lf-inp{height:72px;padding:10px 12px;resize:vertical}
+  .lf .lf-mini{height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 13px var(--sans)}
+  .lf .lf-photo-add{display:inline-flex;align-items:center;justify-self:start;cursor:pointer}
+  .lf .lf-start{padding:0 0 14px}
+  .lf .lf-scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:6}
+  .lf .lf-bs{position:absolute;left:0;right:0;bottom:0;max-height:78%;overflow:auto;background:var(--paper-2);border-radius:20px 20px 0 0;padding:10px 18px 18px;transform:translateY(105%);transition:transform .22s ease;z-index:7;display:grid;gap:12px}
+  .lf.bsopen .lf-scrim{opacity:1;pointer-events:auto}.lf.bsopen .lf-bs{transform:none}
+  .lf .lf-grab{width:40px;height:4px;border-radius:2px;background:var(--line-2);justify-self:center}
+  .lf .lf-bs h4{margin:0;font-family:var(--serif);font-size:20px;font-weight:650}
+  @media (prefers-reduced-motion:reduce){.lf *{transition:none!important}}
   /* ---- Add-planting dialog (the tarp editor rides on the same card styles) ---- */
   #apModal,#trpModal,#sprayModal,#znModal,#mfModal,#bbModal,#bdBulkModal,#plBulkModal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
     background:rgba(0,0,0,.45);padding:1rem}
@@ -6965,23 +7046,17 @@
   </main>
   </div><!-- /.shell-main -->
 
-  <!-- Fertiliser application log. Opened either from the rates page (program/round/block already
-       known) or from Fert records (pick them here). Products come pre-ticked from the round's own
-       rates, so the common case is: tick the beds, check the totals, save. -->
+  <!-- Fertiliser application log — port of design/spray-fert-redesign.html #fe (2026-11-07).
+       Start from (Enter manually | From a program) → What went on → Where → How → When/who → More details.
+       fplRender draws the blocks into #fplBody; the header and sticky footer stay put. -->
   <div id="fpLogModal">
-    <div class="fpl-card lg-card">
-      <div class="lg-head">
-        <div class="lg-titles"><div class="lg-title" id="fplTitle">Log a fert</div><div class="lg-sub" id="fplSub"></div></div>
-        <button class="ap-x lg-x" id="fplClose" type="button" aria-label="Close">✕</button>
+    <div class="lf" id="fplCard">
+      <div class="lf-scroll" id="fplScroll">
+        <div class="lf-fhdr"><button type="button" class="lf-iconbtn" id="fplClose" aria-label="Close">✕</button><div class="lf-t" id="fplTitle">Log a fert</div><button type="button" class="lf-say" id="fplSayBtn">Say it</button></div>
+        <div id="fplBody"></div>
       </div>
-      <div class="lg-body fpl-body" id="fplBody"></div>
-      <div class="lg-foot">
-        <div class="sp-actions">
-          <button class="btn-ghost" id="fplCancel" type="button">Cancel</button>
-          <button class="btn-primary" id="fplSave" type="button">Save fert</button>
-        </div>
-        <span class="fp-prog-txt" id="fplSummary" hidden></span>
-      </div>
+      <div class="lf-foot"><div class="lf-sum" id="fplSummary"></div><button type="button" class="lf-save" id="fplSave">Save fert</button></div>
+      <div class="lf-scrim" data-lf-close></div><div class="lf-bs" id="fplSheet"></div>
     </div>
   </div>
 
@@ -7346,21 +7421,16 @@
   </div>
 
   <!-- SPRAY ENTRY DIALOG -->
-  <!-- SPRAY LOG (redesign 2026-11, canvas page 6). Two screens in one card: #sprayStart (what's
-       coming up + one big Log button) and #sprayForm (one screen: Where · What · Sprayer · Tanks ·
-       Why · When; everything else folded under More). Fertigation is a sprayer choice that swaps
-       Where for irrigation valves and Tanks for mix volume + run time. -->
+  <!-- SPRAY LOG — port of design/spray-fert-redesign.html #sp (2026-11-07). One column, labels above:
+       Start from → What did you mix? → Sprayer + tanks → (Valves) → Where → Why → When/who → More details,
+       sticky summary + Save. Fertigation is a sprayer choice that swaps Where for valves and the tank
+       row for mix volume + run time. #sprayStart (coming up) shares the card. -->
   <div id="sprayModal">
-    <div class="ap-card sp-card lg-card">
-      <div class="lg-head">
-        <button type="button" class="icon-btn lg-back" id="sprayBackStart" title="Back to coming up" hidden>←</button>
-        <div class="lg-titles"><div class="lg-title" id="sprayHead">Log a spray</div><div class="lg-sub" id="spraySub"></div></div>
-        <button type="button" class="lg-say" id="spraySayBtn" title="Say it or type it in one line"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7.2" y="2.6" width="5.6" height="9.4" rx="2.8"/><path d="M4.6 9.6a5.4 5.4 0 0010.8 0M10 15v2.6"/></svg>Say it</button>
-        <button type="button" class="ap-x lg-x" id="sprayClose" title="Close">✕</button>
-      </div>
+    <div class="lf" id="sprayCard">
+      <div class="lf-scroll" id="sprayScroll">
+        <div class="lf-fhdr"><button type="button" class="lf-iconbtn" id="sprayBackStart" aria-label="Back" hidden>←</button><button type="button" class="lf-iconbtn" id="sprayClose" aria-label="Close">✕</button><div class="lf-t" id="sprayHead">Log a spray</div><button type="button" class="lf-say" id="spraySayBtn">Say it</button></div>
 
-      <div class="lg-body">
-        <div id="sprayStart" hidden>
+        <div id="sprayStart" class="lf-start" hidden>
           <div class="lg-lbl">Coming up</div>
           <div id="sprayComing"></div>
           <button type="button" class="lg-link" id="sprayStartSchedule">＋ Schedule a spray</button>
@@ -7368,99 +7438,87 @@
         </div>
 
         <div id="sprayForm">
-          <div class="lg-row"><span class="lg-k">Sprayer</span><div class="lg-sprayers" id="spraySprayers"></div></div>
-          <button type="button" class="lg-row lg-tap" id="sprayWhereRow">
-            <span class="lg-k">Where</span><span class="lg-v" id="sprayBedChips"></span><span class="lg-go">Pick ›</span></button>
-          <div class="lg-row lg-col" id="sprayValveRow" hidden>
-            <span class="lg-k">Valves</span><div class="lg-chips" id="sprayValves"></div></div>
-          <div class="lg-row lg-col">
-            <div class="lg-rowhead"><span class="lg-k">What</span><span class="grow"></span>
-              <label class="lg-mini"><span id="sprayFromLbl">From a saved mix</span> <select id="sprayFromMix"></select></label></div>
-            <div class="sp-items" id="sprayItems"></div>
-            <button type="button" class="lg-link" id="sprayAddItem">＋ Add product</button>
+          <div class="lf-blk" id="sprayFromBlk">
+            <div class="lf-lab"><span>Start from</span></div>
+            <div class="lf-src" id="spraySrc"><button type="button" aria-pressed="true" data-v="manual">Enter manually</button><button type="button" aria-pressed="false" data-v="saved" id="spraySrcSaved">Saved mix</button></div>
+            <div class="lf-pick" id="sprayMixList" hidden></div>
+            <div class="lf-using" id="sprayUsing" hidden></div>
           </div>
-          <div class="lg-row lg-col" id="sprayTanksRow">
-            <div class="lg-rowhead"><span class="lg-k">Tanks</span><div class="lg-v lg-tanksum" id="sprayTankSum"></div>
-              <span class="lg-step"><button type="button" data-tank-step="-0.5" aria-label="Half a tank less">−</button><b id="sprayTankN">0</b><button type="button" data-tank-step="0.5" aria-label="Half a tank more">+</button></span></div>
-            <label class="lg-litres">or type the litres <input type="number" id="sprayAmount" min="0" step="0.1" inputmode="decimal" placeholder="—"> L</label>
-            <select id="sprayAmountUnit" hidden><option>L</option><option>mL</option><option>backpacks</option><option>kg</option></select>
+          <div class="lf-blk">
+            <div class="lf-colhd"><span class="lf-lab"><span>What did you mix?</span></span><span id="sprayCol">per tank</span><span></span></div>
+            <div id="sprayItems" style="display:grid;gap:8px"></div>
+            <button type="button" class="lf-link" id="sprayAddItem" style="justify-self:start">+ Add product</button>
           </div>
-          <div class="lg-row" id="sprayFertRow" hidden>
-            <span class="lg-k">Mixed in</span>
-            <div class="lg-v lg-pair">
-              <label><input type="number" id="sprayMixVol" min="0" step="1" inputmode="decimal" placeholder="200"> L tank</label>
-              <label><input type="number" id="sprayRunMin" min="0" step="1" inputmode="numeric" placeholder="40"> min run</label>
+          <div class="lf-blk">
+            <div class="lf-lab"><span>Sprayer</span></div>
+            <div class="lf-sprayers" id="spraySprayers"></div>
+            <div class="lf-tankrow" id="sprayTanksRow"><div class="lf-big" id="sprayTankSum"></div><div class="lf-step"><button type="button" data-tank-step="-0.5" aria-label="Half a tank less">−</button><b id="sprayTankN"></b><button type="button" data-tank-step="0.5" aria-label="Half a tank more">+</button></div></div>
+            <div id="sprayFertRow" hidden style="display:grid;gap:10px">
+              <div class="lf-tankrow"><div class="lf-big">Mix volume<small>Water in the injector tank</small></div><label class="lf-rate" style="width:128px"><input id="sprayMixVol" inputmode="decimal" aria-label="Mix volume"><span class="lf-unit" style="display:grid;place-items:center">L</span></label></div>
+              <div class="lf-tankrow"><div class="lf-big">Run time<small>Valves open while injecting</small></div><div class="lf-step"><button type="button" data-run-step="-5" aria-label="5 minutes less">−</button><b id="sprayRunN"></b><button type="button" data-run-step="5" aria-label="5 minutes more">+</button></div></div>
+              <input type="hidden" id="sprayRunMin">
             </div>
           </div>
-          <div class="lg-row lg-col">
-            <div class="lg-rowhead" style="align-items:flex-start"><span class="lg-k" style="padding-top:.5rem">Why</span>
-              <div class="lg-chips"><span id="sprayWhyChips" style="display:contents"></span><select id="sprayReason" class="lg-select" title="Other reason"></select></div></div>
+          <div class="lf-blk" id="sprayValveRow" hidden>
+            <div class="lf-lab"><span>Valves</span><span style="text-transform:none;letter-spacing:0;font-weight:400">tap all that ran</span></div>
+            <div class="lf-chips" id="sprayValves"></div>
+            <div class="lf-sub" id="sprayValveBeds"></div>
           </div>
-          <div class="lg-row">
-            <span class="lg-k">When</span>
-            <div class="lg-v lg-pair"><input type="date" id="sprayDate"><select id="sprayBy"></select></div>
+          <div class="lf-blk" id="sprayWhereRow">
+            <div class="lf-lab"><span>Where</span></div>
+            <button type="button" class="lf-wherebtn" id="sprayWhereBtn"><span class="b" id="sprayWhereB"></span><span class="c" id="sprayWhereC"></span><span class="go">Change ›</span></button>
           </div>
-          <div class="sp-safe lg-safe" id="spraySafe"></div>
-
-          <details class="lg-more" id="sprayMore">
-            <summary>Photos, notes, crops, follow-ups</summary>
-            <div id="sprayPhotoSection">
-              <div class="lg-lbl">Photos</div>
-              <div class="sp-photos">
-                <label class="sp-photo-add" id="sprayPhotoAdd">＋ Add photo
-                  <input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden>
-                </label>
+          <div class="lf-blk">
+            <div class="lf-lab"><span>Why</span></div>
+            <div class="lf-chips" id="sprayWhyChips"></div>
+            <input class="lf-inp" id="sprayWhyOther" placeholder="Other reason" aria-label="Other reason" hidden>
+            <select id="sprayReason" hidden></select>
+          </div>
+          <div class="lf-blk">
+            <div class="lf-whenrow"><span id="sprayWhenTxt"></span><button type="button" class="lf-link" id="sprayWhenBtn">Change</button></div>
+            <div class="lf-more" id="sprayWhenMore" hidden><input class="lf-inp" type="date" id="sprayDate" aria-label="Date"><div class="lf-chips" id="sprayByChips"></div><select id="sprayBy" hidden></select></div>
+            <button type="button" class="lf-fold" id="sprayFold">▸ More details: litres, photos, notes, crops, follow-ups</button>
+            <div class="lf-more" id="sprayMore" hidden>
+              <input class="lf-inp" id="sprayAmount" inputmode="decimal" placeholder="Litres put out (overrides tanks)" aria-label="Litres put out">
+              <select id="sprayAmountUnit" hidden><option>L</option><option>mL</option><option>backpacks</option><option>kg</option></select>
+              <textarea class="lf-inp" id="sprayNotes" placeholder="Notes, e.g. middle of I kale"></textarea>
+              <div id="sprayPhotoSection">
+                <label class="lf-mini lf-photo-add" id="sprayPhotoAdd">+ Add photo<input type="file" id="sprayPhotoInput" accept="image/*" capture="environment" multiple hidden></label>
                 <div class="sp-photo-thumbs" id="sprayPhotoThumbs"></div>
               </div>
-            </div>
-            <label class="ap-field"><span>Notes</span>
-              <textarea id="sprayNotes" rows="3" placeholder="Anything else worth recording…"></textarea></label>
-            <label class="ap-field"><span>Location note</span>
-              <input type="text" id="sprayLocNote" placeholder="When the beds don't say it all — “middle of I kale”"></label>
-            <div class="lg-lbl">Crops <span class="lg-hint">filled from the beds</span></div>
-            <div class="sp-chips" id="sprayCropChips"></div>
-            <div class="tl-search sp-inline-search" style="margin-top:.5rem">
-              <input type="text" id="sprayCropSearch" placeholder="Add a crop" autocomplete="off" spellcheck="false">
-              <button type="button" id="sprayCropSearchClear" title="Clear">✕</button>
-            </div>
-            <div class="sp-suggest" id="sprayCropSuggest" hidden></div>
-            <label class="ap-field" title="Auto-filled as the longest withholding period of any product; override if a label says otherwise"><span>Withholding (days)</span>
-              <input type="number" id="sprayWhp" min="0" step="1" placeholder="auto"></label>
-            <div id="sprayFollowupSection">
-              <label class="sp-fav-toggle"><input type="checkbox" id="sprayFollowupOn"> <span>Schedule follow-up sprays (same beds &amp; mix)</span></label>
-              <div id="sprayFollowupControls" hidden>
-                <div class="sp-fu-row">
-                  <span class="sp-fu-lbl">every</span>
-                  <input type="number" id="sprayFollowupEvery" min="1" step="1" value="7">
-                  <span class="sp-fu-lbl">days ×</span>
-                  <input type="number" id="sprayFollowupCount" min="1" max="12" step="1" value="1">
-                  <span class="sp-fu-lbl">time(s)</span>
+              <input class="lf-inp" id="sprayLocNote" placeholder="Location note, when the beds don't say it all" aria-label="Location note">
+              <div class="lf-sub">Crops, filled from the beds</div>
+              <div class="sp-chips" id="sprayCropChips"></div>
+              <input class="lf-inp" id="sprayCropSearch" placeholder="Add a crop" autocomplete="off" spellcheck="false" aria-label="Add a crop">
+              <button type="button" id="sprayCropSearchClear" hidden></button>
+              <div class="sp-suggest" id="sprayCropSuggest" hidden></div>
+              <input class="lf-inp" type="number" id="sprayWhp" min="0" step="1" placeholder="Withholding days (auto from products)" aria-label="Withholding days">
+              <div id="sprayFollowupSection">
+                <label class="sp-fav-toggle"><input type="checkbox" id="sprayFollowupOn"> <span>Schedule follow-up sprays (same beds &amp; mix)</span></label>
+                <div id="sprayFollowupControls" hidden>
+                  <div class="sp-fu-row">
+                    <span class="sp-fu-lbl">every</span>
+                    <input type="number" id="sprayFollowupEvery" min="1" step="1" value="7">
+                    <span class="sp-fu-lbl">days ×</span>
+                    <input type="number" id="sprayFollowupCount" min="1" max="12" step="1" value="1">
+                    <span class="sp-fu-lbl">time(s)</span>
+                  </div>
+                  <div class="sp-fu-list" id="sprayFollowupList"></div>
                 </div>
-                <div class="sp-fu-list" id="sprayFollowupList"></div>
               </div>
+              <button type="button" class="lf-link" id="spraySaveAsMix" style="justify-self:start">Save these products as a mix</button>
             </div>
-            <button type="button" class="lg-link" id="spraySaveAsMix">Save these products as a mix</button>
-          </details>
-        </div>
-
-        <div class="lg-say-sheet" id="spraySaySheet" hidden>
-          <div class="lg-lbl">Say it or type it</div>
-          <textarea id="spraySayText" rows="4" placeholder="copper 40 g a tank, E5 to E8, two and a half tanks in the electric, for downy"></textarea>
-          <div class="lg-hint" id="spraySayHint">Tap the keyboard’s microphone to talk. It fills the form in — you still check it and save.</div>
-          <div class="lg-say-acts"><button type="button" class="btn-ghost" id="spraySayCancel">Cancel</button>
-            <button type="button" class="btn-primary" id="spraySayGo">Fill the form</button></div>
+          </div>
         </div>
       </div>
-
-      <div class="lg-foot">
+      <div class="lf-foot" id="sprayFormFoot">
         <div class="sp-err" id="sprayErr" hidden></div>
-        <div id="sprayStartFoot" hidden><button type="button" class="btn-primary lg-big" id="sprayStartNew">＋ Log a spray</button></div>
-        <div class="sp-actions" id="sprayFormFoot">
-          <button class="btn-ghost" id="sprayCancel">Cancel</button>
-          <button class="btn-ghost" id="sprayLogAsPlannedBtn" style="display:none">Log as planned</button>
-          <button class="btn-primary" id="spraySave">Save spray</button>
-        </div>
+        <div class="lf-sum" id="spraySum"></div>
+        <button type="button" class="lf-save" id="spraySave">Save spray</button>
+        <button type="button" class="lf-link" id="sprayLogAsPlannedBtn" style="display:none">Log as planned, nothing changed</button>
       </div>
+      <div class="lf-foot" id="sprayStartFoot" hidden><button type="button" class="lf-save" id="sprayStartNew">＋ Log a spray</button></div>
+      <div class="lf-scrim" data-lf-close></div><div class="lf-bs" id="spraySheet"></div>
     </div>
   </div>
 
@@ -9447,8 +9505,7 @@ function backCandidates(){
       const x=pn.querySelector("[aria-label='Close'],.icon-btn"); if(x) out.push([pn,()=>x.click()]);
     }
   });
-  const say=document.getElementById("spraySaySheet");
-  if(say && !say.hidden && backVisible(say)) out.push([say,()=>{ say.hidden=true; }]);
+  document.querySelectorAll(".lf.bsopen").forEach(c=>{ if(backVisible(c)) out.push([c,()=>lfSheetClose(c)]); });
   const wbp=document.getElementById("wbPanel");
   if(wbp && cmIsMobile() && wbSel && backVisible(wbp)) out.push([wbp,()=>{ wbSel=null; buildWhiteboard(); }]);
   const csr=document.getElementById("csRoot");
@@ -28429,6 +28486,16 @@ let srYearFilter=null;       // sidebar season filter; null = every season
 
 // Beds as a run where they are consecutive ("H8–H12"), listed where they are not. The full list is
 // unreadable in a 46px row once a spray covers a whole block.
+// Bed ranges the mockup way (rangeText): runs per block, "C3–C6, E5–E8". No count.
+function lfRange(ids){
+  const by=new Map(), odd=[];
+  (ids||[]).map(id=>(sprayBed(id)||{}).name).filter(Boolean).forEach(n=>{ const m=n.match(/^(.*?)(\d+)$/); if(!m){ odd.push(n); return; } if(!by.has(m[1])) by.set(m[1],[]); by.get(m[1]).push(+m[2]); });
+  const out=[];
+  [...by.keys()].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).forEach(k=>{ const ns=[...new Set(by.get(k))].sort((a,b)=>a-b); let st=null,p=null;
+    const push=()=>out.push(st===p?k+st:k+st+"–"+k+p);
+    ns.forEach(n=>{ if(st===null){st=p=n} else if(n===p+1){p=n} else {push(); st=p=n} }); if(st!==null) push(); });
+  return out.concat(odd).join(", ");
+}
 function srBedsShort(bedIds){
   const names=(bedIds||[]).map(id=>(sprayBed(id)||{}).name).filter(Boolean);
   if(!names.length) return "—";
@@ -28890,37 +28957,39 @@ let spray = null;   // active entry-form state, or null when closed
 // sprayResetState + sprayApplyMode + the three sprayOpen* wrappers share one form.
 function sprayResetState(mode){
   const sprayers=PlannerShared.sprayersFrom(data.farmSettings);
-  spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null,
+  spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null, from:null, fromName:"", fromSub:"",
             method:"Backpack", whpManual:false, mode:mode||"log", editId:null, followups:[],
             zoneIds:new Set(), valveIds:new Set(), sprayer:(sprayers.find(s=>s.default)||sprayers[0]).name,
-            tanks:null, fromStart:false };
-  populateSprayMixSelect();
-  ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayCropSearch","sprayMixVol","sprayRunMin","spraySayText"].forEach(id=>$s(id).value="");
+            tanks:null, fromStart:false, src:"manual" };
+  ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayCropSearch","sprayMixVol","sprayRunMin","sprayWhyOther"].forEach(id=>$s(id).value="");
   $s("sprayAmountUnit").value="L";
   $s("sprayDate").value = sprayToday();
   sprayFillReason($s("sprayReason"), "");
   sprayFillAssignee($s("sprayBy"), localStorage.getItem(SPRAY_BY_KEY) || "");
-  $s("sprayFromMix").value = "";
   $s("sprayPhotoThumbs").innerHTML = "";
   $s("sprayFollowupOn").checked = false; $s("sprayFollowupControls").hidden = true; $s("sprayFollowupList").innerHTML = "";
   $s("sprayCropSuggest").hidden = true;
   $s("sprayErr").hidden = true;
-  $s("sprayMore").open = false;
-  $s("spraySaySheet").hidden = true;
+  sprayFoldOpen(false); $s("sprayWhenMore").hidden=true; $s("sprayWhenBtn").textContent="Change";
+  lfSheetClose($s("sprayCard"));
   sprayShowPanel("form");
   setSprayMethod("Backpack");
+}
+// More details fold: "▸" closed, "▾" open — the mockup's one-character toggle.
+function sprayFoldOpen(on){
+  $s("sprayMore").hidden=!on;
+  const b=$s("sprayFold"); b.textContent=(on?"▾":"▸")+b.textContent.slice(1);
 }
 function sprayApplyMode(){
   const m = spray.mode, isPlan = m==="plan", editing = !!spray.editId;
   $s("sprayHead").textContent = isPlan ? (editing?"Edit scheduled spray":"Schedule a spray")
     : m==="logFromPlan" ? "Log this spray" : spray.sprayer==="Fertigation" ? "Log fertigation" : "Log a spray";
-  $s("spraySub").textContent = isPlan ? "Shows under Coming up and in This week"
-    : m==="logFromPlan" ? "Filled in as planned — change what was different" : "";
   $s("spraySave").textContent = isPlan ? "Schedule spray" : spray.sprayer==="Fertigation" ? "Save fertigation" : "Save spray";
   $s("sprayPhotoSection").style.display = isPlan ? "none" : "";          // no photos of a future spray
   $s("sprayLogAsPlannedBtn").style.display = m==="logFromPlan" ? "" : "none";
   $s("sprayFollowupSection").style.display = editing ? "none" : "";       // follow-ups only for a fresh record
   $s("sprayBackStart").hidden = !spray.fromStart;
+  $s("sprayClose").hidden = !!spray.fromStart;
 }
 // Two screens share the card: "start" (coming up + one big Log button) and "form".
 function sprayShowPanel(which){
@@ -28942,6 +29011,8 @@ function sprayPrefillFromApp(a){
   spray.items = (a.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||""}));
   if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
   spray.fromMixId = a.fromMixId||null;
+  if(spray.fromMixId){ const mx=(data.sprayMixes||[]).find(x=>x.id===spray.fromMixId);
+    if(mx){ spray.from=mx.id; spray.fromName=mx.name; spray.fromSub=sprayMixContents(mx.items); spray.src="saved"; } }
   spray.method = a.method || "Backpack";
   spray.sprayer = a.sprayer || (a.method==="Fertigation" ? "Fertigation" : a.method==="Boom" ? "Tractor" : spray.sprayer);
   spray.tanks = a.tanks!=null ? a.tanks : null;
@@ -28959,14 +29030,14 @@ function sprayPrefillFromApp(a){
 function sprayFinishOpen(focusBeds){
   sprayApplyMode();
   renderSprayBedChips(); renderSprayCropChips(); renderSprayItems(); updateSprayWhp(); renderSprayFollowups();
-  renderSpraySprayers(); renderSprayTanks(); renderSprayValves(); renderSprayWhy();
+  renderSpraySprayers(); renderSprayTanks(); renderSprayValves(); renderSprayWhy(); sprayRenderFrom(); sprayRenderWhen();
   $s("sprayModal").classList.add("open");
-  $s("sprayModal").querySelector(".lg-body").scrollTop=0;
+  $s("sprayScroll").scrollTop=0;
 }
 function sprayOpen(prefill){
   sprayResetState("log");
-  if(prefill && prefill.mixId){ $s("sprayFromMix").value = prefill.mixId; applyMixToForm(prefill.mixId); }
-  else spray.items = [{ productId:"", rate:null, unit:"" }];
+  if(prefill && prefill.mixId){ spray.src="saved"; applyMixToForm(prefill.mixId); }
+  if(!spray.items.length) spray.items = [{ productId:"", rate:null, unit:"mL" }];
   if(prefill && prefill.fromStart) spray.fromStart = true;
   sprayFinishOpen(true);
 }
@@ -28977,8 +29048,7 @@ function sprayStartOpen(){
   if(!up.length){ sprayOpen(); return; }
   sprayResetState("log");
   $s("sprayHead").textContent="Log a spray";
-  $s("spraySub").textContent=fmtLong(sprayToday());
-  $s("sprayBackStart").hidden=true;
+  $s("sprayBackStart").hidden=true; $s("sprayClose").hidden=false;
   renderSprayComing(up);
   sprayShowPanel("start");
   $s("sprayModal").classList.add("open");
@@ -29032,19 +29102,21 @@ function spraySprayerLitres(){
 }
 function renderSpraySprayers(){
   const list=[...PlannerShared.sprayersFrom(data.farmSettings).map(s=>({name:s.name, sub:`${s.litres} L`})), {name:"Fertigation", sub:"valves"}];
-  $s("spraySprayers").innerHTML=list.map(s=>`<button type="button" data-sprayer="${esc(s.name)}" aria-pressed="${s.name===spray.sprayer}">${esc(s.name)}<small>${esc(s.sub)}</small></button>`).join("");
+  $s("spraySprayers").innerHTML=list.map(s=>`<button type="button" class="lf-sprayer" data-sprayer="${esc(s.name)}" aria-pressed="${s.name===spray.sprayer}">${esc(s.name)}<small>${esc(s.sub)}</small></button>`).join("");
   const fert=sprayIsFert();
   $s("sprayWhereRow").hidden=fert; $s("sprayValveRow").hidden=!fert;
   $s("sprayTanksRow").hidden=fert; $s("sprayFertRow").hidden=!fert;
-  $s("sprayFromLbl").textContent = fert ? "From a program" : "From a saved mix";
-  populateSprayMixSelect();
+  $s("sprayCol").textContent = fert ? "in mix" : "per tank";
+  if(fert && $s("sprayMixVol").value==="") $s("sprayMixVol").value="";
+  $s("sprayRunN").textContent = $s("sprayRunMin").value || "0";
+  sprayRenderFrom();
 }
 function setSpraySprayer(name){
   const wasFert=sprayIsFert();
   spray.sprayer=name;
   const s=PlannerShared.sprayersFrom(data.farmSettings).find(x=>x.name===name);
   setSprayMethod(name==="Fertigation" ? "Fertigation" : (s && s.litres>=40) ? "Boom" : "Backpack");
-  if(wasFert!==sprayIsFert()){ spray.fromMixId=null; $s("sprayFromMix").value=""; }
+  if(wasFert!==sprayIsFert()){ spray.fromMixId=null; spray.from=null; }
   if(!spray.amountManual) sprayApplyTanks();
   renderSpraySprayers(); renderSprayTanks(); renderSprayValves(); renderSprayBedChips(); sprayApplyMode();
 }
@@ -29054,23 +29126,39 @@ function sprayApplyTanks(){
   $s("sprayAmountUnit").value = "L";
 }
 function renderSprayTanks(){
-  const t=spray.tanks, l=spraySprayerLitres();
-  const half=n=>(n%1 ? (Math.floor(n)||"")+"½" : String(n));
-  $s("sprayTankN").textContent = t ? half(t) : "0";
+  const t=spray.tanks||0, l=spraySprayerLitres();
+  $s("sprayTankN").textContent = t;
   const amt=$s("sprayAmount").value;
-  $s("sprayTankSum").innerHTML = t && l
-    ? `${half(t)} × ${l} L = ${PlannerShared.tanksToLitres(t,l)} L`
-    : amt ? `${esc(amt)} L` : `<span class="lg-dim" style="font-weight:500;font-size:.95rem">${l?`${l} L tank`:"—"}</span>`;
+  const per=spray.items.filter(it=>it.productId && it.rate).map(it=>`${lfQty(it.rate*t, it.unit)} ${sprayProductName(it.productId).split(" ")[0]}`).join(" · ");
+  const head = spray.amountManual && amt ? `${esc(amt)} L` : `${t} × ${l||0} L = ${PlannerShared.tanksToLitres(t,l)||0} L`;
+  $s("sprayTankSum").innerHTML = `${head}<small>${esc(per||"Add products above")}</small>`;
+  renderSpraySum();
 }
+// "60 mL", "1.2 kg", "1.5 L" — the mockup's fmtQty.
+function lfQty(v,u){ v=+v||0; if(u==="g"&&v>=1000) return (v/1000).toFixed(v%1000?1:0)+" kg"; if(u==="mL"&&v>=1000) return (v/1000).toFixed(1)+" L"; return (+v.toFixed(2))+" "+(u||""); }
 function renderSprayValves(){
   if(!sprayIsFert()){ $s("sprayValves").innerHTML=""; return; }
-  $s("sprayValves").innerHTML = sprayValves().map(v=>
-    `<button type="button" class="lg-chip" data-valve="${esc(v.id)}" aria-pressed="${spray.valveIds.has(v.id)}" title="${v.bedIds.length} beds">${esc(v.name)}</button>`).join("");
+  const vs=sprayValves();
+  $s("sprayValves").innerHTML = vs.map(v=>
+    `<button type="button" class="lf-chip" data-valve="${esc(v.id)}" aria-pressed="${spray.valveIds.has(v.id)}">${esc(v.name)}</button>`).join("");
+  const on=vs.filter(v=>spray.valveIds.has(v.id));
+  $s("sprayValveBeds").textContent = on.length ? "Waters "+on.map(v=>lfRange(v.bedIds)||v.name).join(", ") : "No valves picked";
+  renderSpraySum();
 }
 const SPRAY_WHY_QUICK=["Fungal","Pest","Disease","Deficiency","Routine feed"];
 function renderSprayWhy(){
-  const cur=$s("sprayReason").value;
-  $s("sprayWhyChips").innerHTML = SPRAY_WHY_QUICK.map(r=>`<button type="button" class="lg-chip" data-why="${esc(r)}" aria-pressed="${r===cur}">${esc(r)}</button>`).join("");
+  const cur=$s("sprayReason").value, other=!!spray.whyOther || (cur && !SPRAY_WHY_QUICK.includes(cur));
+  $s("sprayWhyChips").innerHTML = SPRAY_WHY_QUICK.map(r=>`<button type="button" class="lf-chip" data-why="${esc(r)}" aria-pressed="${!other && r===cur}">${esc(r)}</button>`).join("")
+    + `<button type="button" class="lf-chip" data-why-other aria-pressed="${other}">Other…</button>`;
+  const inp=$s("sprayWhyOther"); inp.hidden=!other;
+  if(other && document.activeElement!==inp) inp.value = SPRAY_WHY_QUICK.includes(cur) ? "" : cur;
+}
+// "Today, Sat 7 Nov · Taylor" + the person chips behind Change.
+function sprayRenderWhen(){
+  const d=$s("sprayDate").value||sprayToday(), by=$s("sprayBy").value;
+  $s("sprayWhenTxt").innerHTML = `<b>${d===sprayToday()?"Today, ":""}${fmtShortDay(d)}</b>${by?" · "+esc(by):""}`;
+  $s("sprayByChips").innerHTML = (by?`<button type="button" class="lf-chip" aria-pressed="true" data-by="${esc(by)}">${esc(by)}</button>`:"")
+    + `<button type="button" class="lf-chip" aria-pressed="false" data-by-other>Someone else…</button>`;
 }
 // Every bed the record will carry: ticked beds + the beds of chosen zones + (fertigation) valve beds.
 function sprayAllBedIds(){
@@ -29137,23 +29225,7 @@ async function sprayDeleteRecord(id){
   }catch(e){ alert("Couldn't delete: "+e.message); }
 }
 
-function populateSprayMixSelect(){
-  const sel=$s("sprayFromMix"), cur=sel.value;
-  if(spray && spray.sprayer==="Fertigation"){
-    // Fertigation programs live with the fert programs; each round is one batch through the injector.
-    const progs=(data.fertPrograms||[]).filter(p=>p.kind==="Fertigation" && !p.archived);
-    sel.innerHTML = `<option value="">— none —</option>` + progs.map(p=>{
-      const rounds=(data.fertRounds||[]).filter(r=>r.programId===p.id);
-      return rounds.map(r=>`<option value="prog:${r.id}">${esc(p.name)}${rounds.length>1?" · "+esc(r.name):""}</option>`).join("");
-    }).join("");
-  }else{
-    const mixes=(data.sprayMixes||[]).filter(m=>m.active)
-      .sort((a,b)=>(b.favourite-a.favourite)||a.name.localeCompare(b.name));
-    sel.innerHTML = `<option value="">— none —</option>`+
-      mixes.map(m=>`<option value="${m.id}">${esc(m.name)}${m.favourite?" ★":""}</option>`).join("");
-  }
-  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
-}
+function populateSprayMixSelect(){ sprayRenderFrom(); }
 // A fertigation round's products are fert_items (named by text), so they're matched to the spray
 // products catalogue by name; anything not there yet is listed in the notes rather than dropped.
 function applyFertigationRound(roundId){
@@ -29168,10 +29240,13 @@ function applyFertigationRound(roundId){
   if(missing.length){
     const n=$s("sprayNotes"), add=`Not in spray products: ${missing.join(", ")}`;
     if(!n.value.includes(add)) n.value = n.value ? n.value+"\n"+add : add;
-    $s("sprayMore").open=true;
+    sprayFoldOpen(true);
   }
   spray.fromMixId=null; spray.whpManual=false;
-  renderSprayItems(); updateSprayWhp();
+  const rd=(data.fertRounds||[]).find(r=>r.id===roundId), pg=rd && (data.fertPrograms||[]).find(p=>p.id===rd.programId);
+  spray.from="prog:"+roundId; spray.fromName=[pg&&pg.name, rd&&rd.name].filter(Boolean).join(" · ");
+  spray.fromSub=items.map(i=>`${i.product} ${i.rate??""} ${i.unit||""}`.trim()).join(" · ");
+  renderSprayItems(); updateSprayWhp(); sprayRenderFrom();
 }
 // A curated starter set (so the dropdown isn't empty before any history exists) unioned with every
 // reason actually used so far. Kept as a select+"Add new…" rather than a fixed enum — same reasoning
@@ -29230,20 +29305,20 @@ function sprayRemoveCrop(id){ spray.cropIds.delete(id); (spray.cropOff ||= new S
 
 // The Where row: zone names, then ticked beds; the crops underneath. One tap opens the picker.
 function renderSprayBedChips(){
-  const el=$s("sprayBedChips");
   const zones=[...spray.zoneIds].map(id=>((data.sprayZones||[]).find(z=>z.id===id)||{}).name).filter(Boolean);
-  const all=sprayAllBedIds();
+  const all=sprayAllBedIds(), B=$s("sprayWhereB"), C=$s("sprayWhereC");
   if(!all.length && !zones.length){
     const loc=$s("sprayLocNote").value.trim();
-    el.innerHTML = loc ? `<span class="lg-main">${esc(loc)}</span><span class="lg-small">location note</span>`
-                       : `<span class="lg-dim">Pick beds or a zone</span>`;
-    return;
+    B.textContent = loc || "Pick beds or a zone"; C.textContent = loc ? "location note" : "";
+    renderSpraySum(); return;
   }
   const beds=[...spray.beds];
-  const main=[...zones, beds.length ? srBedsShort(beds) : ""].filter(Boolean).join(", ");
+  const main=[...zones, beds.length ? lfRange(beds) : ""].filter(Boolean).join(", ");
+  B.textContent = main + (all.length ? ` · ${all.length} bed${all.length===1?"":"s"}` : "");
   const crops=[...new Set(all.map(id=>(sprayBed(id)||{}).planting).filter(Boolean).map(pl=>pl.crop).filter(c=>c&&c!=="—"))];
-  const sub=[zones.length ? `${all.length} bed${all.length===1?"":"s"}` : "", crops.slice(0,4).join(", ")+(crops.length>4?"…":"")].filter(Boolean).join(" · ");
-  el.innerHTML = `<span class="lg-main">${esc(main)}</span>${sub?`<span class="lg-small">${esc(sub)}</span>`:""}`;
+  const last=(data.sprayApplications||[]).find(a=>a.status!=="Planned" && a.id!==spray.editId && (a.bedIds||[]).some(b=>all.includes(b)));
+  C.textContent = [crops.slice(0,4).join(", ")+(crops.length>4?"…":""), last?`last: ${sprayProductName(((last.items||[])[0]||{}).productId)} ${fmtShortDay(last.date).replace(/^\w+ /,"")}`:""].filter(Boolean).join(" · ");
+  renderSpraySum();
 }
 function renderSprayCropChips(){
   const el=$s("sprayCropChips");
@@ -29282,20 +29357,50 @@ async function sprayCreateProductInline(){
   }catch(e){ alert("Couldn't add product: "+e.message); return null; }
 }
 function renderSprayItems(){
-  const el=$s("sprayItems");
-  el.innerHTML = spray.items.map((it,i)=>{
-    const opts=`<option value="">— product —</option>`+
-      (data.sprayProducts||[]).filter(p=>p.active||p.id===it.productId)
-        .map(p=>`<option value="${p.id}" ${p.id===it.productId?"selected":""}>${esc(p.name)}</option>`).join("")
-      + `<option value="__add__">+ Add product…</option>`;
-    const units=["mL","L","g","kg"].map(u=>`<option ${u===it.unit?"selected":""}>${u}</option>`).join("");
-    return `<div class="sp-item" data-i="${i}">
-      <select data-item-product="${i}">${opts}</select>
-      <input type="number" step="0.1" min="0" placeholder="rate" data-item-rate="${i}" value="${it.rate!=null?it.rate:""}">
-      <select data-item-unit="${i}">${units}</select>
-      <button type="button" class="x" data-item-del="${i}" title="Remove">✕</button>
-    </div>`;
+  $s("sprayItems").innerHTML = spray.items.map((it,i)=>{
+    const n=it.productId ? sprayProductName(it.productId) : "";
+    return `<div class="lf-prod"><button class="lf-nm" type="button" data-item-pick="${i}"><span>${n?esc(n):'<span style="color:var(--ink-3)">Pick a product</span>'}</span><i>▾</i></button><label class="lf-rate"><input value="${it.rate!=null?it.rate:""}" placeholder="0" inputmode="decimal" data-item-rate="${i}" aria-label="${esc(n||"Product")} rate"><button class="lf-unit" type="button" data-item-unit="${i}">${esc(it.unit||"mL")}</button></label><button class="lf-rm" type="button" data-item-del="${i}" aria-label="Remove">✕</button></div>`;
   }).join("");
+  renderSprayTanks();
+}
+const SPRAY_UNITS=["mL","g","L"];
+// Product picker: a bottom sheet with search and a short list, ✓ on the current one.
+function sprayOpenPicker(i){
+  const cur=(spray.items[i]||{}).productId;
+  const list=(data.sprayProducts||[]).filter(p=>p.active||p.id===cur);
+  lfPicker($s("sprayCard"), list.map(p=>({id:p.id, name:p.name})), cur, id=>{
+    if(id==="__add__"){ sprayCreateProductInline().then(prod=>{ if(prod) sprayPickProduct(i, prod.id); }); return; }
+    sprayPickProduct(i, id);
+  });
+}
+function sprayPickProduct(i, id){
+  const it=spray.items[i]; if(!it) return;
+  it.productId=id;
+  const prod=sprayProduct(id);
+  if(prod){ if(it.rate==null||it.rate==="") it.rate=prod.defaultRate; if(prod.unit && !it.unitSet) it.unit=String(prod.unit).replace(/\s*\/.*$/,""); }
+  renderSprayItems(); updateSprayWhp();
+}
+// Shared bottom-sheet product picker (spray + fert). items: [{id,name}]
+function lfPicker(card, items, cur, onPick){
+  const sh=card.querySelector(".lf-bs");
+  sh.innerHTML=`<div class="lf-grab"></div><h4>Product</h4><input class="lf-inp" placeholder="Search products" data-lf-search aria-label="Search products"><div class="lf-pick">${items.map(p=>`<button type="button" data-lf-pick="${esc(p.id)}"><span class="n">${esc(p.name)}</span><span class="go">${p.id===cur?"✓":""}</span></button>`).join("")}<button type="button" data-lf-pick="__add__"><span class="n">+ New product</span><span class="go"></span></button></div>`;
+  sh.oninput=e=>{ if(e.target.matches("[data-lf-search]")){ const v=e.target.value.toLowerCase(); sh.querySelectorAll("[data-lf-pick]").forEach(b=>{ if(b.dataset.lfPick!=="__add__") b.hidden=!b.textContent.toLowerCase().includes(v); }); } };
+  sh.onclick=e=>{ const b=e.target.closest("[data-lf-pick]"); if(!b) return; lfSheetClose(card); onPick(b.dataset.lfPick); };
+  card.classList.add("bsopen");
+}
+function lfSheetClose(card){ if(card) card.classList.remove("bsopen"); }
+// Say it sheet, shared. onFill(text, button).
+function lfSaySheet(card, placeholder, onFill){
+  const sh=card.querySelector(".lf-bs");
+  sh.innerHTML=`<div class="lf-grab"></div><h4>Say it</h4><div class="lf-sayhint">Type the whole job in one line, or use your keyboard's dictation to speak it. It fills the form for you to check.</div><textarea class="lf-inp" style="height:96px" data-lf-saytxt placeholder="${esc(placeholder)}"></textarea><button class="lf-save" type="button" data-lf-sayfill>Fill the form</button>`;
+  sh.oninput=null;
+  sh.onclick=e=>{ const b=e.target.closest("[data-lf-sayfill]"); if(!b) return; const t=sh.querySelector("[data-lf-saytxt]").value.trim(); if(t) onFill(t, b); };
+  card.classList.add("bsopen");
+  setTimeout(()=>sh.querySelector("textarea").focus(), 60);
+}
+// After Say it: a 1.6 s steel-tint flash on every visible block but Start from.
+function lfFlash(root){
+  [...root.querySelectorAll(".lf-blk")].filter(b=>b.offsetParent!==null).slice(1).forEach(b=>{ b.classList.remove("lf-flash"); void b.offsetWidth; b.classList.add("lf-flash"); });
 }
 function updateSprayWhp(){
   const auto=PlannerShared.mixWhp(spray.items.filter(it=>it.productId), data.sprayProductsById);
@@ -29303,30 +29408,62 @@ function updateSprayWhp(){
   renderSpraySafe();
 }
 function currentSprayWhp(){ const v=$s("sprayWhp").value; return v===""?null:Number(v); }
-function renderSpraySafe(){
-  const el=$s("spraySafe"), whp=currentSprayWhp(), date=$s("sprayDate").value;
-  el.classList.remove("warn");
-  // A product with no withholding period on file isn't the same as "0 days" — say so, rather than
-  // implying it's safe to pick straight away.
-  const unknown=spray && !spray.whpManual ? spray.items.filter(it=>it.productId && (sprayProduct(it.productId)||{}).whp==null).map(it=>sprayProductName(it.productId)) : [];
-  if(spray && !spray.items.some(it=>it.productId)){ el.innerHTML=""; return; }
-  if(unknown.length){ el.classList.add("warn"); el.innerHTML=`${esc(unknown.join(", "))} ${unknown.length===1?"has":"have"} no withholding period set. Check the label.`; return; }
-  if(whp==null){ el.innerHTML=""; return; }
-  if(!whp){ el.innerHTML=`No withholding period — safe to harvest straight away.`; return; }
-  el.classList.add("warn");
-  if(!date){ el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"}.`; return; }
-  el.innerHTML=`Withholding ${whp} day${whp===1?"":"s"} · <b>pick from ${fmtShortDay(PlannerShared.safeAfterISO(date,whp))}</b>`;
+function renderSpraySafe(){ renderSpraySum(); }
+// The live line above Save: tanks · litres · beds · harvest status (green OK / amber WHP).
+function renderSpraySum(){
+  if(!spray) return;
+  const el=$s("spraySum"), whp=currentSprayWhp(), date=$s("sprayDate").value||sprayToday();
+  const unknown=!spray.whpManual ? spray.items.filter(it=>it.productId && (sprayProduct(it.productId)||{}).whp==null).map(it=>sprayProductName(it.productId)) : [];
+  const status = unknown.length ? `<span class="hold">${esc(unknown.join(", "))}: no WHP set</span>`
+    : whp ? `<span class="hold">WHP ${whp} d · harvest ${fmtShortDay(PlannerShared.safeAfterISO(date,whp)).split(" ")[0]}</span>`
+    : `<span class="safe">Harvest OK now</span>`;
+  if(sprayIsFert()){
+    const vs=sprayValves().filter(v=>spray.valveIds.has(v.id)).map(v=>v.name);
+    el.innerHTML=`<span><b>Valves ${esc(vs.join(", ")||"—")}</b></span><span>${esc($s("sprayMixVol").value||0)} L</span><span>${esc($s("sprayRunMin").value||0)} min</span>${status}`;
+    return;
+  }
+  const l=spraySprayerLitres(), t=spray.tanks||0, amt=$s("sprayAmount").value;
+  const all=sprayAllBedIds();
+  const head = spray.amountManual && amt ? `<span><b>${esc(amt)} L</b></span>` : `<span><b>${t} tank${t===1?"":"s"}</b> · ${PlannerShared.tanksToLitres(t,l)||0} L</span>`;
+  el.innerHTML = head + `<span>${esc($s("sprayWhereB").textContent)}</span>` + status;
 }
 function applyMixToForm(mixId){
   if(mixId && String(mixId).startsWith("prog:")){ applyFertigationRound(mixId.slice(5)); return; }
   spray.fromMixId=mixId||null;
   const m=(data.sprayMixes||[]).find(x=>x.id===mixId);
   if(!m){ return; }
+  spray.from=m.id; spray.fromName=m.name; spray.fromSub=sprayMixContents(m.items);
   spray.items=(m.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||"mL"}));
-  if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
-  if(!$s("sprayReason").value && m.target) sprayFillReason($s("sprayReason"), m.target);
+  if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:"mL"}];
+  if(!$s("sprayReason").value && m.target){ sprayFillReason($s("sprayReason"), m.target); renderSprayWhy(); }
   spray.whpManual=false;
-  renderSprayItems(); updateSprayWhp();
+  renderSprayItems(); updateSprayWhp(); sprayRenderFrom();
+}
+function sprayMixContents(items){ return (items||[]).map(it=>`${sprayProductName(it.productId)} ${it.rate??""} ${it.unit||""}`.trim()).join(" · "); }
+// Start from: Enter manually | Saved mix. The list is saved mixes, or the fertigation programs'
+// rounds when the sprayer is Fertigation. Choosing one folds into the "Using …" strip.
+function sprayRenderFrom(){
+  if(!spray) return;
+  const saved=spray.src==="saved";
+  $s("spraySrc").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.v===spray.src));
+  const list=$s("sprayMixList"), using=$s("sprayUsing");
+  using.hidden=!(saved && spray.from); list.hidden=!saved || !!spray.from;
+  if(saved && spray.from) using.innerHTML=`<span>Using <b>${esc(spray.fromName)}</b><small>${esc(spray.fromSub)}</small></span><button class="lf-link" type="button" data-from-clear>Clear</button>`;
+  if(!list.hidden){
+    let rows;
+    if(sprayIsFert()){
+      rows=(data.fertPrograms||[]).filter(p=>p.kind==="Fertigation" && !p.archived).flatMap(p=>{
+        const rounds=(data.fertRounds||[]).filter(r=>r.programId===p.id);
+        return rounds.map(r=>({id:"prog:"+r.id, n:p.name+(rounds.length>1?" · "+r.name:""),
+          m:(data.fertItems||[]).filter(i=>i.roundId===r.id && !i.blockId && !i.blockLabel).map(i=>`${i.product} ${i.rate??""} ${i.unit||""}`.trim()).join(" · ")}));
+      });
+    }else{
+      rows=(data.sprayMixes||[]).filter(m=>m.active).sort((a,b)=>(b.favourite-a.favourite)||a.name.localeCompare(b.name))
+        .map(m=>({id:m.id, n:m.name, m:sprayMixContents(m.items)}));
+    }
+    list.innerHTML = rows.length ? rows.map(r=>`<button type="button" data-from-use="${esc(r.id)}"><span class="n">${esc(r.n)}</span><span class="m">${esc(r.m)}</span><span class="go">Use ›</span></button>`).join("")
+      : `<div class="lf-sub">${sprayIsFert()?"No fertigation programs yet.":"No saved mixes yet. Save one under More details."}</div>`;
+  }
 }
 function sprayShowErr(msg){ const el=$s("sprayErr"); el.textContent=msg; el.hidden=false; el.scrollIntoView({block:"nearest"}); }
 
@@ -29788,17 +29925,18 @@ Line:
 ${String(text).slice(0,1000)}
 """`;
 }
-async function spraySayFill(){
-  const text=$s("spraySayText").value.trim(); if(!text) return;
-  if(!AKEY){ sprayShowErr("Say it needs the Anthropic key on this device — add it under settings ⚙."); return; }
-  const btn=$s("spraySayGo"); btn.disabled=true; const o=btn.textContent; btn.textContent="Reading…";
+async function spraySayFill(text, btn){
+  if(!AKEY){ lfSheetClose($s("sprayCard")); sprayShowErr("Say it needs the Anthropic key on this device — add it under settings ⚙."); return; }
+  btn.disabled=true; const o=btn.textContent; btn.textContent="Reading…";
   try{
     const r=await aiReadText({ prompt:spraySayPrompt(text), schema:SAY_SCHEMA, maxTokens:1500,
       tooLong:"That's more than one spray — say one at a time." });
     if(!spray) return;
-    spraySayApply(r);
-    $s("spraySaySheet").hidden=true;
-  }catch(e){ sprayShowErr(e.message); }
+    lfSheetClose($s("sprayCard"));
+    spray.src="manual"; spray.from=null; spray.fromMixId=null;
+    spraySayApply(r); sprayRenderFrom(); sprayRenderWhen();
+    lfFlash($s("sprayForm"));
+  }catch(e){ lfSheetClose($s("sprayCard")); sprayShowErr(e.message); }
   finally{ btn.disabled=false; btn.textContent=o; }
 }
 function spraySayApply(r){
@@ -29823,46 +29961,68 @@ function spraySayApply(r){
   if(r.reason) sprayFillReason($s("sprayReason"), r.reason);
   if(r.date && /^\d{4}-\d\d-\d\d$/.test(r.date)) $s("sprayDate").value=r.date;
   const extra=[r.note, missed.length ? `Not matched: ${missed.join(", ")}` : ""].filter(Boolean).join("\n");
-  if(extra){ const n=$s("sprayNotes"); n.value = n.value ? n.value+"\n"+extra : extra; $s("sprayMore").open=true; }
+  if(extra){ const n=$s("sprayNotes"); n.value = n.value ? n.value+"\n"+extra : extra; sprayFoldOpen(true); }
   sprayAutoCrops(); renderSprayBedChips(); renderSprayItems(); updateSprayWhp();
   renderSprayTanks(); renderSprayValves(); renderSprayWhy();
 }
 
 /* ---------- Entry-form wiring ---------- */
 (function wireSprayForm(){
-  $s("spraySayBtn").onclick=()=>{ $s("spraySaySheet").hidden=false; setTimeout(()=>$s("spraySayText").focus(), 30); };
-  $s("spraySayCancel").onclick=()=>{ $s("spraySaySheet").hidden=true; };
-  $s("spraySayGo").onclick=spraySayFill;
   const modal=$s("sprayModal"); if(!modal) return;
+  const card=$s("sprayCard");
+  $s("spraySayBtn").onclick=()=>lfSaySheet(card, "copper 40 g a tank, E5 to E8, two and a half tanks in the electric, for downy", spraySayFill);
   $s("sprayClose").onclick=sprayClose;
-  $s("sprayCancel").onclick=sprayClose;
   modal.addEventListener("mousedown",(e)=>{ if(e.target===modal) sprayClose(); });
+  card.querySelector("[data-lf-close]").onclick=()=>lfSheetClose(card);
   $s("sprayReason").addEventListener("change",(e)=>{ sprayOnReasonChange(e.target); renderSprayWhy(); });
-  $s("sprayBy").addEventListener("change",(e)=>sprayOnAssigneeChange(e.target));
 
-  // Redesigned rows
-  $s("sprayWhereRow").onclick=sprayPickWhere;
+  // Start from
+  $s("spraySrc").addEventListener("click",(e)=>{ const b=e.target.closest("button"); if(!b||!spray) return;
+    spray.src=b.dataset.v;
+    if(spray.src==="manual" && spray.from){ spray.from=null; spray.fromMixId=null; spray.items=[{productId:"",rate:null,unit:"mL"}]; renderSprayItems(); updateSprayWhp(); }
+    sprayRenderFrom(); });
+  $s("sprayMixList").addEventListener("click",(e)=>{ const b=e.target.closest("[data-from-use]"); if(b) applyMixToForm(b.dataset.fromUse); });
+  $s("sprayUsing").addEventListener("click",(e)=>{ if(e.target.closest("[data-from-clear]")){ spray.from=null; spray.fromMixId=null; sprayRenderFrom(); } });
+
+  $s("sprayWhereBtn").onclick=sprayPickWhere;
   $s("spraySprayers").addEventListener("click",(e)=>{ const b=e.target.closest("[data-sprayer]"); if(b) setSpraySprayer(b.dataset.sprayer); });
   $s("sprayTanksRow").addEventListener("click",(e)=>{
     const b=e.target.closest("[data-tank-step]"); if(!b) return;
     spray.tanks=Math.max(0, Math.round(((spray.tanks||0)+Number(b.dataset.tankStep))*2)/2) || null;
     spray.amountManual=false; sprayApplyTanks(); renderSprayTanks();
   });
-  $s("sprayAmount").addEventListener("input",()=>{ spray.amountManual=true; spray.tanks=null; renderSprayTanks(); });
+  $s("sprayFertRow").addEventListener("click",(e)=>{
+    const b=e.target.closest("[data-run-step]"); if(!b) return;
+    const v=Math.max(0,(Number($s("sprayRunMin").value)||0)+Number(b.dataset.runStep));
+    $s("sprayRunMin").value=v||""; $s("sprayRunN").textContent=v; renderSpraySum();
+  });
+  $s("sprayMixVol").addEventListener("input",renderSpraySum);
+  $s("sprayAmount").addEventListener("input",()=>{ spray.amountManual=$s("sprayAmount").value!==""; if(spray.amountManual) spray.tanks=null; renderSprayTanks(); });
   $s("sprayValves").addEventListener("click",(e)=>{
     const b=e.target.closest("[data-valve]"); if(!b) return;
     const id=b.dataset.valve; spray.valveIds.has(id)?spray.valveIds.delete(id):spray.valveIds.add(id);
-    b.setAttribute("aria-pressed", spray.valveIds.has(id)); sprayAutoCrops();
+    renderSprayValves(); sprayAutoCrops();
   });
   $s("sprayWhyChips").addEventListener("click",(e)=>{
+    if(e.target.closest("[data-why-other]")){ spray.whyOther=true; renderSprayWhy(); $s("sprayWhyOther").focus(); return; }
     const b=e.target.closest("[data-why]"); if(!b) return;
+    spray.whyOther=false;
     const cur=$s("sprayReason").value, v=b.dataset.why===cur?"":b.dataset.why;
     sprayFillReason($s("sprayReason"), v); renderSprayWhy();
   });
+  $s("sprayWhyOther").addEventListener("input",(e)=>{ sprayFillReason($s("sprayReason"), e.target.value.trim()); });
+  $s("sprayWhenBtn").onclick=()=>{ const m=$s("sprayWhenMore"); m.hidden=!m.hidden; $s("sprayWhenBtn").textContent=m.hidden?"Change":"Done"; };
+  $s("sprayByChips").addEventListener("click",(e)=>{
+    if(!e.target.closest("[data-by-other]")) return;
+    const names=knownAssignees();
+    const name=(prompt("Who did it?"+(names.length?"\n("+names.join(", ")+")":""))||"").trim(); if(!name) return;
+    sprayFillAssignee($s("sprayBy"), name); sprayRenderWhen();
+  });
+  $s("sprayFold").onclick=()=>sprayFoldOpen($s("sprayMore").hidden);
   $s("sprayLocNote").addEventListener("input",()=>{ if(!sprayAllBedIds().length) renderSprayBedChips(); });
 
   // Start screen: coming up + Log a spray
-  $s("sprayStartNew").onclick=()=>{ sprayResetState("log"); spray.fromStart=true; spray.items=[{productId:"",rate:null,unit:""}]; sprayFinishOpen(); };
+  $s("sprayStartNew").onclick=()=>{ sprayResetState("log"); spray.fromStart=true; spray.items=[{productId:"",rate:null,unit:"mL"}]; sprayFinishOpen(); };
   $s("sprayStartSchedule").onclick=()=>{ sprayOpenPlan(null); spray.fromStart=true; sprayApplyMode(); };
   $s("sprayBackStart").onclick=sprayStartOpen;
   $s("sprayStartPlan").onclick=()=>{ sprayClose(); cpOpen(); };
@@ -29875,7 +30035,6 @@ function spraySayApply(r){
 
   const cropSearch=$s("sprayCropSearch");
   cropSearch.addEventListener("input",()=>sprayCropSuggest(cropSearch.value));
-  $s("sprayCropSearchClear").onclick=()=>{ cropSearch.value=""; sprayCropSuggest(""); };
   $s("sprayCropSuggest").addEventListener("click",(e)=>{
     const b=e.target.closest("[data-add-crop]"); if(!b) return;
     sprayAddCrop(b.dataset.addCrop); cropSearch.value=""; sprayCropSuggest("");
@@ -29884,40 +30043,25 @@ function spraySayApply(r){
     const x=e.target.closest("[data-rm-crop]"); if(x) sprayRemoveCrop(x.dataset.rmCrop);
   });
 
-  $s("sprayFromMix").addEventListener("change",(e)=>applyMixToForm(e.target.value));
-  $s("sprayAddItem").onclick=()=>{ spray.items.push({productId:"",rate:null,unit:""}); renderSprayItems(); };
+  $s("sprayAddItem").onclick=()=>{ spray.items.push({productId:"",rate:null,unit:"mL"}); renderSprayItems(); sprayOpenPicker(spray.items.length-1); };
   const items=$s("sprayItems");
-  items.addEventListener("change",(e)=>{
-    const p=e.target.closest("[data-item-product]");
-    if(p){ const i=+p.dataset.itemProduct;
-      if(p.value==="__add__"){
-        sprayCreateProductInline().then(prod=>{
-          if(prod){ spray.items[i].productId=prod.id; if(!spray.items[i].unit) spray.items[i].unit=prod.unit||""; }
-          renderSprayItems(); updateSprayWhp();
-        });
-        return;
-      }
-      spray.items[i].productId=p.value;
-      const prod=sprayProduct(p.value);
-      if(prod){ if(spray.items[i].rate==null||spray.items[i].rate==="") spray.items[i].rate=prod.defaultRate;
-                if(!spray.items[i].unit) spray.items[i].unit=prod.unit; }
-      renderSprayItems(); updateSprayWhp(); return; }
+  items.addEventListener("click",(e)=>{
+    const pk=e.target.closest("[data-item-pick]"); if(pk){ sprayOpenPicker(+pk.dataset.itemPick); return; }
     const u=e.target.closest("[data-item-unit]");
-    if(u){ spray.items[+u.dataset.itemUnit].unit=u.value; }
+    if(u){ e.preventDefault(); const it=spray.items[+u.dataset.itemUnit]; const k=SPRAY_UNITS.indexOf(it.unit);
+      it.unit=SPRAY_UNITS[(k+1)%SPRAY_UNITS.length]; it.unitSet=true; u.textContent=it.unit; renderSprayTanks(); return; }
+    const d=e.target.closest("[data-item-del]"); if(!d) return;
+    spray.items.splice(+d.dataset.itemDel,1);
+    if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:"mL"}];
+    renderSprayItems(); updateSprayWhp();
   });
   items.addEventListener("input",(e)=>{
     const r=e.target.closest("[data-item-rate]");
-    if(r){ const v=r.value; spray.items[+r.dataset.itemRate].rate = v===""?null:Number(v); }
-  });
-  items.addEventListener("click",(e)=>{
-    const d=e.target.closest("[data-item-del]"); if(!d) return;
-    spray.items.splice(+d.dataset.itemDel,1);
-    if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
-    renderSprayItems(); updateSprayWhp();
+    if(r){ const v=r.value.replace(",","."); spray.items[+r.dataset.itemRate].rate = v===""||isNaN(+v)?null:Number(v); renderSprayTanks(); }
   });
 
-  $s("sprayWhp").addEventListener("input",()=>{ spray.whpManual=true; renderSpraySafe(); });
-  $s("sprayDate").addEventListener("change",()=>{ renderSpraySafe(); if($s("sprayFollowupOn").checked) sprayRecomputeFollowups(); });
+  $s("sprayWhp").addEventListener("input",()=>{ spray.whpManual=$s("sprayWhp").value!==""; updateSprayWhp(); });
+  $s("sprayDate").addEventListener("change",()=>{ sprayRenderWhen(); renderSpraySum(); if($s("sprayFollowupOn").checked) sprayRecomputeFollowups(); });
   $s("spraySave").onclick=spraySaveRecord;
   $s("sprayLogAsPlannedBtn").onclick=sprayLogAsPlanned;
   // follow-ups
@@ -32401,20 +32545,9 @@ function fplOpen(opts){
   }
   fplRender();
   $fp("fpLogModal").classList.add("open");
-  $fp("fplBody").scrollTop=0;
+  $fp("fplScroll").scrollTop=0;
 }
-function fplClose(){ $fp("fpLogModal").classList.remove("open"); fplState=null; }
-// Log a past fert again: same beds, products and method (and round, if it came from one); today.
-function fertRepeat(id){
-  const a=(data.fertApps||[]).find(x=>x.id===id); if(!a) return;
-  if(a.programId && fpProgram(a.programId)){
-    fplOpen({ mode:"program", progId:a.programId, roundId:a.roundId, blockId:a.blockId, bedIds:a.bedIds, method:a.method });
-  }else{
-    fplOpen({ mode:"manual", bedIds:a.bedIds, method:a.method });
-    fplState.lines=(a.items||[]).map(i=>({product:i.product, rate:i.rate, unit:i.unit||"kg", on:true, manual:true}));
-    fplRender();
-  }
-}
+function fplClose(){ lfSheetClose($fp("fplCard")); $fp("fpLogModal").classList.remove("open"); fplState=null; }
 // Done on a planned fert (a step from a crop plan): the form, filled in as planned.
 function fertDonePlanned(id){
   const a=(data.fertApps||[]).find(x=>x.id===id); if(!a) return;
@@ -32532,14 +32665,29 @@ function fplPickBeds(){
       fplRender();
     }});
 }
-function fplProgPickerHtml(){
-  const progs=(data.fertPrograms||[]).filter(p=>p.kind!=="Fertigation" && !p.archived);
+// One row per program round: "Next: C7–C12 · 125 beds left" from the beds of every block the round
+// has rates for, minus the beds that already had it.
+function fplRoundProgress(progId, roundId){
   const apps=(data.fertApps||[]).filter(a=>a.status!=="Planned");
-  return `<div class="fpl-progs">${progs.map(p=>fpRoundsOf(p.id).map(r=>{
-      const n=PlannerShared.fertBedsDone(apps, p.id, r.id).size;
-      return `<div class="lg-up" data-fpl-prog="${p.id}" data-fpl-round="${r.id}"><div class="tx"><div class="t">${esc(p.name)} · ${esc(r.name)}</div><div class="s">${n?`${n} beds done`:"not started"}</div></div><span class="rl-go">›</span></div>`;
-    }).join("")).join("") || `<div class="lg-empty">No programs yet.</div>`}
-    <div class="lg-hint" style="margin:.2rem 1rem 0">Fertigation programs are logged under Sprays → Fertigation.</div></div>`;
+  const done=PlannerShared.fertBedsDone(apps, progId, roundId);
+  const blockIds=[...new Set((data.fertItems||[]).filter(i=>i.programId===progId && i.roundId===roundId && i.blockId).map(i=>i.blockId))];
+  const blocks=blockIds.map(id=>(data.blocks||[]).find(b=>b.id===id)).filter(Boolean).sort((a,b)=>blockCmp(a.name,b.name));
+  let total=0, left=0, next=null;
+  blocks.forEach(b=>{ const beds=fpBedsInBlock(b.id); total+=beds.length;
+    const todo=beds.filter(x=>!done.has(x.id)).map(x=>x.id); left+=todo.length;
+    if(!next && todo.length) next={blockId:b.id, bedIds:todo}; });
+  const m = !total ? (done.size?`${done.size} beds done`:"Not started")
+    : !done.size ? `Not started · ${total} beds`
+    : next ? `Next: ${lfRange(next.bedIds)} · ${left} beds left` : `Done · ${total} beds`;
+  return {m, next};
+}
+function fplProgPickerHtml(){
+  const s=fplState;
+  const due=(s.due||[]).map((d,i)=>`<button type="button" data-fpl-due="${i}"><span class="n">${esc(d.title)}</span><span class="m">${esc(d.sub)}</span><span class="go">Use ›</span></button>`).join("");
+  const progs=(data.fertPrograms||[]).filter(p=>p.kind!=="Fertigation" && !p.archived);
+  const rows=progs.map(p=>fpRoundsOf(p.id).map(r=>
+    `<button type="button" data-fpl-prog="${p.id}" data-fpl-round="${r.id}"><span class="n">${esc(p.name)} · ${esc(r.name)}</span><span class="m">${esc(fplRoundProgress(p.id,r.id).m)}</span><span class="go">Use ›</span></button>`).join("")).join("");
+  return due+rows || `<div class="lf-sub">No programs yet.</div>`;
 }
 
 function fplRender(){
@@ -32549,35 +32697,43 @@ function fplRender(){
   const round=isProgram ? fpRoundsOf(s.progId).find(r=>r.id===s.roundId) : null;
   const n=s.beds.size;
   s.due = (s.fresh && !n && !s.editId) ? fplDueItems() : [];
+  if(s.src==null) s.src = isProgram ? "saved" : "manual";
   $fp("fplTitle").textContent = s.editId ? "Log this fert" : "Log a fert";
-  $fp("fplSub").textContent = s.editId ? "Filled in as planned — change what was different" : fmtLong(s.date||sprayToday());
   const crops=[...new Set([...s.beds].map(id=>(sprayBed(id)||{}).planting).filter(p=>p&&p.status!=="Finished").map(p=>p.crop).filter(c=>c&&c!=="—"))];
-  const quick=!isProgram ? fplQuickProducts() : [];
+  const usingName = isProgram ? `${prog?prog.name:"Program"}${round?" · "+round.name:""}` : (s.usingName||"");
+  const usingSub = isProgram ? fplRoundProgress(s.progId, s.roundId).m : (s.usingSub||"");
+  const saved = s.src==="saved", using = saved && !!usingName;
   const methods=PlannerShared.FERT_METHODS.filter(m=>m!=="Fertigated");
+  const date=s.date||sprayToday(), by=s.by!=null?s.by:(localStorage.getItem(SPRAY_BY_KEY)||"");
   $fp("fplBody").innerHTML = `
-    ${s.due.length ? `<div class="lg-lbl">Due this week · tap to fill in</div>`
-      + s.due.map((d,i)=>`<div class="lg-up" data-fpl-due="${i}"><div class="tx"><div class="t">${esc(d.title)}</div><div class="s">${esc(d.sub)}</div></div><button type="button" class="btn-ghost">Use</button></div>`).join("") : ""}
-    ${isProgram ? `<div class="lg-row"><span class="lg-k">From</span><div class="lg-v"><span class="lg-main">${esc(prog?prog.name:"Program")}${round?` · ${esc(round.name)}`:""}</span>
-        <span class="lg-small">rates per bed for the block — untick anything you skipped</span></div>
-        <button type="button" class="lg-link" data-fpl-mode="manual" title="Not from a program">✕</button></div>` : ""}
-    <button type="button" class="lg-row lg-tap" id="fplBedsRow"><span class="lg-k">Beds</span>
-      <span class="lg-v">${n ? `<span class="lg-main">${esc(frBedsShort([...s.beds]))}</span>${crops.length?`<span class="lg-small">${esc(crops.slice(0,4).join(", "))}</span>`:""}` : `<span class="lg-dim">Pick beds</span>`}</span>
-      <span class="lg-go">Pick ›</span></button>
-    <div class="lg-row lg-col"><div class="lg-rowhead"><span class="lg-k">What</span><span class="grow"></span><span class="lg-hint">per bed · total</span></div>
-      ${s.lines.length ? `<div class="fpl-prods">${s.lines.map((l,i)=>fplLineHtml(l,i,n,s.knownProducts)).join("")}</div>`
-        : isProgram ? `<div class="lg-hint">${n ? "Nothing in this round for that block." : "Pick beds to see this round’s rates for their block."}</div>` : ""}
-      ${quick.length ? `<div class="lg-chips">${quick.map((q,i)=>`<button type="button" class="lg-chip" data-fpl-quick="${i}">＋ ${esc(q.product)}</button>`).join("")}</div>` : ""}
-      <button type="button" class="lg-link" id="fplAddLine">＋ Add product</button>
+    <div class="lf-blk">
+      <div class="lf-lab"><span>Start from</span></div>
+      <div class="lf-src"><button type="button" aria-pressed="${!saved}" data-fpl-src="manual">Enter manually</button><button type="button" aria-pressed="${saved}" data-fpl-src="saved">From a program</button></div>
+      <div class="lf-pick"${saved && !using ? "" : " hidden"}>${saved && !using ? fplProgPickerHtml() : ""}</div>
+      <div class="lf-using"${using ? "" : " hidden"}>${using ? `<span>Using <b>${esc(usingName)}</b><small>${esc(usingSub)}</small></span><button class="lf-link" type="button" data-fpl-clear>Clear</button>` : ""}</div>
     </div>
-    <div class="lg-row"><span class="lg-k">How</span><div class="lg-chips">${methods.map(m=>`<button type="button" class="lg-chip" data-fpl-method="${m}" aria-pressed="${m===s.method}">${m}</button>`).join("")}</div></div>
-    <div class="lg-row"><span class="lg-k">When</span><div class="lg-v lg-pair">
-      <input id="fplDate" type="date" value="${esc(s.date||sprayToday())}">
-      <input id="fplBy" type="text" value="${esc(s.by||localStorage.getItem(SPRAY_BY_KEY)||"")}" placeholder="Who"></div></div>
-    ${s.prepOp ? `<div class="lg-safe ok">✓ Also ticks <b>${esc(s.prepOp)}</b> off bed prep for these beds</div>` : ""}
-    ${isProgram ? `<div class="lg-safe warn" id="fplWarn" hidden>Some of these beds already had this round — saving adds a second application.</div>` : ""}
-    ${s.fresh && !n ? `<button type="button" class="lg-link" data-fpl-claude>✦ Plan from a Claude chat</button>` : ""}
-    ${!isProgram && !s.editId ? `<button type="button" class="lg-link" data-fpl-showprogs>From a program ${s.showProgs?"▴":"▾"}</button>${s.showProgs?fplProgPickerHtml():""}` : ""}
-    <details class="lg-more"${s.notes?" open":""}><summary>Notes</summary><textarea id="fplNotes" rows="3" placeholder="Anything else worth recording…">${esc(s.notes||"")}</textarea></details>`;
+    <div class="lf-blk">
+      <div class="lf-colhd"><span class="lf-lab"><span>What went on</span></span><span>per bed</span><span></span></div>
+      <div style="display:grid;gap:8px">${s.lines.map((l,i)=>fplLineHtml(l,i)).join("")}</div>
+      <div class="lf-sub" id="fplTot"></div>
+      <button class="lf-link" type="button" id="fplAddLine" style="justify-self:start">+ Add product</button>
+    </div>
+    <div class="lf-blk">
+      <div class="lf-lab"><span>Where</span></div>
+      <button class="lf-wherebtn" type="button" id="fplBedsRow"><span class="b">${n ? esc(lfRange([...s.beds]))+` · ${n} bed${n===1?"":"s"}` : "Pick beds"}</span><span class="c">${esc(crops.slice(0,4).join(", "))}</span><span class="go">Change ›</span></button>
+      ${s.prepOp ? `<div class="lf-sub">Also ticks ${esc(s.prepOp)} off bed prep for these beds</div>` : ""}
+      ${isProgram ? `<div class="lf-sub" id="fplWarn" style="color:var(--amber)" hidden>Some of these beds already had this round. Saving adds a second application.</div>` : ""}
+    </div>
+    <div class="lf-blk">
+      <div class="lf-lab"><span>How</span></div>
+      <div class="lf-chips">${methods.map(m=>`<button class="lf-chip" type="button" data-fpl-method="${m}" aria-pressed="${m===s.method}">${m}</button>`).join("")}</div>
+    </div>
+    <div class="lf-blk">
+      <div class="lf-whenrow"><span><b>${date===sprayToday()?"Today, ":""}${fmtShortDay(date)}</b>${by?" · "+esc(by):""}</span><button class="lf-link" type="button" data-fpl-when>${s.whenOpen?"Done":"Change"}</button></div>
+      <div class="lf-more"${s.whenOpen?"":" hidden"}><input class="lf-inp" type="date" id="fplDate" value="${esc(date)}" aria-label="Date"><div class="lf-chips">${by?`<button class="lf-chip" type="button" aria-pressed="true">${esc(by)}</button>`:""}<button class="lf-chip" type="button" aria-pressed="false" data-fpl-by-other>Someone else…</button></div></div>
+      <button class="lf-fold" type="button" data-fpl-fold>${s.foldOpen?"▾":"▸"} More details: notes</button>
+      <div class="lf-more"${s.foldOpen?"":" hidden"}><textarea class="lf-inp" id="fplNotes" placeholder="Notes">${esc(s.notes||"")}</textarea>${s.fresh && !n ? `<button type="button" class="lf-link" data-fpl-claude style="justify-self:start">✦ Plan from a Claude chat</button>` : ""}</div>
+    </div>`;
   fplRefreshTotals();
 }
 
@@ -32586,61 +32742,21 @@ function fplRender(){
 // rates page showing the original. Manual lines (added via "+ Add product", for anything off the
 // program like a one-off compost application) get inline inputs and a delete instead of a tick,
 // since there's no rate to fall back to if you clear the field.
-function fplLineHtml(l, i, n, known){
-  const total = (l.rate!=null && n) ? Math.round(l.rate*n*1000)/1000 : null;
-  if(l.manual){
-    // A dropdown of everything this farm has ever used a fertiliser product name for, so retyping
-    // "Natural Gypsum" every time isn't necessary — plus "+ Add product…" at the bottom for a name
-    // that's genuinely new. l.product might not be in `known` yet (freshly typed this session, or
-    // this line just hasn't had a product picked) — both are handled by the placeholder/injected-
-    // option branches below rather than silently losing what's already there.
-    const list=known||[];
-    const opts = [`<option value=""${l.product?"":" selected"}>— product —</option>`]
-      .concat(!l.product || list.includes(l.product) ? [] :
-        [`<option value="${esc(l.product)}" selected>${esc(l.product)}</option>`])
-      .concat(list.map(p=>`<option value="${esc(p)}"${p===l.product?" selected":""}>${esc(p)}</option>`))
-      .concat([`<option value="__add__">+ Add product…</option>`])
-      .join("");
-    return `<div class="fpl-prod fpl-prod-manual">
-      <div class="fpl-prod-main">
-        <select class="fpl-manual-name" data-fpl-i="${i}">${opts}</select>
-        <div class="fpl-manual-rate">
-          <input type="number" step="any" inputmode="decimal" class="fpl-manual-rate-n" data-fpl-i="${i}" placeholder="Rate" value="${l.rate??""}">
-          <select class="fpl-manual-unit" data-fpl-i="${i}">${PlannerShared.FERT_UNITS.map(u=>
-            `<option value="${u}"${u===l.unit?" selected":""}>${u}</option>`).join("")}</select>
-          <span class="fpl-manual-per">/ bed</span>
-        </div>
-      </div>
-      <div class="fpl-prod-total">${total!=null?`<b>${total}</b><span>${esc(l.unit)} total</span>`:`<span>—</span>`}</div>
-      <button class="fpl-manual-del" type="button" data-fpl-dellin="${i}" title="Remove">✕</button>
-    </div>`;
-  }
-  return `<div class="fpl-prod" aria-disabled="${l.on?"false":"true"}">
-    <button class="fpl-prod-tick" type="button" data-fpl-tick="${i}">${l.on?"✓":""}</button>
-    <div class="fpl-prod-main">
-      <div class="fpl-prod-name">${esc(l.product)}</div>
-      <div class="fpl-prod-rate">${l.rate!=null?`${l.rate} ${esc(l.unit)}/bed`:"rate not set"}</div>
-    </div>
-    <div class="fpl-prod-total">${total!=null?`<b>${total}</b><span>${esc(l.unit)} total</span>`:`<span>—</span>`}</div>
-  </div>`;
+function fplLineHtml(l, i){
+  return `<div class="lf-prod"><button class="lf-nm" type="button" data-fpl-pick="${i}"><span>${l.product?esc(l.product):'<span style="color:var(--ink-3)">Pick a product</span>'}</span><i>▾</i></button><label class="lf-rate"><input value="${l.rate??""}" placeholder="0" inputmode="decimal" class="fpl-rate" data-fpl-i="${i}" aria-label="${esc(l.product||"Product")} rate"><button class="lf-unit" type="button" data-fpl-unit="${i}">${esc(l.unit||"kg")}</button></label><button class="lf-rm" type="button" data-fpl-dellin="${i}" aria-label="Remove">✕</button></div>`;
 }
+const FERT_FORM_UNITS=["g","kg","L"];
 
 // Recompute just the per-product totals and the footer count. Called on every bed/product tap so
 // the numbers track the selection without rebuilding the form around them.
 function fplRefreshTotals(){
   const s=fplState; if(!s) return;
-  const n=s.beds.size;
-  $fp("fplBody").querySelectorAll(".fpl-prod").forEach((el,i)=>{
-    const l=s.lines[i]; if(!l) return;
-    const total = (l.rate!=null && n) ? Math.round(l.rate*n*1000)/1000 : null;
-    el.querySelector(".fpl-prod-total").innerHTML =
-      total!=null ? `<b>${total}</b><span>${esc(l.unit)} total</span>` : `<span>—</span>`;
-  });
-  const on=s.lines.filter(l=>l.on).length;
-  $fp("fplSummary").textContent = n ? `${n} bed${n===1?"":"s"} · ${on} product${on===1?"":"s"}` : "no beds picked";
+  const n=s.beds.size, good=s.lines.filter(l=>l.on && l.product && l.rate);
+  const tot=$fp("fplTot");
+  if(tot) tot.textContent = good.length && n ? good.map(l=>`${lfQty(l.rate*n, l.unit)} ${l.product.replace("™","")}`).join(" · ")+` total across ${n} bed${n===1?"":"s"}` : "";
+  const on=s.lines.filter(l=>l.on && l.product).length;
+  $fp("fplSummary").innerHTML = `<span><b>${on} product${on===1?"":"s"}</b></span><span>${n ? esc(lfRange([...s.beds]))+` · ${n} bed${n===1?"":"s"}` : "No beds yet"}</span><span>${esc(s.method||"")}</span>`;
   $fp("fplSave").textContent = s.editId ? (n ? `Save · ${n} bed${n===1?"":"s"}` : "Save") : (n ? `Save fert · ${n} bed${n===1?"":"s"}` : "Save fert");
-  // Re-applying a round to a bed is legitimate, so this warns rather than blocks. It lives here
-  // rather than in fplRender so it appears the moment you tap an already-done bed.
   const warn=$fp("fplWarn");
   if(warn){
     const done=PlannerShared.fertBedsDone(data.fertApps||[], s.progId, s.roundId);
@@ -32651,8 +32767,49 @@ function fplRefreshTotals(){
 // Read the free-text/select fields back before any re-render, same reason as the Farm info editor.
 function fplSync(){
   const s=fplState; if(!s) return;
-  const g=id=>($fp(id)||{}).value;
-  s.date=g("fplDate"); s.by=g("fplBy"); s.notes=g("fplNotes");
+  const d=$fp("fplDate"), nt=$fp("fplNotes");
+  if(d && d.value) s.date=d.value;
+  if(nt) s.notes=nt.value;
+  if(s.by==null) s.by=localStorage.getItem(SPRAY_BY_KEY)||"";
+}
+// Product picker for line i: every fert product name this farm has used.
+function fplOpenPicker(i){
+  const s=fplState; if(!s) return;
+  lfPicker($fp("fplCard"), s.knownProducts.map(p=>({id:p, name:p})), (s.lines[i]||{}).product, name=>{
+    if(!fplState || !s.lines[i]) return;
+    if(name==="__add__"){ name=(prompt("New product name:")||"").trim(); if(!name) return;
+      if(!s.knownProducts.includes(name)){ s.knownProducts.push(name); s.knownProducts.sort((a,b)=>a.localeCompare(b)); } }
+    const l=s.lines[i]; l.product=name;
+    if(l.rate==null){ const last=(data.fertApps||[]).flatMap(a=>a.items||[]).find(x=>x.product===name && x.rate!=null);
+      if(last){ l.rate=last.rate; l.unit=last.unit||l.unit; } }
+    fplSync(); fplRender();
+  });
+}
+/* Say it for the fert form: the spray parser's schema, asked about fertiliser. Products are kept as
+   said (matched to names this farm has used); beds matched as for sprays; the rest goes to notes. */
+async function fplSayFill(text, btn){
+  if(!AKEY){ lfSheetClose($fp("fplCard")); alert("Say it needs the Anthropic key on this device — add it under settings ⚙."); return; }
+  btn.disabled=true; const o=btn.textContent; btn.textContent="Reading…";
+  try{
+    const prompt=spraySayPrompt(text).replace("describing a spray they've done — or fertigation through the irrigation","describing fertiliser they've spread on beds (rates are per bed)")
+      .replace(/Products they use: [^\n]*/, "Products they use: "+(fplState?fplState.knownProducts.join(", "):""));
+    const r=await aiReadText({ prompt, schema:SAY_SCHEMA, maxTokens:1500, tooLong:"That's more than one job — say one at a time." });
+    const s=fplState; if(!s) return;
+    lfSheetClose($fp("fplCard")); fplSync();
+    const sq=sbSquash, missed=[];
+    const bedByName=new Map(data.beds.map(b=>[sq(b.name), b.id]));
+    const beds=(r.beds||[]).map(n=>bedByName.get(sq(n))||qaMatchBed(n)||(missed.push(n),null)).filter(Boolean);
+    if(beds.length) s.beds=new Set(beds);
+    const lines=(r.products||[]).map(p=>{ const k=s.knownProducts.find(x=>sq(x)===sq(p.name)||sq(x).includes(sq(p.name)));
+      return {product:k||p.name, rate:p.rate, unit:p.unit||"kg", on:true, manual:true}; });
+    if(lines.length) s.lines=lines;
+    s.mode="manual"; s.progId=null; s.roundId=null; s.src="manual"; s.usingName="";
+    if(r.date && /^d{4}-dd-dd$/.test(r.date)) s.date=r.date;
+    const extra=[r.note, missed.length?`Not matched: ${missed.join(", ")}`:""].filter(Boolean).join("\n");
+    if(extra){ s.notes = s.notes ? s.notes+"\n"+extra : extra; s.foldOpen=true; }
+    fplRender(); lfFlash($fp("fplBody"));
+  }catch(e){ lfSheetClose($fp("fplCard")); alert(e.message); }
+  finally{ btn.disabled=false; btn.textContent=o; }
 }
 
 async function fplSave(){
@@ -33492,78 +33649,59 @@ async function frDelete(id){
 (function wireFertLog(){
   const modal=$fp("fpLogModal"); if(!modal) return;
   $fp("fplClose").onclick=fplClose;
-  $fp("fplCancel").onclick=fplClose;
   $fp("fplSave").onclick=fplSave;
   modal.addEventListener("mousedown",e=>{ if(e.target===modal) fplClose(); });
+  const fcard=$fp("fplCard");
+  fcard.querySelector("[data-lf-close]").onclick=()=>lfSheetClose(fcard);
+  $fp("fplSayBtn").onclick=()=>lfSaySheet(fcard, "organic life 300 g a bed on C7 to C12, spread", fplSayFill);
 
   $fp("fplBody").addEventListener("click",(ev)=>{
     const s=fplState; if(!s) return;
-    const modeBtn=ev.target.closest("[data-fpl-mode]");
-    if(modeBtn){ fplSetMode(modeBtn.dataset.fplMode); return; }
-    // Redesigned rows (2026-11)
-    if(ev.target.closest("#fplBedsRow")){ fplPickBeds(); return; }
-    if(ev.target.closest("[data-fpl-claude]")){ fplClose(); cpOpen(); return; }
-    const due=ev.target.closest("[data-fpl-due]");
-    if(due){ fplUseDue(+due.dataset.fplDue); return; }
-    const quick=ev.target.closest("[data-fpl-quick]");
-    if(quick){ const q=fplQuickProducts()[+quick.dataset.fplQuick]; if(!q) return;
-      fplSync(); s.lines=s.lines.filter(l=>!(l.manual && !l.product && l.rate==null));
-      s.lines.push({product:q.product, rate:q.rate, unit:q.unit||"kg", on:true, manual:true});
-      if(!s.knownProducts.includes(q.product)) s.knownProducts.push(q.product);
+    const t=ev.target;
+    const src=t.closest("[data-fpl-src]");
+    if(src){ fplSync();
+      if(src.dataset.fplSrc==="manual"){ s.src="manual";
+        if(s.mode==="program" || s.usingName){ s.mode="manual"; s.progId=null; s.roundId=null; s.usingName=""; s.lines=[{product:"", rate:null, unit:"g", on:true, manual:true}]; } }
+      else s.src="saved";
       fplRender(); return; }
-    const meth=ev.target.closest("[data-fpl-method]");
+    if(t.closest("[data-fpl-clear]")){ fplSync(); s.lines.forEach(l=>l.manual=true); s.mode="manual"; s.progId=null; s.roundId=null; s.usingName=""; s.src="saved"; fplRender(); return; }
+    if(t.closest("#fplBedsRow")){ fplPickBeds(); return; }
+    if(t.closest("[data-fpl-claude]")){ fplClose(); cpOpen(); return; }
+    const due=t.closest("[data-fpl-due]");
+    if(due){ const d=s.due[+due.dataset.fplDue]; if(d){ s.usingName=d.title; s.usingSub=d.sub; } fplUseDue(+due.dataset.fplDue); return; }
+    const pg=t.closest("[data-fpl-prog]");
+    if(pg){ fplSync(); s.mode="program"; s.progId=pg.dataset.fplProg; s.roundId=pg.dataset.fplRound; s.src="saved";
+      const nx=fplRoundProgress(s.progId, s.roundId).next;
+      if(nx && !s.beds.size){ s.beds=new Set(nx.bedIds); s.blockId=nx.blockId; } else fplBlockFromBeds();
+      s.lines=[]; fplBuildLines(); fplRender(); return; }
+    const meth=t.closest("[data-fpl-method]");
     if(meth){ s.method=meth.dataset.fplMethod;
       $fp("fplBody").querySelectorAll("[data-fpl-method]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.fplMethod===s.method?"true":"false"));
-      return; }
-    if(ev.target.closest("[data-fpl-showprogs]")){ fplSync(); s.showProgs=!s.showProgs; fplRender(); return; }
-    const pg=ev.target.closest("[data-fpl-prog]");
-    if(pg){ fplSync(); s.mode="program"; s.progId=pg.dataset.fplProg; s.roundId=pg.dataset.fplRound; s.showProgs=false;
-      s.lines=s.lines.filter(l=>l.manual && l.product); fplBlockFromBeds(); fplBuildLines(); fplRender(); return; }
-    // Bed and product taps update in place rather than re-rendering the body. You tick six beds in
-    // a row with one thumb; a full re-render on each tap loses scroll position and drops whatever
-    // you'd half-typed into Notes.
-    const bed=ev.target.closest("[data-fpl-bed]");
-    if(bed){ const id=bed.dataset.fplBed;
-      if(s.beds.has(id)) s.beds.delete(id); else s.beds.add(id);
-      bed.setAttribute("aria-pressed", s.beds.has(id)?"true":"false");
       fplRefreshTotals(); return; }
-    if(ev.target.closest("#fplAll")){
-      const beds=fpBedsInBlock(s.blockId);
-      if(s.beds.size===beds.length) s.beds.clear(); else beds.forEach(b=>s.beds.add(b.id));
-      $fp("fplBody").querySelectorAll("[data-fpl-bed]").forEach(el=>
-        el.setAttribute("aria-pressed", s.beds.has(el.dataset.fplBed)?"true":"false"));
-      const allBtn=$fp("fplAll"); if(allBtn) allBtn.textContent = s.beds.size===beds.length?"none":"all";
-      fplRefreshTotals(); return; }
-    const tick=ev.target.closest("[data-fpl-tick]");
-    if(tick){ const i=+tick.dataset.fplTick; s.lines[i].on=!s.lines[i].on;
-      tick.textContent = s.lines[i].on ? "✓" : "";
-      tick.closest(".fpl-prod").setAttribute("aria-disabled", s.lines[i].on?"false":"true");
-      fplRefreshTotals(); return; }
-    // "+ Add product" — for anything off-program, deep compost being the case that prompted it.
-    // Appended rather than inserted at the top so the round's own products stay in the order the
-    // rates page shows them, with manual additions visibly tacked on the end.
-    if(ev.target.closest("#fplAddLine")){
-      fplSync();
-      s.lines.push({ product:"", rate:null, unit:"L", on:true, manual:true });
-      fplRender();
-      const last=$fp("fplBody").querySelector(".fpl-manual-name:last-of-type");
-      if(last) last.focus();
-      return;
-    }
-    const dellin=ev.target.closest("[data-fpl-dellin]");
+    if(t.closest("[data-fpl-when]")){ fplSync(); s.whenOpen=!s.whenOpen; fplRender(); return; }
+    if(t.closest("[data-fpl-fold]")){ fplSync(); s.foldOpen=!s.foldOpen; fplRender(); return; }
+    if(t.closest("[data-fpl-by-other]")){ fplSync(); const names=knownAssignees();
+      const name=(prompt("Who did it?"+(names.length?"\n("+names.join(", ")+")":""))||"").trim(); if(name){ s.by=name; fplRender(); } return; }
+    const pick=t.closest("[data-fpl-pick]"); if(pick){ fplOpenPicker(+pick.dataset.fplPick); return; }
+    const un=t.closest("[data-fpl-unit]");
+    if(un){ ev.preventDefault(); const l=s.lines[+un.dataset.fplUnit]; if(!l) return;
+      l.unit=FERT_FORM_UNITS[(FERT_FORM_UNITS.indexOf(l.unit)+1)%FERT_FORM_UNITS.length]; un.textContent=l.unit; fplRefreshTotals(); return; }
+    if(t.closest("#fplAddLine")){ fplSync();
+      s.lines.push({ product:"", rate:null, unit:"g", on:true, manual:true });
+      fplRender(); fplOpenPicker(s.lines.length-1); return; }
+    const dellin=t.closest("[data-fpl-dellin]");
     if(dellin){ fplSync(); s.lines.splice(+dellin.dataset.fplDellin,1); fplRender(); return; }
   });
-  // Only the rate field updates live as you type — the product name is now a select (see the
-  // change listener below), so there's nothing here for it to do.
   $fp("fplBody").addEventListener("input",(ev)=>{
     const s=fplState; if(!s) return;
     const i=ev.target.dataset.fplI; if(i==null) return;
     const l=s.lines[+i]; if(!l) return;
-    if(ev.target.classList.contains("fpl-manual-rate-n")){
-      l.rate=ev.target.value===""?null:+ev.target.value;
-      fplRefreshTotals();
-    }
+    const v=ev.target.value.replace(",",".");
+    l.rate = v===""||isNaN(+v) ? null : +v;
+    fplRefreshTotals();
   });
+  $fp("fplBody").addEventListener("change",(ev)=>{ if(ev.target.id==="fplDate"){ fplSync(); fplRender(); } });
+  /* old change handler (program/round/block selects) kept below for the rates-page fields */
   // Changing program/round rebuilds the product list from the new rates — those only exist in
   // Program mode. Changing block just re-scopes the bed picker: in Program mode that also means a
   // new set of round-derived products (a different block can have different rates), but in Manual
@@ -34245,6 +34383,7 @@ function fwOpenSprayForObs(obs, sub){
   const today=wkISO(new Date());
   const dateEl=document.getElementById("sprayDate");
   if(dateEl) dateEl.value = friday<today ? today : friday;
+  sprayRenderWhen(); renderSpraySum();
 }
 
 function fwOpenTaskForObs(obs){
