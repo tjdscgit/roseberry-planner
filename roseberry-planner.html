@@ -2859,6 +2859,82 @@
   .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
+  /* ---------- Claude notes (More → Reference): port of design/notes-redesign.html #kn / #kd / #dk (2026-11-08).
+     Read-only view of public.knowledge_notes. Mockup class names with a kn- prefix; values are the mockup's,
+     checked by measurement (scripts/compare-notes.mjs). Every note is shown; status/superseded_by are unused. */
+  .kn,.kn-fix{--sans:"Roboto Flex",system-ui,-apple-system,Roboto,sans-serif;--serif:"Fraunces",Georgia,serif;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
+  .kn{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--paper);overflow:hidden}
+  .kn *,.kn-fix *{box-sizing:border-box}
+  .kn [hidden],.kn-fix [hidden]{display:none!important}
+  .kn button,.kn-fix button{cursor:pointer;font-family:inherit;margin:0}
+  .kn button:focus-visible,.kn input:focus-visible,.kn-fix button:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  .kn-scroll{flex:1;overflow-y:auto;overscroll-behavior:contain}
+  .kn-hdr{padding:18px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .kn-hdr .t{font-family:var(--serif);font-weight:650;font-size:26px;line-height:1.1}
+  .kn-hdr .s{color:var(--ink-2);font-size:13px}
+  .kn-iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);display:grid;place-items:center;font-size:18px;flex:none}
+  .kn-fchips{display:flex;gap:6px;padding:4px 14px 10px;overflow-x:auto;scrollbar-width:none}
+  .kn-fchip{flex:none;height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink-2);font:500 13px var(--sans);display:flex;align-items:center;gap:6px}
+  .kn-fchip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+  .kn-sq{width:8px;height:8px;border-radius:2px}
+  .kn-searchbar{margin:0 14px 8px;display:flex;align-items:center;gap:8px;height:44px;border-radius:12px;border:1px solid var(--line-2);padding:0 12px;color:var(--ink-3)}
+  .kn-searchbar input{flex:1;min-width:0;border:0;background:none;color:var(--ink);font:15px var(--sans)}
+  .kn-searchbar input:focus{outline:none}.kn-searchbar:focus-within{border-color:var(--steel)}
+  .kn-scope{display:flex;justify-content:space-between;align-items:center;padding:0 18px 6px;font-size:13px;color:var(--ink-2)}
+  .kn-link{background:none;border:0;padding:0;color:var(--steel);font:500 14px var(--sans)}
+  .kn-note{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:14px 18px;border:0;border-top:1px solid var(--line);background:none;width:100%;text-align:left;color:var(--ink);cursor:pointer}
+  .kn-note .tt{font-weight:500;font-size:16px;line-height:1.3}
+  .kn-note .dt{font-size:13px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .kn-note .pv{grid-column:1/-1;font-size:14px;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .kn-note .mt{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--ink-2)}
+  .kn-cat{display:inline-flex;align-items:center;gap:5px}.kn-cat::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--c,var(--steel))}
+  .kn-where{font-family:var(--serif);font-weight:650;color:var(--ink);font-size:14px}
+  .kn-empty{padding:40px 24px;text-align:center;color:var(--ink-2);display:grid;gap:8px}
+  .kn-empty b{color:var(--ink);font-weight:500}
+  /* note panel + crop/block sheet cover the whole screen, app nav included, as in the mockup phone */
+  .kn-ov{position:fixed;inset:0;background:var(--paper);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s ease;z-index:80;visibility:hidden}
+  .kn-ov.open{transform:none;visibility:visible}
+  .kn-scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:81}
+  .kn-bs{position:fixed;left:0;right:0;bottom:0;max-height:78%;overflow:auto;background:var(--paper-2);border-radius:20px 20px 0 0;padding:10px 18px 18px;transform:translateY(105%);transition:transform .22s ease;z-index:82;display:grid;gap:12px}
+  .kn-bs.open{transform:none}.kn-bs.open+.kn-scrim{opacity:1;pointer-events:auto}
+  .kn-grab{width:40px;height:4px;border-radius:2px;background:var(--line-2);justify-self:center}
+  .kn-bs h4{margin:0;font-family:var(--serif);font-size:20px;font-weight:650}
+  .kn-pick{display:grid}
+  .kn-pick button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:12px 2px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);text-align:left;width:100%}
+  .kn-pick button:first-child{border-top:0}
+  .kn-pick .n{font-weight:500;grid-column:1}.kn-pick .m{font-size:13px;color:var(--ink-2);grid-column:1}
+  .kn-fhdr{padding:16px 18px 8px;display:flex;align-items:center;gap:10px}
+  .kn-dbody{padding:4px 20px 28px;display:grid;gap:14px;align-content:start}
+  .kn-eyebrow{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--ink-2)}
+  .kn-dbody h2{margin:0;font-family:var(--serif);font-weight:650;font-size:26px;line-height:1.15;text-wrap:balance}
+  .kn-facts{display:flex;gap:6px;flex-wrap:wrap}
+  .kn-fact{height:32px;padding:0 10px;border-radius:8px;background:var(--paper-2);display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+  .kn-fact b{font-family:var(--serif);font-weight:650;color:var(--ink);font-size:15px}
+  .kn-prose{font-size:16px;line-height:1.6;max-width:62ch;display:grid;gap:10px}
+  .kn-prose p{margin:0}.kn-prose ul{margin:0;padding-left:20px;display:grid;gap:4px}
+  .kn-prose .num{font-variant-numeric:tabular-nums;font-weight:500}
+  .kn-rule{height:1px;background:var(--line)}
+  .kn-kv2{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 12px;font-size:14px}
+  .kn-kv2 span:nth-child(odd){color:var(--ink-3)}
+  .kn-tags{display:flex;gap:6px;flex-wrap:wrap}.kn-tags span{font-size:13px;padding:3px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--ink-2)}
+  .kn-ask{font-size:13px;color:var(--ink-3)}
+  /* desktop (#dk) */
+  .kn.desk{overflow-x:auto}
+  .kn-desk{display:grid;grid-template-columns:220px 380px minmax(0,1fr);height:100%;min-width:1000px;background:var(--paper)}
+  .kn-dside{overflow:auto;padding:20px 16px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:10px;background:var(--paper-2)}
+  .kn-dside .t{font-family:var(--serif);font-weight:650;font-size:22px}
+  .kn-dside .s{color:var(--ink-2);font-size:13px;margin-top:-6px}
+  .kn-dside .k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650;margin-top:10px}
+  .kn-dcats{display:grid;gap:2px}
+  .kn-dcat{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border-radius:8px;border:0;background:none;color:var(--ink-2);font:500 14px var(--sans);text-align:left}
+  .kn-dcat .kn-sq{flex:none}
+  .kn-dcat small{margin-left:auto;font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+  .kn-dcat[aria-pressed="true"]{background:var(--paper-3);color:var(--ink)}
+  .kn-dlist{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .kn-dlist .kn-note[aria-current="true"]{background:var(--steel-tint)}
+  .kn-dnote{overflow:auto;min-width:0}
+  .kn-dnote .kn-fhdr{display:none}
+  .kn-dnote .kn-dbody{padding:28px 40px 40px;max-width:720px}
   /* ---------- Spray records / Fert records on a phone: port of design/spray-fert-redesign.html #sr / #fr (2026-11-07).
      Mockup class names with an rr- prefix (the app has global .seg/.tab/.grp/.bar). Values are the mockup's,
      checked by measurement (scripts/compare-records.mjs). The desk keeps the audit table. */
@@ -6851,6 +6927,12 @@
       </div>
     </section>
 
+    <!-- CLAUDE NOTES — read-only view of public.knowledge_notes, filled by "file this" in a chat.
+         Port of design/notes-redesign.html (#kn list, #kd note, #dk desktop). -->
+    <section class="view" id="view-notes">
+      <div class="kn" id="knRoot"></div>
+    </section>
+
     <!-- FARM INFO — the reference library: SOPs, soil reports, certification, supplier contacts.
          This is the one tab that isn't about the season. Nothing here is dated, scheduled or
          derived; entries are written once and read many times, which is why the whole page is a
@@ -10642,7 +10724,7 @@ const RAIL_GROUPS = {
     { name:"Water",      views:[["irrig","Irrigation"]] },
   ]},
   more: { label:"More", groups:[
-    { name:"Reference", views:[["farminfo","Reference library"]] },
+    { name:"Reference", views:[["farminfo","Reference library"],["notes","Claude notes"]] },
   ]},
 };
 // view id -> rail key, derived once so showView() never has to search
@@ -10797,6 +10879,7 @@ function renderViewContent(view){
   if(view==="spraymix") buildSprayMixes();
   if(view==="fieldwalk") buildFieldWalk();
   if(view==="farminfo") buildFarmInfo();
+  if(view==="notes") buildNotes();
   if(view==="fertprog") buildFertProg();
   if(view==="fertrec") buildFertRecords();
   if(view==="fertcalc") buildFertCalc();
@@ -33701,6 +33784,130 @@ function frBedDetail(bed,apps){
       :`<div class="cr-empty">Nothing logged on this bed yet.</div>`}
   </div>`;
 }
+
+/* ---------- Claude notes: port of design/notes-redesign.html #kn / #kd / #dk (2026-11-08).
+   Read-only. Rows come from public.knowledge_notes (authenticated_read policy), newest first.
+   Every note is shown: the status and superseded_by columns stay in the table, unused here. */
+const KN_CATS={nutrition:["Nutrition","var(--amber)"],pest:["Pest & disease","var(--clay)"],irrigation:["Irrigation","var(--steel)"],
+  variety:["Variety","var(--ok)"],soil:["Soil","var(--ink-2)"],inputs:["Inputs","var(--steel)"],equipment:["Equipment","var(--ink-3)"],general:["General","var(--ink-3)"]};
+let knNotes=null, knLoading=false, knErr="";
+const kn={q:"",cat:"all",scope:"",sel:null};
+const knCatKey=c=>{ const s=String(c||"").toLowerCase(); return s.startsWith("pest")?"pest":(KN_CATS[s]?s:"general"); };
+const knFmt=d=>{ if(!d) return ""; const x=new Date(String(d).slice(0,10)+"T00:00"); return x.getDate()+" "+x.toLocaleString("en-AU",{month:"short"}); };
+const knPlain=n=>String(n.note||"").replace(/^\s*[•\-*]\s+/gm,"").replace(/\s+/g," ").trim();
+const knParts=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean);
+const knHasScope=(n,s)=>[...knParts(n.crop),...knParts(n.block)].includes(s);
+function knScopes(){ const m=new Set(); for(const n of knNotes||[]) for(const p of [...knParts(n.crop),...knParts(n.block)]) m.add(p); return [...m].sort((a,b)=>a.localeCompare(b)); }
+function knMatch(n){ const q=kn.q.toLowerCase();
+  return (kn.cat==="all"||knCatKey(n.category)===kn.cat) && (!kn.scope||knHasScope(n,kn.scope))
+    && (!q||[n.title,n.note,n.crop,n.block,(n.tags||[]).join(" ")].join(" ").toLowerCase().includes(q)); }
+function knRow(n,cur){ const c=KN_CATS[knCatKey(n.category)];
+  return `<button class="kn-note" type="button" data-kn-n="${n.id}"${cur!==undefined?` aria-current="${cur}"`:""}><span class="tt">${esc(n.title||"")}</span><span class="dt">${knFmt(n.date||n.created_at)}</span><span class="pv">${esc(knPlain(n))}</span><span class="mt"><span class="kn-cat" style="--c:${c[1]}">${c[0]}</span>${n.crop?`<span>${esc(n.crop)}</span>`:""}${n.block?`<span class="kn-where">${esc(n.block)}</span>`:""}</span></button>`; }
+function knEmpty(){
+  if((knNotes||[]).length) return `<div class="kn-empty"><b>No notes match</b><span>Try another word, or clear the filters.</span></div>`;
+  if(knErr) return `<div class="kn-empty"><b>Couldn't load notes</b><span>${esc(knErr)}</span></div>`;
+  if(knLoading) return `<div class="kn-empty"><b>Loading notes…</b></div>`;
+  return `<div class="kn-empty"><b>No notes yet</b><span>Say “file this” at the end of a chat and Claude will save what you settled here.</span></div>`; }
+// Body: blank lines split paragraphs; lines starting with •, - or * become a bullet list. Amounts with a unit get tabular figures.
+function knProse(text){
+  const num=s=>esc(s).replace(/\b\d+(?:[.,]\d+)?(?::\d+|\s?(?:mL|L|g|kg|mm|cm|m|%|ha)\b|%)/g,m=>`<span class="num">${m}</span>`);
+  return String(text||"").split(/\n\s*\n/).map(par=>{ const out=[]; let ul=[];
+    const flush=()=>{ if(ul.length){ out.push(`<ul>${ul.map(l=>`<li>${num(l)}</li>`).join("")}</ul>`); ul=[]; } };
+    for(const line of par.split("\n")){ const m=line.match(/^\s*[•\-*]\s+(.*)$/);
+      if(m) ul.push(m[1]); else if(line.trim()){ flush(); out.push(`<p>${num(line.trim())}</p>`); } }
+    flush(); return out.join(""); }).join(""); }
+function knDetail(n){ if(!n) return ""; const c=KN_CATS[knCatKey(n.category)], d=n.date||n.created_at;
+  return `<div class="kn-scroll"><div class="kn-fhdr"><button class="kn-iconbtn" type="button" id="knOvClose" data-kn-back aria-label="Back">←</button></div><div class="kn-dbody">
+ <div class="kn-eyebrow"><span class="kn-cat" style="--c:${c[1]}">${c[0]}</span><span>Filed ${knFmt(d)}</span></div>
+ <h2>${esc(n.title||"")}</h2>
+ <div class="kn-facts">${n.crop?`<span class="kn-fact">${esc(n.crop)}</span>`:""}${n.block?`<span class="kn-fact"><b>${esc(n.block)}</b></span>`:""}${d?`<span class="kn-fact">${knFmt(d)} ${String(d).slice(0,4)}</span>`:""}</div>
+ <div class="kn-prose">${knProse(n.note)}</div>
+ <div class="kn-rule"></div>
+ <div class="kn-kv2">${n.source_chat?`<span>From chat</span><span>${esc(n.source_chat)}</span>`:""}${(n.tags||[]).length?`<span>Tags</span><span class="kn-tags">${n.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</span>`:""}</div>
+ <div class="kn-ask">Ask Claude "what have we noted on the tomato tunnel?" to search from a chat.</div>
+ </div></div>`; }
+const knVis=()=>(knNotes||[]).filter(knMatch);
+const knCount=()=>{ if(!knNotes) return ""; const k=knNotes.length; return `${k} note${k===1?"":"s"}`; };
+const knCatList=()=>[["all","All",""],...Object.entries(KN_CATS).map(([k,v])=>[k,v[0],v[1]])];
+const knSearch=(id,style)=>`<label class="kn-searchbar"${style?` style="${style}"`:""}><span aria-hidden="true">⌕</span><input id="${id}" placeholder="Search notes, crops, rates…" autocomplete="off" value="${esc(kn.q)}"></label>`;
+
+function knPhoneList(){ const vis=knVis();
+  return `<div class="kn-scroll" id="knScroll">
+  <div class="kn-hdr"><div><div class="t">Claude notes</div><div class="s">${knCount()}</div></div><button class="kn-iconbtn" type="button" data-kn-refresh aria-label="Refresh">↻</button></div>
+  ${knSearch("knQ")}
+  <div class="kn-fchips">${knCatList().map(([k,l,c])=>`<button class="kn-fchip" type="button" data-kn-c="${k}" aria-pressed="${kn.cat===k}">${c?`<span class="kn-sq" style="background:${c}"></span>`:""}${esc(l)}</button>`).join("")}</div>
+  <div class="kn-scope"><button class="kn-link" type="button" data-kn-scope>${kn.scope?`${esc(kn.scope)} ✕`:"All crops and blocks ›"}</button><span>${vis.length} shown</span></div>
+  <div id="knList">${vis.length?vis.map(n=>knRow(n)).join(""):knEmpty()}</div></div>`; }
+function knDesk(){ const vis=knVis(), all=knNotes||[];
+  if(kn.sel==null&&vis.length) kn.sel=vis[0].id;
+  const cnt=k=>all.filter(n=>k==="all"||knCatKey(n.category)===k).length;
+  return `<div class="kn-desk">
+  <aside class="kn-dside"><div class="t">Claude notes</div><div class="s">${knCount()}</div>
+   <div class="k">Category</div><div class="kn-dcats">${knCatList().map(([k,l,c])=>`<button class="kn-dcat" type="button" data-kn-c="${k}" aria-pressed="${kn.cat===k}">${c?`<span class="kn-sq" style="background:${c}"></span>`:""}${esc(l)}<small>${cnt(k)}</small></button>`).join("")}</div>
+   <div class="k">Crop or block</div><div class="kn-dcats">${["",...knScopes()].map(o=>`<button class="kn-dcat" type="button" data-kn-ds="${esc(o)}" aria-pressed="${kn.scope===o}">${o?esc(o):"All crops and blocks"}</button>`).join("")}</div>
+   <div class="kn-ask" style="margin-top:auto">Say “file this” at the end of a chat to add a note here.</div></aside>
+  <div class="kn-dlist"><div style="display:flex;gap:8px;align-items:center;padding:14px 14px 8px">${knSearch("knDQ","margin:0;flex:1")}<button class="kn-iconbtn" type="button" data-kn-refresh aria-label="Refresh">↻</button></div>
+   <div class="kn-scope" style="padding-top:4px"><span>${vis.length} shown</span></div>
+   <div id="knDList" style="overflow:auto;flex:1">${vis.length?vis.map(n=>knRow(n,n.id===kn.sel)).join(""):knEmpty()}</div></div>
+  <div class="kn-dnote" id="knDNote">${knDetail(all.find(x=>x.id===kn.sel))}</div></div>`; }
+
+// The note panel and the crop/block sheet hang off <body> so they cover the app nav, like the mockup phone.
+// They carry .open plus a close button, so Android back closes them (backCloseTop).
+function knFix(){
+  let f=document.getElementById("knFix");
+  if(!f){ f=document.createElement("div"); f.id="knFix"; f.className="kn-fix";
+    f.innerHTML=`<div class="kn-bs" id="knSheet"></div><div class="kn-scrim" data-kn-close></div><div class="kn-ov" id="knOv"></div>`;
+    document.body.appendChild(f); f.addEventListener("click",knClick); }
+  return f; }
+function knCloseAll(){ const f=document.getElementById("knFix"); if(!f) return;
+  f.querySelector("#knOv").classList.remove("open"); f.querySelector("#knSheet").classList.remove("open"); }
+function knRender(keepFocus){
+  const root=document.getElementById("knRoot"); if(!root) return;
+  const phone=cmIsMobile(), ae=document.activeElement, fid=keepFocus&&ae&&ae.id, pos=fid&&ae.selectionStart;
+  root.classList.toggle("desk",!phone);
+  const sc=document.getElementById("knScroll"), top=sc?sc.scrollTop:0;
+  root.innerHTML=phone?knPhoneList():knDesk();
+  if(phone){ const s2=document.getElementById("knScroll"); if(s2) s2.scrollTop=top; } else knCloseAll();
+  if(fid){ const i=document.getElementById(fid); if(i){ i.focus(); try{ i.setSelectionRange(pos,pos); }catch(_){} } }
+}
+function knOpen(id){ const n=(knNotes||[]).find(x=>String(x.id)===String(id)); if(!n) return;
+  if(!cmIsMobile()){ kn.sel=n.id; knRender(); return; }
+  const ov=knFix().querySelector("#knOv"); ov.innerHTML=knDetail(n); ov.querySelector(".kn-scroll").scrollTop=0;
+  requestAnimationFrame(()=>ov.classList.add("open")); }
+function knSheet(){ const sh=knFix().querySelector("#knSheet");
+  sh.innerHTML=`<div class="kn-grab"></div><h4>Crop or block</h4><div class="kn-pick">${knScopes().map(o=>{ const c=(knNotes||[]).filter(n=>knHasScope(n,o)).length;
+    return `<button type="button" data-kn-sc="${esc(o)}"><span class="n">${esc(o)}</span><span class="m">${c} note${c===1?"":"s"}</span></button>`; }).join("")}</div><button type="button" id="knSheetClose" data-kn-close hidden></button>`;
+  sh.classList.add("open"); }
+function knClick(e){ const A=s=>e.target.closest(s); let b;
+  if(A("[data-kn-refresh]")) return knLoad(true);
+  if((b=A("[data-kn-c]"))){ kn.cat=b.dataset.knC; return knRender(); }
+  if((b=A("[data-kn-ds]"))){ kn.scope=b.dataset.knDs; return knRender(); }
+  if(A("[data-kn-scope]")){ if(kn.scope){ kn.scope=""; return knRender(); } return knSheet(); }
+  if((b=A("[data-kn-sc]"))){ kn.scope=b.dataset.knSc; knCloseAll(); return knRender(); }
+  if(A("[data-kn-close]")) return document.getElementById("knSheet").classList.remove("open");
+  if(A("[data-kn-back]")) return document.getElementById("knOv").classList.remove("open");
+  if((b=A("[data-kn-n]"))) return knOpen(b.dataset.knN);
+}
+async function knLoad(force){
+  if(knLoading||(knNotes&&!force)) return knRender();
+  knLoading=true; knErr=""; knRender();
+  try{
+    const r=await sbFetch(`${SB_URL}/rest/v1/knowledge_notes?select=*&order=date.desc.nullslast,created_at.desc`,{headers:sbHeaders()});
+    if(!r.ok) throw new Error(r.status+" "+(await r.text()).slice(0,160));
+    knNotes=await r.json();
+    if(kn.sel!=null&&!knNotes.some(n=>n.id===kn.sel)) kn.sel=null;
+  }catch(e){ knErr=e.message||String(e); }
+  finally{ knLoading=false; }
+  if(currentView==="notes") knRender();
+}
+function buildNotes(){ knFix(); knLoad(false); }
+(function wireNotes(){
+  const root=document.getElementById("knRoot"); if(!root) return;
+  root.addEventListener("click",knClick);
+  root.addEventListener("input",e=>{ if(e.target.id==="knQ"||e.target.id==="knDQ"){ kn.q=e.target.value; knRender(true); } });
+  let wasPhone=cmIsMobile();
+  window.addEventListener("resize",()=>{ const p=cmIsMobile(); if(p!==wasPhone){ wasPhone=p; if(currentView==="notes") knRender(); } });
+})();
 
 /* ---------- Spray records / Fert records on a phone: port of design/spray-fert-redesign.html #sr / #fr (2026-11-07).
    One idiom for both. The desk keeps the audit table (buildSprayRecords / buildFertRecords below the phone check). */
