@@ -3769,22 +3769,58 @@
     .rl-pills{padding-left:.8rem;padding-right:.8rem}
   }
 
-  /* ---------- Field bed picker (spray + fert logs) ----------
-     Full screen on a phone, a tall card on a desk. Above #sprayModal / #fpLogModal so it can be
-     opened from either. Strips are big tap targets; the tick column is the drag-to-select handle. */
+  /* ---------- Where picker (spray + fert logs) — port of design/spray-fert-redesign.html "Where".
+     Full screen sliding in from the right on a phone; a tall card on a desk (map + search there only). */
   #bedPick{position:fixed;inset:0;z-index:80;display:none;background:rgba(0,0,0,.45);align-items:center;justify-content:center}
   #bedPick.open{display:flex}
-  .bpk-card{width:min(480px,100%);height:min(90vh,100%);display:flex;flex-direction:column;background:var(--paper);
-    border:1px solid var(--line-2);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
-  @media(max-width:640px){ .bpk-card{width:100%;height:100%;border-radius:0;border:none} }
-  .bpk-head{display:flex;align-items:center;gap:.7rem;padding:.9rem 1rem .6rem}
-  .bpk-title{font-size:1.15rem;font-weight:650}
-  .bpk-sub{font-family:var(--sans);font-size:.7rem;color:var(--ink-2);margin-top:.15rem}
-  .bpk-tabs{margin:0 1rem .7rem}
-  .bpk-tabs button{flex:1 1 0;padding:.65rem 0;font-size:.7rem}
-  .bpk-body{flex:1;min-height:0;overflow:auto;padding-bottom:.8rem;-webkit-overflow-scrolling:touch}
-  .bpk-search.tl-search{width:auto;margin:0 1rem .6rem}
-  .bpk-map{display:block;width:calc(100% - 2rem);height:140px;margin:0 1rem .5rem;border:1px solid var(--line);
+  .wpk{width:min(480px,100%);height:min(90vh,100%);display:flex;flex-direction:column;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:15px;line-height:1.45;border:1px solid var(--line-2);border-radius:16px;overflow:hidden}
+  @media(max-width:640px){
+    #bedPick{background:none}
+    .wpk{width:100%;height:100%;border-radius:0;border:0;animation:wpkIn .22s ease}
+    .wpk-desk{display:none}
+  }
+  @keyframes wpkIn{from{transform:translateX(100%)}to{transform:none}}
+  .wpk button{cursor:pointer;font-family:inherit}
+  .wpk .wpk-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .wpk .wpk-hdr{padding:16px 18px 8px;display:flex;align-items:center;gap:10px}
+  .wpk .wpk-hdr .t{font-family:var(--serif);font-weight:650;font-size:24px;line-height:1.1;flex:1}
+  .wpk .wpk-iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);display:grid;place-items:center;font-size:18px;flex:none;padding:0}
+  .wpk .wpk-seg{margin:0 14px 8px;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--paper-2);border-radius:10px;padding:3px}
+  .wpk .wpk-seg button{height:34px;border:0;border-radius:8px;background:none;color:var(--ink-2);font:500 14px var(--sans)}
+  .wpk .wpk-seg button[aria-pressed="true"]{background:var(--paper-3);color:var(--ink)}
+  .wpk .wpk-tabs{display:flex;gap:4px;padding:8px 14px;overflow-x:auto;scrollbar-width:none}
+  .wpk .wpk-tab{flex:none;min-width:48px;height:38px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--ink-2);font:650 15px var(--sans)}
+  .wpk .wpk-tab[aria-selected="true"]{background:var(--paper-3);color:var(--ink)}
+  .wpk .wpk-tab span{color:var(--steel);font-weight:500}
+  .wpk .wpk-tools{display:flex;justify-content:space-between;align-items:center;padding:6px 18px 8px;font-size:13px;color:var(--ink-2)}
+  .wpk .wpk-link{background:none;border:0;padding:0;color:var(--steel);font:500 14px var(--sans)}
+  .wpk .wpk-toggle{height:32px;padding:0 10px;border-radius:999px;border:1px solid var(--line-2);background:none;color:var(--ink-2);font:500 13px var(--sans)}
+  .wpk .wpk-toggle[aria-pressed="true"]{border-color:var(--steel);color:var(--steel);background:var(--steel-tint)}
+  .wpk .wbed{display:grid;grid-template-columns:52px minmax(0,1fr) 28px;gap:10px;align-items:center;padding:10px 18px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);width:100%;text-align:left;font:400 13.333px/normal var(--sans);user-select:none;-webkit-user-select:none}
+  .wpk .wbed .id{font-family:var(--serif);font-weight:650;font-size:20px}
+  .wpk .wbed .crop{font-weight:500}.wpk .wbed .last{font-size:13px;color:var(--ink-2)}
+  .wpk .wbed .box{width:26px;height:26px;border-radius:8px;border:1.5px solid var(--line-2);display:grid;place-items:center;font-size:14px;color:transparent;touch-action:none}
+  .wpk .wbed[aria-pressed="true"]{background:var(--steel-tint)}
+  .wpk .wbed[aria-pressed="true"] .box{background:var(--steel);border-color:var(--steel);color:var(--paper)}
+  .wpk .wbed.empty .id,.wpk .wbed.empty .crop{color:var(--ink-3)}
+  .wpk .wbed.fam .crop{font-weight:650}
+  .wpk .wbed.sub{padding-left:40px}
+  .wpk .wbed .crop i{font-style:normal;color:var(--ink-2);font-weight:400}
+  .wpk .stg{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--ok);margin-right:6px}.wpk .stg.h{background:var(--amber)}
+  .wpk .wpk-pick{display:grid;padding:0 18px}
+  .wpk .wpk-pick button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;padding:12px 2px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);text-align:left;width:100%;font:400 13.333px/normal var(--sans)}
+  .wpk .wpk-pick button:first-child{border-top:0}
+  .wpk .wpk-pick .n{font-weight:500;grid-column:1}.wpk .wpk-pick .m{font-size:13px;color:var(--ink-2);grid-column:1}
+  .wpk .wpk-pick .go{grid-column:2;grid-row:1/span 2;color:var(--steel);font-size:14px;font-weight:500}
+  .wpk .wpk-zact{display:flex;gap:16px;flex-wrap:wrap;padding:12px 18px}
+  .wpk .wpk-foot{padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--paper-2)}
+  .wpk .wpk-foot b{font-family:var(--serif);font-size:18px;font-weight:650;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wpk .wpk-foot small{display:block;color:var(--ink-2);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wpk .wpk-done{padding:0 22px;height:48px;border-radius:14px;border:0;background:var(--ok);color:var(--ok-ink);font:650 16px var(--sans)}
+  .wpk .wpk-done:disabled{background:var(--line);color:var(--ink-3);cursor:default}
+  .wpk .wpk-search.tl-search{width:auto;margin:0 14px 6px}
+  .bpk-map{display:block;width:calc(100% - 28px);height:140px;margin:0 14px 6px;border:1px solid var(--line);
     border-radius:12px;background:var(--paper-2)}
   .bpk-map .bf{fill:var(--paper);stroke:var(--line-2);stroke-width:.5;cursor:pointer}
   .bpk-map .bf.on{stroke:var(--steel);stroke-width:1.4}
@@ -3792,42 +3828,13 @@
   .bpk-map text{font-family:var(--sans);font-weight:700;fill:var(--ink);pointer-events:none;
     paint-order:stroke;stroke:var(--paper);stroke-width:.9}
   .bpk-map .dot{fill:var(--steel);pointer-events:none}
-  .bpk-far{display:flex;gap:.4rem;flex-wrap:wrap;margin:0 1rem .6rem}
+  /* still used by the Spray records By bed list */
   .bpk-pill{font-family:var(--sans);font-size:.72rem;padding:.45rem .75rem;border-radius:999px;border:1px solid var(--line-2);
     background:none;color:var(--ink-2);cursor:pointer}
   .bpk-pill.on{background:var(--steel);border-color:var(--steel);color:#fff;font-weight:600}
-  .bpk-blockrow{display:flex;align-items:center;gap:.5rem;margin:.3rem 1rem .4rem;font-family:var(--sans);font-size:11px;
-    letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:650}
-  .bpk-blockrow .grow{flex:1;min-width:0}
-  .bpk-link{background:none;border:none;color:var(--steel-soft);font-weight:600;font-size:.86rem;cursor:pointer;padding:.45rem 0;
-    font-family:var(--sans);letter-spacing:0;text-transform:none}
-  .bpk-strip{display:flex;align-items:stretch;margin:0 1rem 5px;min-height:46px;border:1px solid var(--line-2);border-radius:10px;
-    overflow:hidden;cursor:pointer;user-select:none;-webkit-user-select:none}
-  .bpk-strip.empty{border-style:dashed}
-  .bpk-strip.on{border-color:var(--steel);background:var(--sel)}
-  .bpk-strip .bpk-sw{width:8px;flex:0 0 auto;align-self:stretch}
-  .bpk-strip .nm{width:3.6rem;flex:0 0 auto;padding-left:.55rem;display:flex;align-items:center;font-family:var(--sans);
-    font-weight:700;font-size:.8rem}
-  .bpk-strip .tx{flex:1;min-width:0;padding:.35rem 0;display:flex;flex-direction:column;justify-content:center}
-  .bpk-strip .cr{font-size:.9rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bpk-strip.empty .cr{color:var(--ink-2);font-weight:500}
-  .bpk-strip .nt{font-family:var(--sans);font-size:.64rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bpk-tag{align-self:center;flex:0 0 auto;font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
     border:1px solid currentColor;border-radius:999px;padding:.15rem .45rem;margin-left:.3rem;white-space:nowrap;font-weight:650}
   .bpk-tag.amber{color:var(--amber)} .bpk-tag.ok{color:var(--ok)} .bpk-tag.clay{color:var(--clay)}
-  .bpk-tick{width:2.8rem;flex:0 0 auto;display:flex;align-items:center;justify-content:center;touch-action:none}
-  .bpk-tick i{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-2);display:flex;align-items:center;
-    justify-content:center;font-style:normal;color:#fff;font-size:.8rem;font-weight:700}
-  .bpk-strip.on .bpk-tick i{background:var(--steel);border-color:var(--steel)}
-  .bpk-more{background:none;border:none;color:var(--ink-2);font-size:1.1rem;padding:0 .4rem;cursor:pointer}
-  .bpk-zact{display:flex;gap:.5rem;flex-wrap:wrap;margin:.2rem 1rem .6rem}
-  .bpk-empty{margin:.6rem 1rem;color:var(--ink-2);font-size:.88rem;line-height:1.45}
-  .bpk-foot{display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem calc(.8rem + env(safe-area-inset-bottom,0px));
-    border-top:1px solid var(--line)}
-  .bpk-count{flex:1;min-width:0}
-  .bpk-count b{display:block;font-size:.95rem}
-  .bpk-count span{display:block;font-family:var(--sans);font-size:.66rem;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bpk-foot .btn-primary{padding:.8rem 1.7rem}
 
   /* ---------- Farm info ---------- */
   /* Two panes side by side on a desk, one pane that pushes on a phone: below 860px the detail pane
@@ -7509,24 +7516,15 @@
     </div>
   </div>
 
-  <!-- FIELD BED PICKER — shared by the spray and fert logs (bedPickOpen) -->
+  <!-- WHERE PICKER — shared by the spray and fert logs (bedPickOpen) -->
   <div id="bedPick">
-    <div class="bpk-card" role="dialog" aria-labelledby="bpkTitle">
-      <div class="bpk-head">
-        <button type="button" class="icon-btn" id="bedPickClose" title="Back">←</button>
-        <div class="bpk-titles"><div class="bpk-title" id="bpkTitle">Where</div>
-          <div class="bpk-sub">Beds, a saved zone, or a whole block</div></div>
+    <div class="wpk" role="dialog" aria-labelledby="bpkTitle">
+      <div class="wpk-scroll" id="bpkScroll">
+        <div class="wpk-hdr"><button type="button" class="wpk-iconbtn" id="bedPickClose" aria-label="Back">←</button><div class="t" id="bpkTitle">Where</div></div>
+        <div class="wpk-seg" id="bpkTabs"><button type="button" data-bpk-tab="beds" aria-pressed="true">Beds</button><button type="button" data-bpk-tab="crops" aria-pressed="false">By crop</button><button type="button" data-bpk-tab="zones" aria-pressed="false">Saved zones</button></div>
+        <div id="bpkBody"></div>
       </div>
-      <div class="seg bpk-tabs" id="bpkTabs">
-        <button type="button" data-bpk-tab="beds" aria-pressed="true">Beds</button>
-        <button type="button" data-bpk-tab="zones" aria-pressed="false">Zones</button>
-        <button type="button" data-bpk-tab="block" aria-pressed="false">Whole block</button>
-      </div>
-      <div class="bpk-body" id="bpkBody"></div>
-      <div class="bpk-foot">
-        <div class="bpk-count"><b id="bpkCount">0 beds</b><span id="bpkCrops"></span></div>
-        <button type="button" class="btn-primary" id="bpkDone">Done</button>
-      </div>
+      <div class="wpk-foot"><span id="bpkSum"></span><button type="button" class="wpk-done" id="bpkDone">Done</button></div>
     </div>
   </div>
 
@@ -30103,12 +30101,13 @@ async function sprayMixAction(action, mixId){
   $s("sprayMixSave").onclick=sprayMixSave;
 })();
 
-/* ---------- Field bed picker (spray + fert logs) ----------
-   One picker for both logs. Loosely laid out like the farm: a mini map of the blocks where they sit
-   on the farm map (placedCache — rotation ignored, far-off blocks become pills), then the chosen
-   block's beds in field order, each showing its crop now. Zones and Whole block are the two ways to
-   not tick beds at all. bedPickOpen({bedIds, zoneIds, marks, onDone, title, allowZones}) — marks(bed)
-   returns {tag, cls, note} or null; onDone gets {bedIds, zoneIds}. Back (or the ← button) cancels. */
+/* ---------- Where picker (spray + fert logs) ----------
+   Port of the "Where" phone in design/spray-fert-redesign.html. Three views: Beds (block tabs,
+   Select all / Clear, Range mode, one row per bed), By crop (growing beds grouped by the crop's
+   family — crops."Type"), Saved zones (Use › adds a zone's beds). The desk card also keeps the mini
+   map and bed search; both are hidden at phone widths. bedPickOpen({bedIds, zoneIds, marks, onDone,
+   title, allowZones}) — marks(bed) returns {tag, cls, note} or null; onDone gets {bedIds, zoneIds}.
+   A zone with beds is expanded into its beds; only a zone with no beds (a named place) stays a zone. */
 const BPK_BLOCK_KEY = "roseberry_bpk_block";
 let bpk = null;
 function bpkBlocks(){
@@ -30116,73 +30115,66 @@ function bpkBlocks(){
   const by={}; data.beds.forEach(b=>{ (by[b.block||"—"] ||= []).push(b); });
   return Object.keys(by).sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(k=>({key:k, beds:by[k], frame:null}));
 }
-function bpkZoneBeds(){
-  if(!bpk || !bpk.zones.size) return new Set();
-  return new Set(PlannerShared.bedsForZones(data.sprayZones||[], [...bpk.zones]));
+// What's in the bed now: {crop, cropId, stage:"g"|"h"} when growing, {was} when the last one finished.
+function bpkNow(b){
+  const pl=b.planting;
+  if(!pl) return {};
+  if(pl.status==="Finished" || pl.failed) return {was:pl.crop&&pl.crop!=="—"?pl.crop:""};
+  if(OCCUPIED.has(pl.status) && pl.crop && pl.crop!=="—") return {crop:pl.crop, cropId:pl.cropId, stage:pl.status==="Harvesting"?"h":"g"};
+  return {};
 }
-function bpkAllSelected(){ const s=bpkZoneBeds(); bpk.beds.forEach(b=>s.add(b)); return s; }
+// "C3–C6, E5–E8" — runs of neighbouring beds in field order, per block.
+function bpkRangeText(sel){
+  const out=[];
+  bpkBlocks().forEach(blk=>{
+    let run=[];
+    const flush=()=>{ if(run.length) out.push(run.length===1?run[0].name:`${run[0].name}–${run[run.length-1].name}`); run=[]; };
+    blk.beds.forEach(b=>{ if(sel.has(b.id)) run.push(b); else flush(); });
+    flush();
+  });
+  return out.join(", ");
+}
+function bpkCropsText(sel){
+  const c=new Set(); sel.forEach(id=>{ const b=sprayBed(id); const n=b&&bpkNow(b); if(n&&n.crop) c.add(n.crop); });
+  return [...c].join(", ") || "Empty beds";
+}
 function bedPickOpen(o){
   o=o||{};
-  bpk={ beds:new Set(o.bedIds||[]), zones:new Set(o.zoneIds||[]), tab:"beds", q:"", zoneMenu:null,
-        allowZones:o.allowZones!==false, marks:o.marks||null, onDone:o.onDone||null };
+  const zones=(data.sprayZones||[]).filter(z=>(o.zoneIds||[]).includes(z.id));
+  const beds=new Set(o.bedIds||[]);
+  zones.forEach(z=>(z.bedIds||[]).forEach(id=>beds.add(id)));
+  bpk={ beds, zones:new Set(zones.filter(z=>!(z.bedIds||[]).length).map(z=>z.id)), tab:"beds", q:"",
+        range:false, anchor:null, allowZones:o.allowZones!==false, marks:o.marks||null, onDone:o.onDone||null };
   const blocks=bpkBlocks();
   const first=[...bpk.beds].map(sprayBed).find(Boolean);
-  const saved=localStorage.getItem(BPK_BLOCK_KEY);
-  bpk.block = (first && first.block) || (blocks.some(x=>x.key===saved) ? saved : (blocks[0]||{}).key);
+  let saved=null; try{ saved=localStorage.getItem(BPK_BLOCK_KEY); }catch(_){}
+  bpk.block = (first && first.block && blocks.some(x=>x.key===first.block)) ? first.block
+    : (blocks.some(x=>x.key===saved) ? saved : (blocks[0]||{}).key);
   if(bpk.zones.size && !bpk.beds.size) bpk.tab="zones";
   $s("bpkTitle").textContent = o.title || "Where";
-  document.querySelectorAll("#bpkTabs [data-bpk-tab]").forEach(b=>{
-    b.hidden = b.dataset.bpkTab==="zones" && !bpk.allowZones;
-  });
   bpkRender();
   $s("bedPick").classList.add("open");
+  $s("bpkScroll").scrollTop=0;
 }
 function bedPickClose(){ $s("bedPick").classList.remove("open"); bpk=null; }
 function bpkDone(){
-  if(!bpk) return;
+  if(!bpk || (!bpk.beds.size && !bpk.zones.size)) return;
   const r={ bedIds:[...bpk.beds], zoneIds:[...bpk.zones] }, cb=bpk.onDone;
   bedPickClose();
   if(cb) cb(r);
 }
-// "wk 5" for a crop in the ground, "Planned · 12 Nov" for one coming, "" for an empty bed.
-function bpkPlantingNote(pl){
-  if(!pl) return "";
-  const start=pl.tp||pl.sow;
-  if(OCCUPIED.has(pl.status) && start){
-    const wk=Math.floor((PlannerShared.wkParse(sprayToday())-PlannerShared.wkParse(start))/(7*864e5))+1;
-    return wk>0 ? `wk ${wk}` : "";
-  }
-  return start ? `${String(pl.status||"Planned").toLowerCase()} · ${fmtShortDay(start)}` : (pl.status||"");
-}
-function bpkStripHtml(b, zoneBeds){
-  // A finished or failed planting has left the bed: show it empty, with what was last in it.
-  const done = b.planting && (b.planting.status==="Finished" || b.planting.failed);
-  const pl = done ? null : b.planting, last = done ? b.planting.crop : "";
-  const mine=bpk.beds.has(b.id), viaZone=!mine && zoneBeds.has(b.id), on=mine||viaZone;
-  const occ=!!pl && OCCUPIED.has(pl.status);
-  const crop=pl && pl.crop && pl.crop!=="—" ? pl.crop : "";
-  const col=crop ? (occ ? cropColor(pl.cropId||pl.crop) : tint(cropColor(pl.cropId||pl.crop))) : "transparent";
-  const m=bpk.marks ? bpk.marks(b) : null;
-  const note=[bpkPlantingNote(pl), last && `last: ${last}`, m && m.note, viaZone && "in a zone"].filter(Boolean).join(" · ");
-  return `<div class="bpk-strip${crop?"":" empty"}${on?" on":""}" data-bpk-bed="${b.id}">
-    <span class="bpk-sw" style="background:${col}"></span><span class="nm">${esc(b.name)}</span>
-    <span class="tx"><span class="cr">${esc(crop||"empty")}</span>${note?`<span class="nt">${esc(note)}</span>`:""}</span>
-    ${m && m.tag ? `<span class="bpk-tag ${m.cls||"amber"}">${esc(m.tag)}</span>` : ""}
-    <span class="bpk-tick"><i>${on?"✓":""}</i></span></div>`;
-}
-// The mini map: the main cluster of blocks as an SVG in farm-map metres. A block far from the rest
-// (the back paddocks) would shrink everything else to specks, so those become pills underneath.
+// The mini map (desk only): the main cluster of blocks as an SVG in farm-map metres.
 function bpkMapHtml(){
   const blocks=bpkBlocks().filter(x=>x.frame);
-  if(!blocks.length) return bpkPillsHtml(bpkBlocks());
+  if(!blocks.length) return "";
   const c=blocks.map(x=>({x, cx:x.frame.x+x.frame.w/2, cy:x.frame.y+x.frame.h/2}));
   const med=a=>{ const s=[...a].sort((p,q)=>p-q); return s[Math.floor(s.length/2)]; };
   const mx=med(c.map(v=>v.cx)), my=med(c.map(v=>v.cy));
   const d=c.map(v=>Math.hypot(v.cx-mx, v.cy-my)), md=Math.max(med(d)||1, 1);
-  const near=c.filter((v,i)=>d[i]<=md*3).map(v=>v.x), far=c.filter((v,i)=>d[i]>md*3).map(v=>v.x);
+  const near=c.filter((v,i)=>d[i]<=md*3).map(v=>v.x);
   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
   near.forEach(b=>{ x0=Math.min(x0,b.frame.x); y0=Math.min(y0,b.frame.y); x1=Math.max(x1,b.frame.x+b.frame.w); y1=Math.max(y1,b.frame.y+b.frame.h); });
-  const pad=3, sel=bpkAllSelected();
+  const pad=3;
   const placed=new Map((placedCache||[]).map(p=>[p.key,p]));
   const g=near.map(b=>{
     const fr=b.frame, on=b.key===bpk.block, p=placed.get(b.key);
@@ -30191,91 +30183,95 @@ function bpkMapHtml(){
       const fill=crop ? (OCCUPIED.has(pl.status) ? cropColor(pl.cropId||pl.crop) : tint(cropColor(pl.cropId||pl.crop))) : "none";
       return fill==="none" ? "" : `<rect class="bb" x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${fill}" opacity=".8"/>`;
     }).join("");
-    const has=b.beds.some(x=>sel.has(x.id));
+    const has=b.beds.some(x=>bpk.beds.has(x.id));
     const fs=Math.max(2.6, Math.min(4.2, Math.min(fr.w, fr.h)*0.32));
     return `<g data-bpk-block="${esc(b.key)}"><rect class="bf${on?" on":""}" x="${fr.x}" y="${fr.y}" width="${fr.w}" height="${fr.h}" rx="1"/>${beds}
       <text x="${fr.x+1}" y="${fr.y+fs+0.6}" font-size="${fs.toFixed(2)}">${esc(b.key)}</text>
       ${has?`<circle class="dot" cx="${fr.x+fr.w-2.2}" cy="${fr.y+fr.h-2.2}" r="1.6"/>`:""}</g>`;
   }).join("");
-  return `<svg class="bpk-map" viewBox="${x0-pad} ${y0-pad} ${x1-x0+pad*2} ${y1-y0+pad*2}" preserveAspectRatio="xMidYMid meet">${g}</svg>`
-    + bpkPillsHtml(far);
+  return `<svg class="bpk-map" viewBox="${x0-pad} ${y0-pad} ${x1-x0+pad*2} ${y1-y0+pad*2}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
 }
-function bpkPillsHtml(list){
-  if(!list.length) return "";
-  return `<div class="bpk-far">${list.map(b=>`<button type="button" class="bpk-pill${b.key===bpk.block?" on":""}" data-bpk-block="${esc(b.key)}">${esc(b.key)}</button>`).join("")}</div>`;
+function bpkBedRow(b){
+  const n=bpkNow(b), on=bpk.beds.has(b.id), m=bpk.marks ? bpk.marks(b) : null;
+  const crop = n.crop ? `<span class="stg${n.stage==="h"?" h":""}"></span>${esc(n.crop)}` : "Empty"+(n.was?" · was "+esc(n.was):"");
+  const last=[m && m.tag, m && m.note].filter(Boolean).join(" · ");
+  return `<button class="wbed${n.crop?"":" empty"}" type="button" data-bpk-bed="${b.id}" aria-pressed="${on}"><span class="id">${esc(b.name)}</span><span><div class="crop">${crop}</div>${last?`<div class="last">${esc(last)}</div>`:""}</span><span class="box">✓</span></button>`;
+}
+// Growing beds grouped by crop family → crop, both sorted by name.
+function bpkFamilies(){
+  const fam={};
+  data.beds.forEach(b=>{
+    const n=bpkNow(b); if(!n.crop) return;
+    const f=((data.cropDefs||{})[n.cropId]||{}).type || "No family set";
+    ((fam[f] ||= {})[n.crop] ||= []).push(b.id);
+  });
+  const by=(a,b)=>a.localeCompare(b);
+  return Object.keys(fam).sort(by).map(f=>({name:f, crops:Object.keys(fam[f]).sort(by).map(c=>({name:c, ids:fam[f][c]}))}));
 }
 function bpkRender(){
   if(!bpk) return;
-  document.querySelectorAll("#bpkTabs [data-bpk-tab]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.bpkTab===bpk.tab?"true":"false"));
+  const tabs=$s("bpkTabs");
+  tabs.querySelectorAll("[data-bpk-tab]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.bpkTab===bpk.tab?"true":"false"));
   const body=$s("bpkBody");
-  if(bpk.tab==="beds") body.innerHTML=`<div class="tl-search bpk-search"><input type="text" id="bpkSearch" placeholder="Find a bed by name" autocomplete="off" spellcheck="false"><button type="button" id="bpkSearchClear" title="Clear">✕</button></div><div id="bpkTop"></div><div id="bpkList"></div>`;
-  else body.innerHTML=`<div id="bpkList"></div>`;
-  if(bpk.tab==="beds"){ const s=$s("bpkSearch"); s.value=bpk.q||""; }
-  bpkRenderList();
-}
-function bpkRenderList(){
-  const zoneBeds=bpkZoneBeds(), list=$s("bpkList"), top=$s("bpkTop");
-  if(bpk.tab==="beds"){
-    const q=(bpk.q||"").trim().toLowerCase();
-    if(q){
-      top.innerHTML="";
-      const hits=data.beds.filter(b=>`${b.name} ${b.block||""} ${(b.planting&&b.planting.crop)||""}`.toLowerCase().includes(q)).slice(0,40);
-      list.innerHTML = hits.length ? hits.map(b=>bpkStripHtml(b, zoneBeds)).join("") : `<div class="bpk-empty">No bed matches “${esc(bpk.q)}”.</div>`;
-    }else{
-      top.innerHTML=bpkMapHtml();
-      const blk=bpkBlocks().find(x=>x.key===bpk.block) || bpkBlocks()[0];
-      if(!blk){ list.innerHTML=`<div class="bpk-empty">No beds yet.</div>`; return; }
-      const allOn=blk.beds.length && blk.beds.every(b=>bpk.beds.has(b.id));
-      list.innerHTML=`<div class="bpk-blockrow"><span class="grow">Block ${esc(blk.key)} · ${blk.beds.length} beds in field order</span>
-        <button type="button" class="bpk-link" data-bpk-blockall="${esc(blk.key)}">${allOn?"Clear":"All"}</button></div>`
-        + blk.beds.map(b=>bpkStripHtml(b, zoneBeds)).join("");
-    }
+  if(bpk.tab==="crops"){
+    const row=(name,ids,sub)=>{
+      const on=ids.length && ids.every(i=>bpk.beds.has(i));
+      return `<button class="wbed ${sub?"sub":"fam"}" type="button" style="grid-template-columns:minmax(0,1fr) 28px" data-bpk-crop="${ids.join("|")}" aria-pressed="${!!on}"><span><div class="crop">${esc(name)} <i>· ${ids.length} bed${ids.length===1?"":"s"}</i></div><div class="last">${esc(bpkRangeText(new Set(ids)))}</div></span><span class="box">✓</span></button>`;
+    };
+    body.innerHTML=`<div class="wpk-tools"><span>Growing now · tap a group or a single crop</span></div>`
+      + bpkFamilies().map(f=>{
+          const all=f.crops.flatMap(c=>c.ids);
+          return row(f.name, all, false) + (f.crops.length>1 ? f.crops.map(c=>row(c.name, c.ids, true)).join("") : "");
+        }).join("");
   }else if(bpk.tab==="zones"){
-    const zones=(data.sprayZones||[]).filter(z=>!z.archived);
+    const zones=(data.sprayZones||[]).filter(z=>!z.archived && (bpk.allowZones || (z.bedIds||[]).length));
     const rows=zones.map(z=>{
-      const on=bpk.zones.has(z.id), n=z.bedIds.length;
-      const sub = n ? `${sprayBedsLabel(z.bedIds.slice(0,8))}${n>8?` +${n-8}`:""} · ${n} bed${n===1?"":"s"}` : "no beds · a named place";
-      return `<div class="bpk-strip bpk-zone${on?" on":""}" data-bpk-zone="${z.id}">
-        <span class="bpk-sw" style="background:${z.colour||"var(--steel-soft)"}"></span>
-        <span class="tx" style="padding-left:.7rem"><span class="cr">${esc(z.name||"Zone")}</span><span class="nt">${esc(sub)}</span></span>
-        <button type="button" class="bpk-more" data-bpk-zmenu="${z.id}" title="Zone options">⋯</button>
-        <span class="bpk-tick"><i>${on?"✓":""}</i></span></div>
-        ${bpk.zoneMenu===z.id?`<div class="bpk-zact">
-          <button type="button" class="btn-ghost" data-bpk-zren="${z.id}">Rename</button>
-          ${bpk.beds.size?`<button type="button" class="btn-ghost" data-bpk-zset="${z.id}">Use the ${bpk.beds.size} ticked bed${bpk.beds.size===1?"":"s"}</button>`:""}
-          <button type="button" class="btn-ghost" data-bpk-zdel="${z.id}">Delete</button></div>`:""}`;
+      const n=(z.bedIds||[]).length;
+      const m = n ? `${bpkRangeText(new Set(z.bedIds))} · ${n} bed${n===1?"":"s"}` : "no beds · a named place";
+      return `<button type="button" data-bpk-zone="${z.id}"><span class="n">${esc(z.name||"Zone")}</span><span class="m">${esc(m)}</span><span class="go">Use ›</span></button>`;
     }).join("");
-    list.innerHTML = `<div class="bpk-blockrow"><span class="grow">Saved zones</span></div>`
-      + (rows || `<div class="bpk-empty">No zones yet. Tick beds on the Beds tab, then save them here as a zone — “Fruit fly 1”, “Onion rows”. A zone can also have no beds, like an orchard edge.</div>`)
-      + `<div class="bpk-zact">${bpk.beds.size?`<button type="button" class="bpk-link" data-bpk-znew="beds">＋ Save the ${bpk.beds.size} ticked bed${bpk.beds.size===1?"":"s"} as a zone</button>`:""}
-         <button type="button" class="bpk-link" data-bpk-znew="none">＋ New zone with no beds</button></div>`;
+    body.innerHTML = `<div class="wpk-pick">${rows}</div>`
+      + `<div class="wpk-zact">${bpk.beds.size?`<button type="button" class="wpk-link" data-bpk-znew="beds">＋ Save the ${bpk.beds.size} ticked bed${bpk.beds.size===1?"":"s"} as a zone</button>`:""}${bpk.allowZones?`<button type="button" class="wpk-link" data-bpk-znew="none">＋ New zone with no beds</button>`:""}</div>`;
   }else{
-    list.innerHTML = `<div class="bpk-blockrow"><span class="grow">Tap a block to take every bed in it</span></div>`
-      + bpkBlocks().map(blk=>{
-        const n=blk.beds.length, allOn=n && blk.beds.every(b=>bpk.beds.has(b.id));
-        const crops=[...new Set(blk.beds.map(b=>b.planting&&b.planting.crop).filter(c=>c&&c!=="—"))];
-        return `<div class="bpk-strip${allOn?" on":""}" data-bpk-blockall="${esc(blk.key)}">
-          <span class="nm" style="width:auto;min-width:3.4rem;padding:0 .7rem">${esc(blk.key)}</span>
-          <span class="tx"><span class="cr">${n} bed${n===1?"":"s"}</span><span class="nt">${esc(crops.slice(0,4).join(", ")||"nothing in")}${crops.length>4?"…":""}</span></span>
-          <span class="bpk-tick"><i>${allOn?"✓":""}</i></span></div>`;
-      }).join("");
+    const blocks=bpkBlocks(), blk=blocks.find(x=>x.key===bpk.block) || blocks[0];
+    const cnt=x=>x.beds.filter(b=>bpk.beds.has(b.id)).length;
+    const q=(bpk.q||"").trim().toLowerCase();
+    let list;
+    if(q){
+      const hits=data.beds.filter(b=>`${b.name} ${b.block||""} ${(b.planting&&b.planting.crop)||""}`.toLowerCase().includes(q)).slice(0,40);
+      list=hits.map(bpkBedRow).join("");
+    }else if(blk){
+      const allOn=blk.beds.length && blk.beds.every(b=>bpk.beds.has(b.id));
+      list=`<div class="wpk-tools"><button class="wpk-link" type="button" data-bpk-blockall="${esc(blk.key)}">${allOn?"Clear":"Select all"} ${esc(blk.key)}</button><button class="wpk-toggle" type="button" data-bpk-range aria-pressed="${bpk.range}">Range${bpk.range&&bpk.anchor?" · tap end bed":""}</button></div>`
+        + blk.beds.map(bpkBedRow).join("");
+    }else list="";
+    body.innerHTML=`<div class="wpk-desk">${bpkMapHtml()}<div class="tl-search wpk-search"><input type="text" id="bpkSearch" placeholder="Find a bed by name" autocomplete="off" spellcheck="false"><button type="button" id="bpkSearchClear" title="Clear">✕</button></div></div>`
+      + (q ? "" : `<div class="wpk-tabs">${blocks.map(x=>{ const c=cnt(x); return `<button class="wpk-tab" type="button" data-bpk-block="${esc(x.key)}" aria-selected="${x.key===(blk&&blk.key)}">${esc(x.key)}${c?` <span>${c}</span>`:""}</button>`; }).join("")}</div>`)
+      + list;
+    $s("bpkSearch").value=bpk.q||"";
   }
   bpkFoot();
 }
 function bpkFoot(){
-  const all=bpkAllSelected(), nz=bpk.zones.size;
-  $s("bpkCount").textContent = nz
-    ? `${nz} zone${nz===1?"":"s"}${bpk.beds.size?` + ${bpk.beds.size} bed${bpk.beds.size===1?"":"s"}`:""}`
-    : `${all.size} bed${all.size===1?"":"s"}`;
-  const crops=[...new Set([...all].map(id=>(sprayBed(id)||{}).planting).filter(Boolean).map(pl=>pl.crop).filter(c=>c&&c!=="—"))];
-  $s("bpkCrops").textContent = nz ? `${all.size} beds${crops.length?" · "+crops.slice(0,4).join(", "):""}` : crops.slice(0,5).join(", ");
+  const n=bpk.beds.size;
+  const zn=[...bpk.zones].map(id=>((data.sprayZones||[]).find(z=>z.id===id)||{}).name).filter(Boolean);
+  const head=[bpkRangeText(bpk.beds), ...zn].filter(Boolean).join(", ");
+  $s("bpkSum").innerHTML = (n||zn.length)
+    ? `<b>${esc(head)}</b><small>${n?`${n} bed${n===1?"":"s"} · ${esc(bpkCropsText(bpk.beds))}`:"Saved zone"}</small>`
+    : `<small>No beds picked</small>`;
+  $s("bpkDone").disabled = !(n||zn.length);
 }
-function bpkToggleBed(id, force){
-  const on = force!=null ? force : !bpk.beds.has(id);
-  if(on) bpk.beds.add(id); else bpk.beds.delete(id);
-  const el=document.querySelector(`#bpkList [data-bpk-bed="${CSS.escape(id)}"]`);
-  if(el){ const v=on||bpkZoneBeds().has(id); el.classList.toggle("on", v); el.querySelector(".bpk-tick i").textContent=v?"✓":""; }
-  bpkFoot();
+function bpkTapBed(id){
+  if(bpk.range){
+    if(!bpk.anchor){ bpk.anchor=id; bpk.beds.add(id); }
+    else{
+      const ids=(bpkBlocks().find(x=>x.key===bpk.block)||{beds:[]}).beds.map(b=>b.id);
+      let a=ids.indexOf(bpk.anchor), b=ids.indexOf(id);
+      if(a<0||b<0){ bpk.beds.add(id); }
+      else{ if(a>b) [a,b]=[b,a]; ids.slice(a,b+1).forEach(i=>bpk.beds.add(i)); }
+      bpk.anchor=null;
+    }
+  }else bpk.beds.has(id) ? bpk.beds.delete(id) : bpk.beds.add(id);
 }
 async function bpkZoneCreate(withBeds){
   const name=(prompt(withBeds?"Name this zone (e.g. Fruit fly 1 · glasshouses):":"Name this place (e.g. Orchard edge):")||"").trim();
@@ -30285,14 +30281,14 @@ async function bpkZoneCreate(withBeds){
     const order=(data.sprayZones||[]).reduce((m,z)=>Math.max(m, z.order||0), 0)+1;
     const [rec]=await atCreate(CFG.farmBase, CFG.tables.sprayZones, [{ [F.sz_name]:name, [F.sz_beds]:beds, [F.sz_order]:order }]);
     (data.sprayZones ||= []).push(PlannerShared.parseSprayZones([rec])[0]);
-    if(bpk){ bpk.zones.add(rec.id); if(withBeds) bpk.beds.clear(); bpkRenderList(); }
+    if(bpk){ if(!withBeds) bpk.zones.add(rec.id); bpkRender(); }
   }catch(e){ alert("Couldn't save the zone: "+e.message); }
 }
 async function bpkZonePatch(id, fields, local){
   try{
     await atPatch(CFG.farmBase, CFG.tables.sprayZones, id, fields);
     const z=(data.sprayZones||[]).find(x=>x.id===id); if(z) Object.assign(z, local);
-    if(bpk){ bpk.zoneMenu=null; bpkRenderList(); }
+    if(bpk) bpkRender();
   }catch(e){ alert("Couldn't update the zone: "+e.message); }
 }
 (function wireBedPick(){
@@ -30302,59 +30298,70 @@ async function bpkZonePatch(id, fields, local){
   root.addEventListener("mousedown",e=>{ if(e.target===root) bedPickClose(); });
   $s("bpkTabs").addEventListener("click",e=>{
     const t=e.target.closest("[data-bpk-tab]"); if(!t||!bpk) return;
-    bpk.tab=t.dataset.bpkTab; bpk.zoneMenu=null; bpkRender();
+    bpk.tab=t.dataset.bpkTab; bpk.anchor=null; bpkRender();
   });
   const body=$s("bpkBody");
-  body.addEventListener("input",e=>{ if(e.target.id==="bpkSearch" && bpk){ bpk.q=e.target.value; bpkRenderList(); } });
-  // Drag down the tick column to select (or clear) a run of beds — touch-action:none on the ticks
-  // only, so dragging anywhere else still scrolls the list.
+  body.addEventListener("input",e=>{ if(e.target.id==="bpkSearch" && bpk){ bpk.q=e.target.value; bpkRender(); const s=$s("bpkSearch"); s.focus(); s.setSelectionRange(s.value.length,s.value.length); } });
+  // Drag down the tick column to select (or clear) a run of beds — touch-action:none on the boxes
+  // only, so dragging anywhere else still scrolls the list. Off while Range is on.
   let drag=null;
   body.addEventListener("pointerdown",e=>{
-    const tick=e.target.closest(".bpk-tick"), strip=tick && tick.closest("[data-bpk-bed]");
-    if(!strip || !bpk) return;
-    const id=strip.dataset.bpkBed;
-    drag={on:!bpk.beds.has(id), seen:new Set([id]), moved:false};
-    bpkToggleBed(id, drag.on);
-    try{ tick.setPointerCapture(e.pointerId); }catch(_){}
-    e.preventDefault();
+    const box=e.target.closest(".box"), row=box && box.closest("[data-bpk-bed]");
+    if(!row || !bpk || bpk.range) return;
+    drag={on:!bpk.beds.has(row.dataset.bpkBed), seen:new Set(), moved:false};
+    try{ box.setPointerCapture(e.pointerId); }catch(_){}
   });
   body.addEventListener("pointermove",e=>{
     if(!drag) return;
-    const el=document.elementFromPoint(e.clientX, e.clientY), strip=el && el.closest && el.closest("[data-bpk-bed]");
-    if(strip && !drag.seen.has(strip.dataset.bpkBed)){ drag.seen.add(strip.dataset.bpkBed); drag.moved=true; bpkToggleBed(strip.dataset.bpkBed, drag.on); }
+    const el=document.elementFromPoint(e.clientX, e.clientY), row=el && el.closest && el.closest("[data-bpk-bed]");
+    if(!row || drag.seen.has(row.dataset.bpkBed)) return;
+    if(!drag.seen.size && !drag.moved){ drag.moved=true; }
+    drag.seen.add(row.dataset.bpkBed);
+    if(drag.seen.size>1){
+      drag.seen.forEach(id=>drag.on?bpk.beds.add(id):bpk.beds.delete(id));
+      bpkRender();
+    }
   });
-  const endDrag=()=>{ if(drag) setTimeout(()=>{ drag=null; }, 0); };
+  const endDrag=()=>{ if(drag){ const d=drag; setTimeout(()=>{ if(drag===d) drag=null; }, 0); } };
   body.addEventListener("pointerup",endDrag); body.addEventListener("pointercancel",endDrag);
-  body.addEventListener("click",async e=>{
+  body.addEventListener("contextmenu",e=>{
+    const zone=e.target.closest("[data-bpk-zone]"); if(!zone||!bpk) return;
+    e.preventDefault();
+    const z=(data.sprayZones||[]).find(x=>x.id===zone.dataset.bpkZone); if(!z) return;
+    const name=prompt("Zone name (clear it to delete the zone):", z.name);
+    if(name===null) return;
+    if(!name.trim()){
+      if(confirm(`Delete the zone “${z.name}”? Records already logged keep their beds.`)){ bpk.zones.delete(z.id); bpkZonePatch(z.id, {[CFG.f.sz_archived]:true}, {archived:true}); }
+    }else if(name.trim()!==z.name) bpkZonePatch(z.id, {[CFG.f.sz_name]:name.trim()}, {name:name.trim()});
+  });
+  body.addEventListener("click",e=>{
     if(!bpk) return;
-    if(e.target.id==="bpkSearchClear"){ bpk.q=""; $s("bpkSearch").value=""; bpkRenderList(); return; }
-    if(e.target.closest(".bpk-tick") && e.target.closest("[data-bpk-bed]")) return;   // handled on pointerdown
+    if(drag && drag.seen.size>1){ drag=null; return; }
+    drag=null;
+    if(e.target.id==="bpkSearchClear"){ bpk.q=""; bpkRender(); return; }
     const bed=e.target.closest("[data-bpk-bed]");
-    if(bed){ bpkToggleBed(bed.dataset.bpkBed); return; }
+    if(bed){ bpkTapBed(bed.dataset.bpkBed); bpkRender(); return; }
+    const cr=e.target.closest("[data-bpk-crop]");
+    if(cr){ const ids=cr.dataset.bpkCrop.split("|").filter(Boolean); const on=ids.every(i=>bpk.beds.has(i)); ids.forEach(i=>on?bpk.beds.delete(i):bpk.beds.add(i)); bpkRender(); return; }
+    if(e.target.closest("[data-bpk-range]")){ bpk.range=!bpk.range; bpk.anchor=null; bpkRender(); return; }
     const all=e.target.closest("[data-bpk-blockall]");
     if(all){
       const blk=bpkBlocks().find(x=>x.key===all.dataset.bpkBlockall); if(!blk) return;
       const allOn=blk.beds.every(b=>bpk.beds.has(b.id));
       blk.beds.forEach(b=>allOn?bpk.beds.delete(b.id):bpk.beds.add(b.id));
-      bpkRenderList(); return;
+      bpkRender(); return;
     }
     const blk=e.target.closest("[data-bpk-block]");
-    if(blk){ bpk.block=blk.dataset.bpkBlock; localStorage.setItem(BPK_BLOCK_KEY, bpk.block); bpkRenderList(); return; }
-    const zm=e.target.closest("[data-bpk-zmenu]");
-    if(zm){ bpk.zoneMenu = bpk.zoneMenu===zm.dataset.bpkZmenu ? null : zm.dataset.bpkZmenu; bpkRenderList(); return; }
-    const zr=e.target.closest("[data-bpk-zren]");
-    if(zr){ const z=(data.sprayZones||[]).find(x=>x.id===zr.dataset.bpkZren); if(!z) return;
-      const name=(prompt("Zone name:", z.name)||"").trim(); if(name && name!==z.name) bpkZonePatch(z.id, {[CFG.f.sz_name]:name}, {name}); return; }
-    const zs=e.target.closest("[data-bpk-zset]");
-    if(zs){ const beds=[...bpk.beds]; bpkZonePatch(zs.dataset.bpkZset, {[CFG.f.sz_beds]:beds}, {bedIds:beds}); return; }
-    const zd=e.target.closest("[data-bpk-zdel]");
-    if(zd){ const z=(data.sprayZones||[]).find(x=>x.id===zd.dataset.bpkZdel); if(!z) return;
-      if(!confirm(`Delete the zone “${z.name}”? Records already logged keep their beds.`)) return;
-      bpkZonePatch(z.id, {[CFG.f.sz_archived]:true}, {archived:true}); bpk.zones.delete(z.id); return; }
+    if(blk){ bpk.block=blk.dataset.bpkBlock; bpk.anchor=null; try{ localStorage.setItem(BPK_BLOCK_KEY, bpk.block); }catch(_){} bpkRender(); return; }
     const zn=e.target.closest("[data-bpk-znew]");
     if(zn){ bpkZoneCreate(zn.dataset.bpkZnew==="beds"); return; }
     const zone=e.target.closest("[data-bpk-zone]");
-    if(zone){ const id=zone.dataset.bpkZone; bpk.zones.has(id)?bpk.zones.delete(id):bpk.zones.add(id); bpkRenderList(); return; }
+    if(zone){
+      const z=(data.sprayZones||[]).find(x=>x.id===zone.dataset.bpkZone); if(!z) return;
+      if((z.bedIds||[]).length){ bpk.beds=new Set(z.bedIds); bpk.zones.clear(); bpk.tab="beds"; const b=sprayBed(z.bedIds[0]); if(b&&b.block) bpk.block=b.block; }
+      else bpk.zones.has(z.id) ? bpk.zones.delete(z.id) : bpk.zones.add(z.id);
+      bpkRender(); return;
+    }
   });
 })();
 
@@ -32517,7 +32524,7 @@ function fertMarks(b){
 function fplPickBeds(){
   const s=fplState; if(!s) return;
   fplSync();
-  bedPickOpen({ bedIds:[...s.beds], allowZones:false, title:"Beds", marks:fertMarks,
+  bedPickOpen({ bedIds:[...s.beds], allowZones:false, title:"Where", marks:fertMarks,
     onDone:({bedIds})=>{
       if(!fplState) return;
       s.beds=new Set(bedIds);
