@@ -2859,6 +2859,72 @@
   .wk-mode-row[aria-pressed="true"]{color:var(--steel);font-weight:600}
   .btn-danger:disabled{opacity:.5;cursor:default}
 
+  /* ---------- Spray records / Fert records on a phone: port of design/spray-fert-redesign.html #sr / #fr (2026-11-07).
+     Mockup class names with an rr- prefix (the app has global .seg/.tab/.grp/.bar). Values are the mockup's,
+     checked by measurement (scripts/compare-records.mjs). The desk keeps the audit table. */
+  .rr{--sans:"Roboto Flex",system-ui,-apple-system,Roboto,sans-serif;--serif:"Fraunces",Georgia,serif;position:absolute;inset:0;display:flex;flex-direction:column;
+    background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;overflow:hidden}
+  .rr[hidden],.rr [hidden]{display:none!important}
+  .rr button{cursor:pointer;font-family:inherit}
+  .rr button:focus-visible,.rr input:focus-visible{outline:2px solid var(--steel);outline-offset:2px}
+  .rr-scroll{flex:1;overflow-y:auto;overscroll-behavior:contain}
+  .rr-hdr{padding:18px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .rr-hdr .t{font-family:var(--serif);font-weight:650;font-size:26px;line-height:1.1}
+  .rr-iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);display:grid;place-items:center;font-size:18px;flex:none}
+  .rr-seg{margin:0 14px 8px;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:var(--paper-2);border-radius:10px;padding:3px}
+  .rr-seg button{height:34px;border:0;border-radius:8px;background:none;color:var(--ink-2);font:500 14px var(--sans)}
+  .rr-seg button[aria-pressed="true"]{background:var(--paper-3);color:var(--ink)}
+  .rr-search{margin:0 14px 4px;height:40px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--ink);padding:0 12px;font:15px var(--sans);width:calc(100% - 28px);display:block}
+  .rr-grp{padding:18px 18px 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650;display:flex;justify-content:space-between}
+  .rr-rec{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;padding:12px 18px;border-top:1px solid var(--line);background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;width:100%;text-align:left;color:var(--ink);margin:0}
+  .rr-rec .where{font-family:var(--serif);font-weight:650;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rr-rec .where small{font-family:var(--sans);font-weight:400;font-size:13px;color:var(--ink-2)}
+  .rr-rec .where.sans{font-family:var(--sans);font-size:16px}
+  .rr-rec .where.ent{font-size:16px}
+  .rr-rec.ent{padding-left:34px;font-size:15px;line-height:1.45}
+  .rr-rec .what{font-size:15px;font-weight:500;grid-column:1/-1;margin-top:-2px}
+  .rr-rec .meta{font-size:13px;color:var(--ink-2);grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .rr-rec .amt{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;align-self:center}
+  .rr-whp{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--amber-tint);color:var(--amber);font-weight:500}
+  .rr-why{display:inline-flex;align-items:center;gap:5px}.rr-why::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--steel)}
+  .rr-why.pest::before{background:var(--clay)}.rr-why.def::before{background:var(--amber)}.rr-why.feed::before{background:var(--ok)}
+  .rr-clay{color:var(--clay)}
+  .rr-duerow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:12px 18px;border-top:1px solid var(--line)}
+  .rr-duerow .what{font-weight:500}.rr-duerow .what span{font-family:var(--serif);font-weight:650}.rr-duerow .late{font-size:13px;color:var(--clay)}
+  .rr-mini{height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 13px var(--sans)}
+  .rr-mini.solid{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  .rr-duerow .acts{display:flex;gap:6px;grid-row:span 2}
+  .rr-planned{margin:8px 14px 0;border-radius:12px;background:var(--clay-tint);overflow:hidden}
+  .rr-planned>button{width:100%;display:flex;align-items:center;gap:8px;padding:12px 14px;border:0;background:none;color:var(--ink);font:500 14px var(--sans);text-align:left}
+  .rr-planned>button b{color:var(--clay);font-weight:650}.rr-planned>button span:last-child{margin-left:auto;color:var(--ink-2)}
+  .rr-planned .rr-duerow{border-top:1px solid var(--line);padding:12px 14px}
+  .rr-planned .sched{font-size:13px;color:var(--ink-2)}
+  .rr-prog{margin:8px 14px 0;padding:12px 14px;border-radius:12px;background:var(--paper-2);display:grid;gap:8px}
+  .rr-prog .row{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+  .rr-prog .row span:last-child{color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .rr-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.rr-bar>i{display:block;height:100%;background:var(--ok);border-radius:3px}
+  .rr-prog .next{font-size:13px;color:var(--ink-2)}.rr-prog .next b{color:var(--ink);font-weight:500}
+  .rr-bundle{font-size:13px;color:var(--steel);background:none;border:0;padding:4px 0 0;text-align:left;grid-column:1/-1}
+  .rr-tabs{display:flex;gap:4px;padding:8px 14px;overflow-x:auto;scrollbar-width:none}
+  .rr-tab{flex:none;min-width:48px;height:38px;padding:0 12px;border-radius:10px;border:0;background:none;color:var(--ink-2);font:650 15px var(--sans)}
+  .rr-tab[aria-selected="true"]{background:var(--paper-3);color:var(--ink)}
+  .rr-bedrow{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 18px;border-top:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;border-radius:0;text-align:left;color:var(--ink);font-size:15px;line-height:1.45;margin:0}
+  .rr-bedrow .id{font-family:var(--serif);font-weight:650;font-size:20px}
+  .rr-bedrow .crop{font-weight:500}.rr-bedrow .last{font-size:13px;color:var(--ink-2)}
+  .rr-bedrow .chev{color:var(--ink-3)}
+  .rr-bedrow.quiet .id,.rr-bedrow.quiet .crop{color:var(--ink-3)}.rr-bedrow.quiet .last{color:var(--ink-3)}
+  .rr-empty{padding:18px;color:var(--ink-2);font-size:14px}
+  .rr-fab{margin:0 14px;height:52px;border-radius:14px;border:0;background:var(--ok);color:var(--ok-ink);font:650 16px var(--sans)}
+  .rr-dock{padding:10px 0;background:var(--paper);border-top:1px solid var(--line);display:grid}
+  .rr-scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .rr-bs{position:fixed;left:0;right:0;bottom:0;max-height:78%;overflow:auto;background:var(--paper-2);border-radius:20px 20px 0 0;padding:10px 18px 18px;transform:translateY(105%);transition:transform .22s ease;z-index:81;display:grid;gap:12px}
+  .rr.bsopen .rr-scrim{opacity:1;pointer-events:auto}.rr.bsopen .rr-bs{transform:none}
+  .rr-grab{width:40px;height:4px;border-radius:2px;background:var(--line-2);justify-self:center}
+  .rr-bs h4{margin:0;font-family:var(--serif);font-size:20px;font-weight:650;line-height:1.45;color:var(--ink)}
+  .rr-kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 10px;font-size:14px}.rr-kv span:nth-child(odd){color:var(--ink-2)}
+  .rr-bsacts{display:grid;grid-template-columns:auto auto 1fr;gap:8px}
+  .rr-bsacts .rr-mini{height:48px}.rr-bsacts .rr-mini.del{color:var(--clay);border-color:var(--clay)}
+  .rr-save{height:48px;border-radius:14px;border:0;background:var(--ok);color:var(--ok-ink);font:650 16px var(--sans)}
   /* ---------- Log a spray / Log a fert: port of design/spray-fert-redesign.html #sp / #fe (2026-11-07).
      Class names are the mockup ones with an lf- prefix (the app already has global .chip/.sub/.seg).
      Full screen on a phone; a tall card on a desk. Values are the mockup values, checked by measurement
@@ -6143,6 +6209,7 @@
 
     <!-- SPRAY LOG · Records -->
     <section class="view" id="view-sprayrec">
+      <div class="rr" id="srRR" hidden></div>
       <div class="cr-split">
       <div class="cr-left">
       <div class="vw-title">
@@ -6817,6 +6884,7 @@
          of record-keeping. Separate table from sprays though: see the schema comment on
          fert_applications for why a fertiliser row must never reach the withholding-period code. -->
     <section class="view" id="view-fertrec">
+      <div class="rr" id="frRR" hidden></div>
       <div class="cr-split">
       <div class="cr-left">
       <div class="vw-title">
@@ -28540,6 +28608,7 @@ function srFiltered(){
 
 function buildSprayRecords(){
   const body=document.getElementById("sprayRecBody"); if(!body) return;
+  if(rrShow("sr")){ renderSidebar(); return; }
   const all=data.sprayApplications||[];
   const logged=all.filter(a=>a.status!=="Planned");
   const planned=all.filter(a=>a.status==="Planned");
@@ -33301,6 +33370,7 @@ function frTotalLabel(a){
 }
 
 function buildFertRecords(){
+  if(rrShow("fr")){ renderSidebar(); return; }
   const dateBox=document.getElementById("frBody");
   const bedBox=document.getElementById("frBedBody");
   const prodBox=document.getElementById("frProdBody");
@@ -33630,6 +33700,264 @@ function frBedDetail(bed,apps){
       </div>`;}).join("")
       :`<div class="cr-empty">Nothing logged on this bed yet.</div>`}
   </div>`;
+}
+
+/* ---------- Spray records / Fert records on a phone: port of design/spray-fert-redesign.html #sr / #fr (2026-11-07).
+   One idiom for both. The desk keeps the audit table (buildSprayRecords / buildFertRecords below the phone check). */
+const RR_PL_KEY="roseberry_rr_planned_open";      // Planned strip open/closed, per device
+const rrBundles=new Set();                          // fert same-day program groups that are expanded
+let rrSheetFor=null;                                // {k, id} of the record in the bottom sheet
+const rrEl = k => document.getElementById(k==="sr"?"srRR":"frRR");
+const rrDay = iso => iso ? fmtShortDay(iso) : "No date";
+const rrDate = iso => iso ? fmtShortDay(iso).replace(/^\w+ /,"") : "";
+const rrPl = (n,w) => `${n} ${w}${n===1?"":"s"}`;
+function rrWhy(r){ const s=(r||"").toLowerCase();
+  return /pest|insect|aphid|caterp|mite|thrip|bug/.test(s) ? "pest" : /defic/.test(s) ? "def" : /feed|routine|nutri/.test(s) ? "feed" : ""; }
+function rrHarvest(iso){
+  const d=PlannerShared.wkParse(iso), t=PlannerShared.wkParse(sprayToday()), n=Math.round((d-t)/864e5);
+  return n>=0 && n<7 ? LG_DAYS[d.getDay()] : rrDate(iso);
+}
+function rrWhere(ids, fallback){
+  const r=lfRange(ids); const n=(ids||[]).length;
+  return r ? `${esc(r)}${n>1?` <small>· ${n} beds</small>`:""}` : esc(fallback||"—");
+}
+function rrSprayWhat(a){
+  const mix=srMixOf(a); if(mix && mix.name) return mix.name;
+  return (a.items||[]).map(it=>sprayProductName(it.productId)).filter(Boolean).join(", ") || a.locationNote || "Spray";
+}
+const rrSprayAmt = a => a.amount!=null ? `${a.amount} ${a.amountUnit||"L"}` : "—";
+const rrSprayer = a => a.sprayer || a.method || "";
+function rrSprayRec(a){
+  const safe=sprayAppSafe(a), why=a.reason ? `<span class="rr-why ${rrWhy(a.reason)}">${esc(a.reason)}</span>` : "";
+  const rest=[rrSprayer(a), a.sprayedBy].filter(Boolean).join(" · ");
+  return `<button class="rr-rec" type="button" data-rr-open="${a.id}"><span class="where">${rrWhere(a.bedIds, a.locationNote||sprayWhereLabel(a))}</span>`
+    +`<span class="amt">${esc(rrSprayAmt(a))}</span><span class="what">${esc(rrSprayWhat(a))}</span>`
+    +`<span class="meta">${why}${why&&rest?"· ":""}${esc(rest)}${safe&&safe.active?`<span class="rr-whp">WHP · harvest ${esc(rrHarvest(safe.safe))}</span>`:""}</span></button>`;
+}
+function rrFertWhat(a){ return (a.items||[]).map(i=>i.product).filter(Boolean).join(", ") || "Fertiliser"; }
+function rrFertRec(a){
+  return `<button class="rr-rec" type="button" data-rr-open="${a.id}"><span class="where">${rrWhere(a.bedIds)}</span>`
+    +`<span class="amt">${esc(frTotalLabel(a))}</span><span class="what">${esc(rrFertWhat(a))}</span>`
+    +`<span class="meta">${esc([a.method||"Spread", a.by].filter(Boolean).join(" · "))}</span></button>`;
+}
+function rrQuery(k){ return ((rrEl(k).querySelector("[data-rr-q]")||{}).value||"").trim().toLowerCase(); }
+function rrFertMatch(a,q){
+  if(!q) return true;
+  return [frMixLabel(a), lfRange(a.bedIds), (a.bedIds||[]).map(id=>((data.beds||[]).find(b=>b.id===id)||{}).name).join(" "),
+    (a.items||[]).map(i=>i.product).join(" "), a.by, a.method, a.notes].join(" ").toLowerCase().includes(q);
+}
+// Planned (overdue + scheduled) in one clay strip. Hidden when nothing is planned.
+function rrPlannedHtml(k, planned){
+  if(!planned.length) return "";
+  const today=sprayToday();
+  const over=planned.filter(a=>a.date && a.date<today).length, sched=planned.length-over;
+  const open=localStorage.getItem(RR_PL_KEY)==="1";
+  const rows=planned.map(a=>{
+    let line;
+    if(a.date && a.date<today){
+      const days=Math.round((PlannerShared.wkParse(today)-PlannerShared.wkParse(a.date))/864e5);
+      line=`<div class="late">Due ${esc(rrDay(a.date))} · ${days>=7?rrPl(Math.floor(days/7),"wk"):rrPl(days,"day")} late</div>`;
+    } else line=`<div class="sched">${a.date===today?"Due today":"Scheduled "+esc(rrDay(a.date))}</div>`;
+    const what = k==="sr" ? rrSprayWhat(a) : rrFertWhat(a);
+    const where = lfRange(a.bedIds) || (k==="sr" ? (a.locationNote||sprayWhereLabel(a)) : "");
+    return `<div class="rr-duerow"><div class="what">${esc(what)}${where?` · <span>${esc(where)}</span>`:""}</div>`
+      +`<div class="acts"><button class="rr-mini" type="button" data-rr-skip="${a.id}">Skip</button><button class="rr-mini solid" type="button" data-rr-log="${a.id}">Log it</button></div>${line}</div>`;
+  }).join("");
+  const parts=[over?`${over} overdue`:"", sched?`${sched} scheduled`:""].filter(Boolean).join(" · ");
+  return `<div class="rr-planned"><button type="button" data-rr-pl><b>Planned</b> · ${parts}<span>${open?"Hide":"Show ›"}</span></button>`
+    +`<div data-rr-pllist${open?"":" hidden"}>${rows}</div></div>`;
+}
+// Fert: the amendment round in progress (same pick as the desk banner).
+function rrProgHtml(){
+  const prog=(data.fertPrograms||[]).find(p=>p.kind!=="Fertigation" && !p.archived); if(!prog) return "";
+  const apps=(data.fertApps||[]).filter(a=>a.status!=="Planned");
+  const rounds=fpRoundsOf(prog.id);
+  const started=rounds.filter(r=>PlannerShared.fertBedsDone(apps, prog.id, r.id).size);
+  const round=started[started.length-1] || rounds[0]; if(!round) return "";
+  const beds=new Set();
+  fpBlocksOf(prog.id).filter(b=>b.blockId).forEach(b=>fpBedsInBlock(b.blockId).forEach(x=>beds.add(x.id)));
+  const done=[...PlannerShared.fertBedsDone(apps, prog.id, round.id)].filter(id=>beds.has(id)).length, total=beds.size;
+  if(!total) return "";
+  let nx=null; try{ nx=fplRoundProgress(prog.id, round.id).next; }catch(_){}
+  const next = nx && nx.bedIds && nx.bedIds.length ? `<b>${esc(lfRange(nx.bedIds))}</b> · ` : "";
+  return `<div class="rr-prog"><div class="row"><span>${esc(prog.name)} · ${esc(round.name)}</span><span>${done} / ${total}</span></div>`
+    +`<div class="rr-bar"><i style="width:${Math.round(done/total*100)}%"></i></div>`
+    +`<div class="next">${next?"Next: "+next:""}${total-done} beds left</div></div>`;
+}
+function rrDayHtml(k){
+  const q=rrQuery(k);
+  const all = k==="sr" ? (data.sprayApplications||[]).filter(a=>!srYearFilter || srYearOf(a)===srYearFilter).filter(a=>sprayRecMatch(a,q))
+                       : frApps().filter(a=>rrFertMatch(a,q));
+  const planned=all.filter(a=>a.status==="Planned").sort((x,y)=>String(x.date||"9").localeCompare(String(y.date||"9")));
+  const logged=all.filter(a=>a.status!=="Planned").sort((x,y)=>String(y.date||"").localeCompare(String(x.date||"")));
+  let html = (k==="fr" && !q ? rrProgHtml() : "") + rrPlannedHtml(k, planned);
+  if(!logged.length) return html + `<div class="rr-empty">${q?"Nothing matches.":k==="sr"?"No sprays logged yet.":"No ferts logged yet."}</div>`;
+  const byDay=new Map(); logged.forEach(a=>{ const d=a.date||""; (byDay.get(d)||byDay.set(d,[]).get(d)).push(a); });
+  byDay.forEach((list,d)=>{
+    html+=`<div class="rr-grp"><span>${esc(rrDay(d))}</span></div>`;
+    if(k==="sr"){ html+=list.map(rrSprayRec).join(""); return; }
+    // Same-day entries from the same program round fold into one row.
+    const groups=new Map();
+    list.forEach(a=>{ const g=a.programId ? `${d}|${a.programId}|${a.roundId||""}` : a.id; (groups.get(g)||groups.set(g,[]).get(g)).push(a); });
+    groups.forEach((g,key)=>{
+      if(g.length<2){ html+=rrFertRec(g[0]); return; }
+      const prog=fpProgram(g[0].programId), round=(data.fertRounds||[]).find(r=>r.id===g[0].roundId);
+      const name=[prog&&prog.name, round&&round.name].filter(Boolean).join(" ") || "Program";
+      const ids=[...new Set(g.flatMap(a=>a.bedIds||[]))];
+      const sum=frTotalLabel({bedIds:ids, items:g.flatMap(a=>(a.items||[]).map(i=>Object.assign({},i,{total:i.total!=null?i.total:(i.rate!=null?i.rate*((a.bedIds||[]).length||1):null)})))});
+      const by=[...new Set(g.map(a=>a.by).filter(Boolean))].join(", ");
+      const open=rrBundles.has(key);
+      html+=`<div class="rr-rec" style="cursor:default"><span class="where">${esc(name)} <small>· ${g.length} entries</small></span><span class="amt">${esc(sum)}</span>`
+        +`<span class="meta">${esc([lfRange(ids), g[0].method||"Spread", by].filter(Boolean).join(" · "))}</span>`
+        +`<button class="rr-bundle" type="button" data-rr-bundle="${esc(key)}">${open?"Hide entries":`Show ${g.length} entries ›`}</button></div>`
+        +(open ? g.map(a=>`<button class="rr-rec ent" type="button" data-rr-open="${a.id}"><span class="where ent">${esc(lfRange(a.bedIds)||"—")}</span><span class="amt">${esc(frTotalLabel(a))}</span></button>`).join("") : "");
+    });
+  });
+  return html;
+}
+let rrBlock={sr:null, fr:null};
+function rrBedHtml(k){
+  const blocks=bpkBlocks();
+  if(!rrBlock[k] || !blocks.some(b=>b.key===rrBlock[k])) rrBlock[k]=(blocks[0]||{}).key;
+  const blk=blocks.find(b=>b.key===rrBlock[k]);
+  // "This season" = the last twelve months.
+  const since=new Date(); since.setFullYear(since.getFullYear()-1); const sinceISO=since.toISOString().slice(0,10);
+  const logged=(k==="sr"?(data.sprayApplications||[]):(data.fertApps||[])).filter(a=>a.status!=="Planned" && (a.date||"")>=sinceISO)
+    .sort((x,y)=>String(y.date||"").localeCompare(String(x.date||"")));
+  const tabs=`<div class="rr-tabs">${blocks.map(b=>`<button class="rr-tab" type="button" data-rr-block="${esc(b.key)}" aria-selected="${b.key===rrBlock[k]}">${esc(b.key)}</button>`).join("")}</div>`;
+  const rows=(blk?blk.beds:[]).slice().sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})).map(b=>{
+    const hist=logged.filter(a=>(a.bedIds||[]).includes(b.id)), last=hist[0], now=bpkNow(b);
+    const crop=now.crop||"Empty";
+    if(!last) return `<div class="rr-bedrow quiet"><span class="id">${esc(b.name)}</span><span><div class="crop">${esc(crop)}</div><div class="last">Nothing this season</div></span><span></span></div>`;
+    const prod = k==="sr" ? ((srMixOf(last)||{}).name || sprayProductName(((last.items||[])[0]||{}).productId) || "Spray") : (((last.items||[])[0]||{}).product || "Fertiliser");
+    const w = k==="sr" ? sprayWhpOnBedAt(b.id) : null;
+    return `<button class="rr-bedrow" type="button" data-rr-bed="${esc(b.name)}"><span class="id">${esc(b.name)}</span><span><div class="crop">${esc(crop)}</div>`
+      +`<div class="last">${esc([prod, rrDate(last.date), hist.length>1?rrPl(hist.length,k==="sr"?"spray":"fert"):""].filter(Boolean).join(" · "))}${w?` <span class="rr-whp">WHP · harvest ${esc(rrHarvest(w.safeAfter))}</span>`:""}</div></span><span class="chev">›</span></button>`;
+  }).join("");
+  return tabs + (rows || `<div class="rr-empty">No beds in this block.</div>`);
+}
+function rrProdHtml(k){
+  const by=new Map();
+  if(k==="sr"){
+    (data.sprayApplications||[]).filter(a=>a.status!=="Planned" && (!srYearFilter || srYearOf(a)===srYearFilter)).forEach(a=>(a.items||[]).forEach(it=>{
+      if(!it.productId) return;
+      const g=by.get(it.productId)||{n:0, l:0, beds:new Set(), last:""}; g.n++; if(a.amount!=null && (a.amountUnit||"L")==="L") g.l+=a.amount; (a.bedIds||[]).forEach(x=>g.beds.add(x)); if((a.date||"")>g.last) g.last=a.date;
+      by.set(it.productId,g); }));
+    const rows=[...by.entries()].sort((x,y)=>String(y[1].last).localeCompare(String(x[1].last)));
+    if(!rows.length) return `<div class="rr-empty">No sprays logged yet.</div>`;
+    return rows.map(([id,g])=>{ const p=sprayProduct(id)||{};
+      return `<button class="rr-rec" type="button" data-rr-prod="${esc(p.name||"")}"><span class="where sans">${esc(p.name||"?")}</span><span class="amt">${g.beds.size?rrPl(g.beds.size,"bed"):Math.round(g.l*10)/10+" L"}</span>`
+        +`<span class="meta">Last ${esc(rrDay(g.last))} · ${rrPl(g.n,"spray")} · ${p.whp!=null?`WHP ${p.whp} d`:`<span class="rr-clay">no WHP set</span>`}</span></button>`; }).join("");
+  }
+  frApps().filter(a=>a.status!=="Planned").forEach(a=>(a.items||[]).forEach(i=>{
+    if(!i.product) return; const n=(a.bedIds||[]).length||1;
+    const amt=i.total!=null?i.total:(i.rate!=null?i.rate*n:null);
+    const g=by.get(i.product)||{unit:i.unit||"kg", total:0, n:0, last:""}; if(amt!=null) g.total+=amt; g.n++; if((a.date||"")>g.last) g.last=a.date;
+    by.set(i.product,g); }));
+  const rows=[...by.entries()].sort((x,y)=>String(y[1].last).localeCompare(String(x[1].last)));
+  if(!rows.length) return `<div class="rr-empty">No ferts logged yet.</div>`;
+  return rows.map(([name,g])=>`<button class="rr-rec" type="button" data-rr-prod="${esc(name)}"><span class="where sans">${esc(name)}</span><span class="amt">${Math.round(g.total*100)/100} ${esc(g.unit)}</span>`
+    +`<span class="meta">Last ${esc(rrDay(g.last))} · ${rrPl(g.n,"application")}</span></button>`).join("");
+}
+function rrMode(k){ const m = k==="sr" ? srMode : frMode; return m==="bed"?1:m==="product"?2:0; }
+function rrBuild(k){
+  const el=rrEl(k); if(!el) return;
+  if(!el.firstChild){
+    el.innerHTML=`<div class="rr-scroll"><div class="rr-hdr"><div class="t">${k==="sr"?"Spray records":"Fert records"}</div><button class="rr-iconbtn" type="button" aria-label="Search" data-rr-search>⌕</button></div>`
+      +`<input class="rr-search" type="search" placeholder="Search" data-rr-q hidden autocomplete="off" spellcheck="false">`
+      +`<div class="rr-seg"><button type="button" data-rr-mode="0">By day</button><button type="button" data-rr-mode="1">By bed</button><button type="button" data-rr-mode="2">By product</button></div>`
+      +`<div data-rr-body></div></div>`
+      +`<div class="rr-dock"><button class="rr-fab" type="button" data-rr-new>${k==="sr"?"+ Log a spray":"+ Log a fert"}</button></div>`
+      +`<div class="rr-scrim" data-rr-close></div><div class="rr-bs" data-rr-sheet></div>`;
+    rrWire(k);
+  }
+  const m=rrMode(k);
+  el.querySelectorAll("[data-rr-mode]").forEach(b=>b.setAttribute("aria-pressed", +b.dataset.rrMode===m ? "true" : "false"));
+  el.querySelector("[data-rr-body]").innerHTML = m===1 ? rrBedHtml(k) : m===2 ? rrProdHtml(k) : rrDayHtml(k);
+  if(rrSheetFor && rrSheetFor.k===k) rrOpenSheet(k, rrSheetFor.id);
+}
+function rrOpenSheet(k, id){
+  const el=rrEl(k), sh=el.querySelector("[data-rr-sheet]");
+  const a=(k==="sr"?(data.sprayApplications||[]):(data.fertApps||[])).find(x=>x.id===id);
+  if(!a){ rrCloseSheet(k); return; }
+  rrSheetFor={k,id};
+  const kv=[];
+  if(k==="sr"){
+    const whp=sprayAppWhp(a), safe=sprayAppSafe(a);
+    kv.push(["Date", [rrDay(a.date), a.sprayedBy].filter(Boolean).join(" · ")],
+      ["Products", (a.items||[]).map(it=>[sprayProductName(it.productId), it.rate!=null?`${it.rate} ${it.unit||""}`.trim():""].filter(Boolean).join(" ")).join(", ")||"—"],
+      ["Sprayer", [rrSprayer(a), a.tanks!=null?rrPl(a.tanks,"tank"):"", a.amount!=null?rrSprayAmt(a):""].filter(Boolean).join(" · ")||"—"],
+      ["Why", a.reason||"—"],
+      ["WHP", `${whp||0} d · ${safe&&safe.active?"harvest "+rrDay(safe.safe):"harvest OK"}`]);
+  } else {
+    const prog=fpProgram(a.programId);
+    kv.push(["Date", [rrDay(a.date), a.by].filter(Boolean).join(" · ")],
+      ["Products", (a.items||[]).map(i=>{ const v=frPerBed(a,i); return [i.product, v!=null?`${v} ${i.unit||""}/bed`:""].filter(Boolean).join(" "); }).join(", ")||"—"],
+      ["Method", a.method||"Spread"], ["Total", frTotalLabel(a)]);
+    if(prog) kv.push(["Program", frMixLabel(a)]);
+  }
+  const n=(a.bedIds||[]).length, title=lfRange(a.bedIds) ? lfRange(a.bedIds)+(n>1?` · ${n} beds`:"") : (k==="sr"?(a.locationNote||sprayWhereLabel(a)):"—");
+  sh.innerHTML=`<div class="rr-grab"></div><h4>${esc(title)}</h4><div class="rr-kv">${kv.map(([x,y])=>`<span>${esc(x)}</span><span>${esc(y)}</span>`).join("")}</div>`
+    +`<div class="rr-bsacts"><button class="rr-mini del" type="button" data-rr-del>Delete</button><button class="rr-mini" type="button" data-rr-edit>Edit</button><button class="rr-save" type="button" data-rr-again>↻ Log again</button></div>`;
+  el.classList.add("bsopen");
+}
+function rrCloseSheet(k){ rrSheetFor=null; rrEl(k).classList.remove("bsopen"); }
+// Edit a logged spray: the log form on that record (saves back over it, items rewritten).
+function sprayEditLogged(id){
+  const a=(data.sprayApplications||[]).find(x=>x.id===id); if(!a) return;
+  if(a.status==="Planned") return sprayOpenPlan(id);
+  sprayResetState("log"); spray.editId=a.id; sprayPrefillFromApp(a);
+  $s("sprayDate").value=a.date||sprayToday();
+  sprayFillAssignee($s("sprayBy"), a.sprayedBy||"");
+  sprayFinishOpen(false);
+}
+function fertEditLogged(id){
+  const a=(data.fertApps||[]).find(x=>x.id===id); if(!a) return;
+  fplOpen({ mode:"manual", date:a.date||null, by:a.by||null }); fplLoadPlanned(a); fplRender();
+}
+// Log a past fert again: same beds, products and method; today, fresh notes. (Was called but never defined.)
+function fertRepeat(id){
+  const a=(data.fertApps||[]).find(x=>x.id===id); if(!a) return;
+  fplOpen({ mode:"manual" }); fplLoadPlanned(a);
+  Object.assign(fplState, { editId:null, planId:null, plantingId:null, planOffset:null, prepOp:"", notes:"", date:null });
+  fplRender();
+}
+function rrWire(k){
+  const el=rrEl(k), rebuild=()=>rrBuild(k);
+  const setMode=i=>{ if(k==="sr"){ srMode=["day","bed","product"][i]; sessionStorage.setItem("roseberry_sr_mode", srMode); }
+    else { frMode=["date","bed","product"][i]; document.querySelectorAll("#frMode [data-fr-mode]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.frMode===frMode?"true":"false")); }
+    rebuild(); };
+  const searchFor=t=>{ const s=el.querySelector("[data-rr-q]"); s.hidden=false; s.value=t; setMode(0); };
+  el.querySelector("[data-rr-q]").addEventListener("input", rebuild);
+  el.addEventListener("click", e=>{
+    const t=e.target, A=s=>t.closest(s);
+    if(A("[data-rr-search]")){ const s=el.querySelector("[data-rr-q]"); s.hidden=!s.hidden; if(s.hidden){ s.value=""; rebuild(); } else s.focus(); return; }
+    let b;
+    if((b=A("[data-rr-mode]"))) return setMode(+b.dataset.rrMode);
+    if(A("[data-rr-pl]")){ localStorage.setItem(RR_PL_KEY, localStorage.getItem(RR_PL_KEY)==="1"?"0":"1"); return rebuild(); }
+    if((b=A("[data-rr-skip]"))) return k==="sr" ? sprayDeleteRecord(b.dataset.rrSkip) : frDelete(b.dataset.rrSkip);
+    if((b=A("[data-rr-log]"))) return k==="sr" ? sprayOpenLogFromPlan(b.dataset.rrLog) : fertDonePlanned(b.dataset.rrLog);
+    if((b=A("[data-rr-bundle]"))){ const key=b.dataset.rrBundle; rrBundles.has(key)?rrBundles.delete(key):rrBundles.add(key); return rebuild(); }
+    if((b=A("[data-rr-block]"))){ rrBlock[k]=b.dataset.rrBlock; return rebuild(); }
+    if((b=A("[data-rr-bed]"))) return searchFor(b.dataset.rrBed);
+    if((b=A("[data-rr-prod]"))) return searchFor(b.dataset.rrProd);
+    if((b=A("[data-rr-open]"))) return rrOpenSheet(k, b.dataset.rrOpen);
+    if(A("[data-rr-close]")) return rrCloseSheet(k);
+    if(A("[data-rr-new]")) return k==="sr" ? sprayStartOpen() : fplOpen({ fresh:true });
+    const id=rrSheetFor && rrSheetFor.id;
+    if(A("[data-rr-del]")){ rrCloseSheet(k); return k==="sr" ? sprayDeleteRecord(id) : frDelete(id); }
+    if(A("[data-rr-edit]")){ rrCloseSheet(k); return k==="sr" ? sprayEditLogged(id) : fertEditLogged(id); }
+    if(A("[data-rr-again]")){ rrCloseSheet(k); return k==="sr" ? sprayRepeat(id) : fertRepeat(id); }
+  });
+}
+// Phone ⇄ desk: the phone page replaces the whole split; the desk keeps the table.
+function rrShow(k){
+  const view=document.getElementById(k==="sr"?"view-sprayrec":"view-fertrec"), el=rrEl(k);
+  const phone=cmIsMobile(), split=view && view.querySelector(".cr-split");
+  if(split) split.style.display = phone ? "none" : "";
+  if(el) el.hidden = !phone;
+  if(phone) rrBuild(k); else if(el && el.classList.contains("bsopen")) rrCloseSheet(k);
+  return phone;
 }
 
 async function frDelete(id){
