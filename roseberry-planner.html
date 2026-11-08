@@ -2861,7 +2861,7 @@
 
   /* ---------- Claude notes (More → Reference): port of design/notes-redesign.html #kn / #kd / #dk (2026-11-08).
      Read-only view of public.knowledge_notes. Mockup class names with a kn- prefix; values are the mockup's,
-     checked by measurement (scripts/compare-notes.mjs). Every note is shown; status/superseded_by are unused. */
+     checked by measurement (scripts/compare-notes.mjs, compare-notes-archive.mjs). superseded_by is unused. */
   .kn,.kn-fix{--sans:"Roboto Flex",system-ui,-apple-system,Roboto,sans-serif;--serif:"Fraunces",Georgia,serif;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45}
   .kn{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--paper);overflow:hidden}
   .kn *,.kn-fix *{box-sizing:border-box}
@@ -2919,6 +2919,26 @@
   .kn-tags{display:flex;gap:6px;flex-wrap:wrap}.kn-tags span{font-size:13px;padding:3px 9px;border-radius:999px;border:1px solid var(--line-2);color:var(--ink-2)}
   .kn-ask{font-size:13px;color:var(--ink-3)}
   .kn .chatlink,.kn-fix .chatlink{color:var(--steel);text-decoration:none;font-weight:500}.kn .chatlink:hover,.kn-fix .chatlink:hover{text-decoration:underline}
+  .kn-note.old .tt{color:var(--ink-2)}
+  .kn-oldtag{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--paper-3);color:var(--ink-2)}
+  .kn .kn-showold{margin:6px 18px 24px;background:none;border:0;padding:8px 0;color:var(--steel);font:500 14px var(--sans);text-align:left}
+  .kn-lk{display:grid;gap:6px}.kn-k2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+  .kn-lkrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;min-height:48px;padding:0 14px;border-radius:12px;border:1px solid var(--line-2);color:var(--ink);text-decoration:none}
+  .kn-lkrow:hover{border-color:var(--steel)}.kn-lkrow .kind{font-size:12px;font-weight:500;color:var(--steel);background:var(--steel-tint);padding:2px 8px;border-radius:6px}
+  .kn-lkrow .lt{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.kn-lkrow .go{color:var(--steel)}
+  .kn-prose .sh{margin:8px 0 -4px;font:650 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .kn-prose .sh:first-child{margin-top:0}
+  .kn-archbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:var(--paper-3);font-size:14px;color:var(--ink-2)}
+  .kn-archbar span{flex:1}
+  .kn-archopts{display:grid;gap:8px}
+  .kn-archopts>button[data-v]{display:grid;gap:2px;text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 15px var(--sans)}
+  .kn-archopts>button[data-v]:hover{border-color:var(--steel)}
+  .kn-archopts small{font-size:13px;font-weight:400;color:var(--ink-2)}
+  .kn-archbtn{justify-self:start;height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line-2);background:none;color:var(--ink);font:500 14px var(--sans)}
+  .kn-dtog{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--ink-2);margin-top:10px}
+  .kn-tog{width:46px;height:28px;border-radius:14px;border:0;background:var(--line-2);position:relative;flex:none}
+  .kn-tog::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--paper);transition:left .15s}
+  .kn-tog[aria-checked="true"]{background:var(--ok)}.kn-tog[aria-checked="true"]::after{left:21px}
   /* desktop (#dk) */
   .kn.desk{overflow-x:auto}
   .kn-desk{display:grid;grid-template-columns:220px 380px minmax(0,1fr);height:100%;min-width:1000px;background:var(--paper)}
@@ -33788,47 +33808,58 @@ function frBedDetail(bed,apps){
 
 /* ---------- Claude notes: port of design/notes-redesign.html #kn / #kd / #dk (2026-11-08).
    Read-only. Rows come from public.knowledge_notes (authenticated_read policy), newest first.
-   Every note is shown: the status and superseded_by columns stay in the table, unused here. */
+   The only write is status, through the set_note_status RPC. Archived notes are hidden by default; superseded_by is unused. */
 const KN_CATS={nutrition:["Nutrition","var(--amber)"],pest:["Pest & disease","var(--clay)"],irrigation:["Irrigation","var(--steel)"],
   variety:["Variety","var(--ok)"],soil:["Soil","var(--ink-2)"],inputs:["Inputs","var(--steel)"],equipment:["Equipment","var(--ink-3)"],general:["General","var(--ink-3)"]};
 let knNotes=null, knLoading=false, knErr="";
-const kn={q:"",cat:"all",scope:"",sel:null};
+const kn={q:"",cat:"all",scope:"",sel:null,old:false};
+let knBusy=false;
+const knIsArch=n=>n.status==="archived_notes"||n.status==="archived_all";
+const knLinks=n=>Array.isArray(n.links)?n.links:[];
+const knUrl=u=>/^https?:\/\//i.test(String(u||""))?String(u):"#";
 const knCatKey=c=>{ const s=String(c||"").toLowerCase(); return s.startsWith("pest")?"pest":(KN_CATS[s]?s:"general"); };
 const knFmt=d=>{ if(!d) return ""; const x=new Date(String(d).slice(0,10)+"T00:00"); return x.getDate()+" "+x.toLocaleString("en-AU",{month:"short"}); };
-const knPlain=n=>String(n.note||"").replace(/^\s*[•\-*]\s+/gm,"").replace(/\s+/g," ").trim();
+const knPlain=n=>String(n.note||"").replace(/^\s*## .*$/gm,"").replace(/^\s*(?:•\s*|[-*]\s+)/gm,"").replace(/\s+/g," ").trim();
 const knParts=s=>String(s||"").split(",").map(x=>x.trim()).filter(Boolean);
 const knHasScope=(n,s)=>[...knParts(n.crop),...knParts(n.block)].includes(s);
 function knScopes(){ const m=new Set(); for(const n of knNotes||[]) for(const p of [...knParts(n.crop),...knParts(n.block)]) m.add(p); return [...m].sort((a,b)=>a.localeCompare(b)); }
 function knMatch(n){ const q=kn.q.toLowerCase();
   return (kn.cat==="all"||knCatKey(n.category)===kn.cat) && (!kn.scope||knHasScope(n,kn.scope))
-    && (!q||[n.title,n.note,n.crop,n.block,(n.tags||[]).join(" ")].join(" ").toLowerCase().includes(q)); }
-function knRow(n,cur){ const c=KN_CATS[knCatKey(n.category)];
-  return `<button class="kn-note" type="button" data-kn-n="${n.id}"${cur!==undefined?` aria-current="${cur}"`:""}><span class="tt">${esc(n.title||"")}</span><span class="dt">${knFmt(n.date||n.created_at)}</span><span class="pv">${esc(knPlain(n))}</span><span class="mt"><span class="kn-cat" style="--c:${c[1]}">${c[0]}</span>${n.crop?`<span>${esc(n.crop)}</span>`:""}${n.block?`<span class="kn-where">${esc(n.block)}</span>`:""}</span></button>`; }
+    && (!q||[n.title,knPlain(n),n.crop,n.block,(n.tags||[]).join(" ")].join(" ").toLowerCase().includes(q)); }
+function knRow(n,cur){ const c=KN_CATS[knCatKey(n.category)], lc=knLinks(n).length;
+  return `<button class="kn-note${knIsArch(n)?" old":""}" type="button" data-kn-n="${n.id}"${cur!==undefined?` aria-current="${cur}"`:""}><span class="tt">${esc(n.title||"")}</span><span class="dt">${knFmt(n.date||n.created_at)}</span><span class="pv">${esc(knPlain(n))}</span><span class="mt"><span class="kn-cat" style="--c:${c[1]}">${c[0]}</span>${n.crop?`<span>${esc(n.crop)}</span>`:""}${n.block?`<span class="kn-where">${esc(n.block)}</span>`:""}${lc?`<span>· ${lc} linked</span>`:""}${knIsArch(n)?`<span class="kn-oldtag">${n.status==="archived_all"?"Archived everywhere":"Archived"}</span>`:""}</span></button>`; }
 function knEmpty(){
   if((knNotes||[]).length) return `<div class="kn-empty"><b>No notes match</b><span>Try another word, or clear the filters.</span></div>`;
   if(knErr) return `<div class="kn-empty"><b>Couldn't load notes</b><span>${esc(knErr)}</span></div>`;
   if(knLoading) return `<div class="kn-empty"><b>Loading notes…</b></div>`;
   return `<div class="kn-empty"><b>No notes yet</b><span>Say “file this” at the end of a chat and Claude will save what you settled here.</span></div>`; }
-// Body: blank lines split paragraphs; lines starting with •, - or * become a bullet list. Amounts with a unit get tabular figures.
+// Body: blank lines split paragraphs; "## " lines are section headings; lines starting with •, - or * become a bullet list. Amounts with a unit get tabular figures.
 function knProse(text){
   const num=s=>esc(s).replace(/\b\d+(?:[.,]\d+)?(?::\d+|\s?(?:mL|L|g|kg|mm|cm|m|%|ha)\b|%)/g,m=>`<span class="num">${m}</span>`);
   return String(text||"").split(/\n\s*\n/).map(par=>{ const out=[]; let ul=[];
     const flush=()=>{ if(ul.length){ out.push(`<ul>${ul.map(l=>`<li>${num(l)}</li>`).join("")}</ul>`); ul=[]; } };
-    for(const line of par.split("\n")){ const m=line.match(/^\s*[•\-*]\s+(.*)$/);
-      if(m) ul.push(m[1]); else if(line.trim()){ flush(); out.push(`<p>${num(line.trim())}</p>`); } }
+    for(const line of par.split("\n")){ const h=line.match(/^\s*## (.*)$/), m=line.match(/^\s*(?:•\s*|[-*]\s+)(.*)$/);
+      if(h){ flush(); out.push(`<h3 class="sh">${esc(h[1].trim())}</h3>`); }
+      else if(m) ul.push(m[1]); else if(line.trim()){ flush(); out.push(`<p>${num(line.trim())}</p>`); } }
     flush(); return out.join(""); }).join(""); }
 function knDetail(n){ if(!n) return ""; const c=KN_CATS[knCatKey(n.category)], d=n.date||n.created_at;
   return `<div class="kn-scroll"><div class="kn-fhdr"><button class="kn-iconbtn" type="button" id="knOvClose" data-kn-back aria-label="Back">←</button></div><div class="kn-dbody">
+ ${knIsArch(n)?`<div class="kn-archbar"><span>${n.status==="archived_all"?"Archived everywhere · hidden here, and Claude ignores it unless you ask":"Archived · hidden from the notes list, Claude still uses it"}</span><button class="kn-link" type="button" data-kn-arch="${n.id}" data-status="current">Unarchive</button></div>`:""}
  <div class="kn-eyebrow"><span class="kn-cat" style="--c:${c[1]}">${c[0]}</span><span>Filed ${knFmt(d)}</span></div>
  <h2>${esc(n.title||"")}</h2>
  <div class="kn-facts">${n.crop?`<span class="kn-fact">${esc(n.crop)}</span>`:""}${n.block?`<span class="kn-fact"><b>${esc(n.block)}</b></span>`:""}${d?`<span class="kn-fact">${knFmt(d)} ${String(d).slice(0,4)}</span>`:""}</div>
  <div class="kn-prose">${knProse(n.note)}</div>
+ ${knLinks(n).length?`<div class="kn-lk"><div class="kn-k2">Linked from this chat</div>${knLinks(n).map(l=>`<a class="kn-lkrow" href="${esc(knUrl(l.url))}" target="_blank" rel="noopener"><span class="kind">${l.kind==="doc"?"Doc":l.kind==="file"?"File":"Page"}</span><span class="lt">${esc(l.title||"")}</span><span class="go">↗</span></a>`).join("")}</div>`:""}
  <div class="kn-rule"></div>
  <div class="kn-kv2">${n.source_chat?`<span>From chat</span><span>${n.source_chat_url?`<a class="chatlink" href="${esc(n.source_chat_url)}" target="_blank" rel="noopener">${esc(n.source_chat)} ↗</a>`:`${esc(n.source_chat)} <span style="color:var(--ink-3)">· no link</span>`}</span>`:""}${(n.tags||[]).length?`<span>Tags</span><span class="kn-tags">${n.tags.map(t=>`<span>${esc(t)}</span>`).join("")}</span>`:""}</div>
+ ${knIsArch(n)?"":`<button class="kn-archbtn" type="button" data-kn-archopen>Archive note…</button><div class="kn-archopts" hidden><button type="button" data-kn-arch="${n.id}" data-status="archived_notes" data-v="list"><b>Archive from notes</b><small>Hidden from this list. Claude still finds it in chats.</small></button><button type="button" data-kn-arch="${n.id}" data-status="archived_all" data-v="all"><b>Archive from notes and Claude</b><small>Hidden here, and Claude ignores it unless you ask for archived notes.</small></button><button type="button" class="kn-link" data-kn-archopen style="justify-self:start;padding:4px 0">Cancel</button></div>`}
  <div class="kn-ask">Ask Claude "what have we noted on the tomato tunnel?" to search from a chat.</div>
  </div></div>`; }
-const knVis=()=>(knNotes||[]).filter(knMatch);
-const knCount=()=>{ if(!knNotes) return ""; const k=knNotes.length; return `${k} note${k===1?"":"s"}`; };
+const knVis=()=>(knNotes||[]).filter(n=>knMatch(n)&&(kn.old||!knIsArch(n)));
+const knCount=()=>{ if(!knNotes) return ""; const a=knNotes.filter(knIsArch).length, k=knNotes.length-a; return `${k} note${k===1?"":"s"} · ${a} archived`; };
+// End-of-list link on the phone. Counts archived notes that match the current search and filters.
+function knShowOld(){ const h=(knNotes||[]).filter(n=>knMatch(n)&&knIsArch(n)).length; if(!h) return "";
+  return `<button class="kn-showold" type="button" data-kn-old>${kn.old?"Hide archived notes":`Show ${h} archived note${h>1?"s":""}`}</button>`; }
 const knCatList=()=>[["all","All",""],...Object.entries(KN_CATS).map(([k,v])=>[k,v[0],v[1]])];
 const knSearch=(id,style)=>`<label class="kn-searchbar"${style?` style="${style}"`:""}><span aria-hidden="true">⌕</span><input id="${id}" placeholder="Search notes, crops, rates…" autocomplete="off" value="${esc(kn.q)}"></label>`;
 
@@ -33838,13 +33869,14 @@ function knPhoneList(){ const vis=knVis();
   ${knSearch("knQ")}
   <div class="kn-fchips">${knCatList().map(([k,l,c])=>`<button class="kn-fchip" type="button" data-kn-c="${k}" aria-pressed="${kn.cat===k}">${c?`<span class="kn-sq" style="background:${c}"></span>`:""}${esc(l)}</button>`).join("")}</div>
   <div class="kn-scope"><button class="kn-link" type="button" data-kn-scope>${kn.scope?`${esc(kn.scope)} ✕`:"All crops and blocks ›"}</button><span>${vis.length} shown</span></div>
-  <div id="knList">${vis.length?vis.map(n=>knRow(n)).join(""):knEmpty()}</div></div>`; }
+  <div id="knList">${vis.length?vis.map(n=>knRow(n)).join(""):knEmpty()}${knShowOld()}</div></div>`; }
 function knDesk(){ const vis=knVis(), all=knNotes||[];
   if(kn.sel==null&&vis.length) kn.sel=vis[0].id;
-  const cnt=k=>all.filter(n=>k==="all"||knCatKey(n.category)===k).length;
+  const cnt=k=>all.filter(n=>(k==="all"||knCatKey(n.category)===k)&&(kn.old||!knIsArch(n))).length;
   return `<div class="kn-desk">
   <aside class="kn-dside"><div class="t">Claude notes</div><div class="s">${knCount()}</div>
    <div class="k">Category</div><div class="kn-dcats">${knCatList().map(([k,l,c])=>`<button class="kn-dcat" type="button" data-kn-c="${k}" aria-pressed="${kn.cat===k}">${c?`<span class="kn-sq" style="background:${c}"></span>`:""}${esc(l)}<small>${cnt(k)}</small></button>`).join("")}</div>
+   <div class="kn-dtog"><span>Show archived</span><button class="kn-tog" type="button" role="switch" data-kn-old aria-checked="${kn.old}" aria-label="Show archived notes"></button></div>
    <div class="k">Crop or block</div><div class="kn-dcats">${["",...knScopes()].map(o=>`<button class="kn-dcat" type="button" data-kn-ds="${esc(o)}" aria-pressed="${kn.scope===o}">${o?esc(o):"All crops and blocks"}</button>`).join("")}</div>
    <div class="kn-ask" style="margin-top:auto">Say “file this” at the end of a chat to add a note here.</div></aside>
   <div class="kn-dlist"><div style="display:flex;gap:8px;align-items:center;padding:14px 14px 8px">${knSearch("knDQ","margin:0;flex:1")}<button class="kn-iconbtn" type="button" data-kn-refresh aria-label="Refresh">↻</button></div>
@@ -33879,8 +33911,24 @@ function knSheet(){ const sh=knFix().querySelector("#knSheet");
   sh.innerHTML=`<div class="kn-grab"></div><h4>Crop or block</h4><div class="kn-pick">${knScopes().map(o=>{ const c=(knNotes||[]).filter(n=>knHasScope(n,o)).length;
     return `<button type="button" data-kn-sc="${esc(o)}"><span class="n">${esc(o)}</span><span class="m">${c} note${c===1?"":"s"}</span></button>`; }).join("")}</div><button type="button" id="knSheetClose" data-kn-close hidden></button>`;
   sh.classList.add("open"); }
+// Status changes go through the set_note_status RPC: signed-in users have no other write access to this table.
+async function knSetStatus(id,status){ if(knBusy) return; knBusy=true;
+  try{
+    const r=await sbFetch(`${SB_URL}/rest/v1/rpc/set_note_status`,{method:"POST",headers:{...sbHeaders(),"Content-Type":"application/json"},body:JSON.stringify({note_id:Number(id),new_status:status})});
+    if(!r.ok) throw new Error(r.status+" "+(await r.text()).slice(0,160));
+    const n=(knNotes||[]).find(x=>String(x.id)===String(id)); if(!n) return;
+    n.status=status;
+    if(status==="current"){ const ov=document.getElementById("knOv"); if(ov&&ov.classList.contains("open")) ov.innerHTML=knDetail(n); }
+    else { if(!kn.old) kn.sel=null; const ov=document.getElementById("knOv"); if(ov) ov.classList.remove("open"); }
+    knRender();
+  }catch(err){ alert("Couldn't change this note: "+(err.message||err)); }
+  finally{ knBusy=false; }
+}
 function knClick(e){ const A=s=>e.target.closest(s); let b;
   if(A("[data-kn-refresh]")) return knLoad(true);
+  if(A("[data-kn-old]")){ kn.old=!kn.old; if(!kn.old){ const s=(knNotes||[]).find(x=>x.id===kn.sel); if(s&&knIsArch(s)) kn.sel=null; } return knRender(); }
+  if((b=A("[data-kn-archopen]"))){ const d=b.closest(".kn-dbody"), o=d.querySelector(".kn-archopts"); o.hidden=!o.hidden; d.querySelector(".kn-archbtn").hidden=!o.hidden; return; }
+  if((b=A("[data-kn-arch]"))) return knSetStatus(b.dataset.knArch,b.dataset.status);
   if((b=A("[data-kn-c]"))){ kn.cat=b.dataset.knC; return knRender(); }
   if((b=A("[data-kn-ds]"))){ kn.scope=b.dataset.knDs; return knRender(); }
   if(A("[data-kn-scope]")){ if(kn.scope){ kn.scope=""; return knRender(); } return knSheet(); }
