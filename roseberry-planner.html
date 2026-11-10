@@ -2852,6 +2852,10 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
   .tl-ms-line input[type=checkbox]:disabled{cursor:default}
   .tl-due{background:var(--paper);border-radius:12px;padding:.7rem .85rem .4rem;margin:.4rem 0 .6rem}
   .tl-due-h{font:var(--t-meta);display:flex;justify-content:space-between;align-items:center;}
+  .tl-fert-row{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:6px 0;border-bottom:1px solid var(--line,rgba(255,255,255,.08));font:var(--t-small);}
+  .tl-fert-row .d{white-space:nowrap;font-weight:600;}
+  .tl-fert-row .m{grid-column:2;opacity:.7;}
+  .tl-fert-more>summary{cursor:pointer;font:var(--t-small);padding:6px 0;opacity:.8;}
   .tl-due .tl-qa{margin-top:.5rem}
   /* Jobs coloured by task category, same treatment as Edit planting › Jobs (.ap2-jrow). */
   .tl-qa-cat{box-shadow:inset 3px 0 0 var(--cat);padding:.35rem 0 .35rem .6rem;border-radius:2px}
@@ -7689,6 +7693,7 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
             <div class="lf-lab"><span>Valves</span><span style="text-transform:none;letter-spacing:0;font-weight:400">tap all that ran</span></div>
             <div class="lf-chips" id="sprayValves"></div>
             <div class="lf-sub" id="sprayValveBeds"></div>
+            <button type="button" class="lf-link" id="sprayValvePick" style="justify-self:start">Pick beds individually ›</button>
           </div>
           <div class="lf-blk" id="sprayWhereRow">
             <div class="lf-lab"><span>Where</span></div>
@@ -11522,6 +11527,31 @@ function bedGroups(){
 const TARP_DEFAULT_WEEKS = 3;
 function tarpsForBed(bedId){ return (data.tarps||[]).filter(t=>t.bedId===bedId && t.start && t.end); }
 function tarpForPlanting(pid){ return (data.tarps||[]).find(t=>t.plantingId===pid) || null; }
+// Logged fertigations that reached this planting: same bed, while it was in the ground. Worked out
+// when read, so records saved before this existed count and moving a planting's dates just works.
+function plantingFertigations(p){
+  const beds=new Set(p.bedIds||[]);
+  const start=String(p.tpActual||p.tp||p.sowActual||p.sow||"").slice(0,10);
+  if(!beds.size || !start) return [];
+  const end=String((p.failed&&p.failureDate) || (OCCUPIED.has(p.status)?"":(p.h2Actual||p.h2||""))).slice(0,10);
+  return (data.sprayApplications||[]).filter(a=>{
+    const d=String(a.date||"").slice(0,10);
+    return d && a.status!=="Planned" && (a.sprayer==="Fertigation" || (a.valveIds||[]).length)
+      && d>=start && (!end || d<=end) && (a.bedIds||[]).some(b=>beds.has(b));
+  }).sort((x,y)=>String(y.date).localeCompare(String(x.date)));
+}
+function tlFertigationHtml(p){
+  const list=plantingFertigations(p);
+  if(!list.length) return "";
+  const row=a=>{
+    const prods=(a.items||[]).filter(it=>it.productId).map(it=>sprayProductName(it.productId)+(it.rate!=null?" "+lfQty(it.rate,it.unit):"")).join(", ");
+    const meta=[lfRange((a.bedIds||[]).filter(b=>(p.bedIds||[]).includes(b))),
+                a.mixVolL!=null?`${a.mixVolL} L mix`:"", a.runMin!=null?`${a.runMin} min`:""].filter(Boolean).join(" · ");
+    return `<div class="tl-fert-row"><span class="d">${esc(fmtShortDay(String(a.date).slice(0,10)))}</span><span>${esc(prods||"—")}</span><span class="m">${esc(meta)}</span></div>`;
+  };
+  return `<div class="sect-h">Fertigation · ${list.length}</div>`+list.slice(0,3).map(row).join("")
+    +(list.length>3?`<details class="tl-fert-more"><summary>Show ${list.length-3} more</summary>${list.slice(3).map(row).join("")}</details>`:"");
+}
 // is this bed under tarp on `dstr` (default today)? — drives the Farm Map's "right now" overlay
 function tarpOnBedAt(bedId, dstr){
   const d = dstr || todayISO();
@@ -17273,6 +17303,7 @@ function tlRenderPanel(p, panel, closeFn, opts){
     body=tasksHtml
       +(openJobs.length?`<div class="tl-due"><div class="tl-due-h"><span>Due next</span><button type="button" class="tl-linkbtn" data-tltab="tasks">${Math.min(2,openJobs.length)} of ${openJobs.length} ›</button></div>`
         +`<div class="tl-qa">${openJobs.slice(0,2).map(i=>i.html).join("")}</div></div>`:"")
+      +tlFertigationHtml(p)
       +`<div class="sect-h">Notes</div>
     <textarea class="tl-notes" rows="4" placeholder="Anything worth remembering about this planting…">${esc(p.notes||"")}</textarea>`;
   }else if(tab==="tasks"){
@@ -29197,7 +29228,7 @@ function sprayResetState(mode){
   const sprayers=PlannerShared.sprayersFrom(data.farmSettings);
   spray = { beds:new Set(), cropIds:new Set(), items:[], photos:[], fromMixId:null, from:null, fromName:"", fromSub:"",
             method:"Backpack", whpManual:false, mode:mode||"log", editId:null, followups:[],
-            zoneIds:new Set(), valveIds:new Set(), sprayer:(sprayers.find(s=>s.default)||sprayers[0]).name,
+            zoneIds:new Set(), valveIds:new Set(), valveOff:new Set(), autoCropIds:new Set(), sprayer:(sprayers.find(s=>s.default)||sprayers[0]).name,
             tanks:null, fromStart:false, src:"manual" };
   ["sprayLocNote","sprayNotes","sprayAmount","sprayWhp","sprayCropSearch","sprayMixVol","sprayRunMin","sprayWhyOther"].forEach(id=>$s(id).value="");
   $s("sprayAmountUnit").value="L";
@@ -29245,6 +29276,9 @@ function sprayPrefillFromApp(a){
   const covered = new Set([...PlannerShared.bedsForZones(data.sprayZones||[], [...spray.zoneIds]),
                            ...PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds])]);
   (a.bedIds||[]).forEach(id=>{ if(!covered.has(id)) spray.beds.add(id); });
+  // A valve bed missing from the saved beds was left out by hand, so it stays out when reopened.
+  const savedBeds=new Set(a.bedIds||[]);
+  spray.valveOff = new Set(savedBeds.size ? PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds]).filter(id=>!savedBeds.has(id)) : []);
   (a.cropIds||[]).forEach(id=>spray.cropIds.add(id));
   spray.items = (a.items||[]).map(it=>({productId:it.productId, rate:it.rate, unit:it.unit||(sprayProduct(it.productId)||{}).unit||""}));
   if(!spray.items.length) spray.items=[{productId:"",rate:null,unit:""}];
@@ -29380,7 +29414,10 @@ function renderSprayValves(){
   $s("sprayValves").innerHTML = vs.map(v=>
     `<button type="button" class="lf-chip" data-valve="${esc(v.id)}" aria-pressed="${spray.valveIds.has(v.id)}">${esc(v.name)}</button>`).join("");
   const on=vs.filter(v=>spray.valveIds.has(v.id));
-  $s("sprayValveBeds").textContent = on.length ? "Waters "+on.map(v=>lfRange(v.bedIds)||v.name).join(", ") : "No valves picked";
+  const all=sprayAllBedIds(), off=(spray.valveOff||new Set()).size;
+  $s("sprayValveBeds").textContent = all.length
+    ? `${on.length?"Waters":"Beds"} ${lfRange(all)} · ${all.length} bed${all.length===1?"":"s"}${off?`, ${off} left out`:""}`
+    : on.length ? "All beds left out" : "No valves picked";
   renderSpraySum();
 }
 const SPRAY_WHY_QUICK=["Fungal","Pest","Disease","Deficiency","Routine feed"];
@@ -29402,13 +29439,32 @@ function sprayRenderWhen(){
 function sprayAllBedIds(){
   const out=new Set(spray.beds);
   PlannerShared.bedsForZones(data.sprayZones||[], [...spray.zoneIds]).forEach(b=>out.add(b));
-  if(sprayIsFert()) PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds]).forEach(b=>out.add(b));
+  if(sprayIsFert()){
+    PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds]).forEach(b=>out.add(b));
+    (spray.valveOff||[]).forEach(b=>out.delete(b));
+  }
   return [...out];
 }
-// Crops follow the beds: add the headline crop of every bed now included (hand-removed crops stay off).
+// Crops follow the beds: every crop in the beds now included (hand-removed crops stay off), and a
+// crop this added drops off again when its beds do. Crops added by hand are never touched.
 function sprayAutoCrops(){
-  sprayAllBedIds().forEach(id=>{ const pl=(sprayBed(id)||{}).planting; if(pl && pl.cropId && !(spray.cropOff||new Set()).has(pl.cropId)) spray.cropIds.add(pl.cropId); });
+  const want=new Set(), off=spray.cropOff||new Set(), auto=spray.autoCropIds||(spray.autoCropIds=new Set());
+  sprayAllBedIds().forEach(id=>{ const b=sprayBed(id)||{};
+    [b.planting, ...(b.plantings||[])].forEach(pl=>{ if(pl && pl.cropId && !off.has(pl.cropId)) want.add(pl.cropId); }); });
+  [...auto].forEach(c=>{ if(!want.has(c)){ spray.cropIds.delete(c); auto.delete(c); } });
+  want.forEach(c=>{ if(!spray.cropIds.has(c)){ spray.cropIds.add(c); auto.add(c); } });
   renderSprayCropChips();
+}
+// Fertigation: start from every bed the valves reach and let the grower take some out or add others.
+function sprayPickFertBeds(){
+  bedPickOpen({ bedIds:sprayAllBedIds(), allowZones:false, marks:sprayMarks, title:"Which beds got it",
+    onDone:({bedIds})=>{
+      const picked=new Set(bedIds), valveBeds=new Set(PlannerShared.bedsForValves(sprayValves(), [...spray.valveIds]));
+      spray.valveOff=new Set([...valveBeds].filter(b=>!picked.has(b)));
+      spray.beds=new Set(bedIds.filter(b=>!valveBeds.has(b)));
+      spray.zoneIds=new Set();
+      sprayAutoCrops(); renderSprayValves();
+    }});
 }
 function sprayMarks(b){
   const w=sprayWhpOnBedAt(b.id);
@@ -29657,7 +29713,8 @@ function renderSpraySum(){
     : `<span class="safe">Harvest OK now</span>`;
   if(sprayIsFert()){
     const vs=sprayValves().filter(v=>spray.valveIds.has(v.id)).map(v=>v.name);
-    el.innerHTML=`<span><b>Valves ${esc(vs.join(", ")||"—")}</b></span><span>${esc($s("sprayMixVol").value||0)} L</span><span>${esc($s("sprayRunMin").value||0)} min</span>${status}`;
+    const nb=sprayAllBedIds().length;
+    el.innerHTML=`<span><b>Valves ${esc(vs.join(", ")||"—")}</b></span><span>${nb} bed${nb===1?"":"s"}</span><span>${esc($s("sprayMixVol").value||0)} L</span><span>${esc($s("sprayRunMin").value||0)} min</span>${status}`;
     return;
   }
   const l=spraySprayerLitres(), t=spray.tanks||0, amt=$s("sprayAmount").value;
@@ -30239,8 +30296,11 @@ function spraySayApply(r){
   $s("sprayValves").addEventListener("click",(e)=>{
     const b=e.target.closest("[data-valve]"); if(!b) return;
     const id=b.dataset.valve; spray.valveIds.has(id)?spray.valveIds.delete(id):spray.valveIds.add(id);
+    // Tapping a valve always starts it with all of its beds.
+    ((sprayValves().find(v=>v.id===id)||{}).bedIds||[]).forEach(x=>spray.valveOff.delete(x));
     renderSprayValves(); sprayAutoCrops();
   });
+  $s("sprayValvePick").onclick=sprayPickFertBeds;
   $s("sprayWhyChips").addEventListener("click",(e)=>{
     if(e.target.closest("[data-why-other]")){ spray.whyOther=true; renderSprayWhy(); $s("sprayWhyOther").focus(); return; }
     const b=e.target.closest("[data-why]"); if(!b) return;
