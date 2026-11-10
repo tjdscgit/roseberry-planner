@@ -29044,20 +29044,19 @@ function srRenderPanel(){
      +(photos?`<div class="pn-sect">Photos</div>`
        +`<div style="display:flex;gap:7px;flex-wrap:wrap">${photos}</div>`:"")
    +`</div>`
-   // A LOGGED spray has no edit path anywhere in the app — the dialog only opens for a new log or
-   // for a scheduled one — so the panel doesn't offer a button that would have to invent one.
+   // Logged sprays edit in the log form on that record (sprayEditLogged), same as the phone sheet.
    +`<div class="pn-foot">`
      +(planned
         ? `<button type="button" class="btn-primary pn-grow" id="srLogNow">Log now</button>`
-          +`<button type="button" class="btn-ghost" id="srEdit">Edit</button>`
         : `<span class="pn-grow"></span>`)
+     +`<button type="button" class="btn-ghost" id="srEdit">Edit</button>`
      +`<button type="button" class="btn-danger" id="srDel">Delete</button></div>`;
 
   panel.querySelector("#srPanelClose").onclick=()=>{ srSelected=null; srRenderPanel(); srMarkRow(); };
   const logNow=panel.querySelector("#srLogNow");
   if(logNow) logNow.onclick=()=>sprayOpenLogFromPlan(a.id);
   const edit=panel.querySelector("#srEdit");
-  if(edit) edit.onclick=()=>sprayOpenPlan(a.id);
+  if(edit) edit.onclick=()=>sprayEditLogged(a.id);   // Planned → schedule form, Logged → log form
   panel.querySelector("#srDel").onclick=()=>sprayDeleteRecord(a.id);
 }
 
@@ -29250,10 +29249,12 @@ function sprayFoldOpen(on){
   const b=$s("sprayFold"); b.textContent=(on?"▾":"▸")+b.textContent.slice(1);
 }
 function sprayApplyMode(){
-  const m = spray.mode, isPlan = m==="plan", editing = !!spray.editId;
+  const m = spray.mode, isPlan = m==="plan", editing = !!spray.editId, fixLogged = editing && m==="log";
+  const fert = spray.sprayer==="Fertigation";
   $s("sprayHead").textContent = isPlan ? (editing?"Edit scheduled spray":"Schedule a spray")
-    : m==="logFromPlan" ? "Log this spray" : spray.sprayer==="Fertigation" ? "Log fertigation" : "Log a spray";
-  $s("spraySave").textContent = isPlan ? "Schedule spray" : spray.sprayer==="Fertigation" ? "Save fertigation" : "Save spray";
+    : fixLogged ? (fert ? "Edit fertigation" : "Edit spray")
+    : m==="logFromPlan" ? "Log this spray" : fert ? "Log fertigation" : "Log a spray";
+  $s("spraySave").textContent = isPlan ? "Schedule spray" : fixLogged ? "Save changes" : fert ? "Save fertigation" : "Save spray";
   $s("sprayPhotoSection").style.display = isPlan ? "none" : "";          // no photos of a future spray
   $s("sprayLogAsPlannedBtn").style.display = m==="logFromPlan" ? "" : "none";
   $s("sprayFollowupSection").style.display = editing ? "none" : "";       // follow-ups only for a fresh record
@@ -29861,12 +29862,13 @@ async function spraySaveRecord(){
     if(by) localStorage.setItem(SPRAY_BY_KEY, by);
     // Captured before sprayClose(), which resets both — see sprayAfterSaveView and fwLinkSprayToObs.
     const cameFromWalk=fwSprayFromWalk, linkObsId=fwSprayLinkObsId, onSaved=spray.onSaved;
+    const fixedLogged=!!spray.editId && spray.mode==="log";   // a correction, not a new spray: no job prompt
     sprayClose();
     await loadAll();
     if(linkObsId) fwLinkSprayToObs(linkObsId, appId);
     if(onSaved){ await onSaved(appId); renderViewContent(currentView); return; }   // opened by ticking a job: stay put
     sprayAfterSaveView(cameFromWalk);
-    if(status==="Logged") jobsOfferForRecord("spray", appId, date, bedIds);
+    if(status==="Logged" && !fixedLogged) jobsOfferForRecord("spray", appId, date, bedIds);
   }catch(e){
     sprayShowErr("Couldn't save: "+e.message);
   }finally{ btn.disabled=false; btn.textContent=origLabel; }
@@ -29956,7 +29958,9 @@ async function sprayUploadPhotos(recordId){
       }catch(e){ errs.push(e.message); }
     }
     if(uploaded.length){
-      try{ await atPatch(CFG.farmBase, CFG.tables.sprayApplications, recordId, { [CFG.f.sap_photos]: uploaded }); }
+      // Editing a record: keep the photos it already has, the new ones go after them.
+      const had=(((data.sprayApplications||[]).find(x=>x.id===recordId)||{}).photos)||[];
+      try{ await atPatch(CFG.farmBase, CFG.tables.sprayApplications, recordId, { [CFG.f.sap_photos]: had.concat(uploaded) }); }
       catch(e){ errs.push(e.message); }
     }
     if(errs.length) alert("Record saved, but some photos didn't upload:\n"+errs.join("\n"));
