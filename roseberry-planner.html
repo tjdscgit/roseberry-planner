@@ -1204,6 +1204,10 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
   #view-crops.cr-bulk .cr-table td:first-child,#view-crops.cr-bulk .cr-table th:first-child{position:sticky;left:0;z-index:1;background:var(--paper);min-width:10rem}
   #view-crops.cr-bulk .cr-table thead th:first-child{z-index:3;background:var(--paper-2)}
   #view-crops.cr-bulk .cr-spark-cell svg{max-height:26px}
+  .cr-wk{display:none}
+  #view-crops.cr-bulk .cr-table td:has(> .cr-wk){white-space:nowrap}
+  #view-crops.cr-bulk .cr-table td:has(> .cr-wk) > input{display:inline-block;vertical-align:middle}
+  #view-crops.cr-bulk .cr-wk{display:inline-block;min-width:4.2rem;margin-left:.4rem;font:var(--t-small);color:var(--ink-3);white-space:nowrap;vertical-align:middle}
   .cr-pick,.cr-pick-all{display:none;width:16px;height:16px;margin:0 .35rem 0 0;accent-color:var(--steel);cursor:pointer}
   #view-crops.cr-bulk .cr-table input.cr-pick,#view-crops.cr-bulk .cr-table input.cr-pick-all{display:inline-block;vertical-align:middle;width:16px;min-width:16px;max-width:16px;height:16px;min-height:16px;flex:0 0 16px;padding:0}
   .cr-fill{display:flex;align-items:center;gap:.45rem;font:var(--t-small);background:var(--steel-tint);border:1px solid var(--steel);border-radius:8px;padding:.25rem .5rem}
@@ -20117,6 +20121,9 @@ const CR_ROW_FIELDS=[
   {k:"germTemp", step:"0.1", label:"Optimal germ temp", group:"Nursery"},
   {k:"pottingUp", type:"select", options:["Yes","No"], label:"Potting up", group:"Nursery"},
 ];
+// Day counts that also read as weeks (shown greyed beside the box in Bulk edit).
+const CR_WEEK_KEYS=new Set(["nursery","dtm","window","gap"]);
+function crWeeksText(v){ if(v===""||v==null||!(+v>0)) return ""; const w=Math.round(+v/7*10)/10; return `(${w} wk)`; }
 function crFieldCellsHTML(start,end,d){
   return CR_ROW_FIELDS.slice(start,end).map(f=>{
     const cls=(f.divider||f.k==="seederRoller")?" cr-divider":"";
@@ -20130,7 +20137,8 @@ function crFieldCellsHTML(start,end,d){
       return `<td class="${cls}"${grp}><select data-k="${f.k}">${opts}</select></td>`;
     }
     const mp = f.k==="pickEvery" ? `<label class="cr-mp" title="Picked more than once — tick to set Pick every and Per plant, per pick"><input type="checkbox" data-mp></label>` : "";
-    return `<td class="${cls}"${grp}>${mp}<input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}"></td>`;
+    const wk = CR_WEEK_KEYS.has(f.k) ? `<span class="cr-wk" data-wk="${f.k}"></span>` : "";
+    return `<td class="${cls}"${grp}>${mp}<input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}">${wk}</td>`;
   }).join("");
 }
 // Binds every [data-k] cell in a row to a save function and a source object to read values from
@@ -20142,6 +20150,8 @@ function crBindFieldCells(tr, rec, saveFn, cropDefsForPlaceholder){
   tr.querySelectorAll("[data-k]").forEach(el=>{
     const k=el.dataset.k;
     el.value=rec[k]??"";
+    const wk=el.parentElement.querySelector(`.cr-wk[data-wk="${k}"]`);
+    if(wk){ const upd=()=>{ wk.textContent=crWeeksText(el.value!==""?el.value:(cropDefsForPlaceholder||{})[k]); }; upd(); el.addEventListener("input",upd); }
     if(cropDefsForPlaceholder && el.tagName==="INPUT"){
       el.placeholder = cropDefsForPlaceholder[k]!=null ? `(${cropDefsForPlaceholder[k]})` : "";
     }
