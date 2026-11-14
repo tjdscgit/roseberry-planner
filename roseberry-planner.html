@@ -1204,6 +1204,13 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
   #view-crops.cr-bulk .cr-table td:first-child,#view-crops.cr-bulk .cr-table th:first-child{position:sticky;left:0;z-index:1;background:var(--paper);min-width:10rem}
   #view-crops.cr-bulk .cr-table thead th:first-child{z-index:3;background:var(--paper-2)}
   #view-crops.cr-bulk .cr-spark-cell svg{max-height:26px}
+  .cr-pick,.cr-pick-all{display:none;width:16px;height:16px;margin:0 .35rem 0 0;accent-color:var(--steel);cursor:pointer}
+  #view-crops.cr-bulk .cr-table input.cr-pick,#view-crops.cr-bulk .cr-table input.cr-pick-all{display:inline-block;vertical-align:middle;width:16px;min-width:16px;max-width:16px;height:16px;min-height:16px;flex:0 0 16px;padding:0}
+  .cr-fill{display:flex;align-items:center;gap:.45rem;font:var(--t-small);background:var(--steel-tint);border:1px solid var(--steel);border-radius:8px;padding:.25rem .5rem}
+  .cr-fill[hidden]{display:none}
+  .cr-fill select,.cr-fill input{height:28px;font:var(--t-small)}
+  .cr-fill input[type=number]{width:5rem}
+  .cr-fill input[type=text]{width:9rem}
   .cr-panel{width:320px;flex:0 0 auto;background:var(--paper-2);border-left:1px solid var(--line);
     display:flex;flex-direction:column;overflow-y:auto;padding:0 0 1rem}
   .cr-panel[hidden]{display:none}
@@ -6074,7 +6081,8 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
         <button class="btn-ghost" id="crAddCropBtn" type="button">＋ New crop</button>
       </div>
       <div class="vw-tools">
-        <span class="sub">Saves as you go · ▸ shows varieties (blank = follow the crop) · click a name to open its page</span>
+        <span class="sub" id="crBulkHint">Saves as you go · ▸ shows varieties (blank = follow the crop) · click a name to open its page · tick crops to set one value on all of them</span>
+        <span class="cr-fill" id="crFillBar" hidden></span>
         <span class="spacer"></span>
         <span class="lbl-inline">Columns</span>
         <div class="seg" id="crGroupToggle" title="Which groups of columns to show. The rest stay on the crop's own panel.">
@@ -6098,7 +6106,7 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
               <th colspan="5" class="cr-divider" data-grp="Nursery">Nursery</th>
             </tr>
             <tr>
-              <th>Crop</th>
+              <th><input type="checkbox" class="cr-pick-all" id="crPickAll" title="Tick every crop shown" aria-label="Tick every crop shown">Crop</th>
               <th title="Rotation family — used to avoid replanting the same family too soon, and by bed issues to rule out related crops">Type</th>
               <th title="Direct sow into the bed, or start in trays/nursery and transplant out" data-grp="Timing">Method</th>
               <th title="How long a tray-started crop spends in the nursery before it's ready to transplant" data-grp="Timing">Days&nbsp;in&nbsp;nursery</th>
@@ -19952,7 +19960,59 @@ function crSetBulk(on){
   crBulk=!!on;
   document.getElementById("view-crops")?.classList.toggle("cr-bulk", crBulk);
   buildCropsTab();
+  crDrawFill();
 }
+/* Set one value on every ticked crop (crop defaults only — varieties keep following the crop). */
+const crPicked=new Set();
+let crFillKey="method";
+const CR_FILL_FIELDS=()=>[{k:"type",label:"Family",type:"select",options:CROP_TYPES}].concat(CR_ROW_FIELDS);
+function crFillCtlHTML(){
+  const f=CR_FILL_FIELDS().find(x=>x.k===crFillKey)||CR_ROW_FIELDS[0];
+  if(f.type==="select"){
+    let opts;
+    if(f.k==="seederRoller"){ const s=new Set(); crPicked.forEach(id=>sdRollerNames((data.cropDefs[id]||{}).seeder).forEach(o=>s.add(o))); opts=[...s]; }
+    else opts=typeof f.options==="function"?f.options():f.options;
+    return `<select id="crFillVal"><option value="">— (clear)</option>${opts.map(o=>`<option>${esc(String(o))}</option>`).join("")}</select>`;
+  }
+  if(f.type==="text") return `<input type="text" id="crFillVal" placeholder="blank = clear">`;
+  return `<input type="number" min="0" step="${f.step}" id="crFillVal" placeholder="blank = clear">`;
+}
+function crDrawFill(){
+  const bar=document.getElementById("crFillBar"), hint=document.getElementById("crBulkHint"); if(!bar) return;
+  const n=crBulk?crPicked.size:0;
+  bar.hidden=!n; if(hint) hint.hidden=!!n;
+  const all=document.getElementById("crPickAll");
+  if(all){ const vis=[...document.querySelectorAll("#crBody .cr-pick")]; all.checked=vis.length>0&&vis.every(x=>x.checked); }
+  if(!n){ bar.innerHTML=""; return; }
+  bar.innerHTML=`<b>${n} crop${n===1?"":"s"}</b><span>Set</span>`
+    +`<select id="crFillKey">${CR_FILL_FIELDS().map(f=>`<option value="${f.k}"${f.k===crFillKey?" selected":""}>${esc(f.label)}</option>`).join("")}</select>`
+    +`<span>to</span>${crFillCtlHTML()}`
+    +`<button type="button" class="btn-primary" id="crFillGo">Apply</button>`
+    +`<button type="button" class="btn-ghost" id="crFillClear">Untick all</button>`;
+  bar.querySelector("#crFillKey").onchange=e=>{ crFillKey=e.target.value; crDrawFill(); };
+  bar.querySelector("#crFillClear").onclick=()=>{ crPicked.clear(); buildCropsTab(); crDrawFill(); };
+  bar.querySelector("#crFillGo").onclick=async e=>{
+    const f=CR_FILL_FIELDS().find(x=>x.k===crFillKey), raw=bar.querySelector("#crFillVal").value;
+    const ids=[...crPicked].filter(id=>data.crops[id]);
+    const shown=raw===""?"blank":raw;
+    if(!confirm(`Set ${f.label} to ${shown} on ${ids.length} crop${ids.length===1?"":"s"}?\n\n${ids.map(id=>data.crops[id]).join(", ")}`)) return;
+    e.target.disabled=true; e.target.textContent="Saving…";
+    const val=(f.type==="select"||f.type==="text") ? raw : (raw===""?"":(+raw));
+    try{
+      for(const id of ids){
+        if(f.k==="type") await saveCropType(id, raw||null);
+        else await crSaveWithYield(id, f.k, val, null);
+      }
+    }finally{ buildCropsTab(); crDrawFill(); }
+  };
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const all=document.getElementById("crPickAll");
+  if(all) all.onchange=()=>{
+    document.querySelectorAll("#crBody .cr-pick").forEach(x=>{ x.checked=all.checked; all.checked?crPicked.add(x.dataset.crop):crPicked.delete(x.dataset.crop); });
+    crDrawFill();
+  };
+});
 function crApplyGroups(){
   const t=document.getElementById("crTable"); if(!t) return;
   Object.entries(CR_GRP_CLASS).forEach(([g,cls])=>t.classList.toggle(cls, crGroups.has(g)));
@@ -20117,7 +20177,7 @@ function crCropRow(c){
   const expanded=crExpanded.has(c.id);
   const cd=data.cropDefs[c.id]||{};
   tr.innerHTML=
-    `<td><div class="cr-crop"><button type="button" class="cr-chev">${expanded?"▾":"▸"}</button>`
+    `<td><div class="cr-crop"><input type="checkbox" class="cr-pick" data-crop="${esc(c.id)}"${crPicked.has(c.id)?" checked":""} aria-label="Tick ${esc(c.name)}"><button type="button" class="cr-chev">${expanded?"▾":"▸"}</button>`
       +`<span class="ap-crop-dot" style="background:${cropColor(c.id)}"></span>${esc(c.name)}</div></td>`
     +`<td><select data-cr-type>${crTypeOptionsHTML(cd.type)}</select></td>`
     +crFieldCellsHTML(0,5,cd)
@@ -20130,6 +20190,7 @@ function crCropRow(c){
     nameCell.style.cursor="pointer";
     nameCell.addEventListener("click",e=>{
       if(e.target.closest(".cr-chev")) return;   // the chevron still expands varieties
+      if(e.target.closest(".cr-pick")){ e.target.checked?crPicked.add(c.id):crPicked.delete(c.id); return crDrawFill(); }
       if(crBulk){ csCrop=c.id; csVar=null; crSelected=c.id; csPhoneSheet=true; crSetBulk(false); return; }
       crSelected = (crSelected===c.id) ? null : c.id;
       crRenderPanel(); crMarkSelectedRow();
