@@ -1204,11 +1204,29 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
   #view-crops.cr-bulk .cr-table td:first-child,#view-crops.cr-bulk .cr-table th:first-child{position:sticky;left:0;z-index:1;background:var(--paper);min-width:10rem}
   #view-crops.cr-bulk .cr-table thead th:first-child{z-index:3;background:var(--paper-2)}
   #view-crops.cr-bulk .cr-spark-cell svg{max-height:26px}
+  #crModeSeg{display:none}
+  #view-crops.cr-bulk #crModeSeg{display:flex!important}
+  #view-crops.cr-tasks #crTable,#view-crops.cr-tasks #crGroupToggle,#view-crops.cr-tasks .vw-tools .lbl-inline{display:none!important}
+  #view-crops.cr-tasks .cr-wrap:has(#crTable){display:none}
+  .ctg{border-collapse:separate;border-spacing:0;font:var(--t-small)}
+  .ctg th,.ctg td{border-bottom:1px solid var(--line);padding:0 4px;height:34px;white-space:nowrap}
+  .ctg thead th{position:sticky;top:0;z-index:2;background:var(--paper-2);font:var(--t-label);color:var(--ink-2);text-align:left;height:auto;padding:8px 6px;vertical-align:bottom;max-width:8.5rem;white-space:normal;line-height:1.2}
+  .ctg td:first-child,.ctg th:first-child{position:sticky;left:0;z-index:1;background:var(--paper);min-width:11rem;padding-left:.8rem}
+  .ctg thead th:first-child{z-index:3;background:var(--paper-2)}
+  .ctg .ctg-name{display:flex;align-items:center;gap:.45rem;font:var(--t-row);cursor:pointer}
+  .ctg .ctg-n{color:var(--ink-3);font:var(--t-small);margin-left:auto;padding-right:.4rem}
+  .ctg-c{display:inline-flex;align-items:center;justify-content:center;min-width:5.4rem;height:26px;border-radius:6px;border:1px dashed transparent;background:transparent;color:var(--ink-3);font:var(--t-small);cursor:pointer;padding:0 6px}
+  .ctg-c:hover{border-color:var(--line-2);color:var(--ink)}
+  .ctg-c.on{background:var(--steel-tint);border:1px solid var(--steel);color:var(--ink)}
+  .ctg-c.var{border-style:dashed;border-color:var(--clay);background:transparent}
+  .ctg tbody tr:hover td{background:var(--hover)}
+  .ctg tbody tr:hover td:first-child{background:var(--hover)}
   .cr-wk{display:none}
   #view-crops.cr-bulk .cr-table td:has(> .cr-wk){white-space:nowrap}
   #view-crops.cr-bulk .cr-table td:has(> .cr-wk) > input{display:inline-block;vertical-align:middle}
   #view-crops.cr-bulk .cr-wk{display:inline-block;min-width:4.2rem;margin-left:.4rem;font:var(--t-small);color:var(--ink-3);white-space:nowrap;vertical-align:middle}
   .cr-pick,.cr-pick-all{display:none;width:16px;height:16px;margin:0 .35rem 0 0;accent-color:var(--steel);cursor:pointer}
+  #view-crops.cr-bulk .ctg input.cr-pick,#view-crops.cr-bulk .ctg input.cr-pick-all,
   #view-crops.cr-bulk .cr-table input.cr-pick,#view-crops.cr-bulk .cr-table input.cr-pick-all{display:inline-block;vertical-align:middle;width:16px;min-width:16px;max-width:16px;height:16px;min-height:16px;flex:0 0 16px;padding:0}
   .cr-fill{display:flex;align-items:center;gap:.45rem;font:var(--t-small);background:var(--steel-tint);border:1px solid var(--steel);border-radius:8px;padding:.25rem .5rem}
   .cr-fill[hidden]{display:none}
@@ -6076,6 +6094,10 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
       <div class="vw-title">
         <button class="btn-ghost" id="crBulkBack" type="button" title="Back to the crop pages">‹ Crop pages</button>
         <span class="vw-name">Bulk edit crops</span>
+        <div class="seg" id="crModeSeg" role="group" aria-label="What to edit">
+          <button type="button" data-crmode="values" aria-pressed="true">Values</button>
+          <button type="button" data-crmode="tasks" aria-pressed="false">Tasks</button>
+        </div>
         <span class="sub" id="crSummary"></span>
         <span class="spacer"></span>
         <div class="tl-search vw-search">
@@ -6144,6 +6166,7 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
           <tbody id="crBody"></tbody>
         </table>
       </div>
+      <div class="cr-wrap" id="crTaskWrap" hidden></div>
       </div>
       <!-- /.cr-left -->
       <aside class="cr-panel" id="crPanel" hidden></aside>
@@ -19963,6 +19986,7 @@ let crBulk=false;
 function crSetBulk(on){
   crBulk=!!on;
   document.getElementById("view-crops")?.classList.toggle("cr-bulk", crBulk);
+  document.getElementById("view-crops")?.classList.toggle("cr-tasks", crBulk && crMode==="tasks");
   buildCropsTab();
   crDrawFill();
 }
@@ -19981,13 +20005,115 @@ function crFillCtlHTML(){
   if(f.type==="text") return `<input type="text" id="crFillVal" placeholder="blank = clear">`;
   return `<input type="number" min="0" step="${f.step}" id="crFillVal" placeholder="blank = clear">`;
 }
+/* ---- Bulk edit › Tasks: crops down the side, every library task across the top ---- */
+let crMode="values", crTaskFillId=null;
+const CTG_ANCH={"Sow":"Sow","Transplant":"TP","First harvest":"1st pick","Last harvest":"Last pick"};
+function ctgShort(s){
+  if(!s||!s.anchor) return "no timing";
+  const o=+s.offset||0;
+  return (CTG_ANCH[s.anchor]||s.anchor)+(o?` ${o>0?"+":"−"}${Math.abs(o)}`:"")+(+s.repeat>0?` ↻${+s.repeat}`:"");
+}
+function crSetMode(m){
+  crMode=m;
+  document.getElementById("view-crops")?.classList.toggle("cr-tasks", crBulk && m==="tasks");
+  document.querySelectorAll("#crModeSeg button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.crmode===m?"true":"false"));
+  buildCropsTab(); crDrawFill();
+}
+function crTaskCols(){ return (data.tasks||[]).slice().sort((a,b)=>a.name.localeCompare(b.name)); }
+function crRenderTaskGrid(filter){
+  const wrap=document.getElementById("crTaskWrap"); if(!wrap) return;
+  const q=(filter!=null?filter:(document.getElementById("crSearch").value||"")).trim().toLowerCase();
+  const ids=Object.keys(data.crops||{}).filter(id=>!q||data.crops[id].toLowerCase().includes(q)).sort((a,b)=>data.crops[a].localeCompare(data.crops[b]));
+  const tasks=crTaskCols();
+  if(!tasks.length){ wrap.innerHTML=`<div class="cr-empty" style="padding:1.5rem">The Task library is empty — add tasks there first. <a href="#" data-ctg-lib>Task library ›</a></div>`; }
+  else{
+    const cts=data.cropTasks||[];
+    const head=`<thead><tr><th><input type="checkbox" class="cr-pick-all" id="ctgPickAll" aria-label="Tick every crop shown">Crop</th>`
+      +tasks.map(t=>`<th title="${esc(t.name)} — library timing: ${esc(csWhen(t.anchor,t.offset))}">${esc(t.name)}</th>`).join("")+`</tr></thead>`;
+    const body=ids.map(id=>{
+      const own=new Set(cts.filter(ct=>ct.cropId===id&&!ct.varietyId).map(ct=>ct.taskId));
+      const varOnly=new Set(cts.filter(ct=>ct.cropId===id&&ct.varietyId).map(ct=>ct.taskId));
+      const res=new Map(resolveTasksForCropVariety(id,null).map(s=>[s.taskId,s]));
+      return `<tr><td><span class="ctg-name" data-ctg-open="${esc(id)}"><input type="checkbox" class="cr-pick" data-crop="${esc(id)}"${crPicked.has(id)?" checked":""} aria-label="Tick ${esc(data.crops[id])}">`
+        +`<span class="ap-crop-dot" style="background:${cropColor(id)}"></span>${esc(data.crops[id])}<span class="ctg-n">${own.size||""}</span></span></td>`
+        +tasks.map(t=>{
+          if(own.has(t.id)) return `<td><button type="button" class="ctg-c on" data-ctg-edit="${esc(id)}|${esc(t.id)}" title="${esc(data.crops[id])} · ${esc(t.name)} — click to change or remove">${esc(ctgShort(res.get(t.id)))}</button></td>`;
+          if(varOnly.has(t.id)) return `<td><button type="button" class="ctg-c var" data-ctg-add="${esc(id)}|${esc(t.id)}" title="Only some varieties have this — click to add it for the whole crop">varieties</button></td>`;
+          return `<td><button type="button" class="ctg-c" data-ctg-add="${esc(id)}|${esc(t.id)}" title="Add ${esc(t.name)} to ${esc(data.crops[id])} at the library timing">＋</button></td>`;
+        }).join("")+`</tr>`;
+    }).join("");
+    wrap.innerHTML=`<table class="ctg">${head}<tbody>${body}</tbody></table>`;
+  }
+  if(!wrap._bound){ wrap._bound=true;
+    wrap.addEventListener("change",e=>{
+      if(e.target.id==="ctgPickAll"){ wrap.querySelectorAll(".cr-pick").forEach(x=>{ x.checked=e.target.checked; e.target.checked?crPicked.add(x.dataset.crop):crPicked.delete(x.dataset.crop); }); return crDrawFill(); }
+      if(e.target.classList.contains("cr-pick")){ e.target.checked?crPicked.add(e.target.dataset.crop):crPicked.delete(e.target.dataset.crop); crDrawFill(); }
+    });
+    wrap.addEventListener("click",async e=>{
+      if(e.target.closest(".cr-pick,#ctgPickAll")) return;
+      if(e.target.closest("[data-ctg-lib]")){ e.preventDefault(); return showView("tasklib"); }
+      const add=e.target.closest("[data-ctg-add]"), ed=e.target.closest("[data-ctg-edit]"), op=e.target.closest("[data-ctg-open]");
+      if(add){ const [c,t]=add.dataset.ctgAdd.split("|"); add.disabled=true; await crBulkAddTask([c],t); return; }
+      if(ed){ const [c,t]=ed.dataset.ctgEdit.split("|"); csCrop=c; csVar=null; return csOpenTaskDlg(t); }
+      if(op){ csCrop=op.dataset.ctgOpen; csVar=null; crSelected=csCrop; csPhoneSheet=true; crMode="values"; document.getElementById("view-crops")?.classList.remove("cr-tasks"); crSetBulk(false); }
+    });
+  }
+}
+// Adds a library task (at its library timing) to each crop that hasn't got it. One question about
+// plantings already on the timeline, asked once for the lot rather than once per crop.
+async function crBulkAddTask(cropIds, taskId){
+  const todo=cropIds.filter(id=>!(data.cropTasks||[]).some(ct=>ct.cropId===id&&!ct.varietyId&&ct.taskId===taskId));
+  if(!todo.length){ buildCropsTab(); return; }
+  const task=ctTaskById(taskId);
+  const live=(data.plantings||[]).filter(p=>todo.includes(p.cropId)&&p.status!=="Finished"&&!p.skipped).length;
+  const sync=live ? confirm(`Also add "${task?task.name:"this task"}" to the ${live} planting${live===1?"":"s"} of ${todo.length===1?data.crops[todo[0]]:"these crops"} already on the timeline?\n\nCancel = only new plantings get it.`) : false;
+  const realConfirm=window.confirm;
+  window.confirm=()=>sync;   // ctMaybePropagate asks per crop; answer with the one question above
+  const realBuild=buildCropTasks; buildCropTasks=()=>{};
+  try{ for(const id of todo) await ctAddTask(id,null,taskId); }
+  finally{ window.confirm=realConfirm; buildCropTasks=realBuild; buildCropsTab(); crDrawFill(); }
+}
+async function crBulkRemoveTask(cropIds, taskId){
+  const rows=(data.cropTasks||[]).filter(ct=>cropIds.includes(ct.cropId)&&!ct.varietyId&&ct.taskId===taskId);
+  const task=ctTaskById(taskId);
+  if(!rows.length){ alert(`None of the ticked crops have "${task?task.name:"that task"}" set crop-wide.`); return; }
+  if(!confirm(`Remove "${task?task.name:"task"}" from ${rows.length} crop${rows.length===1?"":"s"}?\n\n${rows.map(r=>data.crops[r.cropId]).join(", ")}\n\nThe task stays in the library; variety-only copies are kept.`)) return;
+  const live=(data.plantings||[]).filter(p=>rows.some(r=>r.cropId===p.cropId)&&p.status!=="Finished"&&!p.skipped).length;
+  const sync=live ? confirm(`Also take it off the ${live} planting${live===1?"":"s"} already on the timeline?\n\nCancel = leave those as they are.`) : false;
+  try{
+    await atDelete(CFG.farmBase, CFG.tables.cropTasks, rows.map(r=>r.id));
+    const gone=new Set(rows.map(r=>r.id));
+    data.cropTasks=data.cropTasks.filter(x=>!gone.has(x.id));
+    const realConfirm=window.confirm; window.confirm=()=>sync;
+    try{ if(sync) for(const r of rows) await ctMaybePropagate(r.cropId,null,taskId); } finally{ window.confirm=realConfirm; }
+  }catch(e){ console.error(e); alert("Couldn't remove the task:\n"+e.message); }
+  buildCropsTab(); crDrawFill();
+}
+function crDrawTaskFill(bar,n){
+  const tasks=crTaskCols();
+  if(!crTaskFillId || !tasks.some(t=>t.id===crTaskFillId)) crTaskFillId=tasks[0]?.id||null;
+  bar.innerHTML=`<b>${n} crop${n===1?"":"s"}</b><select id="crTaskFillId">${tasks.map(t=>`<option value="${esc(t.id)}"${t.id===crTaskFillId?" selected":""}>${esc(t.name)}</option>`).join("")}</select>`
+    +`<button type="button" class="btn-primary" id="crTaskAdd">Add</button><button type="button" class="btn-ghost" id="crTaskRem">Remove</button>`
+    +`<button type="button" class="btn-ghost" id="crFillClear">Untick all</button>`;
+  bar.querySelector("#crTaskFillId").onchange=e=>{ crTaskFillId=e.target.value; };
+  bar.querySelector("#crFillClear").onclick=()=>{ crPicked.clear(); buildCropsTab(); crDrawFill(); };
+  bar.querySelector("#crTaskAdd").onclick=async e=>{ const ids=[...crPicked].filter(id=>data.crops[id]); if(!crTaskFillId) return;
+    const t=ctTaskById(crTaskFillId); if(!confirm(`Add "${t.name}" at its library timing (${csWhen(t.anchor,t.offset)}) to ${ids.length} crop${ids.length===1?"":"s"}?\n\nCrops that already have it are left alone.`)) return;
+    e.target.disabled=true; e.target.textContent="Saving…"; await crBulkAddTask(ids, crTaskFillId); };
+  bar.querySelector("#crTaskRem").onclick=()=>crBulkRemoveTask([...crPicked], crTaskFillId);
+}
 function crDrawFill(){
   const bar=document.getElementById("crFillBar"), hint=document.getElementById("crBulkHint"); if(!bar) return;
   const n=crBulk?crPicked.size:0;
-  bar.hidden=!n; if(hint) hint.hidden=!!n;
+  bar.hidden=!n; if(hint){ hint.hidden=!!n; hint.textContent=crMode==="tasks"
+    ? "Click ＋ to add a task at its library timing · click a timing to change or remove it · tick crops to add or remove a task on all of them"
+    : "Saves as you go · ▸ shows varieties (blank = follow the crop) · click a name to open its page · tick crops to set one value on all of them"; }
   const all=document.getElementById("crPickAll");
   if(all){ const vis=[...document.querySelectorAll("#crBody .cr-pick")]; all.checked=vis.length>0&&vis.every(x=>x.checked); }
+  const all2=document.getElementById("ctgPickAll");
+  if(all2){ const vis=[...document.querySelectorAll("#crTaskWrap .cr-pick")]; all2.checked=vis.length>0&&vis.every(x=>x.checked); }
   if(!n){ bar.innerHTML=""; return; }
+  if(crMode==="tasks") return crDrawTaskFill(bar,n);
   bar.innerHTML=`<b>${n} crop${n===1?"":"s"}</b><span>Set</span>`
     +`<select id="crFillKey">${CR_FILL_FIELDS().map(f=>`<option value="${f.k}"${f.k===crFillKey?" selected":""}>${esc(f.label)}</option>`).join("")}</select>`
     +`<span>to</span>${crFillCtlHTML()}`
@@ -20067,6 +20193,9 @@ function buildCropsTab(filter){
   if(!csRoot && cmIsMobile()){ buildCrMobileList(); return; }
   if(csRoot && !crBulk){ csRoot.hidden=false; if(crSplit) crSplit.style.display="none"; csRender(); return; }
   if(csRoot){ csRoot.hidden=true; if(crSplit) crSplit.style.display=""; }
+  const tw=document.getElementById("crTaskWrap");
+  if(tw) tw.hidden=!(crBulk && crMode==="tasks");
+  if(crBulk && crMode==="tasks"){ crRenderTaskGrid(filter); return; }
   crApplyGroups();
   const body=document.getElementById("crBody"); if(!body) return;
   const q=(filter!=null?filter:(document.getElementById("crSearch").value||"")).trim().toLowerCase();
@@ -20564,6 +20693,8 @@ function csSheetHTML(){
     +(t.total?"":"");
 }
 function csRender(){
+  // the task dialog is shared with Bulk edit › Tasks; its saves call here, so redraw the grid instead
+  if(crBulk){ buildCropsTab(); crDrawFill(); return; }
   const root=document.getElementById("csRoot"); if(!root) return;
   const ids=Object.keys(data.crops||{}).sort((a,b)=>data.crops[a].localeCompare(data.crops[b]));
   if(csCrop && !data.crops[csCrop]){ csCrop=null; csVar=null; }
@@ -20915,6 +21046,7 @@ document.getElementById("crSearch").addEventListener("input",e=>{
 });
 document.getElementById("crAddCropBtn").addEventListener("click",crAddCrop);
 document.getElementById("crBulkBack").addEventListener("click",()=>crSetBulk(false));
+document.querySelectorAll("#crModeSeg button").forEach(b=>b.addEventListener("click",()=>crSetMode(b.dataset.crmode)));
 document.getElementById("crSearchClear").addEventListener("click",()=>{
   const inp=document.getElementById("crSearch");
   inp.value=""; inp.closest(".tl-search").classList.remove("has-val");
