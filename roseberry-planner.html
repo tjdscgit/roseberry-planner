@@ -1190,7 +1190,20 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
   .cr-table.grp-timing [data-grp="Timing"],
   .cr-table.grp-spacing [data-grp="Row Spacing"],
   .cr-table.grp-harvest [data-grp="Harvest"],
-  .cr-table.grp-nursery [data-grp="Nursery"]{display:table-cell}
+  .cr-table.grp-nursery [data-grp="Nursery"],
+  .cr-table.grp-seeder [data-grp="Seeder"]{display:table-cell}
+  /* Bulk edit (2026-11-15): the old spreadsheet table, reached from the Crops list's ⊞ button. */
+  #view-crops.cr-bulk .cr-split{display:flex!important}
+  #view-crops.cr-bulk #csRoot,#view-crops.cr-bulk .cr-panel{display:none!important}
+  #view-crops.cr-bulk .vw-tools .seg,#view-crops.cr-bulk .vw-tools .lbl-inline{display:flex!important}
+  #view-crops.cr-bulk .cr-table input[type=text]{width:9rem}
+  #view-crops.cr-bulk .cr-table tbody td{height:34px;padding-top:2px;padding-bottom:2px}
+  #view-crops.cr-bulk .cr-table input,#view-crops.cr-bulk .cr-table select{height:28px;min-height:28px;padding-top:0;padding-bottom:0;font:var(--t-small)}
+  #view-crops.cr-bulk .cr-table input[type=number]{width:4.6rem}
+  #view-crops.cr-bulk .cr-table select{max-width:9.5rem}
+  #view-crops.cr-bulk .cr-table td:first-child,#view-crops.cr-bulk .cr-table th:first-child{position:sticky;left:0;z-index:1;background:var(--paper);min-width:10rem}
+  #view-crops.cr-bulk .cr-table thead th:first-child{z-index:3;background:var(--paper-2)}
+  #view-crops.cr-bulk .cr-spark-cell svg{max-height:26px}
   .cr-panel{width:320px;flex:0 0 auto;background:var(--paper-2);border-left:1px solid var(--line);
     display:flex;flex-direction:column;overflow-y:auto;padding:0 0 1rem}
   .cr-panel[hidden]{display:none}
@@ -6050,7 +6063,8 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
       <div class="cr-split">
       <div class="cr-left">
       <div class="vw-title">
-        <span class="vw-name">Crop defaults</span>
+        <button class="btn-ghost" id="crBulkBack" type="button" title="Back to the crop pages">‹ Crop pages</button>
+        <span class="vw-name">Bulk edit crops</span>
         <span class="sub" id="crSummary"></span>
         <span class="spacer"></span>
         <div class="tl-search vw-search">
@@ -6060,12 +6074,13 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
         <button class="btn-ghost" id="crAddCropBtn" type="button">＋ New crop</button>
       </div>
       <div class="vw-tools">
-        <span class="sub">Prefills the Add-planting dialog · saves automatically</span>
+        <span class="sub">Saves as you go · ▸ shows varieties (blank = follow the crop) · click a name to open its page</span>
         <span class="spacer"></span>
         <span class="lbl-inline">Columns</span>
         <div class="seg" id="crGroupToggle" title="Which groups of columns to show. The rest stay on the crop's own panel.">
           <button type="button" data-crgrp="Timing" aria-pressed="true">Timing</button>
           <button type="button" data-crgrp="Row Spacing" aria-pressed="true">Spacing</button>
+          <button type="button" data-crgrp="Seeder" aria-pressed="false">Seeder</button>
           <button type="button" data-crgrp="Harvest" aria-pressed="false">Harvest</button>
           <button type="button" data-crgrp="Nursery" aria-pressed="false">Nursery</button>
         </div>
@@ -6078,6 +6093,7 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
               <th></th>
               <th colspan="6" data-grp="Timing">Timing</th>
               <th colspan="4" class="cr-divider" data-grp="Row Spacing">Row Spacing</th>
+              <th colspan="6" class="cr-divider" data-grp="Seeder">Seeder settings</th>
               <th colspan="6" class="cr-divider" data-grp="Harvest">Harvest</th>
               <th colspan="5" class="cr-divider" data-grp="Nursery">Nursery</th>
             </tr>
@@ -6094,6 +6110,12 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
               <th title="Default gap between rows, in cm" data-grp="Row Spacing">Row&nbsp;spacing&nbsp;(cm)</th>
               <th title="Default gap between plants within a row, in cm" data-grp="Row Spacing">Plant&nbsp;spacing&nbsp;(cm)</th>
               <th title="Which seeder/tool is normally used to sow this crop" data-grp="Row Spacing">Seeder</th>
+              <th class="cr-divider" title="Seeder roller — options follow the row's seeder" data-grp="Seeder">Roller</th>
+              <th data-grp="Seeder">Front&nbsp;sprocket</th>
+              <th data-grp="Seeder">Rear&nbsp;sprocket</th>
+              <th data-grp="Seeder">Brush</th>
+              <th data-grp="Seeder">Felt</th>
+              <th data-grp="Seeder">Seeder&nbsp;notes</th>
               <th class="cr-divider" title="What harvest is counted in — bunches, kg, heads, punnets, etc." data-grp="Harvest">Unit</th>
               <th title="How many of that unit one plant typically yields — used to estimate total harvest from bed length" data-grp="Harvest">Number&nbsp;/&nbsp;unit</th>
               <th title="Default sale price per unit — feeds the Harvest tab's season-earnings estimate" data-grp="Harvest">Price</th>
@@ -19924,7 +19946,13 @@ function buildCrMobileList(){
    the selected crop's panel — so hiding a group never hides a field outright. */
 let crGroups = new Set(["Timing","Row Spacing"]);
 let crSelected = null;
-const CR_GRP_CLASS = {"Timing":"grp-timing","Row Spacing":"grp-spacing","Harvest":"grp-harvest","Nursery":"grp-nursery"};
+const CR_GRP_CLASS = {"Timing":"grp-timing","Row Spacing":"grp-spacing","Seeder":"grp-seeder","Harvest":"grp-harvest","Nursery":"grp-nursery"};
+let crBulk=false;
+function crSetBulk(on){
+  crBulk=!!on;
+  document.getElementById("view-crops")?.classList.toggle("cr-bulk", crBulk);
+  buildCropsTab();
+}
 function crApplyGroups(){
   const t=document.getElementById("crTable"); if(!t) return;
   Object.entries(CR_GRP_CLASS).forEach(([g,cls])=>t.classList.toggle(cls, crGroups.has(g)));
@@ -19973,7 +20001,8 @@ function buildCropsTab(filter){
   });
   const csRoot=document.getElementById("csRoot"), crSplit=document.querySelector("#view-crops .cr-split");
   if(!csRoot && cmIsMobile()){ buildCrMobileList(); return; }
-  if(csRoot){ csRoot.hidden=false; if(crSplit) crSplit.style.display="none"; csRender(); return; }
+  if(csRoot && !crBulk){ csRoot.hidden=false; if(crSplit) crSplit.style.display="none"; csRender(); return; }
+  if(csRoot){ csRoot.hidden=true; if(crSplit) crSplit.style.display=""; }
   crApplyGroups();
   const body=document.getElementById("crBody"); if(!body) return;
   const q=(filter!=null?filter:(document.getElementById("crSearch").value||"")).trim().toLowerCase();
@@ -20010,7 +20039,7 @@ const CR_ROW_FIELDS=[
   {k:"rowSpacing", step:"0.1", label:"Row spacing (cm)", group:"Row Spacing"},
   {k:"plantSpacing", step:"0.1", label:"Plant spacing (cm)", group:"Row Spacing"},
   {k:"seeder", type:"select", options:()=>sdNames(), label:"Seeder", group:"Row Spacing"},
-  {k:"seederRoller", type:"select", options:()=>sdRollerNames(csDefs(csCrop,csVar).seeder), label:"Roller", group:"Seeder"},
+  {k:"seederRoller", type:"select", options:d=>sdRollerNames((d||csDefs(csCrop,csVar)).seeder), label:"Roller", group:"Seeder"},
   {k:"frontSprocket", type:"select", options:()=>PlannerShared.JANG_SPROCKETS.map(String), label:"Front sprocket", group:"Seeder"},
   {k:"rearSprocket", type:"select", options:()=>PlannerShared.JANG_SPROCKETS.map(String), label:"Rear sprocket", group:"Seeder"},
   {k:"brush", type:"text", label:"Brush", group:"Seeder"},
@@ -20028,13 +20057,15 @@ const CR_ROW_FIELDS=[
   {k:"germTemp", step:"0.1", label:"Optimal germ temp", group:"Nursery"},
   {k:"pottingUp", type:"select", options:["Yes","No"], label:"Potting up", group:"Nursery"},
 ];
-function crFieldCellsHTML(start,end){
+function crFieldCellsHTML(start,end,d){
   return CR_ROW_FIELDS.slice(start,end).map(f=>{
-    const cls=f.divider?" cr-divider":"";
+    const cls=(f.divider||f.k==="seederRoller")?" cr-divider":"";
     // data-grp lets the Columns switch hide a whole group without any renderer knowing about it
     const grp=` data-grp="${f.group}"`;
+    if(f.type==="text") return `<td class="${cls}"${grp}><input type="text" data-k="${f.k}"></td>`;
     if(f.type==="select"){
-      const opts_=typeof f.options==="function" ? f.options() : f.options;
+      let opts_=(typeof f.options==="function" ? f.options(d) : f.options).slice();
+      const cur=d&&d[f.k]; if(!csBlank(cur) && !opts_.map(String).includes(String(cur))) opts_.push(String(cur));
       const opts=`<option value="">—</option>`+opts_.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       return `<td class="${cls}"${grp}><select data-k="${f.k}">${opts}</select></td>`;
     }
@@ -20056,7 +20087,9 @@ function crBindFieldCells(tr, rec, saveFn, cropDefsForPlaceholder){
     }
     el.onchange=()=>{
       const raw=el.value;
-      saveFn(k, SELECT_DEFAULT_KEYS.has(k) ? raw : (raw===""?"":(+raw)));
+      const val=(SELECT_DEFAULT_KEYS.has(k)||el.type==="text") ? raw : (raw===""?"":(+raw));
+      // the roller list depends on the seeder, so redraw the rows once a seeder is saved
+      Promise.resolve(saveFn(k, val)).then(()=>{ if(k==="seeder") buildCropsTab(); });
       crRefreshSpark(tr);
     };
   });
@@ -20087,9 +20120,9 @@ function crCropRow(c){
     `<td><div class="cr-crop"><button type="button" class="cr-chev">${expanded?"▾":"▸"}</button>`
       +`<span class="ap-crop-dot" style="background:${cropColor(c.id)}"></span>${esc(c.name)}</div></td>`
     +`<td><select data-cr-type>${crTypeOptionsHTML(cd.type)}</select></td>`
-    +crFieldCellsHTML(0,5)
+    +crFieldCellsHTML(0,5,cd)
     +`<td class="cr-spark-cell" data-grp="Timing"></td>`
-    +crFieldCellsHTML(5);
+    +crFieldCellsHTML(5,undefined,cd);
   const {sparkCell}=crBindFieldCells(tr, cd, (k,v)=>crSaveWithYield(c.id,k,v,tr), null);
   crShowYieldSource(c.id, tr);
   const nameCell=tr.querySelector(".cr-crop");
@@ -20097,6 +20130,7 @@ function crCropRow(c){
     nameCell.style.cursor="pointer";
     nameCell.addEventListener("click",e=>{
       if(e.target.closest(".cr-chev")) return;   // the chevron still expands varieties
+      if(crBulk){ csCrop=c.id; csVar=null; crSelected=c.id; csPhoneSheet=true; crSetBulk(false); return; }
       crSelected = (crSelected===c.id) ? null : c.id;
       crRenderPanel(); crMarkSelectedRow();
     });
@@ -20119,9 +20153,9 @@ function crVarietyRow(c,v){
   tr.innerHTML=
     `<td><div class="cr-variety-name"><span class="cr-dot" style="background:${cropColor(c.id)}"></span>${esc(v.name)}</div></td>`
     +`<td class="cr-type-inherited">${esc(cropType||"—")}</td>`
-    +crFieldCellsHTML(0,5)
+    +crFieldCellsHTML(0,5,csDefs(c.id,v.id))
     +`<td class="cr-spark-cell" data-grp="Timing"></td>`
-    +crFieldCellsHTML(5);
+    +crFieldCellsHTML(5,undefined,csDefs(c.id,v.id));
   const cd=data.cropDefs[c.id]||{};
   const {sparkCell}=crBindFieldCells(tr, v, (k,val)=>saveVarietyField(v.id,k,val), cd);
   tr._crRenderSpark=()=>{
@@ -20227,6 +20261,7 @@ function csListPaneHTML(){
   return `<aside class="cs-list"><div class="cs-list-head">`
     +(phone?"":`<button type="button" class="icon-btn" data-cs-act="list" aria-label="Hide crop list" title="Hide crop list">‹</button>`)
     +`<span class="vw-name">Crops</span><span class="spacer"></span>`
+    +`<button type="button" class="btn-ghost" data-cs-act="bulk" title="Edit every crop in one spreadsheet">⊞ Bulk edit</button>`
     +`<button type="button" class="icon-btn" data-cs-act="newcrop" aria-label="New crop" title="New crop">＋</button></div>`
     +`<div class="tl-search cs-search"><input type="text" id="csSearch" placeholder="Search crops &amp; varieties…" autocomplete="off" spellcheck="false" value="${esc(csQuery)}"></div>`
     +`<div class="cs-pills">${[["all","All"],["notasks","No tasks"],["gaps","Gaps"]].map(([k,l])=>
@@ -20534,6 +20569,7 @@ function csBind(root){
     if(el.dataset.csTask){ return csOpenTaskDlg(el.dataset.csTask); }
     const act=el.dataset.csAct;
     if(act==="list"){ csListOpen=!csListOpen; try{ localStorage.setItem("csListOpen",csListOpen?"1":"0"); }catch(_){} return csRender(); }
+    if(act==="bulk") return crSetBulk(true);
     if(act==="edit"){ csEdit=true; return csRender(); }
     if(act==="done"){ csEdit=false; return csRender(); }
     if(act==="phoneback") return csPhoneClose();
@@ -20807,6 +20843,7 @@ document.getElementById("crSearch").addEventListener("input",e=>{
   buildCropsTab(e.target.value);
 });
 document.getElementById("crAddCropBtn").addEventListener("click",crAddCrop);
+document.getElementById("crBulkBack").addEventListener("click",()=>crSetBulk(false));
 document.getElementById("crSearchClear").addEventListener("click",()=>{
   const inp=document.getElementById("crSearch");
   inp.value=""; inp.closest(".tl-search").classList.remove("has-val");
