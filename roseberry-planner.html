@@ -19890,6 +19890,28 @@ async function crAddVariety(cropId,cropName){
     return null;
   }
 }
+// Deletes a variety and its variety-only crop tasks. Plantings keep their variety text (it's free
+// text, not a link), so they just fall back to the crop's values.
+async function crDeleteVariety(varId){
+  const v=data.varietiesById[varId]; if(!v) return false;
+  const cname=data.crops[v.cropId]||"the crop";
+  const tasks=(data.cropTasks||[]).filter(ct=>ct.varietyId===varId);
+  const plantings=(data.plantings||[]).filter(p=>p.cropId===v.cropId && varietyIdForPlantingText(v.cropId,p.variety)===varId);
+  const lines=[`Delete the variety "${v.name}" from ${cname}? This can't be undone.`];
+  if(tasks.length) lines.push(`Its ${tasks.length} variety-only task${tasks.length===1?"":"s"} will be deleted too.`);
+  if(plantings.length) lines.push(`${plantings.length} planting${plantings.length===1?"":"s"} name it. They keep the name but will follow ${cname}'s values.`);
+  if(!confirm(lines.join("\n\n"))) return false;
+  try{
+    if(tasks.length){
+      await atDelete(CFG.farmBase, CFG.tables.cropTasks, tasks.map(t=>t.id));
+      const gone=new Set(tasks.map(t=>t.id)); data.cropTasks=data.cropTasks.filter(t=>!gone.has(t.id));
+    }
+    await atDelete(CFG.farmBase, CFG.tables.varieties, [varId]);
+  }catch(e){ console.error(e); alert("Couldn't delete the variety:\n"+e.message); return false; }
+  data.varietiesByCrop[v.cropId]=(data.varietiesByCrop[v.cropId]||[]).filter(x=>x.id!==varId);
+  delete data.varietiesById[varId];
+  return true;
+}
 const crExpanded = new Set();   // crop ids currently showing their variety rows
 
 // Mobile: crop list -> that crop's settings (+ its varieties) -> a variety's own overrides.
@@ -20663,6 +20685,7 @@ function csSheetHTML(){
     +`<h2 class="cs-title"><span class="ap-crop-dot" style="background:${cropColor(csCrop)}"></span>${esc(v?v.name:cname)}`
     +`<span class="cs-title-sub">${v?esc(cname)+" variety":vs.length?`${vs.length} variet${vs.length===1?"y":"ies"}`:"crop defaults"}</span></h2></div>`
     +`<span class="spacer" style="flex:1"></span><span class="cs-saved" id="csSaved"></span>`
+    +(v&&csEdit?`<button type="button" class="btn-danger" data-cs-act="delvar" style="margin-right:8px">Delete variety</button>`:"")
     +(csEdit?`<button type="button" class="btn-primary" data-cs-act="done">Done</button>`:`<button type="button" class="btn-primary" data-cs-act="edit">Edit</button>`)+`</div>`;
   const tabs=`<nav class="cs-tabs" aria-label="Varieties"><button type="button" class="cs-tab${!csVar?" on":""}" data-cs-tab="">${esc(cname)} <span class="cs-tab-sub">(crop)</span></button>`
     +vs.map(x=>`<button type="button" class="cs-tab${x.id===csVar?" on":""}" data-cs-tab="${esc(x.id)}">${esc(x.name)}${csOverCount(x.id)?`<span class="cs-dot" title="Has values of its own"></span>`:""}</button>`).join("")
@@ -20772,6 +20795,7 @@ function csBind(root){
     const act=el.dataset.csAct;
     if(act==="list"){ csListOpen=!csListOpen; try{ localStorage.setItem("csListOpen",csListOpen?"1":"0"); }catch(_){} return csRender(); }
     if(act==="bulk") return crSetBulk(true);
+    if(act==="delvar"){ if(await crDeleteVariety(csVar)){ csVar=null; csEdit=false; csRender(); } return; }
     if(act==="edit"){ csEdit=true; return csRender(); }
     if(act==="done"){ csEdit=false; return csRender(); }
     if(act==="phoneback") return csPhoneClose();
