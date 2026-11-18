@@ -438,7 +438,7 @@
 
   // Yield per bed metre from spacing (user's design, 2026-10-17):
   //   plants/m (rows x 100 / in-row spacing) x picks x per plant, per pick
-  // picks = 1 for a once-only crop (no "pick every"), else floor(harvest window / pick every) + 1.
+  // picks = 1 for a once-only crop (no "pick every"), else floor(harvest window / pick every), min 1 (user 2026-11-19: a 14 d window picked every 7 d = 2 picks).
   // per plant, per pick = the crop's own figure, else 1 / Number per unit, else 1 / the count in the
   // unit name ("Bunch (6)" -> 1/6). null when there isn't enough to work it out.
   function yieldFromSpacing(d){
@@ -453,7 +453,7 @@
     }
     const ppm=rows*100/ps;
     const pe=+d.pickEvery, win=+d.window;
-    const picks = (pe>0 && win>0) ? Math.floor(win/pe)+1 : 1;
+    const picks = (pe>0 && win>0) ? Math.max(1,Math.floor(win/pe)) : 1;
     const v=+(ppm*picks*per).toFixed(2);
     const r=x=>+(+x).toFixed(2);
     const text = `${r(ppm)} plants/m` + (picks>1?` × ${picks} picks`:"") + ` × ${perSrc==="per pick"?r(per):perSrc} = ${v}`;
