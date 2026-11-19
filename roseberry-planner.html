@@ -20287,7 +20287,7 @@ function crFieldCellsHTML(start,end,d){
       const opts=`<option value="">—</option>`+opts_.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join("");
       return `<td class="${cls}"${grp}><select data-k="${f.k}">${opts}</select></td>`;
     }
-    const mp = f.k==="pickEvery" ? `<label class="cr-mp" title="Picked more than once — tick to set Pick every and Per plant, per pick"><input type="checkbox" data-mp></label>` : "";
+    const mp = f.k==="pickEvery" ? `<label class="cr-mp" title="Picked more than once — tick to set Pick every"><input type="checkbox" data-mp></label>` : "";
     const wk = CR_WEEK_KEYS.has(f.k) ? `<span class="cr-wk" data-wk="${f.k}"></span>` : "";
     return `<td class="${cls}"${grp}>${mp}<input class="cr-num" type="number" min="0" step="${f.step}" data-k="${f.k}">${wk}</td>`;
   }).join("");
@@ -20318,7 +20318,7 @@ function crBindFieldCells(tr, rec, saveFn, cropDefsForPlaceholder){
   // the yield works out as one harvest); ticking opens them up for typing.
   const mp=tr.querySelector("[data-mp]"), pe=tr.querySelector('[data-k="pickEvery"]'), pp=tr.querySelector('[data-k="perPick"]');
   if(mp && pe && pp){
-    const set=on=>{ mp.checked=on; pe.disabled=!on; pp.disabled=!on; };
+    const set=on=>{ mp.checked=on; pe.disabled=!on; };  // Per plant, per pick stays open: single-pick crops need it too (user 2026-11-20)
     set(+rec.pickEvery>0);
     mp.onchange=()=>{
       if(mp.checked){ set(true); pe.focus(); }
