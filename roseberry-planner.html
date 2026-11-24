@@ -12075,7 +12075,10 @@ const CM_PX_PER_M = 2, CM_COL_MIN_W = 24, CM_BED_SCALE_KEY = "roseberry_cm_bed_s
 const CM_LAYOUT_KEY = "roseberry_cm_layout_v1";
 let cmLayout = (()=>{ try{ return localStorage.getItem(CM_LAYOUT_KEY)==="farm" ? "farm" : "grid"; }catch(_){ return "grid"; } })();
 let cmBedScale = (()=>{ try{ return localStorage.getItem(CM_BED_SCALE_KEY)==="1"; }catch(_){ return false; } })();
+let cmFarmOn=false;           // set by buildCropMap: Farm map layout is in force for this draw
+const CM_FARM_PX_PER_M=26;    // Farm map layout: one metre of the farm in pixels
 function cmColW(bed){
+  if(cmFarmOn) return Math.max(CM_COL_MIN_W, Math.round(((bed&&bed.wid>0?Number(bed.wid):DEFAULT_WID)+0.15)*CM_FARM_PX_PER_M));
   if(!cmBedScale || cmIsMobile() || !bed || !(bed.len>0)) return CM_COL_W;
   return Math.max(CM_COL_MIN_W, Math.round(Number(bed.len)*CM_PX_PER_M));
 }
@@ -12472,18 +12475,17 @@ function cmPackRows(wrap){
   wrap.style.flexWrap="wrap";
   if(best) wrap.style.width=Math.ceil(best.w)+"px";
 }
-// "Farm map" layout: blocks keep the arrangement they have on the Farm map. A crop-map block is far
-// bigger than its footprint on the ground (a year of timeline per bed), so true scale is impossible
-// and pushing blocks apart scatters them. Instead blocks are grouped into columns by how far across
-// the farm they sit (same origin, bed widths and orientation as layoutAndDraw; tilt ignored), columns
-// run left to right in farm order, and each column is stacked top to bottom by farm position.
+// "Farm map" layout: every block sits where it does on the Farm map, at the same scale (bed columns
+// are bed-width, the track is bed-length) and with the same tilt (fmBlockRotations, which carries
+// the ~81 degree defaults). Block origin, bed widths and orientation follow layoutAndDraw. Tilting
+// is about the middle of the bed area, like the Farm map does about the block frame.
 function cmFarmLayout(wrap, keys, groups){
-  const GAP=24, COL_GAP_M=9;
+  const S=CM_FARM_PX_PER_M, PAD=40;
   const kids=[...wrap.children];
   wrap.style.display="block";
   wrap.style.position = cmViewMode==="map" ? "" : "relative";
   wrap.style.boxSizing="content-box";
-  kids.forEach(k=>{ k.style.position="absolute"; k.style.left="0"; k.style.top="0"; k.style.flex=""; });
+  kids.forEach(k=>{ k.style.position="absolute"; k.style.left="0"; k.style.top="0"; k.style.flex=""; k.style.transform=""; });
   const items=keys.map((key,i)=>{
     const el=kids[i], meta=cmBlockByName(key), beds=groups[key]||[];
     let cx=null, cy=null;
@@ -12493,26 +12495,39 @@ function cmFarmLayout(wrap, keys, groups){
       const horiz=meta.orient==="Beds run horizontal";
       cx=meta.x+(horiz?mainMax:cursor)/2; cy=meta.y+(horiz?cursor:mainMax)/2;
     }
-    return {el, cx, cy, w:el.offsetWidth, h:el.offsetHeight};
+    // where the bed area (tracks, not the header or month axis) sits inside the block, unscaled
+    const br=el.getBoundingClientRect(), k=el.offsetWidth ? br.width/el.offsetWidth : 1;
+    const t0=el.querySelector(".cm-track"), cols=el.querySelectorAll(".cm-col");
+    let bx=el.offsetWidth/2, by=el.offsetHeight/2;
+    if(t0 && cols.length){
+      const r0=t0.getBoundingClientRect(), r1=cols[cols.length-1].getBoundingClientRect();
+      bx=((r0.left+r1.right)/2-br.left)/k; by=((r0.top+r0.bottom)/2-br.top)/k;
+    }
+    return {key, el, cx, cy, bx, by, w:el.offsetWidth, h:el.offsetHeight, deg:fmBlockRotations[key]||0};
   });
-  const cols=[];
-  items.filter(it=>it.cx!=null).sort((a,b)=>a.cx-b.cx).forEach(it=>{
-    const last=cols[cols.length-1];
-    if(last && it.cx-last[last.length-1].cx<=COL_GAP_M) last.push(it); else cols.push([it]);
+  const placed=items.filter(it=>it.cx!=null);
+  let spill=0;
+  const maxY=placed.length?Math.max(...placed.map(it=>it.cy)):0;
+  items.forEach(it=>{
+    if(it.cx==null){ it.cx=(spill++)*(1000/S); it.cy=maxY+60; it.deg=0; }   // no map position: a row below the farm
   });
-  const loose=items.filter(it=>it.cx==null);       // no map position yet: one column at the end
-  if(loose.length) cols.push(loose);
-  let x=0, W=0, H=0;
-  cols.forEach(col=>{
-    col.sort((a,b)=>(a.cy||0)-(b.cy||0));
-    let y=0, cw=0;
-    col.forEach(it=>{
-      it.el.style.left=Math.round(x)+"px"; it.el.style.top=Math.round(y)+"px";
-      y+=it.h+GAP; cw=Math.max(cw,it.w);
+  // bounding box of the tilted blocks
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxYpx=-Infinity;
+  items.forEach(it=>{
+    const ox=it.cx*S, oy=it.cy*S, a=it.deg*Math.PI/180, c=Math.cos(a), sn=Math.sin(a);
+    it.left=ox-it.bx; it.top=oy-it.by;
+    [[0,0],[it.w,0],[it.w,it.h],[0,it.h]].forEach(([px,py])=>{
+      const dx=it.left+px-ox, dy=it.top+py-oy;
+      const X=ox+dx*c-dy*sn, Y=oy+dx*sn+dy*c;
+      minX=Math.min(minX,X); maxX=Math.max(maxX,X); minY=Math.min(minY,Y); maxYpx=Math.max(maxYpx,Y);
     });
-    H=Math.max(H,y-GAP); x+=cw+GAP; W=x-GAP;
   });
-  wrap.style.width=Math.ceil(W)+"px"; wrap.style.height=Math.ceil(H)+"px";
+  items.forEach(it=>{
+    it.el.style.left=Math.round(it.left-minX+PAD)+"px"; it.el.style.top=Math.round(it.top-minY+PAD)+"px";
+    it.el.style.transformOrigin=`${it.bx}px ${it.by}px`;
+    if(it.deg) it.el.style.transform=`rotate(${it.deg}deg)`;
+  });
+  wrap.style.width=Math.ceil(maxX-minX+PAD*2)+"px"; wrap.style.height=Math.ceil(maxYpx-minY+PAD*2)+"px";
 }
 function setCmLayout(mode){
   cmLayout=mode==="farm"?"farm":"grid";
@@ -12810,6 +12825,14 @@ function buildCropMap(){
   const activeKeys = phone ? (cmSelectedBlock ? [cmSelectedBlock] : keys)
                            : (deskPick.length ? keys.filter(k=>deskPick.includes(k)) : keys);
 
+  // Farm map layout: bed columns and track height are drawn at the farm's own scale, so each block
+  // is the same size on screen as on the Farm map (see cmFarmLayout).
+  cmFarmOn = !phone && cmLayout==="farm" && activeKeys.length>1;
+  if(cmFarmOn){
+    const lens=[]; activeKeys.forEach(k=>(groups[k]||[]).forEach(b=>{ if(b.len>0) lens.push(Number(b.len)); }));
+    const avg=lens.length?lens.reduce((a,b)=>a+b,0)/lens.length:28;
+    CM_H=Math.max(240,Math.round(avg*CM_FARM_PX_PER_M));
+  }
   // Plantings are drawn per BLOCK, not per bed: a planting that takes four beds is one rectangle
   // four columns wide, the way it actually occupies the ground. Keying on bedIds[0] (what this
   // did before) drew it in its first bed only, so the other three read as empty.
