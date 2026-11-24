@@ -2372,6 +2372,16 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
   .cm-block-h-editable{cursor:pointer}
   .cm-block-h-editable:hover{outline:1px dashed var(--line-2)}
   .cm-grid{display:flex;align-items:flex-start;gap:1px;width:max-content;position:relative}
+  /* Farm map layout, edit mode: a cover over each block that drags it, plus a small bar to tilt it.
+     The bar is counter-scaled by the map zoom (--cm-k) so it stays readable when zoomed right out. */
+  .cm-fl-edit{position:absolute;inset:0;z-index:30;cursor:move;touch-action:none;border-radius:10px;
+    background:color-mix(in srgb,var(--steel) 14%,transparent);outline:2px dashed var(--steel)}
+  .cm-fl-bar{position:absolute;display:flex;gap:4px;align-items:center;cursor:default;
+    background:var(--paper);border:1px solid var(--line-2);border-radius:8px;padding:3px 6px;
+    font:var(--t-small);color:var(--ink);white-space:nowrap;
+    transform:translate(-50%,-50%) rotate(calc(-1deg * var(--cm-rot,0))) scale(clamp(1, calc(1 / var(--cm-k,1)), 4))}
+  .cm-fl-bar button{font:var(--t-small);padding:1px 6px;border:1px solid var(--line-2);border-radius:5px;background:transparent;color:var(--ink);cursor:pointer}
+  .cm-fl-bar input{width:54px;font:var(--t-small);padding:1px 3px;background:transparent;color:var(--ink);border:1px solid var(--line-2);border-radius:5px}
 
   /* Head is a real panel title, not a collapsed strip label: name, then how much of the plan has
      ground under it, which is the number this panel exists to move. */
@@ -5940,6 +5950,11 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
             </label>
           </div>
         </div>
+        <button class="btn-ghost cm-filters" id="cmLayoutEditBtn" type="button" hidden
+                title="Drag blocks to move them and tilt them, to match your farm. Saved on this device only; the Farm map itself is not changed">
+          ✥ Edit layout
+        </button>
+        <button class="btn-ghost cm-filters" id="cmLayoutResetBtn" type="button" hidden title="Put every block back where the Farm map has it">Reset layout</button>
         <span class="spacer"></span>
         <div class="cm-pop-wrap">
           <button class="btn-ghost cm-filters" id="cmHistBtn" type="button" aria-expanded="false"
@@ -12073,6 +12088,18 @@ const CM_AXIS_W = 30, CM_COL_W = 44, CM_GAP = 1, CM_COLH_H = 18;
    Everything that places a bar reads cmColW()/the per-block x offsets, never CM_COL_W directly. */
 const CM_PX_PER_M = 2, CM_COL_MIN_W = 24, CM_BED_SCALE_KEY = "roseberry_cm_bed_scale_v1";
 const CM_LAYOUT_KEY = "roseberry_cm_layout_v1";
+/* Farm map layout, hand-edited: per block {dx,dy} (metres off where the Farm map has it) and rot
+   (degrees, replaces the Farm map's tilt). Per device. The Blocks table / Farm map are untouched. */
+const CM_FL_KEY = "roseberry_cm_farmpos_v1";
+let cmFlEdit=false;
+let cmFlOv = (()=>{ try{ return JSON.parse(localStorage.getItem(CM_FL_KEY)||"{}")||{}; }catch(_){ return {}; } })();
+function cmFlSave(){ try{ localStorage.setItem(CM_FL_KEY, JSON.stringify(cmFlOv)); }catch(_){} }
+function cmFlSyncBtns(){
+  const e=document.getElementById("cmLayoutEditBtn"), r=document.getElementById("cmLayoutResetBtn"); if(!e||!r) return;
+  e.hidden=!cmFarmOn; r.hidden=!cmFarmOn || !Object.keys(cmFlOv).length;
+  e.textContent = cmFlEdit ? "\u2713 Done editing" : "\u271B Edit layout";
+  e.setAttribute("aria-pressed", cmFlEdit?"true":"false");
+}
 let cmLayout = (()=>{ try{ return localStorage.getItem(CM_LAYOUT_KEY)==="farm" ? "farm" : "grid"; }catch(_){ return "grid"; } })();
 let cmBedScale = (()=>{ try{ return localStorage.getItem(CM_BED_SCALE_KEY)==="1"; }catch(_){ return false; } })();
 let cmFarmOn=false;           // set by buildCropMap: Farm map layout is in force for this draw
@@ -12505,11 +12532,16 @@ function cmFarmLayout(wrap, keys, groups){
     }
     return {key, el, cx, cy, bx, by, w:el.offsetWidth, h:el.offsetHeight, deg:fmBlockRotations[key]||0};
   });
+  items.forEach(it=>{
+    const o=cmFlOv[it.key]; if(!o) return;
+    if(it.cx!=null){ it.cx+=o.dx||0; it.cy+=o.dy||0; }
+    if(o.rot!=null) it.deg=o.rot;
+  });
   const placed=items.filter(it=>it.cx!=null);
   let spill=0;
   const maxY=placed.length?Math.max(...placed.map(it=>it.cy)):0;
   items.forEach(it=>{
-    if(it.cx==null){ it.cx=(spill++)*(1000/S); it.cy=maxY+60; it.deg=0; }   // no map position: a row below the farm
+    if(it.cx==null){ it.cx=(spill++)*(1000/S); it.cy=maxY+60; it.deg=0; it.loose=true; }   // no map position: a row below the farm
   });
   // bounding box of the tilted blocks
   let minX=Infinity, minY=Infinity, maxX=-Infinity, maxYpx=-Infinity;
@@ -12526,11 +12558,57 @@ function cmFarmLayout(wrap, keys, groups){
     it.el.style.left=Math.round(it.left-minX+PAD)+"px"; it.el.style.top=Math.round(it.top-minY+PAD)+"px";
     it.el.style.transformOrigin=`${it.bx}px ${it.by}px`;
     if(it.deg) it.el.style.transform=`rotate(${it.deg}deg)`;
+    if(cmFlEdit) cmFlAddOverlay(it, wrap);
   });
   wrap.style.width=Math.ceil(maxX-minX+PAD*2)+"px"; wrap.style.height=Math.ceil(maxYpx-minY+PAD*2)+"px";
 }
+function cmFlAddOverlay(it, wrap){
+  const key=it.key, S=CM_FARM_PX_PER_M;
+  const ov=document.createElement("div"); ov.className="cm-fl-edit";
+  const bar=document.createElement("div"); bar.className="cm-fl-bar";
+  bar.innerHTML=`<b>${esc(key)}</b><button type="button" data-a="l" title="Tilt 5\u00b0 anticlockwise">\u27f2</button>`
+    +`<input type="number" step="1" value="${Math.round(it.deg*10)/10}" title="Tilt in degrees">`
+    +`<button type="button" data-a="r" title="Tilt 5\u00b0 clockwise">\u27f3</button>`
+    +`<button type="button" data-a="0" title="Put this block back where the Farm map has it">Reset</button>`;
+  ov.style.setProperty("--cm-rot", it.deg);
+  bar.style.left=it.bx+"px"; bar.style.top=it.by+"px";     // upright, in the middle of the bed area
+  ov.appendChild(bar);
+  const setRot=deg=>{ (cmFlOv[key] ||= {}).rot=Math.round(deg*10)/10; cmFlSave(); buildCropMap(); };
+  bar.addEventListener("pointerdown",e=>e.stopPropagation());
+  bar.addEventListener("click",e=>{
+    const a=e.target.closest("button"); if(!a) return; e.stopPropagation();
+    if(a.dataset.a==="l") setRot(it.deg-5);
+    else if(a.dataset.a==="r") setRot(it.deg+5);
+    else if(a.dataset.a==="0"){ delete cmFlOv[key]; cmFlSave(); buildCropMap(); }
+  });
+  bar.querySelector("input").addEventListener("change",e=>{ const v=parseFloat(e.target.value); if(!isNaN(v)) setRot(v); });
+  // drag to move: screen pixels -> the layout's own pixels (undo the map zoom) -> metres
+  ov.addEventListener("pointerdown",e=>{
+    if(e.button!==0) return;
+    e.preventDefault(); e.stopPropagation();
+    const k=wrap.offsetWidth ? wrap.getBoundingClientRect().width/wrap.offsetWidth : 1;
+    const x0=e.clientX, y0=e.clientY, l0=parseFloat(it.el.style.left)||0, t0=parseFloat(it.el.style.top)||0;
+    let dx=0, dy=0;
+    ov.setPointerCapture(e.pointerId);
+    const mv=ev=>{ dx=(ev.clientX-x0)/k; dy=(ev.clientY-y0)/k; it.el.style.left=(l0+dx)+"px"; it.el.style.top=(t0+dy)+"px"; };
+    const up=()=>{
+      ov.removeEventListener("pointermove",mv); ov.removeEventListener("pointerup",up); ov.removeEventListener("pointercancel",up);
+      if(Math.abs(dx)<1 && Math.abs(dy)<1) return;
+      const o=(cmFlOv[key] ||= {}); o.dx=(o.dx||0)+dx/S; o.dy=(o.dy||0)+dy/S; cmFlSave(); buildCropMap();
+    };
+    ov.addEventListener("pointermove",mv); ov.addEventListener("pointerup",up); ov.addEventListener("pointercancel",up);
+  });
+  it.el.appendChild(ov);
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const e=document.getElementById("cmLayoutEditBtn"), r=document.getElementById("cmLayoutResetBtn");
+  if(e) e.addEventListener("click",()=>{ cmFlEdit=!cmFlEdit; cmFlSyncBtns(); buildCropMap(); });
+  if(r) r.addEventListener("click",()=>{ if(!confirm("Put every block back where the Farm map has it?")) return;
+    cmFlOv={}; cmFlSave(); buildCropMap(); });
+});
 function setCmLayout(mode){
   cmLayout=mode==="farm"?"farm":"grid";
+  if(cmLayout!=="farm") cmFlEdit=false;
   try{ localStorage.setItem(CM_LAYOUT_KEY, cmLayout); }catch(_){}
   document.querySelectorAll("#cmLayoutToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.cmlayout===cmLayout?"true":"false"));
   buildCropMap(); if(cmViewMode==="map") cmFitView();
@@ -12828,6 +12906,8 @@ function buildCropMap(){
   // Farm map layout: bed columns and track height are drawn at the farm's own scale, so each block
   // is the same size on screen as on the Farm map (see cmFarmLayout).
   cmFarmOn = !phone && cmLayout==="farm" && activeKeys.length>1;
+  if(!cmFarmOn) cmFlEdit=false;
+  cmFlSyncBtns();
   if(cmFarmOn){
     const lens=[]; activeKeys.forEach(k=>(groups[k]||[]).forEach(b=>{ if(b.len>0) lens.push(Number(b.len)); }));
     const avg=lens.length?lens.reduce((a,b)=>a+b,0)/lens.length:28;
@@ -13140,6 +13220,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 function applyCmMapView(){
   document.getElementById("cmBlocks").style.transform =
     `translate(${cmMapState.tx}px,${cmMapState.ty}px) scale(${cmMapState.k})`;
+  document.getElementById("cmBlocks").style.setProperty("--cm-k", cmMapState.k);
   const z=document.getElementById("cmZoomVal");
   if(z) z.textContent=Math.round(cmMapState.k*100)+"%";
 }
@@ -13377,7 +13458,7 @@ function setCmViewMode(mode){
   blocks.classList.toggle("cm-mapmode",mode==="map");
   document.getElementById("cmZoombar").style.display = "none";   // superseded by .cm-statusbar
   document.querySelectorAll("#cmViewToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.cmview===mode?"true":"false"));
-  if(mode==="map"){ cmFitView(); } else { blocks.style.transform=""; vp.scrollTop=0; vp.scrollLeft=0; }
+  if(mode==="map"){ cmFitView(); } else { blocks.style.transform=""; blocks.style.removeProperty("--cm-k"); vp.scrollTop=0; vp.scrollLeft=0; }
   if(mode!=="list" && typeof setCmTarpMode==="function") setCmTarpMode(false); // tarp drawing is List-only
 }
 document.querySelectorAll("#cmViewToggle button").forEach(b=>b.addEventListener("click",()=>setCmViewMode(b.dataset.cmview)));
@@ -13606,7 +13687,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") cmHideTypePopover(
   // to pan when one is pressed — otherwise the capture eats their click. `.cm-tarp` is here so a
   // tarp opens its editor in Map mode; without it the pan-capture swallowed the click (hover still
   // worked, which is why it looked so baffling).
-  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-bar-pending, .cm-chip, .cm-tarp, #cmZoombar, .cm-block-h");
+  const isDndTarget=el=>el&&el.closest&&el.closest(".cm-bar, .cm-bar-pending, .cm-chip, .cm-tarp, #cmZoombar, .cm-block-h, .cm-fl-edit");
 
   vp.addEventListener("pointerdown",e=>{
     if(cmViewMode!=="map"||isDndTarget(e.target)) return; // let native drag-and-drop take over
