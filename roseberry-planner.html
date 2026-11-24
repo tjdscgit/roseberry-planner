@@ -5919,6 +5919,11 @@ body{background:var(--paper);color:var(--ink);font:var(--t-ui);font-weight:400;-
               <button data-cmview="list" aria-pressed="true">List</button>
               <button data-cmview="map" aria-pressed="false">Map</button>
             </div>
+            <div class="cm-pop-head">Layout</div>
+            <div class="seg" id="cmLayoutToggle" role="tablist" title="Tiled: blocks in a tidy grid. Farm: blocks sit where they do on the Farm map">
+              <button data-cmlayout="grid" aria-pressed="true">Tiled</button>
+              <button data-cmlayout="farm" aria-pressed="false">Farm map</button>
+            </div>
             <div class="cm-pop-head">Colour</div>
             <div class="seg" id="cmColorToggle" role="tablist" title="Colour plantings by individual crop, or by crop family">
               <button data-cmcolor="crop" aria-pressed="true">By crop</button>
@@ -12067,6 +12072,8 @@ const CM_AXIS_W = 30, CM_COL_W = 44, CM_GAP = 1, CM_COLH_H = 18;
    glance. Off, every column is CM_COL_W. A visual guide only — dates, fits and drops are unchanged.
    Everything that places a bar reads cmColW()/the per-block x offsets, never CM_COL_W directly. */
 const CM_PX_PER_M = 2, CM_COL_MIN_W = 24, CM_BED_SCALE_KEY = "roseberry_cm_bed_scale_v1";
+const CM_LAYOUT_KEY = "roseberry_cm_layout_v1";
+let cmLayout = (()=>{ try{ return localStorage.getItem(CM_LAYOUT_KEY)==="farm" ? "farm" : "grid"; }catch(_){ return "grid"; } })();
 let cmBedScale = (()=>{ try{ return localStorage.getItem(CM_BED_SCALE_KEY)==="1"; }catch(_){ return false; } })();
 function cmColW(bed){
   if(!cmBedScale || cmIsMobile() || !bed || !(bed.len>0)) return CM_COL_W;
@@ -12465,6 +12472,58 @@ function cmPackRows(wrap){
   wrap.style.flexWrap="wrap";
   if(best) wrap.style.width=Math.ceil(best.w)+"px";
 }
+// "Farm map" layout: blocks keep the arrangement they have on the Farm map. A crop-map block is far
+// bigger than its footprint on the ground (a year of timeline per bed), so true scale is impossible
+// and pushing blocks apart scatters them. Instead blocks are grouped into columns by how far across
+// the farm they sit (same origin, bed widths and orientation as layoutAndDraw; tilt ignored), columns
+// run left to right in farm order, and each column is stacked top to bottom by farm position.
+function cmFarmLayout(wrap, keys, groups){
+  const GAP=24, COL_GAP_M=9;
+  const kids=[...wrap.children];
+  wrap.style.display="block";
+  wrap.style.position = cmViewMode==="map" ? "" : "relative";
+  wrap.style.boxSizing="content-box";
+  kids.forEach(k=>{ k.style.position="absolute"; k.style.left="0"; k.style.top="0"; k.style.flex=""; });
+  const items=keys.map((key,i)=>{
+    const el=kids[i], meta=cmBlockByName(key), beds=groups[key]||[];
+    let cx=null, cy=null;
+    if(meta && meta.x!=null && meta.y!=null){
+      let cursor=0, mainMax=0;
+      beds.forEach(b=>{ cursor+=(b.wid!=null?b.wid:DEFAULT_WID)+0.15; mainMax=Math.max(mainMax,b.len!=null?b.len:DEFAULT_LEN); });
+      const horiz=meta.orient==="Beds run horizontal";
+      cx=meta.x+(horiz?mainMax:cursor)/2; cy=meta.y+(horiz?cursor:mainMax)/2;
+    }
+    return {el, cx, cy, w:el.offsetWidth, h:el.offsetHeight};
+  });
+  const cols=[];
+  items.filter(it=>it.cx!=null).sort((a,b)=>a.cx-b.cx).forEach(it=>{
+    const last=cols[cols.length-1];
+    if(last && it.cx-last[last.length-1].cx<=COL_GAP_M) last.push(it); else cols.push([it]);
+  });
+  const loose=items.filter(it=>it.cx==null);       // no map position yet: one column at the end
+  if(loose.length) cols.push(loose);
+  let x=0, W=0, H=0;
+  cols.forEach(col=>{
+    col.sort((a,b)=>(a.cy||0)-(b.cy||0));
+    let y=0, cw=0;
+    col.forEach(it=>{
+      it.el.style.left=Math.round(x)+"px"; it.el.style.top=Math.round(y)+"px";
+      y+=it.h+GAP; cw=Math.max(cw,it.w);
+    });
+    H=Math.max(H,y-GAP); x+=cw+GAP; W=x-GAP;
+  });
+  wrap.style.width=Math.ceil(W)+"px"; wrap.style.height=Math.ceil(H)+"px";
+}
+function setCmLayout(mode){
+  cmLayout=mode==="farm"?"farm":"grid";
+  try{ localStorage.setItem(CM_LAYOUT_KEY, cmLayout); }catch(_){}
+  document.querySelectorAll("#cmLayoutToggle button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.cmlayout===cmLayout?"true":"false"));
+  buildCropMap(); if(cmViewMode==="map") cmFitView();
+}
+document.querySelectorAll("#cmLayoutToggle button").forEach(b=>{
+  b.setAttribute("aria-pressed", b.dataset.cmlayout===cmLayout?"true":"false");
+  b.addEventListener("click",()=>setCmLayout(b.dataset.cmlayout));
+});
 function cmSetDeskBlocks(list){
   cmDeskBlocks=list;
   try{ sessionStorage.setItem(CM_DESK_BLOCKS_KEY, JSON.stringify(list)); }catch(_){}
@@ -12769,6 +12828,7 @@ function buildCropMap(){
   wrap.style.gridTemplateColumns=`repeat(${perRow}, max-content)`;
   // undo cmPackRows' row layout from a previous build (it only applies with beds to scale)
   wrap.style.display=wrap.style.flexWrap=wrap.style.alignItems=wrap.style.width=wrap.style.boxSizing="";
+  wrap.style.position=wrap.style.height="";   // …and cmFarmLayout's
 
   wrap.innerHTML="";
   activeKeys.forEach(key=>{
@@ -12915,7 +12975,8 @@ function buildCropMap(){
   // two wide blocks come out far larger one above the other than side by side.
   // Beds to scale makes blocks very different widths (a 60m-bed block is four times a 15m one), and
   // the grid's shared columns then leave big gaps — so it packs into rows instead.
-  if(!phone && cmBedScale && activeKeys.length>1) cmPackRows(wrap);
+  if(!phone && cmLayout==="farm" && activeKeys.length>1) cmFarmLayout(wrap, activeKeys, groups);
+  else if(!phone && cmBedScale && activeKeys.length>1) cmPackRows(wrap);
   else if(!phone && activeKeys.length>1 && activeKeys.length<keys.length) cmBestColumns(wrap);
 
   // Mobile + a single block picked: stretch the year track to fill the screen instead of
